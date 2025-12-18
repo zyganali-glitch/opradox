@@ -60,29 +60,35 @@ body {
 .gm-logo-box {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0;
+    height: 100%;
+    padding: 0;
 }
 
-
-
-.gm-logo-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--gm-primary) !important;
-    letter-spacing: -0.5px;
+.gm-logo-img {
+    height: 100%;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    transition: transform 0.2s ease;
 }
 
-.gm-logo-title span {
-    color: var(--gm-accent) !important;
+.gm-logo-img:hover {
+    transform: scale(1.02);
 }
 
 .gm-logo-subtitle {
-    font-size: 0.8rem;
-    color: var(--gm-text-muted);
-    border-left: 1px solid var(--gm-divider);
-    padding-left: 10px;
-    margin-left: 10px;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(90deg, var(--gm-primary), var(--gm-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    border-left: 3px solid var(--gm-primary);
+    padding-left: 20px;
+    margin-left: 20px;
+    white-space: nowrap;
 }
 
 .gm-header-right {

@@ -68,9 +68,9 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Gerekli Uyarısı -->
-        <div class="sf-warning" style="color:#ef4444; font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
-            <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
+        <!-- İkinci Dosya Bilgi Mesajı -->
+        <div class="sf-warning" style="color:var(--gm-primary); font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
+            <i class="fas fa-info-circle"></i> ${T.lbl_second_file_required || 'Aynı veya farklı dosyadan seçim yapabilirsiniz'}
         </div>
     </div>
     `;

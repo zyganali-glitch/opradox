@@ -2143,8 +2143,8 @@
       {
         "name": "return_mode",
         "type": "select",
-        "label_tr": "Dönüş Tipi",
-        "label_en": "Return Type",
+        "label_tr": "Dönüş Tipi (Opsiyonel)",
+        "label_en": "Return Type (Optional)",
         "description_tr": "Bu alanda, sonuçların nasıl döneceğini seçmelisiniz. 'summary' seçerseniz, sadece özet bilgileri alırsınız. 'summary_and_rows' seçerseniz, hem özet bilgileri hem de filtrelenmiş satırları Excel dosyası olarak alırsınız.",
         "description_en": "In this field, you should choose how you want the results to be returned. If you select 'summary', you will receive only summary information. If you select 'summary_and_rows', you will receive both summary information and the filtered rows as an Excel file.",
         "placeholder_tr": "",
@@ -2156,19 +2156,8 @@
         "option_labels_tr": {
           "summary": "Sadece Özet",
           "summary_and_rows": "Özet ve Satırlar"
-        }
-      },
-      {
-        "name": "column_name",
-        "type": "text",
-        "label_tr": "Sütun Adı",
-        "label_en": "Column Name"
-      },
-      {
-        "name": "search_value",
-        "type": "text",
-        "label_tr": "Aranacak Değer",
-        "label_en": "Search Value"
+        },
+        "default": "summary"
       }
     ],
     "tags_tr": [
@@ -2932,12 +2921,13 @@
       {
         "name": "result_column",
         "type": "text",
-        "label_tr": "Sonuç Sütunu Adı",
-        "label_en": "Result Column Name",
+        "label_tr": "Sonuç Sütunu Adı (Opsiyonel)",
+        "label_en": "Result Column Name (Optional)",
         "description_tr": "Bu alana, sonuçların hangi sütunda gösterileceğini belirlemek için bir isim yazmalısınız. Örneğin, 'Sonuç'. Eğer boş bırakırsanız, otomatik olarak 'Fiyat_lookup' olarak adlandırılır.",
         "description_en": "Here, you should enter a name for the column where the results will be displayed. For example, 'Result'. If you leave it blank, it will be automatically named 'Price_lookup'.",
         "placeholder_tr": "Örn: Sonuç...",
-        "placeholder_en": "e.g. Result..."
+        "placeholder_en": "e.g. Result...",
+        "default": "Sonuç"
       },
       {
         "name": "fallback_df",
@@ -2952,8 +2942,9 @@
       {
         "name": "return_column",
         "type": "text",
-        "label_tr": "Dönüş Sütunu",
-        "label_en": "Return Column"
+        "label_tr": "Dönüş Sütunu (Opsiyonel)",
+        "label_en": "Return Column (Optional)",
+        "default": "Sonuç"
       }
     ],
     "tags_tr": [
@@ -2976,6 +2967,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, ana tablonuzda aradığınız verilerin bulunmadığı durumlarda, yedek bir tablo kullanarak verilerinizi bulmanıza yardımcı olur. Böylece, eksik verileriniz için alternatif bir kaynak oluşturmuş olursunuz.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Ana tablonuzun hangi sütununu kullanarak arama yapacağınızı belirleyin ve 'Anahtar Sütun' alanına yazın.",
         "Ana tablonuzda arama yapacağınız sütunun adını 'Arama Sütunu' alanına yazın.",
         "Yedek tablonuzda arama yapacağınız sütunun adını 'Yedek Sütun' alanına yazın.",
@@ -3026,6 +3018,7 @@
       ],
       "what_is_en": "This scenario helps you find your data using a backup table when the data you are looking for is not found in your main table. Thus, you create an alternative source for your missing data.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "Determine which column in your main table you will use to search and write it in the 'Key Column' field.",
         "Enter the name of the column in your main table that you will search in the 'Lookup Column' field.",
         "Enter the name of the column in your fallback table that you will search in the 'Fallback Column' field.",
@@ -3542,69 +3535,6 @@
     }
   },
   {
-    "id": "frequency-table",
-    "category": "counting_frequency",
-    "title_tr": "Frekans Tablosu (Frequency Table)",
-    "title_en": "Frequency Table",
-    "short_tr": "Bir sütundaki değerlerin kaçar kez geçtiğini sayar.",
-    "short_en": "Counts how many times each value appears in a column.",
-    "status": "implemented",
-    "implementation": {
-      "module": "app.scenarios.frequency_table_single_column",
-      "func": "run"
-    },
-    "params": [
-      {
-        "name": "column",
-        "type": "text",
-        "label_tr": "Analiz Sütunu",
-        "label_en": "Analysis Column",
-        "description_tr": "Hangi sütunu saymak istiyorsunuz? (Örn: Şehir)",
-        "description_en": "Which column do you want to count? (e.g. City)",
-        "placeholder_tr": "Örn: Şehir...",
-        "placeholder_en": "e.g. City..."
-      }
-    ],
-    "tags_tr": [
-      "frekans",
-      "sayma",
-      "analiz"
-    ],
-    "tags_en": [
-      "frequency",
-      "count",
-      "analysis"
-    ],
-    "help_tr": {
-      "what_is_tr": "Bu modül, seçtiğiniz sütundaki her bir değerin kaç kez tekrar ettiğini hesaplar. Anket sonuçlarını analiz etmek, en çok satılan ürünleri bulmak veya hatalı tekrarları tespit etmek için kullanılır.",
-      "how_to_tr": [
-        "**Dosya Yükle:** Veri setinizi yükleyin.",
-        "**Analiz Sütunu:** Sayım yapılacak sütun adını girin (Örn: `Şehir`).",
-        "**Çalıştır:** Sonuç, değerler ve sayıları içeren yeni bir tablo olarak döner."
-      ],
-      "examples_tr": [
-        "**Senaryo:** Müşteri listemizde hangi şehirden kaç kişi olduğunu görelim.",
-        "**Tablo:**\n| Ad | Şehir |\n| :--- | :--- |\n| Ali | İstanbul |\n| Veli | Ankara |\n| Can | İstanbul |",
-        "**İşlem:**\n- Sütun: `Şehir`",
-        "**Sonuç:**\n| Şehir | Sayı |\n| :--- | :--- |\n| İstanbul | 2 |\n| Ankara | 1 |"
-      ]
-    },
-    "help_en": {
-      "what_is_en": "This module calculates how many times each value appears in the column you select. It is used to analyze survey results, find best-selling products, or detect incorrect repetitions.",
-      "how_to_en": [
-        "**Upload File:** Upload your dataset.",
-        "**Analysis Column:** Enter the column name to count (e.g. `City`).",
-        "**Run:** The result returns as a new table containing values and their counts."
-      ],
-      "examples_en": [
-        "**Scenario:** Let's see how many customers are from each city.",
-        "**Table:**\n| Name | City |\n| :--- | :--- |\n| Ali | Istanbul |\n| Veli | Ankara |\n| Can | Istanbul |",
-        "**Process:**\n- Column: `City`",
-        "**Result:**\n| City | Count |\n| :--- | :--- |\n| Istanbul | 2 |\n| Ankara | 1 |"
-      ]
-    }
-  },
-  {
     "id": "sum-multi",
     "category": "conditional_aggregation",
     "title_tr": "Çoklu Sütun Toplama (Sum Multi)",
@@ -3799,12 +3729,13 @@
       {
         "name": "flag_column",
         "type": "text",
-        "label_tr": "Bayrak Sütunu Adı",
-        "label_en": "Flag Column Name",
+        "label_tr": "Bayrak Sütunu Adı (Opsiyonel)",
+        "label_en": "Flag Column Name (Optional)",
         "description_tr": "Bu alana, sonuçlarınızda hangi sütunun 'EVET' veya 'HAYIR' olarak işaretleneceğini belirten başlığı yazmalısınız. Örneğin, 'Durum' yazabilirsiniz. Eğer bu alanı boş bırakırsanız, işlem gerçekleşmeyecektir.",
         "description_en": "In this field, you should write the header that indicates which column will be marked as 'YES' or 'NO' in your results. For example, you can write 'Status'. If you leave this field empty, the process will not proceed.",
         "placeholder_tr": "Örn: Durum...",
-        "placeholder_en": "e.g. Status..."
+        "placeholder_en": "e.g. Status...",
+        "default": "Bayrak"
       },
       {
         "name": "condition_column",
@@ -3855,26 +3786,6 @@
         "description_en": "In this field, write the value against which your specified condition will be checked. For example, if you write '1000', the condition checks if the values in the 'Sales' column are equal to 1000. If you want to check multiple values, you can write them separated by commas (e.g., '1000, 2000').",
         "placeholder_tr": "Örn: 1000...",
         "placeholder_en": "e.g. 1000..."
-      },
-      {
-        "name": "value",
-        "type": "text",
-        "label_tr": "Değer",
-        "label_en": "Value"
-      },
-      {
-        "name": "operator",
-        "type": "select",
-        "label_tr": "Operatör",
-        "label_en": "Operator",
-        "options": [
-          ">",
-          "<",
-          ">=",
-          "<=",
-          "==",
-          "!="
-        ]
       }
     ],
     "tags_tr": [
@@ -4594,42 +4505,44 @@
       {
         "name": "lower_threshold",
         "type": "text",
-        "label_tr": "Alt Eşik Değeri",
-        "label_en": "Lower Threshold Value",
-        "description_tr": "Bu alana, hücre değerlerinin altında renklendirilmesini istediğiniz eşik değerini yazın. Örneğin, '100' gibi. Eğer sayısal bir değer girmezseniz, işlem gerçekleşmez ve hata mesajı alırsınız.",
-        "description_en": "Enter the threshold value below which you want the cell values to be highlighted. For example, '100'. If you do not enter a numeric value, the process will not proceed and you will receive an error message.",
+        "label_tr": "Alt Eşik Değeri (Opsiyonel)",
+        "label_en": "Lower Threshold Value (Optional)",
+        "description_tr": "Alt eşik değeri. Boş bırakılırsa otomatik hesaplanır (Q1 - 1.5*IQR).",
+        "description_en": "Lower threshold. If empty, calculated automatically (Q1 - 1.5*IQR).",
         "placeholder_tr": "Örn: 100...",
         "placeholder_en": "e.g. 100..."
       },
       {
         "name": "upper_threshold",
         "type": "text",
-        "label_tr": "Üst Eşik Değeri",
-        "label_en": "Upper Threshold Value",
-        "description_tr": "Bu alana, hücre değerlerinin üstünde renklendirilmesini istediğiniz eşik değerini yazın. Örneğin, '200' gibi. Eğer sayısal bir değer girmezseniz, işlem gerçekleşmez ve hata mesajı alırsınız.",
-        "description_en": "Enter the threshold value above which you want the cell values to be highlighted. For example, '200'. If you do not enter a numeric value, the process will not proceed and you will receive an error message.",
+        "label_tr": "Üst Eşik Değeri (Opsiyonel)",
+        "label_en": "Upper Threshold Value (Optional)",
+        "description_tr": "Üst eşik değeri. Boş bırakılırsa otomatik hesaplanır (Q3 + 1.5*IQR).",
+        "description_en": "Upper threshold. If empty, calculated automatically (Q3 + 1.5*IQR).",
         "placeholder_tr": "Örn: 200...",
         "placeholder_en": "e.g. 200..."
       },
       {
         "name": "lower_color",
         "type": "text",
-        "label_tr": "Alt Eşik Rengi",
-        "label_en": "Lower Threshold Color",
+        "label_tr": "Alt Eşik Rengi (Opsiyonel)",
+        "label_en": "Lower Threshold Color (Optional)",
         "description_tr": "Bu alana, alt eşik değerinin altında kalan hücrelerin renklendirilmesi için istediğiniz rengi belirtin. Renk kodunu 'FFFF0000' gibi yazabilirsiniz. Eğer bir renk girmezseniz, varsayılan olarak kırmızı kullanılacaktır.",
         "description_en": "Enter the color you want for highlighting cells below the lower threshold. You can write the color code like 'FFFF0000'. If you do not enter a color, red will be used by default.",
         "placeholder_tr": "Örn: FFFF0000...",
-        "placeholder_en": "e.g. FFFF0000..."
+        "placeholder_en": "e.g. FFFF0000...",
+        "default": "#FF6B6B"
       },
       {
         "name": "upper_color",
         "type": "text",
-        "label_tr": "Üst Eşik Rengi",
-        "label_en": "Upper Threshold Color",
+        "label_tr": "Üst Eşik Rengi (Opsiyonel)",
+        "label_en": "Upper Threshold Color (Optional)",
         "description_tr": "Bu alana, üst eşik değerinin üstünde kalan hücrelerin renklendirilmesi için istediğiniz rengi belirtin. Renk kodunu 'FF00FF00' gibi yazabilirsiniz. Eğer bir renk girmezseniz, varsayılan olarak yeşil kullanılacaktır.",
         "description_en": "Enter the color you want for highlighting cells above the upper threshold. You can write the color code like 'FF00FF00'. If you do not enter a color, green will be used by default.",
         "placeholder_tr": "Örn: FF00FF00...",
-        "placeholder_en": "e.g. FF00FF00..."
+        "placeholder_en": "e.g. FF00FF00...",
+        "default": "#4ECDC4"
       }
     ],
     "tags_tr": [
@@ -4991,7 +4904,7 @@
       "filtering"
     ],
     "help_tr": {
-      "what_is_tr": "Bu senaryo, belirli bir koşula göre maksimum veya minimum değeri bulmanıza yardımcı olur. Örneğin, bir ürün kategorisindeki en yüksek veya en düşük satış tutarını bulmak için kullanılabilir. Bu sayede, hangi ürünlerin daha çok satıldığını veya hangi ürünlerin daha az tercih edildiğini görebilirsiniz.",
+      "what_is_tr": "Bu senaryo, belirli bir koşulu sağlayan satırlar arasından maksimum veya minimum değeri bulur. Excel'deki MAXIF/MINIF fonksiyonları gibi çalışır. Örneğin: 'IT departmanındaki en yüksek maaşı bul'.",
       "how_to_tr": [
         "'Koşul Sütunu' alanına, verilerinizi hangi kritere göre filtreleyecekseniz o sütunun adını yazın.",
         "'Koşul Değeri' alanına, yukarıda belirttiğiniz sütunda aramak istediğiniz değeri yazın.",
@@ -5038,7 +4951,7 @@
       "examples_tr": [
         "Örnek Senaryo: 'Ürün Kategorisi' sütununda 'Elektronik' değeri için 'Satış Tutarı' sütunundaki maksimum değeri bulmak istiyorsunuz."
       ],
-      "what_is_en": "This scenario helps you find the maximum or minimum value based on a specific condition. For example, it can be used to find the highest or lowest sales amount in a product category. This way, you can see which products are sold more or less.",
+      "what_is_en": "This scenario finds the maximum or minimum value among rows that meet a specific condition. Works like Excel's MAXIF/MINIF functions. Example: 'Find the highest salary in IT department'.",
       "how_to_en": [
         "In the 'Condition Column' field, enter the name of the column you want to filter your data by.",
         "In the 'Condition Value' field, enter the value you want to search for in the column you specified above.",
@@ -5125,6 +5038,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, belirli kriterlere göre verilerinizi aramanıza ve eşleşen değerleri bulmanıza yardımcı olur. Örneğin, bir ürünün fiyatını bulmak için ürün adını ve müşteri ID'sini kullanabilirsiniz.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Sol paneldeki 'Arama Sütunları' alanına, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın.",
         "'Arama Değerleri' alanına, yukarıda belirttiğiniz sütunlara karşılık gelen değerleri yazın.",
         "'Getirilecek Sütun' alanına, arama sonuçlarında hangi sütunun değerini almak istediğinizi yazın.",
@@ -5166,6 +5080,7 @@
       ],
       "what_is_en": "This scenario helps you search your data based on specific criteria and find matching values. For example, you can use the product name and customer ID to find the price of a product.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "In the 'Lookup Columns' field on the left panel, write the names of the columns you want to search your data by.",
         "In the 'Lookup Values' field, write the values corresponding to the columns you specified above.",
         "In the 'Return Column' field, write the name of the column whose value you want to retrieve in the search results.",
@@ -6711,10 +6626,10 @@
       {
         "name": "aggfunc",
         "type": "select",
-        "label_tr": "Toplama Fonksiyonu",
-        "label_en": "Aggregation Function",
-        "description_tr": "Bu alanda, gruplama sonrası hangi hesaplama yöntemini kullanmak istediğinizi seçin. Seçenekler: 'Toplam', 'Ortalama', 'Adet', 'En Küçük', 'En Büyük', 'Medyan'. Yanlış bir seçenek seçerseniz, hata alırsınız.",
-        "description_en": "Select the aggregation method you want to use after grouping. Options: 'Sum', 'Mean', 'Count', 'Min', 'Max', 'Median'. If you select an invalid option, you will receive an error.",
+        "label_tr": "Toplama Fonksiyonu (Opsiyonel)",
+        "label_en": "Aggregation Function (Optional)",
+        "description_tr": "Gruplama sonrası hangi fonksiyon uygulanacak? Boş bırakırsanız sadece filtreleme yapılır.",
+        "description_en": "Which function to apply after grouping? Leave empty for filtering only.",
         "placeholder_tr": "Seçin...",
         "placeholder_en": "Select...",
         "options": [
@@ -6732,7 +6647,8 @@
           "min": "En Küçük",
           "max": "En Büyük",
           "median": "Medyan"
-        }
+        },
+        "default": "sum"
       }
     ],
     "tags_tr": [
@@ -7320,36 +7236,6 @@
     },
     "params": [
       {
-        "name": "group_column",
-        "type": "text",
-        "label_tr": "Gruplama Sütunu",
-        "label_en": "Group Column",
-        "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, müşteri adı ya da ürün kategorisi gibi. Eğer bu alanı yanlış yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
-        "description_en": "Enter the name of the column by which you want to group your data. For example, customer name or product category. If you write this incorrectly, the process will not work and you will receive an error.",
-        "placeholder_tr": "Örn: Müşteri Adı...",
-        "placeholder_en": "e.g. Customer Name..."
-      },
-      {
-        "name": "value_column",
-        "type": "text",
-        "label_tr": "Değer Sütunu",
-        "label_en": "Value Column",
-        "description_tr": "Bu alana, hangi değerleri incelemek istiyorsanız o sütunun adını yazın. Örneğin, işlem türü ya da ürün adı gibi. Yanlış yazarsanız, sonuçlar beklediğiniz gibi çıkmayabilir.",
-        "description_en": "Enter the name of the column that contains the values you want to analyze. For example, transaction type or product name. If you write this incorrectly, the results may not be as expected.",
-        "placeholder_tr": "Örn: İşlem Türü...",
-        "placeholder_en": "e.g. Transaction Type..."
-      },
-      {
-        "name": "target_column",
-        "type": "text",
-        "label_tr": "Hedef Sütun",
-        "label_en": "Target Column",
-        "description_tr": "Bu alana, son eşleşen kaydı almak istediğiniz sütunun adını yazın. Örneğin, son işlem tarihi ya da son işlem tutarı gibi. Yanlış yazarsanız, sonuçlar doğru olmayabilir.",
-        "description_en": "Enter the name of the column from which you want to retrieve the last matching record. For example, last transaction date or last transaction amount. If you write this incorrectly, the results may not be accurate.",
-        "placeholder_tr": "Örn: Son İşlem Tutarı...",
-        "placeholder_en": "e.g. Last Transaction Amount..."
-      },
-      {
         "name": "lookup_column",
         "type": "text",
         "label_tr": "Arama Sütunu",
@@ -7366,12 +7252,6 @@
         "type": "text",
         "label_tr": "Dönüş Sütunu",
         "label_en": "Return Column"
-      },
-      {
-        "name": "search_value",
-        "type": "text",
-        "label_tr": "Aranacak Değer",
-        "label_en": "Search Value"
       }
     ],
     "tags_tr": [
@@ -7392,6 +7272,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, verilerinizdeki son eşleşen kayıtları bulmanıza yardımcı olur. Örneğin, bir müşterinin en son yaptığı işlemi görmek istiyorsanız, bu aracı kullanabilirsiniz. Böylece, hangi ürünleri veya hizmetleri en son tercih ettiğini kolayca görebilirsiniz.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Excel dosyanızı yükleyin.",
         "Gruplamak istediğiniz sütunun adını yazın (Örn: Müşteri Adı).",
         "İncelemek istediğiniz değerlerin bulunduğu sütunun adını yazın (Örn: İşlem Türü).",
@@ -7442,6 +7323,7 @@
       ],
       "what_is_en": "This scenario helps you find the last matching records in your data. For example, if you want to see the last transaction made by a customer, you can use this tool. Thus, you can easily see which products or services they preferred most recently.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "Upload your Excel file.",
         "Enter the name of the column you want to group by (e.g. Customer Name).",
         "Enter the name of the column that contains the values you want to analyze (e.g. Transaction Type).",
@@ -8985,6 +8867,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, verilerinizi belirli bir referans listesi ile karşılaştırarak geçerliliğini kontrol etmenizi sağlar. Yanlış veya eksik verileri tespit ederek, iş süreçlerinizi daha sağlıklı hale getirir.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Kontrol etmek istediğiniz değerlerin bulunduğu sütunun başlığını yazın.",
         "Değerlerinizi kontrol edeceğiniz referans listesinin yolunu yazın veya bir liste oluşturun.",
         "İsterseniz, verilerinizi gruplandırmak için bir sütun belirleyin.",
@@ -9029,6 +8912,7 @@
       ],
       "what_is_en": "This scenario allows you to validate your data against a specific reference list. By identifying incorrect or missing data, it helps make your business processes healthier.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "Write the header of the column containing the values you want to validate.",
         "Enter the path to the reference list you want to validate your values against or create a list.",
         "Optionally, specify a column for grouping your data.",
@@ -9090,10 +8974,10 @@
       {
         "name": "lookup_value_column",
         "type": "text",
-        "label_tr": "Lookup Değer Sütun Adı",
-        "label_en": "Lookup Value Column Name",
-        "description_tr": "Bu alana, ikinci dosyanızdan hangi bilgiyi almak istediğinizi belirten sütunun adını yazmalısınız. Örneğin, 'Fiyat' veya 'Stok Miktarı'. Yanlış yazarsanız, istediğiniz bilgi gelmez.",
-        "description_en": "In this field, you should write the name of the column from your second file that indicates the information you want to retrieve. For example, 'Price' or 'Stock Quantity'. If you write it incorrectly, the desired information will not come.",
+        "label_tr": "Lookup Değer Sütun Adı (Opsiyonel)",
+        "label_en": "Lookup Value Column Name (Optional)",
+        "description_tr": "Getirilecek sütun. Boş bırakılırsa tüm eşleşen satır getirilir.",
+        "description_en": "Column to return. If empty, returns entire matching row.",
         "placeholder_tr": "Örn: Fiyat...",
         "placeholder_en": "e.g. Price..."
       },
@@ -9133,6 +9017,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, ana tablonuzdaki belirli bir anahtara göre başka bir tablodan bilgi çekmenizi sağlar. Örneğin, müşteri bilgilerini çekmek için kullanabilirsiniz. Böylece, verilerinizi daha düzenli ve anlamlı hale getirebilirsiniz.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Ana tablonuzdaki hangi sütunun anahtar olduğunu belirleyin ve 'Anahtar Sütun Adı' alanına yazın.",
         "Sol paneldeki 'İkinci Dosya' alanına diğer Excel dosyanızı yükleyin.",
         "İkinci dosyanızdaki anahtar sütunu ve almak istediğiniz değer sütununu belirleyin ve ilgili alanlara yazın.",
@@ -9174,6 +9059,7 @@
       ],
       "what_is_en": "This scenario allows you to pull information from another table based on a specific key in your main table. For example, you can use it to fetch customer information. This way, you can make your data more organized and meaningful.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "Identify which column in your main table is the key and write it in the 'Key Column Name' field.",
         "Upload your other Excel file in the 'Second File' section on the left panel.",
         "Identify the key column in the second file and the value column you want to retrieve, and write them in the respective fields.",
@@ -9234,18 +9120,19 @@
       {
         "name": "default_value",
         "type": "text",
-        "label_tr": "Varsayılan Değer",
-        "label_en": "Default Value",
-        "description_tr": "Eğer aradığınız değer bulunamazsa, bu alana yazdığınız değer dönecektir. Örneğin, 'Bulunamadı' yazabilirsiniz. Bu alan isteğe bağlıdır.",
-        "description_en": "If the value you are looking for cannot be found, the value you write in this field will be returned. For example, you can write 'Not Found'. This field is optional.",
+        "label_tr": "Varsayılan Değer (Opsiyonel)",
+        "label_en": "Default Value (Optional)",
+        "description_tr": "Eşleşme bulunamazsa döndürülecek değer. Boş bırakılabilir.",
+        "description_en": "Value to return if no match found. Can be left empty.",
         "placeholder_tr": "Örn: Bulunamadı...",
-        "placeholder_en": "e.g. Not Found..."
+        "placeholder_en": "e.g. Not Found...",
+        "default": ""
       },
       {
         "name": "search_mode",
         "type": "select",
-        "label_tr": "Arama Yöntemi",
-        "label_en": "Search Mode",
+        "label_tr": "Arama Yöntemi (Opsiyonel)",
+        "label_en": "Search Mode (Optional)",
         "description_tr": "Bu alanda, arama işleminin hangi yönde yapılacağını seçin. 'Soldan Sağa' veya 'Sağdan Sola' seçeneklerinden birini tercih edebilirsiniz. Yanlış bir seçim yaparsanız, arama işlemi gerçekleşmez.",
         "description_en": "In this field, choose the direction in which the search operation will be performed. You can choose either 'Left to Right' or 'Right to Left'. If you make a wrong selection, the search operation will not occur.",
         "placeholder_tr": "",
@@ -9257,13 +9144,14 @@
         "option_labels_tr": {
           "left-to-right": "Soldan Sağa",
           "right-to-left": "Sağdan Sola"
-        }
+        },
+        "default": "exact"
       },
       {
         "name": "case_sensitive",
         "type": "select",
-        "label_tr": "Büyük/Küçük Harf Duyarlılığı",
-        "label_en": "Case Sensitivity",
+        "label_tr": "Büyük/Küçük Harf Duyarlılığı (Opsiyonel)",
+        "label_en": "Case Sensitivity (Optional)",
         "description_tr": "Bu alanda, aramanızın büyük/küçük harf duyarlı olup olmayacağını seçin. Eğer 'Evet' seçerseniz, 'Elma' ile 'elma' farklı değerler olarak kabul edilir. Yanlış bir seçim yaparsanız, arama sonuçlarınızı etkileyebilir.",
         "description_en": "In this field, choose whether your search will be case sensitive or not. If you select 'Yes', 'Apple' and 'apple' will be considered different values. A wrong selection may affect your search results.",
         "placeholder_tr": "",
@@ -9275,7 +9163,8 @@
         "option_labels_tr": {
           "True": "Evet",
           "False": "Hayır"
-        }
+        },
+        "default": false
       }
     ],
     "tags_tr": [
@@ -9299,6 +9188,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, belirli bir değeri aramak ve o değere karşılık gelen başka bir değeri almak için kullanılır. Örneğin, bir ürünün fiyatını bulmak istediğinizde, ürün adını arayıp, fiyatını çekmek için bu aracı kullanabilirsiniz.",
       "how_to_tr": [
+        "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Aranacak Değer alanına, bulmak istediğiniz ürünün adını yazın.",
         "Arama Sütunu alanına, ürün adlarının bulunduğu sütunun başlığını yazın.",
         "Sonuç Sütunu alanına, almak istediğiniz değerin bulunduğu sütunun başlığını yazın.",
@@ -9346,6 +9236,7 @@
       ],
       "what_is_en": "This scenario is used to search for a specific value and retrieve another value corresponding to it. For example, when you want to find the price of a product, you can use this tool to search for the product name and pull its price.",
       "how_to_en": [
+        "💡 **Tip:** You can select a different sheet from the same file or upload a second file. Can also work with a single file.",
         "In the Lookup Value field, write the name of the product you want to find.",
         "In the Lookup Column field, write the header of the column where the product names are located.",
         "In the Return Column field, write the header of the column where the value you want to retrieve is located.",
