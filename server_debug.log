@@ -174,3 +174,48 @@ Filename: tablo4_ykd25082025 (1).xlsx
 Params Raw: {"config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"Doluluk Oranı\",\"ctype\":\"arithmetic\",\"columns\":[\"Yerleşen\",\"Kontenjan\"],\"operation\":\"percent\"},{\"type\":\"output\",\"output_ty...
 Calling runner for custom-report-builder-pro...
 Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 10:05:27.232244
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 10:08:19.423363
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Params Raw: {"":"Sayfa1","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 10:38:45.869091
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 10:46:07.579736
+Scenario ID: basic-summary-stats-column
+Filename: test.csv
+Sheet: None
+Params Raw: {"column":"col1"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 11:04:36.723022
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.

@@ -3215,10 +3215,40 @@ function renderScenarioResult(data) {
         summarySection.style.border = "1px solid var(--gm-card-border)";
         summarySection.style.borderRadius = "8px";
 
-        // Özet Başlığı (ikon rengi başlıkla aynı - inherit)
-        const summaryHeader = document.createElement("h5");
-        summaryHeader.className = "gm-result-section-header";
-        summaryHeader.innerHTML = `<i class="fas fa-check-circle"></i> <span data-i18n="result_summary">${CURRENT_LANG === 'en' ? 'Result Summary' : 'Sonuç Özeti'}</span>`;
+        // Özet Başlığı - Flexbox ile buton için yer açıldı
+        const summaryHeader = document.createElement("div");
+        summaryHeader.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        `;
+
+        const summaryTitle = document.createElement("h5");
+        summaryTitle.className = "gm-result-section-header";
+        summaryTitle.style.margin = "0";
+        summaryTitle.innerHTML = `<i class="fas fa-check-circle"></i> <span data-i18n="result_summary">${CURRENT_LANG === 'en' ? 'Result Summary' : 'Sonuç Özeti'}</span>`;
+
+        // YENİ SENARYO BUTONU (Üstte, Kompakt, Başlangıçta Gizli)
+        const newScenarioBtn = document.createElement("button");
+        newScenarioBtn.id = "newScenarioBtn";
+        newScenarioBtn.className = "gm-gradient-btn";
+        newScenarioBtn.style.cssText = `
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        `;
+        newScenarioBtn.innerHTML = `<i class="fas fa-redo-alt"></i> ${CURRENT_LANG === 'en' ? 'New Scenario' : 'Yeni Senaryo'}`;
+
+        // Tıklama eventi - Sayfa yenileme (F5 gibi)
+        newScenarioBtn.onclick = () => {
+            window.location.reload();
+        };
+
+        summaryHeader.appendChild(summaryTitle);
+        summaryHeader.appendChild(newScenarioBtn);
         summarySection.appendChild(summaryHeader);
 
         // Özet İçeriği (Tek Satır - Pipe Separator)
@@ -3562,8 +3592,7 @@ function renderScenarioResult(data) {
         alert(msg);
     };
 
-    mdDiv.appendChild(newScenarioBtn);
-
+    // Eski buton kaldırıldı - artık üstte header'da var
 
     // 3. TEKNİK DETAYLAR
     if (data.technical_details) {
