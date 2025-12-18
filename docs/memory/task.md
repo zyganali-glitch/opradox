@@ -1,0 +1,30 @@
+- [x] Check `opradox` directory contents <!-- id: 0 -->
+- [x] Determine if this should be a new repo or cloned <!-- id: 1 -->
+    - [x] Search for "opradox" in parent directory
+- [x] Fix the git repository state <!-- id: 2 -->
+    - [x] Clone repository from https://github.com/zyganali-glitch/opradox.git
+- [/] Analyze Project Structure <!-- id: 3 -->
+    - [x] Explore `frontend` directory
+    - [x] Explore `backend` directory
+    - [x] Analyze Project Structure <!-- id: 3 -->
+    - [x] Read `frontend/KALSÖR YAPISI.txt` and `frontend/index.html`
+    - [x] Check `backend/requirements.txt` and `backend/app` structure
+    - [x] List and review `backend/app/scenarios`
+    - [x] Check `frontend/js/app.js` content
+    - [x] Check `documentation`
+- [x] Refine Project Scope and Timeline <!-- id: 4 -->
+    - [x] Create `implementation_plan.md` for verification
+    - [x] Notify user for approval
+    - [x] Remove optional date params from identified scenarios (scripted)
+    - [x] Fix parameter formatting (scripted)
+    - [x] Implement backend logic for `basic-summary-stats-column` (`backend/app/scenarios/basic_summary_stats_column.py`)
+- [x] Verification Plan: opradox (Excel Features) <!-- id: 5 -->
+    - [x] Create virtual environment and install dependencies
+    - [x] Start Backend Server (Uvicorn)
+    - [x] Serve Frontend (Simple HTTP Server)
+    - [x] Verify Frontend (index.html)
+    - [x] Verify Scenarios (End-to-End)
+- [/] Refine and Fix Scenarios (Feedback Loop) <!-- id: 6 -->
+    - [x] Catalog Fixes: Categorization, Descriptions, Params, Date Removal
+    - [x] UI Fixes: Markdown Table Rendering & Pane Resizing
+    - [x] Functionality Fixes: Implement "Stub" Scenarios (Basic Summary Stats, etc.)

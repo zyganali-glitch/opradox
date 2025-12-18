@@ -1,0 +1,2126 @@
+/* style.css - opradox Ultimate Final */
+
+:root {
+    --gm-bg: #05060a;
+    --gm-card-bg: #10121b;
+    --gm-card-border: #2a2e45;
+    --gm-primary: #2c7be5;
+    --gm-accent: #b9134f;
+    --gm-text: #f1f5f9;
+    --gm-text-muted: #94a3b8;
+    --gm-divider: #1e2233;
+    --gm-font: 'Segoe UI', Inter, sans-serif;
+    --gm-success: #00d97e;
+    --x-color: #ffffff;
+    --header-h: 64px;
+}
+
+body.day-mode {
+    --gm-bg: #e0f0ff;
+    /* Gök Mavisi */
+    --gm-card-bg: #ffffff;
+    --gm-card-border: #c9d7e8;
+    --gm-text: #0e1a2b;
+    --gm-text-muted: #4c5d73;
+    --gm-primary: #1d75d2;
+    --gm-divider: #dcebf7;
+    --x-color: #000000;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--gm-font);
+    background: var(--gm-bg);
+    color: var(--gm-text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* HEADER */
+.gm-header {
+    height: var(--header-h);
+    flex-shrink: 0;
+    background: var(--gm-card-bg);
+    border-bottom: 1px solid var(--gm-card-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+}
+
+.gm-logo-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gm-logo-icon {
+    display: grid;
+    grid-template-columns: repeat(3, 6px);
+    gap: 4px;
+}
+
+.gm-logo-icon span {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    opacity: 0.9;
+}
+
+.gm-logo-icon span:nth-child(odd) {
+    background: var(--gm-accent);
+}
+
+.gm-logo-icon span:nth-child(even) {
+    background: var(--gm-primary);
+}
+
+.gm-logo-icon span:nth-child(5) {
+    background: #fff;
+    opacity: 1;
+    transform: scale(1.3);
+}
+
+.gm-logo-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gm-primary) !important;
+    letter-spacing: -0.5px;
+}
+
+.gm-logo-title span {
+    color: var(--gm-accent) !important;
+}
+
+.gm-logo-subtitle {
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    border-left: 1px solid var(--gm-divider);
+    padding-left: 10px;
+    margin-left: 10px;
+    font-weight: 600;
+}
+
+.gm-header-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.gm-icon-btn {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: 0.2s;
+    padding: 5px;
+}
+
+.gm-icon-btn:hover {
+    color: var(--gm-primary);
+    transform: translateY(-2px);
+}
+
+/* Renkli İkonlar */
+.fa-whatsapp {
+    color: #25D366;
+}
+
+.fa-telegram {
+    color: #0088cc;
+}
+
+.fa-facebook-f {
+    color: #1877F2;
+}
+
+.fa-instagram {
+    color: #E4405F;
+}
+
+.fa-linkedin-in {
+    color: #0A66C2;
+}
+
+.fa-diagram-project {
+    color: #833AB4;
+}
+
+.x-btn {
+    color: var(--x-color) !important;
+    opacity: 1 !important;
+}
+
+.gm-pill-btn {
+    border: 1px solid var(--gm-card-border);
+    background: transparent;
+    color: var(--gm-text);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.gm-gradient-btn {
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.gm-gradient-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 3 SÜTUNLU BAĞIMSIZ SCROLL */
+.gm-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr 400px;
+    gap: 20px;
+    padding: 20px;
+    padding-bottom: 60px;
+    overflow: hidden;
+    /* Ana container scroll etmez */
+    height: calc(100vh - var(--header-h));
+}
+
+/* Sadece gerekli paneller kendi içinde scroll etsin */
+.gm-middle-pane,
+.gm-right-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Sol Panel - SPLIT LAYOUT: Dosyalar (Üst, Kompakt) + Senaryolar (Alt, Geniş) */
+.gm-left-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* DOSYALAR SECTION - Üst Bölge (Kompakt, Scroll) */
+.gm-files-section {
+    flex: 0 1 auto;
+    /* Flexile ama büyümez */
+    max-height: 35vh;
+    /* MAKSIMUM YÜKSEKLİK - Kompakt */
+    overflow-y: auto;
+    /* İçerik taşarsa scroll */
+    overflow-x: hidden;
+    border-bottom: 2px solid var(--gm-divider);
+    /* Ayırıcı çizgi */
+    padding-bottom: 8px;
+}
+
+/* Upload Card - Kompaktlaştırılmış */
+.gm-upload-card {
+    flex-shrink: 0;
+    padding: 12px;
+    /* 15px -> 12px */
+    margin: 0 0 8px 0;
+    /* Minimal margin */
+}
+
+/* SENARYOLAR SECTION - Alt Bölge (Geniş, Sabit) */
+.gm-scenarios-section {
+    flex: 1 1 auto;
+    /* Kalan alanın HEPSİNİ AL */
+    min-height: 0;
+    /* Flex overflow fix */
+    overflow: hidden;
+    /* Taşma yok, içinde scroll */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Senaryo Kartı - Flexible Yükseklik */
+.gm-scenario-list-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    margin: 0;
+    /* Margin kaldır */
+    padding: 12px;
+    /* Kompakt padding */
+}
+
+/* Arama Kutusu Sabit */
+.gm-search-wrapper {
+    flex-shrink: 0;
+}
+
+/* Sadece Liste Scroll Edecek */
+.gm-accordion-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* MARKDOWN TABLES support */
+.gm-help-text table,
+.gm-markdown-result table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 0.85rem;
+}
+
+.gm-help-text th,
+.gm-markdown-result th,
+.gm-help-text td,
+.gm-markdown-result td {
+    border: 1px solid var(--gm-card-border);
+    padding: 8px;
+    text-align: left;
+}
+
+.gm-help-text th,
+.gm-markdown-result th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    color: var(--gm-primary);
+}
+
+body.day-mode .gm-help-text th,
+body.day-mode .gm-markdown-result th {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* KARTLAR */
+.gm-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 15px;
+    flex-shrink: 0;
+}
+
+.gm-card h2 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: var(--gm-accent);
+    font-weight: 700;
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 8px;
+}
+
+.gm-muted {
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    margin: 0 0 10px 0;
+}
+
+/* DOSYA YÜKLEME */
+.gm-file-label {
+    border: 2px dashed var(--gm-card-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    /* Kompakt padding */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    /* Daha dar gap */
+    cursor: pointer;
+    color: var(--gm-text-muted);
+    transition: 0.2s;
+    background: rgba(0, 0, 0, 0.02);
+    font-size: 0.9rem;
+    /* Kompakt font */
+}
+
+/* Icon Küçültme (inline style override için) */
+.gm-file-label i {
+    font-size: 1.3rem !important;
+    /* 1.8rem -> 1.3rem */
+}
+
+.gm-file-label:hover {
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.gm-file-label input {
+    display: none;
+}
+
+.gm-selected-file {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-success);
+    text-align: center;
+}
+
+/* FILE INFO PANEL - Kompaktlaştırılmış */
+.gm-file-info {
+    margin-top: 10px;
+    /* 12px -> 10px */
+    padding: 8px;
+    /* 10px -> 8px */
+    background: rgba(44, 123, 229, 0.08);
+    border: 1px solid var(--gm-primary);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    /* Kompakt font */
+}
+
+.gm-info-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 6px;
+    /* 8px -> 6px */
+    font-size: 0.75rem;
+    /* 0.85rem -> 0.75rem */
+    color: var(--gm-text);
+    gap: 8px;
+    /* Kompakt gap */
+}
+
+.gm-info-stats i {
+    color: var(--gm-primary);
+    margin-right: 4px;
+}
+
+.gm-column-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    /* 4px -> 3px */
+    max-height: 60px;
+    /* 80px -> 60px, Daha kompakt */
+    overflow-y: auto;
+}
+
+.gm-col-chip {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    padding: 2px 5px;
+    /* 2px 6px -> 2px 5px */
+    font-size: 0.65rem;
+    /* 0.7rem -> 0.65rem */
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gm-col-chip:hover {
+    background: var(--gm-primary);
+    color: white;
+    border-color: var(--gm-primary);
+}
+
+.gm-col-chip strong {
+    color: var(--gm-primary);
+    margin-right: 2px;
+}
+
+/* Second File Toggle */
+.gm-second-file-toggle {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed var(--gm-card-border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.gm-second-file-toggle:hover {
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+}
+
+.gm-second-file-toggle.open {
+    background: rgba(44, 123, 229, 0.1);
+    border-style: solid;
+}
+
+.gm-second-file-toggle.open i {
+    transform: rotate(45deg);
+}
+
+.gm-second-file-wrapper {
+    margin-top: 8px;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Info Note */
+.gm-info-note {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    line-height: 1.4;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.gm-info-note strong {
+    color: var(--gm-primary);
+}
+
+/* Day Mode - Panel Accent Colors */
+body.day-mode .gm-info-note strong {
+    color: var(--gm-accent);
+}
+
+body.day-mode .gm-info-stats i {
+    color: var(--gm-accent);
+}
+
+body.day-mode .gm-col-chip strong {
+    color: var(--gm-accent);
+}
+
+/* AKORDEON */
+.gm-scenario-search {
+    width: 100%;
+    padding: 8px 8px 8px 30px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    outline: none;
+    margin-bottom: 10px;
+}
+
+/* Left Pane layout for sticky header */
+.pane.left {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Prevent body scroll, handle inside */
+}
+
+.pane-header {
+    flex-shrink: 0;
+    /* Don't shrink */
+    background: var(--gm-card-bg);
+    z-index: 10;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+#scenario-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* Scroll only this part */
+    padding-top: 10px;
+}
+
+.gm-accordion-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.gm-accordion-header {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 10px 0;
+    color: var(--gm-accent) !important;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-scenario-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 10px;
+    margin-top: 2px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--gm-text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.gm-scenario-btn:hover,
+.gm-scenario-btn.active {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--gm-primary);
+    font-weight: 600;
+}
+
+.gm-accordion-content {
+    display: none;
+    padding: 5px 0;
+}
+
+.gm-accordion-content.open {
+    display: block;
+}
+
+/* SİHİRBAZ */
+.gm-form-row {
+    margin-bottom: 10px;
+}
+
+.gm-form-row label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-form-row input,
+.gm-form-row select,
+.gm-form-row textarea {
+    width: 100%;
+    padding: 8px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    outline: none;
+}
+
+/* SONUÇ & PAYLAŞ */
+.gm-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 8px;
+}
+
+.gm-result-share {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.gm-result-json {
+    background: var(--gm-bg);
+    padding: 10px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #a5b4fc;
+    border: 1px solid var(--gm-card-border);
+    overflow: auto;
+    max-height: 250px;
+}
+
+/* KILAVUZ */
+.gm-help-title {
+    color: var(--gm-accent);
+    font-weight: 700;
+    margin-top: 15px;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 5px;
+}
+
+.gm-help-subtitle {
+    color: var(--gm-accent);
+    font-weight: 700;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.gm-help-text,
+.gm-help-list {
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 10px;
+}
+
+.gm-help-text ul,
+.gm-help-text ol {
+    list-style: none !important;
+    padding-left: 0 !important;
+}
+
+.gm-help-text li {
+    position: relative;
+    padding-left: 1rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.gm-help-text li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--gm-primary-color);
+}
+
+/* Kılavuz metninin ekrana sığması */
+.gm-help-text,
+.gm-help-list {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    overflow-x: hidden;
+}
+
+/* MODAL & TOPLULUK */
+.gm-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.gm-modal.show {
+    display: flex;
+}
+
+.gm-modal-content {
+    background: var(--gm-card-bg);
+    padding: 0;
+    border-radius: 16px;
+    width: 700px;
+    border: 1px solid var(--gm-card-border);
+    display: flex;
+    overflow: hidden;
+}
+
+.gm-modal-left {
+    width: 40%;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    padding: 30px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.gm-modal-right {
+    width: 60%;
+    padding: 30px;
+    position: relative;
+}
+
+.gm-close-modal {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gm-text-muted);
+}
+
+.gm-comments-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background: var(--gm-card-bg);
+    border-top: 1px solid var(--gm-card-border);
+    transition: transform 0.3s ease;
+}
+
+.gm-comments-wrapper.collapsed {
+    transform: translateY(calc(100% - 40px));
+}
+
+.gm-comments-header {
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    background: var(--gm-card-bg);
+    color: var(--gm-primary);
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-comments-body {
+    padding: 0;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+}
+
+.gm-comments-container {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.gm-comments-list {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.gm-comment-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border: 1px solid var(--gm-card-border);
+}
+
+.gm-comment-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--gm-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+}
+
+.gm-comment-content {
+    flex: 1;
+}
+
+.gm-comment-actions {
+    margin-top: 5px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.gm-emoji-btn {
+    cursor: pointer;
+    opacity: 0.7;
+    filter: grayscale(1);
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: var(--gm-text);
+}
+
+.gm-emoji-btn:hover,
+.gm-emoji-btn.active {
+    opacity: 1;
+    filter: grayscale(0);
+    transform: scale(1.2);
+}
+
+.gm-reply-link {
+    color: var(--gm-primary);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.gm-reply-box {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+.gm-reply-box input {
+    flex: 1;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--gm-card-border);
+    background: var(--gm-bg);
+    color: var(--gm-text);
+}
+
+.gm-nested-replies {
+    margin-left: 40px;
+    margin-top: 5px;
+    border-left: 2px solid var(--gm-divider);
+    padding-left: 10px;
+}
+
+.gm-comment-input-box {
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid var(--gm-card-border);
+    padding-top: 10px;
+}
+
+.gm-comment-input-box textarea {
+    flex: 1;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    border-radius: 6px;
+    padding: 10px;
+    resize: none;
+    height: 45px;
+    outline: none;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gm-card-border);
+    border-radius: 3px;
+}
+
+/* CODE PREVIEW */
+.gm-code-preview {
+    background: #000000;
+    /* Pure black background for code preview in dark mode */
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--gm-card-border);
+    font-family: Consolas, 'Courier New', monospace;
+    margin-top: 20px;
+}
+
+body.day-mode .gm-code-preview {
+    background: #ffffff;
+    /* Same as card-bg in day mode */
+    color: #333333;
+    border: 1px solid #ccc;
+}
+
+/* UNIFIED RESULT SECTION HEADERS */
+.gm-result-section-header {
+    color: var(--gm-accent);
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gm-result-section-header i {
+    font-size: 1rem;
+}
+
+/* Search Icon Styling */
+.gm-search-wrapper {
+    position: relative;
+}
+
+.gm-search-wrapper i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gm-text-muted);
+    pointer-events: none;
+    transition: opacity 0.2s;
+    font-size: 0.9rem;
+    padding-bottom: 2px;
+}
+
+.gm-search-wrapper input:focus+i,
+.gm-search-wrapper.has-text i {
+    opacity: 0;
+}
+
+.gm-scenario-search {
+    padding-left: 32px !important;
+}
+
+/* CODE HEADER - Consistent Color */
+.gm-code-header {
+    color: #b9134f;
+    /* Matches accent (Bordeaux-ish) for consistency */
+}
+
+body.day-mode .gm-code-header {
+    color: #b9134f !important;
+}
+
+/* Day Mode Specifics */
+body.day-mode .gm-file-label {
+    color: var(--gm-primary);
+    border-color: var(--gm-card-border);
+    /* Keep border subtle unless hovered */
+}
+
+body.day-mode .gm-file-label i {
+    color: var(--gm-primary);
+}
+
+body.day-mode .gm-file-label:hover {
+    border-color: var(--gm-primary);
+    background: rgba(29, 117, 210, 0.05);
+}
+
+body.day-mode .gm-accordion-header,
+body.day-mode .gm-scenario-btn {
+    color: var(--gm-primary);
+}
+
+/* Description under Result Summary in Day Mode */
+body.day-mode .gm-markdown-result p,
+body.day-mode .gm-result-description {
+    color: var(--gm-primary);
+}
+
+/* JSON SYNTAX HIGHLIGHTING */
+.gm-key {
+    color: #9cdcfe;
+}
+
+.gm-string {
+    color: #ce9178;
+}
+
+.gm-number {
+    color: #b5cea8;
+}
+
+.gm-boolean {
+    color: #569cd6;
+}
+
+.gm-null {
+    color: #808080;
+}
+
+body.day-mode .gm-key {
+    color: #0451a5;
+}
+
+body.day-mode .gm-string {
+    color: #a31515;
+}
+
+body.day-mode .gm-number {
+    color: #098658;
+}
+
+body.day-mode .gm-boolean {
+    color: #0000ff;
+}
+
+body.day-mode .gm-null {
+    color: #808080;
+}
+
+body.day-mode .gm-null {
+    color: #808080;
+}
+
+/* Custom Report Builder UI Improvements */
+.gm-builder-row-btn {
+    background: linear-gradient(135deg, #1d75d2 0%, #b9134f 100%);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-weight: 500;
+}
+
+.gm-builder-row-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(29, 117, 210, 0.3);
+}
+
+.gm-builder-row-btn i {
+    font-size: 0.8rem;
+}
+
+.gm-builder-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--gm-input-bg, rgba(255, 255, 255, 0.05));
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--gm-card-border);
+    margin-bottom: 4px;
+}
+
+.gm-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gm-text);
+    background: transparent;
+    border: 1px solid var(--gm-card-border);
+    min-width: 60px;
+    text-align: center;
+}
+
+.gm-builder-row input,
+.gm-builder-row select {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+/* Day Mode Overrides */
+body.day-mode .gm-badge {
+    color: var(--gm-primary);
+    border-color: var(--gm-primary);
+}
+
+body.day-mode .gm-builder-row {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* ============================================
+   OYUN HAMURU PRO - BUILDER STYLES
+   ============================================ */
+
+.gm-pro-builder {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Tab Navigation */
+.gm-pro-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--gm-card-border);
+    overflow-x: auto;
+}
+
+.gm-pro-tab {
+    flex: 1;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    color: var(--gm-text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.gm-pro-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--gm-text);
+}
+
+.gm-pro-tab.active {
+    background: var(--gm-primary);
+    color: white;
+    font-weight: 600;
+}
+
+.gm-pro-tab i {
+    font-size: 0.9rem;
+}
+
+/* Tab Contents */
+.gm-pro-tab-contents {
+    padding: 15px;
+}
+
+.gm-pro-tab-content {
+    display: none;
+}
+
+.gm-pro-tab-content.active {
+    display: block;
+}
+
+.gm-pro-section {
+    min-height: 100px;
+}
+
+/* Add Button */
+.gm-pro-add-btn {
+    background: linear-gradient(135deg, var(--gm-primary), #1d5aa8);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 10px;
+}
+
+.gm-pro-add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(29, 117, 210, 0.4);
+}
+
+/* Rows Container */
+.gm-pro-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Single Row */
+.gm-pro-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--gm-card-border);
+    flex-wrap: wrap;
+}
+
+.gm-pro-row-vertical {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Row Inputs */
+.gm-pro-row input,
+.gm-pro-row select {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    outline: none;
+    min-width: 100px;
+}
+
+.gm-pro-row input:focus,
+.gm-pro-row select:focus {
+    border-color: var(--gm-primary);
+}
+
+.gm-pro-row input[type="text"] {
+    flex: 1;
+    min-width: 80px;
+}
+
+/* Delete Button */
+.gm-pro-del {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.gm-pro-del:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Form Row (Output Tab) */
+.gm-pro-form-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.gm-pro-form-row label {
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+    min-width: 150px;
+}
+
+.gm-pro-select {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+    min-width: 150px;
+}
+
+.gm-pro-form-row input[type="text"] {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+    flex: 1;
+}
+
+.gm-pro-form-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Badge Colors for PRO */
+.gm-badge-filter {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.gm-badge-group {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+}
+
+.gm-badge-agg {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.gm-badge-sort {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.gm-badge-select {
+    border-color: #ec4899;
+    color: #ec4899;
+}
+
+.gm-badge-window {
+    border-color: #06b6d4;
+    color: #06b6d4;
+}
+
+/* Day Mode Overrides for PRO */
+body.day-mode .gm-pro-builder {
+    background: #f8fafc;
+}
+
+body.day-mode .gm-pro-tabs {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.day-mode .gm-pro-tab:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.day-mode .gm-pro-row {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .gm-pro-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .gm-pro-tab {
+        min-width: 70px;
+        padding: 8px 5px;
+        font-size: 0.75rem;
+    }
+
+    .gm-pro-row {
+        flex-wrap: wrap;
+    }
+
+    .gm-pro-form-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .gm-pro-form-row label {
+        min-width: auto;
+        margin-bottom: 5px;
+    }
+}
+
+/* PRO BUILDER OTO-TAMAMLAMA VE DÜZEN */
+.gm-pro-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    flex-wrap: wrap;
+}
+
+/* Vertical layout */
+.gm-pro-row-vertical {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Input genişlik iyileştirmeleri */
+.gm-pro-row input,
+.gm-pro-row select {
+    min-width: 0;
+}
+
+/* Partition/Order inputları */
+.pro-win-part,
+.pro-win-order {
+    min-width: 150px;
+}
+
+/* Logic select (VE/VEYA) */
+.pro-logic {
+    background-color: rgba(var(--gm-accent-rgb), 0.1);
+    /* Fallback or calculate logic */
+    border: 1px solid var(--gm-accent);
+    background: rgba(185, 19, 79, 0.1);
+}
+
+/* Datalist okunu düzeltme */
+input[list]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+input[list]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+/* PRO tabs */
+.gm-pro-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--gm-divider);
+    padding-bottom: 5px;
+    overflow-x: auto;
+}
+
+.gm-pro-tab {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.gm-pro-tab.active,
+.gm-pro-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--gm-primary);
+    font-weight: 600;
+}
+
+.gm-pro-tab-content {
+    display: none;
+    animation: fadeIn 0.2s;
+}
+
+.gm-pro-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gm-pro-add-btn {
+    background: none;
+    border: 1px dashed var(--gm-text-muted);
+    color: var(--gm-text-muted);
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.gm-pro-add-btn:hover {
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+}
+
+.gm-pro-del {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.7;
+}
+
+.gm-pro-del:hover {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 4px;
+}
+
+/* Badge stilleri */
+.gm-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: white;
+}
+
+.gm-badge-filter {
+    background: #6366f1;
+}
+
+.gm-badge-group {
+    background: #ec4899;
+}
+
+.gm-badge-agg {
+    background: #14b8a6;
+}
+
+.gm-badge-sort {
+    background: #f59e0b;
+}
+
+.gm-badge-select {
+    background: #8b5cf6;
+}
+
+@media (max-width: 768px) {
+    .gm-pro-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gm-pro-row input,
+    .gm-pro-row select {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* ===== COPY BUTTON ===== */
+.gm-copy-btn {
+    background: rgba(44, 123, 229, 0.2);
+    border: 1px solid var(--gm-primary);
+    color: var(--gm-primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.gm-copy-btn:hover {
+    background: var(--gm-primary);
+    color: white;
+}
+
+.gm-copy-btn.copied {
+    background: var(--gm-success);
+    border-color: var(--gm-success);
+    color: white;
+}
+
+/* ===== DRAG & DROP HIGHLIGHT ===== */
+.gm-file-label.drag-over {
+    border-color: var(--gm-primary) !important;
+    border-style: solid !important;
+    background: rgba(44, 123, 229, 0.15) !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(44, 123, 229, 0.3);
+}
+
+/* ===== PYTHON CODE SYNTAX HIGHLIGHTING ===== */
+/* ===== PYTHON CODE SYNTAX HIGHLIGHTING ===== */
+.gm-code-preview {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    margin-top: 20px;
+    overflow: hidden;
+    border: 1px solid var(--gm-card-border);
+}
+
+.gm-code-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gm-divider);
+    margin-bottom: 0;
+    background: var(--gm-card-bg);
+}
+
+.gm-python-code {
+    /* GECE MODU */
+    /* Arka plan: Mini kılavuz ile aynı */
+    background: rgba(255, 255, 255, 0.02) !important;
+    /* Metin Rengi: BEYAZ (Mini kılavuz açıklaması / Muted) */
+    color: var(--gm-text-muted) !important;
+    padding: 16px;
+    border-radius: 0;
+    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+body.day-mode .gm-python-code {
+    /* GÜNDÜZ MODU */
+    /* Arka plan: BEYAZ (Card BG) */
+    background: var(--gm-card-bg) !important;
+    /* Metin Rengi: SİYAH (Mini kılavuz açıklaması / Muted) */
+    color: var(--gm-text-muted) !important;
+    border: none;
+    border-top: 1px solid var(--gm-divider);
+}
+
+/* --- 3 RENK KURALI (BORDO, MAVİ, SİYAH/BEYAZ) --- */
+
+/* 1. RENK: BORDO (Accent) - Keywords, Builtins, Pandas */
+.gm-py-keyword,
+.gm-py-builtin,
+.gm-py-pandas {
+    color: var(--gm-accent) !important;
+    /* BORDO */
+    font-weight: normal;
+}
+
+/* 2. RENK: MAVİ (Primary) - Strings, Numbers */
+.gm-py-string,
+.gm-py-fstring,
+.gm-py-number {
+    color: var(--gm-primary) !important;
+    /* MAVİ */
+}
+
+/* 3. RENK: SİYAH/BEYAZ - Base Code Text (Yukarıdaki .gm-python-code color kuralı ile sağlanır) */
+
+/* Yorumlar - Yine base renge yakın (muted) */
+.gm-py-comment {
+    color: var(--gm-text-muted);
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Code Stats Box (Kırmızı Dikdörtgen Alanı) */
+.gm-code-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--gm-text-muted);
+    padding: 10px 16px;
+    /* GECE MODU ARKA PLAN - !important ile garanti */
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-top: 1px solid var(--gm-divider);
+}
+
+body.day-mode .gm-code-stats {
+    /* GÜNDÜZ MODU ARKA PLAN - !important ile garanti */
+    background: var(--gm-card-bg) !important;
+}
+
+.gm-code-stats i {
+    margin-right: 6px;
+    color: var(--gm-primary);
+}
+
+.gm-stat-item strong {
+    color: var(--gm-text);
+}
+
+/* DRAG & DROP VISUAL FEEDBACK */
+.gm-file-label.drag-over {
+    border-color: var(--gm-success);
+    color: var(--gm-success);
+    background: rgba(0, 217, 126, 0.1);
+    transform: scale(1.02);
+}
+
+/* ===== PRISM.JS SYNTAX HIGHLIGHTING OVERRIDE ===== */
+/* Renk Şeması: BORDO (accent), BEYAZ/SİYAH (text), MAVİ (primary) */
+
+/* .gm-python-code içindeki <code> elementi için - Prism.js'in arka planını override et */
+.gm-python-code code[class*="language-"],
+.gm-python-code pre[class*="language-"] {
+    background: transparent !important;
+    color: inherit !important;
+    text-shadow: none !important;
+}
+
+/* =============== GECE MODU =============== */
+/* 1. BORDO - Keywords (import, def, return, if, else, for, while, in, not, and, or, True, False, None) */
+.gm-python-code .token.keyword,
+.gm-python-code .token.boolean,
+.gm-python-code .token.constant {
+    color: var(--gm-accent) !important;
+    /* BORDO */
+}
+
+/* 2. BEYAZ - Base text, parantezler, operatörler (mevcut renk devam) */
+.gm-python-code .token.punctuation,
+.gm-python-code .token.operator {
+    color: var(--gm-text) !important;
+    /* BEYAZ */
+}
+
+/* 3. MAVİ - Strings, Numbers, Functions */
+.gm-python-code .token.string,
+.gm-python-code .token.char,
+.gm-python-code .token.number,
+.gm-python-code .token.function,
+.gm-python-code .token.class-name,
+.gm-python-code .token.builtin {
+    color: var(--gm-primary) !important;
+    /* MAVİ */
+}
+
+/* Yorumlar - Gri (muted) */
+.gm-python-code .token.comment,
+.gm-python-code .token.prolog,
+.gm-python-code .token.doctype,
+.gm-python-code .token.cdata {
+    color: var(--gm-text-muted) !important;
+    font-style: italic;
+}
+
+/* =============== GÜNDÜZ MODU =============== */
+/* 1. BORDO - Keywords (aynı kalıyor, --gm-accent day-mode'da da bordo) */
+
+/* 2. SİYAH - Base text, parantezler, operatörler (--gm-text day-mode'da siyah) */
+
+/* 3. MAVİ - Strings, Numbers, Functions (--gm-primary day-mode'da koyu mavi) */
+
+/* Day mode için extra düzeltme gerekmiyor, CSS variables otomatik adapte oluyor */
+
+/* ============================================
+   FILE PREVIEW TABLE STYLES
+   ============================================ */
+.gm-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.gm-preview-table th {
+    background: var(--gm-primary);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.gm-preview-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gm-preview-table tr:hover td {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+body.day-mode .gm-preview-table th {
+    background: var(--gm-primary);
+}
+
+/* Modal Header / Close Button */
+.gm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--gm-card-border);
+    background: var(--gm-card-bg);
+}
+
+.gm-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--gm-accent);
+}
+
+.gm-modal-header h3 i {
+    margin-right: 8px;
+    color: var(--gm-primary);
+}
+
+.gm-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.gm-modal-close:hover {
+    color: var(--gm-accent);
+}
+
+.gm-modal-body {
+    padding: 20px;
+    background: var(--gm-card-bg);
+}
+
+/* ============================================
+   FILE PREVIEW & COLUMN CHIP STYLE (UNIFIED - VISUAL MATCH)
+   ============================================ */
+/* ============================================
+   ORIGINAL STYLES (RESTORED)
+   ============================================ */
+.gm-col-chip {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    margin: 2px;
+}
+
+.gm-col-chip:hover {
+    background: var(--gm-primary);
+    color: white;
+    border-color: var(--gm-primary);
+}
+
+.gm-col-chip strong {
+    color: var(--gm-primary);
+    margin-right: 2px;
+}
+
+/* PREVIEW BUTONU (CHIP STİLİNE UYUARLANMIŞ + ÖZELLEŞTİRİLMİŞ) */
+.gm-btn-preview {
+    /* Chip ile ortak özellikler */
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    /* Varsayılan text rengini boşver, aşağıda span ile ezeceğiz */
+    cursor: pointer;
+    transition: all 0.2s;
+
+    /* Buton spesifikleri */
+    width: 100%;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* İkon ile yazı arası */
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+/* İKON: MAVİ */
+.gm-btn-preview i {
+    color: var(--gm-primary);
+    transition: color 0.2s;
+}
+
+/* YAZI: BORDO VE KALIN */
+.gm-btn-preview .gm-preview-text {
+    color: var(--gm-accent);
+    font-weight: 700;
+    /* Bold */
+    transition: color 0.2s;
+}
+
+/* HOVER DURUMU */
+.gm-btn-preview:hover {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+}
+
+.gm-btn-preview:hover i,
+.gm-btn-preview:hover .gm-preview-text {
+    color: white;
+    /* Hover'da hepsi beyaz olsun ki okunsun */
+}
+
+/* Day Mode Override (Uyumluluk için) */
+body.day-mode .gm-col-chip {
+    background: white;
+    border-color: #ccc;
+    color: #555;
+}
+
+/* Preview butonu override (Renkler zaten variable olduğu için burada sadece bg değişir) */
+body.day-mode .gm-btn-preview {
+    background: white;
+    border-color: #ccc;
+}
+
+/* Day mode hover */
+body.day-mode .gm-col-chip:hover,
+body.day-mode .gm-btn-preview:hover {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+}
+
+body.day-mode .gm-col-chip strong {
+    color: var(--gm-primary);
+}
+
+/* ============================================
+   MULTI-SHEET EXCEL DROPDOWN STYLES
+   ============================================ */
+.gm-sheet-select-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-left: 3px solid var(--gm-primary);
+    border-radius: 6px;
+}
+
+.gm-sheet-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.gm-sheet-label i {
+    color: var(--gm-primary);
+    font-size: 0.9rem;
+}
+
+.gm-sheet-select {
+    flex: 1;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    max-width: 180px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.gm-sheet-select:focus {
+    border-color: var(--gm-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.gm-sheet-select:hover {
+    border-color: var(--gm-primary);
+}
+
+.gm-sheet-count {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+    background: rgba(59, 130, 246, 0.1);
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+body.day-mode .gm-sheet-select-container {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+body.day-mode .gm-sheet-select {
+    background: white;
+}
+
+body.day-mode .gm-sheet-count {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* ============================================
+   CROSS-SHEET OPTION (Same file, different sheet)
+   ============================================ */
+.gm-crosssheet-option {
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--gm-card-bg);
+    border: 1px dashed var(--gm-primary);
+    border-radius: 6px;
+}
+
+.gm-crosssheet-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--gm-text);
+}
+
+.gm-crosssheet-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--gm-primary);
+    cursor: pointer;
+}
+
+.gm-crosssheet-selector {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.day-mode .gm-crosssheet-option {
+    background: #f0f9ff;
+}
+
+/* Modern Column Chip Style & Horizontal Scrollbar */
+.gm-col-chip-modern {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid var(--gm-card-border);
+    background: var(--gm-bg);
+    color: var(--gm-text);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.gm-col-chip-modern:hover {
+    border-color: var(--gm-primary);
+    background: rgba(29, 117, 210, 0.1);
+    color: var(--gm-primary);
+}
+
+/* PRO Cross-sheet Column List Scrollbar - Mini Kılavuz ile aynı stil */
+.pro-crosssheet-column-list::-webkit-scrollbar {
+    height: 8px;
+}
+
+.pro-crosssheet-column-list::-webkit-scrollbar-track {
+    background: var(--gm-bg);
+    border-radius: 4px;
+}
+
+.pro-crosssheet-column-list::-webkit-scrollbar-thumb {
+    background: var(--gm-primary);
+    border-radius: 4px;
+}
+
+.pro-crosssheet-column-list::-webkit-scrollbar-thumb:hover {
+    background: var(--gm-accent);
+}
+
+/* Firefox scrollbar + satır yüksekliği */
+.pro-crosssheet-column-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--gm-primary) var(--gm-bg);
+    min-height: 32px;
+}
+
+/* Pro crosssheet columns container yüksekliği */
+.pro-crosssheet-columns {
+    min-height: 36px !important;
+    height: auto !important;
+}

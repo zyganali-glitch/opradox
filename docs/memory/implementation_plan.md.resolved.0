@@ -1,0 +1,36 @@
+# Verification Plan: opradox (Excel Features)
+
+**Goal:** Verify that the cloned `opradox` repository is functional, focusing on the existing Excel scenarios and UI integration. This confirms the "Phase 1" scope before considering future extensions (PDF/Word).
+
+## User Review Required
+> [!NOTE]
+> No code changes are proposed. This plan identifies the steps to **verify** the current state of the application.
+
+## Proposed Changes
+No code changes are planned. The work involves running and testing the existing codebase.
+
+## Verification Plan
+
+### 1. Environment Setup
+- [ ] Create a virtual environment and install dependencies from [backend/requirements.txt](file:///C:/Users/MEHMET/.gemini/antigravity/scratch/opradox/backend/requirements.txt).
+- [ ] Verify [uvicorn](file:///C:/Users/MEHMET/.gemini/antigravity/scratch/opradox/backend/uvicorn) can start the backend application ([main.py](file:///C:/Users/MEHMET/.gemini/antigravity/scratch/opradox/backend/app/main.py)).
+
+### 2. Frontend Integration
+- [ ] Open [frontend/index.html](file:///C:/Users/MEHMET/.gemini/antigravity/scratch/opradox/frontend/index.html) (via a simple server or directly if supported) and ensure it loads without errors.
+- [ ] Verify that the frontend can fetch the scenario menu from the backend (`/ui/menu`).
+
+### 3. Scenario Testing (End-to-End)
+We will test 3 representative scenarios to ensure different categories work:
+- **Conditional Aggregation:** `average-condition` (Tests logic and param parsing)
+- **Data Cleaning:** `check-missing-values` (Tests file reading and reporting)
+- **Dates:** `bucket-dates-into-periods` (Tests date parsing library)
+
+**Test Steps for each:**
+1.  Start Backend.
+2.  Use `curl` or a test script to POST a sample `.xlsx` file and parameters to `/run/{scenario_id}`.
+3.  Verify the JSON response contains the expected summary.
+4.  Verify the download link works (if applicable).
+
+### 4. UI Polish Check
+- [ ] Inspect [style.css](file:///C:/Users/MEHMET/.gemini/antigravity/scratch/opradox/frontend/css/style.css) rendering (Dark/Light mode toggle).
+- [ ] Check Language Toggle (TR/EN) responsiveness in the menu.

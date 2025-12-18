@@ -1,0 +1,752 @@
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 10:57:17.750293
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"key":"Program Kodu","how":"right","key_column":"Program Kodu","right_table":[]}...
+Calling runner for join-two-tables-key...
+Runner Exception: [Errno 22] Invalid argument
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 20, in run
+    raise HTTPException(status_code=400, detail="'right_table' parametresi DataFrame olmalýdýr.")
+fastapi.exceptions.HTTPException: 400: 'right_table' parametresi DataFrame olmalýdýr.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 122, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 88, in run
+    traceback.print_exc()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 208, in print_exc
+    print_exception(sys.exception(), limit=limit, file=file, chain=chain)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 130, in print_exception
+    te.print(file=file, chain=chain, colorize=colorize)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 1470, in print
+    print(line, file=file, end="")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 10:57:24.812506
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"key":"Program Kodu","how":"right","key_column":"Program Kodu","right_table":[]}...
+Calling runner for join-two-tables-key...
+Runner Exception: [Errno 22] Invalid argument
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 20, in run
+    raise HTTPException(status_code=400, detail="'right_table' parametresi DataFrame olmalýdýr.")
+fastapi.exceptions.HTTPException: 400: 'right_table' parametresi DataFrame olmalýdýr.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 122, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 88, in run
+    traceback.print_exc()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 208, in print_exc
+    print_exception(sys.exception(), limit=limit, file=file, chain=chain)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 130, in print_exception
+    te.print(file=file, chain=chain, colorize=colorize)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 1470, in print
+    print(line, file=file, end="")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 10:57:34.988042
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"key":"Program Kodu","how":"right","key_column":"Program Kodu","right_table":["Program Kodu","Program Kodu"]}...
+Calling runner for join-two-tables-key...
+Runner Exception: [Errno 22] Invalid argument
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 20, in run
+    raise HTTPException(status_code=400, detail="'right_table' parametresi DataFrame olmalýdýr.")
+fastapi.exceptions.HTTPException: 400: 'right_table' parametresi DataFrame olmalýdýr.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 122, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 88, in run
+    traceback.print_exc()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 208, in print_exc
+    print_exception(sys.exception(), limit=limit, file=file, chain=chain)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 130, in print_exception
+    te.print(file=file, chain=chain, colorize=colorize)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 1470, in print
+    print(line, file=file, end="")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 10:58:23.452172
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"key":"Program Kodu","how":"right","key_column":"Program Kodu","right_table":["Program Kodu","Program Kodu"]}...
+Calling runner for join-two-tables-key...
+Runner Exception: [Errno 22] Invalid argument
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 20, in run
+    raise HTTPException(status_code=400, detail="'right_table' parametresi DataFrame olmalýdýr.")
+fastapi.exceptions.HTTPException: 400: 'right_table' parametresi DataFrame olmalýdýr.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 122, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\join_two_tables_key.py", line 88, in run
+    traceback.print_exc()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 208, in print_exc
+    print_exception(sys.exception(), limit=limit, file=file, chain=chain)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 130, in print_exception
+    te.print(file=file, chain=chain, colorize=colorize)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\traceback.py", line 1470, in print
+    print(line, file=file, end="")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 11:09:04.365415
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"key":"Program Kodu","how":"inner","key_column":"Program Kodu","right_table":[]}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 11:58:27.480518
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Program Kodu\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 12:03:54.067962
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Ãœniversite TÃ¼rÃ¼\",\"right_on\":\"Ãœniversite AdÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 12:05:21.730445
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Program AdÄ±\",\"how\":\"outer\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"outer"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 12:06:05.297909
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Ãœniversite TÃ¼rÃ¼\",\"right_on\":\"Ãœniversite AdÄ±\",\"how\":\"outer\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"outer"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 12:46:12.145755
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 12:47:25.895060
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Tam_TÃ¼rler\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 13:00:10.198272
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"inner\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"inner"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 15:32:49.984160
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 15:33:13.691073
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program Kodu\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"outer\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"outer"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 15:50:29.894499
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"inner\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"inner"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 16:56:21.047248
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Ãœniversite AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:07:54.696036
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:32:45.180525
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"left\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"left"}...
+CROSSSHEET: 'Sayfa2' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:33:07.420047
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"merge\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"how\":\"outer\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"outer"}...
+CROSSSHEET: 'Sayfa2' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:33:45.387520
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"union\",\"ignore_index\":true,\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"Sayfa2"}...
+CROSSSHEET: 'Sayfa2' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:34:22.092004
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[{\"type\":\"diff\",\"left_on\":\"Program AdÄ±\",\"right_on\":\"Salt_program_adÄ±\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa2\"}]}","":"Salt_program_adÄ±"}...
+CROSSSHEET: 'Sayfa2' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:35:41.691336
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"diff\",\"left_on\":\"Salt_program_adÄ±\",\"right_on\":\"Program AdÄ±\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa1\"}]}","":"Program AdÄ±"}...
+CROSSSHEET: 'Sayfa1' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:35:50.075258
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"diff\",\"left_on\":\"Salt_program_adÄ±\",\"right_on\":\"Program AdÄ±\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa1\"}]}","":"Program AdÄ±"}...
+CROSSSHEET: 'Sayfa1' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 17:36:29.499198
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"validate\",\"left_on\":\"Program Kodu\",\"right_on\":\"Program Kodu\",\"result_column\":\"DoÄŸrulama\",\"use_crosssheet\":true,\"crosssheet_name\":\"Sayfa1\"}]}",""...
+CROSSSHEET: 'Sayfa1' sayfasý okundu, 12265 satýr
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:46:54.564497
+Scenario ID: concatenate-columns
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","columns":"Program Kodu, Ãœniversite TÃ¼rÃ¼","separator":"-"}...
+Calling runner for concatenate-columns...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:49:38.164681
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"inner"}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:50:37.874560
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"inner"}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:50:51.211409
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"outer"}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:51:40.828830
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"outer"}...
+Calling runner for join-two-tables-key...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 21:52:34.899379
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"outer"}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-16 22:45:48.622813
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"config":"{\"actions\":[]}"}...
+Second File Error: 'dict' object has no attribute 'empty'
+Runner Exception: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 114, in run_scenario
+    df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\excel_utils.py", line 50, in read_table_from_upload
+    if df.empty:
+       ^^^^^^^^
+AttributeError: 'dict' object has no attribute 'empty'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 118, in run_scenario
+    raise HTTPException(status_code=400, detail=f"Ýkinci dosya okunamadý: {str(e)}")
+fastapi.exceptions.HTTPException: 400: Ýkinci dosya okunamadý: 'dict' object has no attribute 'empty'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 09:57:18.658100
+Scenario ID: join-two-tables-key
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","key":"Program Kodu","how":"inner"}...
+Calling runner for join-two-tables-key...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 11:36:49.321154
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 11:37:57.604467
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 11:55:20.428517
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 12:01:16.947790
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0,05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 12:01:28.906279
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 12:03:17.316015
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 12:05:01.650462
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 12:37:09.967954
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.90","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 15:20:19.053493
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 15:20:42.820454
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 15:31:13.164364
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 16:06:12.072922
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 16:25:12.575066
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0.95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 16:30:08.470983
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0.05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 17:20:46.746532
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0,05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-17 17:20:51.289151
+Scenario ID: outlier-flagging
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","group_column":"Ãœniversite AdÄ±","value_column":"Program Kodu","lower_quantile":"0,05","upper_quantile":"0,95","flag_column":"AykÄ±rÄ± DeÄŸer"}...
+Calling runner for outlier-flagging...
+Runner Exception: '<=' not supported between instances of 'int' and 'str'
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 146, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\outlier_flagging.py", line 20, in run
+    if not (0 <= lower_quantile < upper_quantile <= 1):
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'int' and 'str'
+

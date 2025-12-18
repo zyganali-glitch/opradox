@@ -1,0 +1,54 @@
+Program Kodu;Üniversite Türü;Üniversite Adý;Fakülte/Yüksekokul Adý;Program Adý;Puan Türü;Kontenjan;Yerleþen;En Küçük Puan;En Büyük Puan
+105761027;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Eczacýlýk Fakültesi;Eczacýlýk;SAY;45;45;453.93797;459.37466
+105761151;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Gemi Ýnþaatý ve Denizcilik Fakültesi;Gemi Ýnþaatý ve Gemi Makineleri Mühendisliði;SAY;30;30;423.41073;444.08821
+105761221;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Gemi Ýnþaatý ve Denizcilik Fakültesi;Gemi ve Deniz Teknolojisi Mühendisliði;SAY;20;20;400.0415;420.21639
+105761158;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Hukuk Fakültesi;Hukuk;EA;60;60;416.97723;452.93725
+105761029;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Ýktisat (Ýngilizce);EA;60;62;336.91444;364.89807
+105710121;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Ýþletme;EA;40;40;333.37874;362.75271
+105761134;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Maliye;EA;60;60;315.92201;330.92711
+105761135;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Saðlýk Yönetimi;EA;50;51;302.71141;336.89028
+105710342;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Siyaset Bilimi ve Kamu Yönetimi (Ýngilizce);EA;60;62;318.2564;342.91274
+105761228;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Uluslararasý Ýliþkiler (Ýngilizce);EA;55;57;338.10463;361.90741
+105761092;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Uluslararasý Ticaret ve Ýþletmecilik (Ýngilizce);EA;60;60;347.62241;380.03593
+105761256;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Veri Bilimi ve Analitiði (Ýngilizce);SAY;30;30;371.30556;436.45676
+105761263;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýktisadi ve Ýdari Bilimler Fakültesi;Veri Bilimi ve Analitiði (Ýngilizce) (KKTC Uyruklu);SAY;1;1;234.84004;234.84004
+105761165;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýlahiyat Fakültesi;Ýlahiyat;SÖZ;99;101;278.7204;370.28931
+105761270;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýlahiyat Fakültesi;Ýlahiyat (KKTC Uyruklu);SÖZ;2;0;;
+105761172;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Ýlahiyat Fakültesi;Ýlahiyat (M.T.O.K.);SÖZ;11;11;263.53322;285.18964
+105761137;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Bilgisayar Mühendisliði (Ýngilizce);SAY;80;80;438.4526;459.03188
+105710103;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Biyomedikal Mühendisliði (Ýngilizce);SAY;50;51;363.47705;414.36031
+105710042;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Elektrik-Elektronik Mühendisliði (Ýngilizce);SAY;50;50;434.46068;451.67105
+105710184;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Harita Mühendisliði (Ýngilizce);SAY;60;62;305.00914;374.38464
+105761179;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Harita Mühendisliði (Ýngilizce) (KKTC Uyruklu);SAY;2;0;;
+105710087;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Ýnþaat Mühendisliði (Ýngilizce);SAY;30;30;366.96485;399.88792
+105710051;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Makine Mühendisliði (Ýngilizce);SAY;60;60;416.92417;445.57404
+105710112;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Mekatronik Mühendisliði (Ýngilizce);SAY;75;75;395.64164;433.83452
+105761144;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Metalurji ve Malzeme Mühendisliði (Ýngilizce);SAY;75;77;362.91221;390.14104
+105710315;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Mühendislik ve Mimarlýk Fakültesi;Petrol ve Doðalgaz Mühendisliði (Ýngilizce);SAY;35;35;359.98724;396.21818
+105761032;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Orman Fakültesi;Orman Endüstrisi Mühendisliði;SAY;30;30;288.06192;304.33101
+105761090;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Orman Fakültesi;Orman Mühendisliði;SAY;30;30;309.31744;373.8291
+105710281;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Saðlýk Bilimleri Fakültesi;Beslenme ve Diyetetik;SAY;27;27;344.75041;375.86967
+105710333;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Saðlýk Bilimleri Fakültesi;Fizyoterapi ve Rehabilitasyon;SAY;60;60;336.20583;396.74444
+105710024;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Saðlýk Bilimleri Fakültesi;Hemþirelik;SAY;160;160;378.48043;420.79259
+105761091;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Saðlýk Bilimleri Fakültesi;Sosyal Hizmet;EA;30;30;313.95044;355.4953
+105761186;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sanat ve Tasarým Fakültesi;Görsel Ýletiþim Tasarýmý;SÖZ;35;35;349.11828;377.42155
+105761242;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Bilgi Güvenliði Teknolojisi;SAY;30;30;344.00529;394.4415
+105761089;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Bilgi ve Belge Yönetimi;EA;65;66;281.34645;328.9164
+105761031;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Coðrafya;SÖZ;40;41;316.55022;339.66091
+105710209;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Felsefe;EA;35;36;272.63127;337.51035
+105761193;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Ýngiliz Dili ve Edebiyatý (Ýngilizce);DÝL;40;40;410.42437;437.53873
+105710193;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Medya ve Ýletiþim;SÖZ;80;80;329.50444;377.62958
+105710299;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Psikoloji;EA;50;50;384.01093;397.99119
+105710227;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Sosyoloji;EA;30;31;301.46489;368.90392
+105710218;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Tarih;SÖZ;30;31;330.53573;402.2238
+105710263;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Türk Dili ve Edebiyatý;SÖZ;30;31;327.49519;383.76914
+105710272;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Sosyal ve Beþeri Bilimler Fakültesi;Türk Ýslam Arkeolojisi;EA;30;31;255.8594;304.38979
+105710033;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Su Ürünleri Fakültesi;Su Ürünleri Mühendisliði;SAY;35;36;265.59035;295.55328
+105710015;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Týp Fakültesi;Týp;SAY;215;215;499.1976;508.42523
+105710245;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Týp Fakültesi;Týp (KKTC Uyruklu);SAY;1;0;;
+105761066;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Turizm Fakültesi;Gastronomi ve Mutfak Sanatlarý;SÖZ;40;40;371.74203;396.11029
+105710139;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Turizm Fakültesi;Turizm Rehberliði;DÝL;65;67;381.66922;414.04526
+105761249;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Turizm Fakültesi;Turizm ve Gastronomi Yönetimi Programlarý (Ýngilizce);EA;30;30;309.16219;321.72267
+105710069;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Diþ Hekimliði Fakültesi;Diþ Hekimliði (Ýngilizce);SAY;40;40;469.99137;475.41577
+105710324;DEVLET;ÝZMÝR KATÝP ÇELEBÝ ÜNÝVERSÝTESÝ;Diþ Hekimliði Fakültesi;Diþ Hekimliði;SAY;40;40;472.25691;475.21588
+Bu rapor opradox ile oluþturuldu - opradox.app;;;;;;;;;

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Opradox – Excel Doktoru</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Prism.js Syntax Highlighting - Tomorrow Night Theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Prism.js Core + Python -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script defer src="js/optional_features.js?v=20241218d"></script>
+    <script defer src="js/app.js?v=20241217"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="gm-app-root">
+
+        <header class="gm-header">
+            <div class="gm-logo-box">
+                <div class="gm-logo-icon">
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="gm-logo-text">
+                    <span class="gm-logo-title">Opra<span>dox</span></span>
+                    <span class="gm-logo-subtitle" data-i18n="subtitle">Excel Doktoru</span>
+                </div>
+            </div>
+
+            <div class="gm-header-right">
+                <div class="gm-site-share" id="headerShareContainer" style="position:relative;">
+                    <button class="gm-pill-btn" id="headerShareBtn">
+                        <i class="fas fa-share-alt"></i> <span data-i18n="recommend_site">Siteyi Tavsiye Et</span>
+                    </button>
+                    <div id="headerShareDropdown" style="display:none;"></div>
+                </div>
+
+                <div class="gm-divider-v" style="width:1px; height:20px; background:var(--gm-divider); margin:0 10px;">
+                </div>
+
+                <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
+                        class="fas fa-sun"></i></button>
+                <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
+                <button id="contactBtn" class="gm-pill-btn"><i class="fas fa-envelope"></i> <span
+                        data-i18n="contact">Bize Ulaşın</span></button>
+            </div>
+        </header>
+
+        <main class="gm-main">
+            <section class="gm-left-pane">
+                <!-- FILES SECTION (Top, Compact, Scrollable) -->
+                <div class="gm-files-section">
+                    <div class="gm-card gm-upload-card">
+                        <h2 data-i18n="step1_title">1. Dosyanı Yükle</h2>
+                        <label class="gm-file-label" id="dropZone">
+                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+                            <i class="fas fa-file-excel" style="font-size:1.8rem; margin-bottom:5px;"></i>
+                            <span id="fileLabelText" data-i18n="file_placeholder">Ana Dosya Seç</span>
+                        </label>
+                        <div id="selectedFileName" class="gm-selected-file"></div>
+
+                        <!-- Dosya Bilgi Paneli 1 (Ana dosya önizlemesi) -->
+                        <div id="fileInfoPanel" class="gm-file-info" style="display:none;">
+                            <div class="gm-info-note" data-i18n="column_ref_note">
+                                💡 Sütun adını <strong>tıklayarak kopyalayın</strong>, veya parametre alanına
+                                <strong>sütun
+                                    adı</strong>, <strong>harf kodu (A, B...)</strong> yazın ya da <strong>listeden
+                                    seçin</strong>. Birden fazla sütun için virgülle ayırın.
+                            </div>
+                            <div class="gm-info-stats">
+                                <span><i class="fas fa-table"></i> <strong id="fileRowCount">0</strong> <span
+                                        data-i18n="info_rows">satır</span></span>
+                                <span><i class="fas fa-columns"></i> <strong id="fileColCount">0</strong> <span
+                                        data-i18n="info_cols">sütun</span></span>
+                            </div>
+                            <div id="fileColumnList" class="gm-column-chips"></div>
+                        </div>
+
+                        <!-- İkinci Dosya Ekle Butonu (Artık 1. dosya bilgi panelinin altında) -->
+                        <div class="gm-second-file-toggle" id="secondFileToggle" onclick="toggleSecondFile()">
+                            <i class="fas fa-plus-circle"></i> <span data-i18n="add_second_file">İkinci Dosya
+                                Ekle</span>
+                        </div>
+
+                        <div id="secondFileWrapper" class="gm-second-file-wrapper" style="display:none;">
+
+                            <!-- YENİ: Aynı dosyadan farklı sayfa seçeneği -->
+                            <div class="gm-crosssheet-option" id="crossSheetOption" style="display:none;">
+                                <label class="gm-crosssheet-checkbox">
+                                    <input type="checkbox" id="useSameFileDifferentSheet"
+                                        onchange="toggleCrossSheetMode()">
+                                    <span data-i18n="use_same_file_sheet">Ana dosyadan farklı sayfa kullan</span>
+                                </label>
+                                <div id="crossSheetSelector" class="gm-crosssheet-selector pro-crosssheet-selector"
+                                    style="display:none; align-items:center; gap:8px; margin-top:5px;">
+                                    <div style="flex:0 0 auto; display:flex; align-items:center; gap:6px;">
+                                        <label class="gm-sheet-label" style="font-size:0.8rem;">
+                                            <i class="fas fa-layer-group"></i> <span
+                                                data-i18n="select_sheet">Sayfa:</span>
+                                        </label>
+                                        <select id="crossSheetSelect" class="gm-sheet-select"
+                                            onchange="fetchCrossSheetColumns(this)">
+                                            <!-- Dinamik doldurulacak -->
+                                        </select>
+                                    </div>
+
+                                    <!-- Global Column Preview - her zaman flex, içi dolunca görünür -->
+                                    <div class="pro-crosssheet-columns"
+                                        style="flex:1; min-width:0; padding:2px 8px; background:var(--gm-bg); border-radius:4px; font-size:0.7rem; overflow:hidden; border:1px solid var(--gm-card-border); display:flex; align-items:center;">
+                                        <div class="pro-crosssheet-column-list gm-column-chips"
+                                            style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:4px; align-items:center; white-space:nowrap; padding-bottom:2px; height:24px; scrollbar-width:thin;">
+                                            <span
+                                                style="color:var(--gm-text-muted); font-size:0.7rem; font-style:italic;">Sayfa
+                                                seçin...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dosya yükleme alanı (crosssheet mode değilse görünür) -->
+                            <div id="file2UploadArea">
+                                <label class="gm-file-label" id="dropZone2" style="border-style:dotted;">
+                                    <input type="file" id="fileInput2" accept=".xlsx,.xls,.csv" />
+                                    <i class="fas fa-copy" style="font-size:1.2rem; margin-bottom:5px;"></i>
+                                    <span id="fileLabelText2" style="font-size:0.8rem;"
+                                        data-i18n="file_placeholder_2">İkinci
+                                        Dosya (Opsiyonel)</span>
+                                </label>
+                                <div id="selectedFileName2" class="gm-selected-file"></div>
+
+                                <!-- Dosya Bilgi Paneli 2 (Birinci dosyayla tutarlı) -->
+                                <div id="fileInfoPanel2" class="gm-file-info" style="display:none;">
+                                    <div class="gm-info-note" data-i18n="column_ref_note_2">
+                                        💡 <strong>İkinci dosya</strong> sütun adlarını tıklayarak kopyalayabilirsiniz.
+                                    </div>
+                                    <!-- Sheet Select Placeholder (JS will fill this) -->
+                                    <div id="fileSheetSelect2Container" style="display:none; margin-bottom:8px;"></div>
+
+                                    <div class="gm-info-stats">
+                                        <span><i class="fas fa-table"></i> <strong id="fileRowCount2">0</strong> <span
+                                                data-i18n="info_rows">satır</span></span>
+                                        <span><i class="fas fa-columns"></i> <strong id="fileColCount2">0</strong> <span
+                                                data-i18n="info_cols">sütun</span></span>
+                                    </div>
+                                    <div id="fileColumnList2" class="gm-column-chips"></div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- Datalist for File 2 Columns (Cross-sheet/Second File) -->
+                    <datalist id="file2-columns"></datalist>
+                </div>
+
+                <!-- SCENARIOS SECTION (Bottom, Expanded, Fixed Height) -->
+                <div class="gm-scenarios-section">
+                    <div class="gm-card gm-scenario-list-card">
+                        <h2 data-i18n="step2_title">2. Senaryonu Seç</h2>
+                        <div class="gm-search-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input id="scenarioSearch" class="gm-scenario-search" placeholder="..." />
+                        </div>
+                        <div id="scenarioListContainer" class="gm-accordion-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gm-middle-pane">
+                <div class="gm-card gm-scenario-card">
+                    <div class="gm-card-header">
+                        <h2 id="scenarioTitle" data-i18n="step3_title">3. Senaryo Ayarları</h2>
+                    </div>
+                    <p id="scenarioSubtitle" class="gm-muted" data-i18n="no_selection">Lütfen soldan bir senaryo seçin.
+                    </p>
+                    <div id="dynamicFormContainer">
+                        <div class="gm-info-box" style="text-align:center; padding:30px; opacity:0.6;">
+                            <i class="fas fa-arrow-left fa-2x"></i><br>Seçim Bekleniyor...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gm-card gm-result-card">
+                    <div class="gm-result-header">
+                        <h2 data-i18n="results_title">Sonuç</h2>
+                        <div class="gm-result-share" id="resultShareContainer" style="position:relative;">
+                            <button class="gm-pill-btn" id="resultShareBtn">
+                                <i class="fas fa-share-alt"></i> <span data-i18n="share_result">Sonuç Paylaş</span>
+                            </button>
+                            <div id="resultShareDropdown" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <div id="statusMessage" class="gm-status"></div>
+                    <div id="markdownResult" class="gm-markdown-result"
+                        style="display:none; padding:10px; border:1px solid var(--gm-card-border); border-radius:6px; margin-bottom:10px;">
+                    </div>
+                    <pre id="resultJson" class="gm-result-json">// Sonuçlar burada görünecek.</pre>
+                    <div id="downloadExcelPlaceholder"></div>
+                </div>
+            </section>
+
+            <section class="gm-right-pane">
+                <div class="gm-card gm-help-card">
+                    <h2 data-i18n="help_title">Kullanım Kılavuzu</h2>
+                    <div id="helpContentArea">
+                        <div class="gm-help-placeholder">
+                            <i class="fas fa-book-open"></i>
+                            <p>Detaylar için senaryo seçin.</p>
+                        </div>
+                    </div>
+
+                    <div id="helpTemplate" style="display:none;">
+                        <div class="gm-help-section">
+                            <h4 class="gm-help-subtitle" data-i18n="help_subtitle_what">Nedir?</h4>
+                            <p id="scenarioWhatIs" class="gm-help-text"></p>
+                        </div>
+                        <div class="gm-help-section">
+                            <h4 class="gm-help-subtitle" data-i18n="help_subtitle_how">Nasıl Kullanılır?</h4>
+                            <ol id="scenarioHowTo" class="gm-help-list"></ol>
+                        </div>
+                        <div class="gm-help-section">
+                            <h4 class="gm-help-subtitle" data-i18n="help_subtitle_example">Örnek</h4>
+                            <ul id="scenarioExamples" class="gm-help-list"></ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div class="gm-comments-wrapper collapsed" id="commentsWrapper">
+            <div class="gm-comments-header">
+                <span data-i18n="community_title">💬 Topluluk Panosu</span>
+                <i class="fas fa-chevron-up"></i>
+            </div>
+            <div class="gm-comments-body">
+                <div class="gm-comments-container">
+                    <div id="commentsList" class="gm-comments-list"></div>
+                    <div class="gm-comment-input-box">
+                        <textarea id="publicComment" placeholder="..."></textarea>
+                        <button id="sendCommentBtn" class="gm-gradient-btn" style="height:fit-content;"
+                            data-i18n="send_btn">Gönder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contactModal" class="gm-modal">
+        <div class="gm-modal-content">
+            <span class="gm-close-modal">&times;</span>
+            <div class="gm-modal-left">
+                <h2 data-i18n="modal_about_title">Hakkımızda</h2>
+                <p data-i18n="modal_about_desc">...</p>
+            </div>
+            <div class="gm-modal-right">
+                <h2 data-i18n="contact_modal_title" style="color:var(--gm-text); margin-bottom:15px; border:none;">Bize
+                    Ulaşın</h2>
+                <form id="contactForm">
+                    <div class="gm-form-row"><label data-i18n="lbl_name">Ad Soyad</label><input type="text" required>
+                    </div>
+                    <div class="gm-form-row"><label data-i18n="lbl_email">E-posta</label><input type="email" required>
+                    </div>
+                    <div class="gm-form-row"><label data-i18n="lbl_msg">Mesajınız</label><textarea rows="3"
+                            required></textarea></div>
+                    <button type="submit" class="gm-gradient-btn" style="width:100%"
+                        data-i18n="send_btn">Gönder</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

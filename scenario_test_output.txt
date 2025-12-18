@@ -1,0 +1,21 @@
+============================================================
+opradox Scenario Test Suite
+============================================================
+[OK] Test Excel created: test_data.xlsx
+python : Traceback (most recent call last):
+At line:1 char:14
++ chcp 65001 ; python test_all_scenarios.py 2>&1 | Out-File -Encoding u ...
++              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\test_all_scenarios.py", line 213, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\test_all_scenarios.py", line 131, in main
+    print("\n\U0001f4cb Fetching scenarios...")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MEHMET\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1254.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4cb' in position 2: character maps to <undefined>

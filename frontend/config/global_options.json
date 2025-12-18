@@ -1,0 +1,416 @@
+{
+    "date_filter": {
+        "id": "date_filter",
+        "label_tr": "Tarih Filtresi",
+        "label_en": "Date Filter",
+        "badge_label_tr": "TARİH FİLTRESİ",
+        "badge_label_en": "DATE FILTER",
+        "icon": "📅",
+        "color": "#3b82f6",
+        "allow_multiple": false,
+        "description_tr": "Sadece belirli tarih aralığındaki verileri analiz et",
+        "description_en": "Analyze only data within a specific date range",
+        "params": [
+            {
+                "name": "date_column",
+                "type": "text",
+                "label_tr": "Tarih Sütunu",
+                "label_en": "Date Column",
+                "placeholder_tr": "Örn: Tarih",
+                "placeholder_en": "e.g. Date",
+                "list": "colOptions"
+            },
+            {
+                "name": "start_date",
+                "type": "date",
+                "label_tr": "Başlangıç Tarihi",
+                "label_en": "Start Date"
+            },
+            {
+                "name": "end_date",
+                "type": "date",
+                "label_tr": "Bitiş Tarihi",
+                "label_en": "End Date"
+            }
+        ]
+    },
+    "grouping": {
+        "id": "grouping",
+        "label_tr": "Gruplama",
+        "label_en": "Grouping",
+        "badge_label_tr": "GRUPLAMA",
+        "badge_label_en": "GROUPING",
+        "icon": "📊",
+        "color": "#10b981",
+        "allow_multiple": false,
+        "description_tr": "Verileri kategorilere göre grupla",
+        "description_en": "Group data by categories",
+        "params": [
+            {
+                "name": "group_column",
+                "type": "text",
+                "label_tr": "Grup Sütunu",
+                "label_en": "Group Column",
+                "placeholder_tr": "Örn: Kategori",
+                "placeholder_en": "e.g. Category",
+                "list": "colOptions"
+            }
+        ]
+    },
+    "sorting": {
+        "id": "sorting",
+        "label_tr": "Sıralama",
+        "label_en": "Sorting",
+        "badge_label_tr": "SIRALAMA",
+        "badge_label_en": "SORTING",
+        "icon": "⬆️",
+        "color": "#f59e0b",
+        "allow_multiple": false,
+        "description_tr": "Çıktıyı belirli sütuna göre sırala",
+        "description_en": "Sort output by specific column",
+        "params": [
+            {
+                "name": "sort_column",
+                "type": "text",
+                "label_tr": "Sıralama Sütunu",
+                "label_en": "Sort Column",
+                "list": "colOptions"
+            },
+            {
+                "name": "sort_order",
+                "type": "select",
+                "label_tr": "Sıra",
+                "label_en": "Order",
+                "options": [
+                    {
+                        "value": "asc",
+                        "label_tr": "Artan (A→Z, 0→9)",
+                        "label_en": "Ascending (A→Z, 0→9)"
+                    },
+                    {
+                        "value": "desc",
+                        "label_tr": "Azalan (Z→A, 9→0)",
+                        "label_en": "Descending (Z→A, 9→0)"
+                    }
+                ]
+            }
+        ]
+    },
+    "output_format": {
+        "id": "output_format",
+        "label_tr": "Çıktı Formatı",
+        "label_en": "Output Format",
+        "badge_label_tr": "ÇIKTI FORMATI",
+        "badge_label_en": "OUTPUT FORMAT",
+        "icon": "📄",
+        "color": "#ec4899",
+        "allow_multiple": false,
+        "description_tr": "Excel çıktı ayarları",
+        "description_en": "Excel output settings",
+        "params": [
+            {
+                "name": "freeze_header",
+                "type": "checkbox",
+                "label_tr": "Başlık satırını dondur",
+                "label_en": "Freeze header row"
+            },
+            {
+                "name": "auto_fit_columns",
+                "type": "checkbox",
+                "label_tr": "Sütunları otomatik genişlet",
+                "label_en": "Auto-fit columns"
+            },
+            {
+                "name": "include_totals",
+                "type": "checkbox",
+                "label_tr": "Toplam satırı ekle",
+                "label_en": "Include totals row"
+            },
+            {
+                "name": "decimal_places",
+                "type": "number",
+                "label_tr": "Ondalık basamak",
+                "label_en": "Decimal places",
+                "default": 2,
+                "min": 0,
+                "max": 10
+            }
+        ]
+    },
+    "page_range": {
+        "id": "page_range",
+        "label_tr": "Sayfa Aralığı",
+        "label_en": "Page Range",
+        "badge_label_tr": "SAYFA ARALIĞI",
+        "badge_label_en": "PAGE RANGE",
+        "icon": "📏",
+        "color": "#8b5cf6",
+        "allow_multiple": false,
+        "description_tr": "Sadece belirli satır aralığını işle (performans için)",
+        "description_en": "Process only specific row range (for performance)",
+        "params": [
+            {
+                "name": "start_row",
+                "type": "number",
+                "label_tr": "Başlangıç Satırı",
+                "label_en": "Start Row",
+                "min": 1,
+                "default": 1
+            },
+            {
+                "name": "end_row",
+                "type": "number",
+                "label_tr": "Bitiş Satırı",
+                "label_en": "End Row",
+                "min": 1
+            }
+        ]
+    },
+    "color_format": {
+        "id": "color_format",
+        "label_tr": "Renk & Format",
+        "label_en": "Color & Format",
+        "badge_label_tr": "RENK & FORMAT",
+        "badge_label_en": "COLOR & FORMAT",
+        "icon": "🎨",
+        "color": "#ef4444",
+        "allow_multiple": false,
+        "description_tr": "Belirli değerleri renkli vurgula",
+        "description_en": "Highlight specific values with color",
+        "params": [
+            {
+                "name": "highlight_column",
+                "type": "text",
+                "label_tr": "Vurgulanacak Sütun",
+                "label_en": "Column to Highlight",
+                "list": "colOptions"
+            },
+            {
+                "name": "highlight_threshold",
+                "type": "number",
+                "label_tr": "Eşik Değer",
+                "label_en": "Threshold Value"
+            },
+            {
+                "name": "highlight_color",
+                "type": "select",
+                "label_tr": "Renk",
+                "label_en": "Color",
+                "options": [
+                    {
+                        "value": "red",
+                        "label_tr": "Kırmızı",
+                        "label_en": "Red"
+                    },
+                    {
+                        "value": "green",
+                        "label_tr": "Yeşil",
+                        "label_en": "Green"
+                    },
+                    {
+                        "value": "yellow",
+                        "label_tr": "Sarı",
+                        "label_en": "Yellow"
+                    }
+                ]
+            }
+        ]
+    },
+    "summary_stats": {
+        "id": "summary_stats",
+        "label_tr": "Özet İstatistikler",
+        "label_en": "Summary Statistics",
+        "badge_label_tr": "ÖZET İSTATİSTİKLER",
+        "badge_label_en": "SUMMARY STATS",
+        "icon": "📊",
+        "color": "#06b6d4",
+        "allow_multiple": false,
+        "description_tr": "Çıktıya özet istatistik sayfası ekle",
+        "description_en": "Add summary statistics sheet to output",
+        "params": [
+            {
+                "name": "include_summary",
+                "type": "checkbox",
+                "label_tr": "Özet sayfası ekle",
+                "label_en": "Include summary sheet",
+                "default": true
+            },
+            {
+                "name": "summary_position",
+                "type": "select",
+                "label_tr": "Özet Konumu",
+                "label_en": "Summary Position",
+                "options": [
+                    {
+                        "value": "top",
+                        "label_tr": "Başta",
+                        "label_en": "Top"
+                    },
+                    {
+                        "value": "bottom",
+                        "label_tr": "Sonda",
+                        "label_en": "Bottom"
+                    }
+                ]
+            }
+        ]
+    },
+    "number_format": {
+        "id": "number_format",
+        "label_tr": "Sayı Formatı",
+        "label_en": "Number Format",
+        "badge_label_tr": "SAYI FORMATI",
+        "badge_label_en": "NUMBER FORMAT",
+        "icon": "🔢",
+        "color": "#047857",
+        "allow_multiple": false,
+        "description_tr": "Sayıların gösterim formatı",
+        "description_en": "Number display format",
+        "params": [
+            {
+                "name": "number_format",
+                "type": "select",
+                "label_tr": "Format Türü",
+                "label_en": "Format Type",
+                "options": [
+                    {
+                        "value": "comma_dot",
+                        "label_tr": "1,234.56 (Amerikan)",
+                        "label_en": "1,234.56 (US)"
+                    },
+                    {
+                        "value": "dot_comma",
+                        "label_tr": "1.234,56 (Avrupa)",
+                        "label_en": "1.234,56 (EU)"
+                    },
+                    {
+                        "value": "plain",
+                        "label_tr": "1234.56 (Düz)",
+                        "label_en": "1234.56 (Plain)"
+                    }
+                ]
+            },
+            {
+                "name": "currency_symbol",
+                "type": "text",
+                "label_tr": "Para Birimi Sembolü",
+                "label_en": "Currency Symbol",
+                "placeholder_tr": "Örn: ₺, $, €",
+                "placeholder_en": "e.g. ₺, $, €"
+            },
+            {
+                "name": "show_thousands_separator",
+                "type": "checkbox",
+                "label_tr": "Binlik ayıracı göster",
+                "label_en": "Show thousands separator",
+                "default": true
+            }
+        ]
+    },
+    "filtering": {
+        "id": "filtering",
+        "label_tr": "Filtreleme",
+        "label_en": "Filtering",
+        "badge_label_tr": "FİLTRE",
+        "badge_label_en": "FILTER",
+        "icon": "🔍",
+        "color": "#6366f1",
+        "allow_multiple": true,
+        "description_tr": "Belirli koşula göre filtreleme (birden fazla eklenebilir)",
+        "description_en": "Filter by specific condition (multiple allowed)",
+        "params": [
+            {
+                "name": "filter_column",
+                "type": "text",
+                "label_tr": "Filtre Sütunu",
+                "label_en": "Filter Column",
+                "list": "colOptions"
+            },
+            {
+                "name": "filter_operator",
+                "type": "select",
+                "label_tr": "Operatör",
+                "label_en": "Operator",
+                "options": [
+                    {
+                        "value": "==",
+                        "label_tr": "Eşit (=)",
+                        "label_en": "Equals (=)"
+                    },
+                    {
+                        "value": "!=",
+                        "label_tr": "Eşit Değil (≠)",
+                        "label_en": "Not Equals (≠)"
+                    },
+                    {
+                        "value": ">",
+                        "label_tr": "Büyük (>)",
+                        "label_en": "Greater (>)"
+                    },
+                    {
+                        "value": "<",
+                        "label_tr": "Küçük (<)",
+                        "label_en": "Less (<)"
+                    },
+                    {
+                        "value": ">=",
+                        "label_tr": "Büyük Eşit (≥)",
+                        "label_en": "Greater or Equal (≥)"
+                    },
+                    {
+                        "value": "<=",
+                        "label_tr": "Küçük Eşit (≤)",
+                        "label_en": "Less or Equal (≤)"
+                    },
+                    {
+                        "value": "contains",
+                        "label_tr": "İçerir",
+                        "label_en": "Contains"
+                    }
+                ]
+            },
+            {
+                "name": "filter_value",
+                "type": "text",
+                "label_tr": "Filtre Değeri",
+                "label_en": "Filter Value"
+            }
+        ]
+    },
+    "data_transform": {
+        "id": "data_transform",
+        "label_tr": "Veri Dönüştürme",
+        "label_en": "Data Transform",
+        "badge_label_tr": "VERİ DÖNÜŞTÜRME",
+        "badge_label_en": "DATA TRANSFORM",
+        "icon": "🔄",
+        "color": "#14b8a6",
+        "allow_multiple": false,
+        "description_tr": "Veri temizleme ve dönüştürme seçenekleri",
+        "description_en": "Data cleaning and transformation options",
+        "params": [
+            {
+                "name": "remove_duplicates",
+                "type": "checkbox",
+                "label_tr": "Tekrar eden satırları kaldır",
+                "label_en": "Remove duplicate rows"
+            },
+            {
+                "name": "fill_empty_cells",
+                "type": "text",
+                "label_tr": "Boş hücreleri doldur",
+                "label_en": "Fill empty cells with",
+                "placeholder_tr": "Örn: -",
+                "placeholder_en": "e.g. -",
+                "default": "-"
+            },
+            {
+                "name": "trim_whitespace",
+                "type": "checkbox",
+                "label_tr": "Boşlukları temizle",
+                "label_en": "Trim whitespace",
+                "default": true
+            }
+        ]
+    }
+}

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <title>opradox 2.0 – Admin Paneli</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/admin.css" />
+</head>
+
+<body class="admin-body">
+
+    <header class="admin-topbar">
+        <div class="admin-title">opradox Admin Panel</div>
+        <a href="index.html" class="admin-back">← Kullanıcı Arayüzüne Dön</a>
+    </header>
+
+    <main class="admin-main">
+
+        <!-- FILTER PANEL -->
+        <section class="admin-filters">
+            <input type="text" id="filterText" placeholder="Metne göre filtrele..." />
+            <select id="filterType">
+                <option value="">Tümü</option>
+                <option value="comment">Yorum</option>
+                <option value="bug">Hata Bildirimi</option>
+                <option value="request">İstek / Öneri</option>
+            </select>
+            <button id="filterBtn">Filtrele</button>
+        </section>
+
+        <!-- FEEDBACK LIST -->
+        <section class="admin-feedback-list">
+            <h2>Geri Bildirimler</h2>
+            <div id="adminFeedbackContainer" class="admin-fb-container">
+                <!-- Admin.js burayı dolduracak -->
+            </div>
+        </section>
+
+        <!-- REPLY PANEL -->
+        <section class="admin-reply-panel">
+            <h3>Yanıt Gönder</h3>
+            <textarea id="replyMessage" placeholder="Yanıt metni..."></textarea>
+            <button id="replySendBtn">Yanıtla</button>
+        </section>
+
+    </main>
+
+    <!-- JS -->
+    <script src="js/admin.js"></script>
+</body>
+</html>
+
+
+<table id="gm-feedback-table">
+<thead><tr><th>ID</th><th>Girdi</th></tr></thead>
+<tbody></tbody>
+</table>

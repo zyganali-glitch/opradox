@@ -1,0 +1,47 @@
+# Tasks
+
+- [x] Sync with GitHub <!-- id: 0 -->
+    - [x] Verify git status <!-- id: 1 -->
+    - [x] Pull latest changes <!-- id: 2 -->
+- [x] Start Application <!-- id: 3 -->
+    - [x] Determine start commands <!-- id: 4 -->
+    - [x] Run application locally <!-- id: 5 -->
+    - [x] Troubleshoot startup errors <!-- id: 6 -->
+- [ ] Verify Frontend <!-- id: 7 -->
+    - [x] Check frontend directory <!-- id: 8 -->
+    - [x] Determine frontend start command <!-- id: 9 -->
+    - [x] Start frontend if necessary <!-- id: 10 -->
+- [x] Final Verification <!-- id: 11 -->
+    - [x] Verify UI access <!-- id: 12 -->
+    - [x] Verify functionality <!-- id: 13 -->
+- [x] Fix Scenario Guide Formatting <!-- id: 14 -->
+    - [x] Analyze formatting issues in JSON <!-- id: 15 -->
+    - [x] Clean up redundant markers <!-- id: 16 -->
+- [x] Implement Missing Scenarios <!-- id: 17 -->
+    - [x] Identify missing implementation files <!-- id: 18 -->
+    - [x] Fix `text-to-date-converter` help <!-- id: 21 -->
+    - [x] Fix `concatenate-columns` help <!-- id: 22 -->
+    - [x] Fix `calculate-growth-rate` help <!-- id: 23 -->
+    - [x] Create missing scenario files <!-- id: 19 -->
+    - [x] Ensure params and help exist <!-- id: 20 -->
+- [x] Verify and Fix Scenario Engines <!-- id: 24 -->
+    - [x] Diagnose `basic-summary-stats-column` failure <!-- id: 25 -->
+    - [x] Create automated test harness for all scenarios <!-- id: 26 -->
+    - [x] Run test harness and collect failures <!-- id: 27 -->
+    - [x] Batch fix implementation errors <!-- id: 28 -->
+- [ ] Enhance Scenario Outputs & UX <!-- id: 30 -->
+    - [x] Standardize `df_out` handling in `main.py` for file generation <!-- id: 31 -->
+    - [x] Implement "Technical Summary" field in response <!-- id: 32 -->
+    - [x] Update Frontend to show Download options (Excel, CSV, JSON) <!-- id: 33 -->
+    - [x] Update Frontend to show "Technical Details" section <!-- id: 34 -->
+    - [x] Verify `normalize_case` and others return `df_out` properly <!-- id: 35 -->
+    - [x] **Verify & Debug**: Ensure Excel download works (Switched to `xlsxwriter` to fix crash). <!-- id: 11 -->
+    - [x] **Deep Diagnostics**: Instrument backend with stack trace logging for persistent 500 errors. <!-- id: 12 -->
+    - [x] **UI Polish V2**: Fix "Code Summary" background for Day Mode. <!-- id: 13 -->
+    - [x] **Code Colors Upgrade**: Implement vibrant syntax highlighting for Day Mode (Bordeaux headers/Blue/Green). <!-- id: 39 -->
+    - [x] **Localization**: Add English/Turkish Localization for new elements. <!-- id: 40 -->
+    - [x] **File Preview & Autocomplete**: Added file preview modal (unified styling) and global column autocomplete.
+    - [x] **2nd File Support**: Added UI for second file upload and preview.
+
+## Dosya & Çıktı Yönetimi (Next Steps)
+- [ ] Bekleyen görevler buraya eklenecek...
