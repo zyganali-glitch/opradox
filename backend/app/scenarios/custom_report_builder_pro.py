@@ -752,6 +752,242 @@ def _compute_date_hierarchy(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFra
 
 
 # =============================================================================
+# NEW COMPUTED COLUMN TYPES - Yeni Hesaplama Tipleri (2024-12)
+# =============================================================================
+
+def _compute_running_total(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Kümülatif Toplam / Running Total"""
+    value_col = resolve_column(df, cc.get("value_column") or cc.get("columns", [None])[0])
+    group_col = resolve_column(df, cc.get("group_column"))
+    
+    if not value_col or value_col not in df.columns:
+        raise ValueError(f"Değer sütunu bulunamadı: {cc.get('value_column')}")
+    
+    df = df.copy()
+    if group_col and group_col in df.columns:
+        df[name] = df.groupby(group_col)[value_col].cumsum()
+    else:
+        df[name] = df[value_col].cumsum()
+    
+    return df
+
+
+def _compute_moving_avg(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Hareketli Ortalama / Moving Average"""
+    value_col = resolve_column(df, cc.get("value_column") or cc.get("columns", [None])[0])
+    window_size = int(cc.get("window_size", 3))
+    
+    if not value_col or value_col not in df.columns:
+        raise ValueError(f"Değer sütunu bulunamadı: {cc.get('value_column')}")
+    
+    df = df.copy()
+    df[name] = df[value_col].rolling(window=window_size, min_periods=1).mean().round(2)
+    
+    return df
+
+
+def _compute_growth_rate(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Büyüme Oranı (%) / Growth Rate"""
+    value_col = resolve_column(df, cc.get("value_column") or cc.get("columns", [None])[0])
+    
+    if not value_col or value_col not in df.columns:
+        raise ValueError(f"Değer sütunu bulunamadı: {cc.get('value_column')}")
+    
+    df = df.copy()
+    prev_value = df[value_col].shift(1)
+    df[name] = ((df[value_col] - prev_value) / prev_value * 100).round(2)
+    
+    return df
+
+
+def _compute_percentile_rank(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Yüzdelik Sıralama / Percentile Rank"""
+    value_col = resolve_column(df, cc.get("value_column") or cc.get("columns", [None])[0])
+    
+    if not value_col or value_col not in df.columns:
+        raise ValueError(f"Değer sütunu bulunamadı: {cc.get('value_column')}")
+    
+    df = df.copy()
+    df[name] = df[value_col].rank(pct=True).round(4) * 100
+    
+    return df
+
+
+def _compute_z_score(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Z-Skoru (Standart Sapma) / Z-Score"""
+    value_col = resolve_column(df, cc.get("value_column") or cc.get("columns", [None])[0])
+    
+    if not value_col or value_col not in df.columns:
+        raise ValueError(f"Değer sütunu bulunamadı: {cc.get('value_column')}")
+    
+    df = df.copy()
+    mean_val = df[value_col].mean()
+    std_val = df[value_col].std()
+    if std_val > 0:
+        df[name] = ((df[value_col] - mean_val) / std_val).round(3)
+    else:
+        df[name] = 0
+    
+    return df
+
+
+def _compute_age(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Yaş Hesaplama / Age Calculation"""
+    date_col = resolve_column(df, cc.get("date_column") or cc.get("columns", [None])[0])
+    
+    if not date_col or date_col not in df.columns:
+        raise ValueError(f"Tarih sütunu bulunamadı: {cc.get('date_column')}")
+    
+    df = df.copy()
+    birth_dates = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
+    today = pd.Timestamp.now()
+    df[name] = ((today - birth_dates).dt.days / 365.25).astype(int)
+    
+    return df
+
+
+def _compute_split(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Sütun Böl / Split Column"""
+    source_col = resolve_column(df, cc.get("source_column") or cc.get("columns", [None])[0])
+    separator = cc.get("separator", ",")
+    index = int(cc.get("index", 0))  # Hangi parçayı al (0-indexed)
+    
+    if not source_col or source_col not in df.columns:
+        raise ValueError(f"Kaynak sütun bulunamadı: {cc.get('source_column')}")
+    
+    df = df.copy()
+    split_data = df[source_col].astype(str).str.split(separator)
+    df[name] = split_data.apply(lambda x: x[index].strip() if len(x) > index else "")
+    
+    return df
+
+
+def _compute_normalize_turkish(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Türkçe Karakter Normalizasyonu / Turkish Character Normalization"""
+    source_col = resolve_column(df, cc.get("source_column") or cc.get("columns", [None])[0])
+    
+    if not source_col or source_col not in df.columns:
+        raise ValueError(f"Kaynak sütun bulunamadı: {cc.get('source_column')}")
+    
+    tr_map = str.maketrans({
+        'ı': 'i', 'İ': 'I', 'ğ': 'g', 'Ğ': 'G',
+        'ü': 'u', 'Ü': 'U', 'ş': 's', 'Ş': 'S',
+        'ö': 'o', 'Ö': 'O', 'ç': 'c', 'Ç': 'C'
+    })
+    
+    df = df.copy()
+    df[name] = df[source_col].astype(str).str.translate(tr_map)
+    
+    return df
+
+
+def _compute_extract_numbers(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Metinden Sayı Çıkar / Extract Numbers from Text"""
+    source_col = resolve_column(df, cc.get("source_column") or cc.get("columns", [None])[0])
+    
+    if not source_col or source_col not in df.columns:
+        raise ValueError(f"Kaynak sütun bulunamadı: {cc.get('source_column')}")
+    
+    df = df.copy()
+    df[name] = df[source_col].astype(str).str.extract(r'(\d+[\d.,]*)', expand=False)
+    df[name] = pd.to_numeric(df[name].str.replace(',', '.'), errors='coerce')
+    
+    return df
+
+
+def _compute_weekday(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Haftanın Günü / Weekday"""
+    date_col = resolve_column(df, cc.get("date_column") or cc.get("columns", [None])[0])
+    lang = cc.get("lang", "tr")
+    
+    if not date_col or date_col not in df.columns:
+        raise ValueError(f"Tarih sütunu bulunamadı: {cc.get('date_column')}")
+    
+    weekday_names_tr = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+    weekday_names_en = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    df = df.copy()
+    dt = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
+    weekday_idx = dt.dt.dayofweek
+    
+    if lang == "tr":
+        df[name] = weekday_idx.map(lambda x: weekday_names_tr[x] if pd.notna(x) and 0 <= x <= 6 else "")
+    else:
+        df[name] = weekday_idx.map(lambda x: weekday_names_en[x] if pd.notna(x) and 0 <= x <= 6 else "")
+    
+    return df
+
+
+def _compute_business_days(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """İş Günü Farkı / Business Days Difference"""
+    date1_col = resolve_column(df, cc.get("date1_column"))
+    date2_col = resolve_column(df, cc.get("date2_column"))
+    
+    if not date1_col or date1_col not in df.columns:
+        raise ValueError(f"Başlangıç tarihi sütunu bulunamadı: {cc.get('date1_column')}")
+    if not date2_col or date2_col not in df.columns:
+        raise ValueError(f"Bitiş tarihi sütunu bulunamadı: {cc.get('date2_column')}")
+    
+    df = df.copy()
+    d1 = pd.to_datetime(df[date1_col], errors='coerce', dayfirst=True)
+    d2 = pd.to_datetime(df[date2_col], errors='coerce', dayfirst=True)
+    
+    # İş günü hesaplama (basit: hafta sonlarını çıkar)
+    def count_business_days(start, end):
+        if pd.isna(start) or pd.isna(end):
+            return np.nan
+        return np.busday_count(start.date(), end.date())
+    
+    df[name] = [count_business_days(s, e) for s, e in zip(d1, d2)]
+    
+    return df
+
+
+def _compute_duplicate_flag(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Tekrar İşaretle / Duplicate Flag"""
+    check_col = resolve_column(df, cc.get("check_column") or cc.get("columns", [None])[0])
+    
+    if not check_col or check_col not in df.columns:
+        raise ValueError(f"Kontrol sütunu bulunamadı: {cc.get('check_column')}")
+    
+    df = df.copy()
+    df[name] = df.groupby(check_col).cumcount() + 1
+    
+    return df
+
+
+def _compute_missing_flag(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Eksik Veri İşaretle / Missing Data Flag"""
+    check_col = resolve_column(df, cc.get("check_column") or cc.get("columns", [None])[0])
+    
+    if not check_col or check_col not in df.columns:
+        raise ValueError(f"Kontrol sütunu bulunamadı: {cc.get('check_column')}")
+    
+    df = df.copy()
+    df[name] = df[check_col].isna() | (df[check_col].astype(str).str.strip() == "")
+    df[name] = df[name].map({True: "Eksik", False: "Dolu"})
+    
+    return df
+
+
+def _compute_correlation(df: pd.DataFrame, cc: Dict, name: str) -> pd.DataFrame:
+    """Korelasyon / Correlation (iki sütun arası)"""
+    col1 = resolve_column(df, cc.get("column1") or cc.get("columns", [None])[0])
+    col2 = resolve_column(df, cc.get("column2") or (cc.get("columns", [None, None])[1] if len(cc.get("columns", [])) > 1 else None))
+    
+    if not col1 or col1 not in df.columns:
+        raise ValueError(f"Birinci sütun bulunamadı: {cc.get('column1')}")
+    if not col2 or col2 not in df.columns:
+        raise ValueError(f"İkinci sütun bulunamadı: {cc.get('column2')}")
+    
+    df = df.copy()
+    corr_value = df[col1].corr(df[col2])
+    df[name] = round(corr_value, 4) if pd.notna(corr_value) else 0
+    
+    return df
+
+
+# =============================================================================
 # WHAT-IF ANALYSIS ENGINE - Senaryo Analizi Motoru (YENİ)
 # =============================================================================
 
@@ -1008,6 +1244,35 @@ def apply_computed_columns(df: pd.DataFrame, computed_columns: List[Dict], varia
                 df = _compute_qoq_change(df, cc, name)
             elif comp_type == "date_hierarchy":
                 df = _compute_date_hierarchy(df, cc, name)
+            # === YENİ: 2024-12 Ek Hesaplama Tipleri ===
+            elif comp_type == "running_total":
+                df = _compute_running_total(df, cc, name)
+            elif comp_type == "moving_avg":
+                df = _compute_moving_avg(df, cc, name)
+            elif comp_type == "growth_rate":
+                df = _compute_growth_rate(df, cc, name)
+            elif comp_type == "percentile_rank":
+                df = _compute_percentile_rank(df, cc, name)
+            elif comp_type == "z_score":
+                df = _compute_z_score(df, cc, name)
+            elif comp_type == "age":
+                df = _compute_age(df, cc, name)
+            elif comp_type == "split":
+                df = _compute_split(df, cc, name)
+            elif comp_type == "normalize_turkish":
+                df = _compute_normalize_turkish(df, cc, name)
+            elif comp_type == "extract_numbers":
+                df = _compute_extract_numbers(df, cc, name)
+            elif comp_type == "weekday":
+                df = _compute_weekday(df, cc, name)
+            elif comp_type == "business_days":
+                df = _compute_business_days(df, cc, name)
+            elif comp_type == "duplicate_flag":
+                df = _compute_duplicate_flag(df, cc, name)
+            elif comp_type == "missing_flag":
+                df = _compute_missing_flag(df, cc, name)
+            elif comp_type == "correlation":
+                df = _compute_correlation(df, cc, name)
         except Exception as e:
             df[name] = f"HATA: {str(e)}"
     

@@ -274,7 +274,36 @@ const EXTRA_TEXTS = {
         "queue_pos": "Sıra",
         "elapsed_time": "Süre",
         "server_load": "Sunucu Yükü",
-        "cancel_job": "İptal Et"
+        "cancel_job": "İptal Et",
+
+        // === YENİ HESAPLAMA TİPLERİ (2024-12) ===
+        "comp_running_total": "Kümülatif Toplam",
+        "comp_moving_avg": "Hareketli Ortalama",
+        "comp_growth_rate": "Büyüme Oranı (%)",
+        "comp_percentile_rank": "Yüzdelik Sıralama",
+        "comp_z_score": "Z-Skoru (Standart Sapma)",
+        "comp_age": "Yaş Hesapla",
+        "comp_split": "Sütun Böl",
+        "comp_normalize_turkish": "Türkçe Düzelt (İ→I)",
+        "comp_extract_numbers": "Sayı Çıkar",
+        "comp_weekday": "Haftanın Günü",
+        "comp_business_days": "İş Günü Farkı",
+        "comp_duplicate_flag": "Tekrar İşaretle",
+        "comp_missing_flag": "Eksik Veri İşaretle",
+        "comp_correlation": "Korelasyon",
+        // Yeni hesaplama tipleri - parametreler
+        "new_cc_value_col": "Değer Sütunu",
+        "new_cc_group_col": "Gruplama Sütunu (Opsiyonel)",
+        "new_cc_window_size": "Pencere Boyutu (N)",
+        "new_cc_date_col": "Tarih Sütunu",
+        "new_cc_source_col": "Kaynak Sütun",
+        "new_cc_separator": "Ayraç (,/-/vb.)",
+        "new_cc_part_index": "Parça No (0=ilk)",
+        "new_cc_check_col": "Kontrol Sütunu",
+        "new_cc_col1": "Birinci Sütun",
+        "new_cc_col2": "İkinci Sütun",
+        "new_cc_date1": "Başlangıç Tarihi Sütunu",
+        "new_cc_date2": "Bitiş Tarihi Sütunu"
     },
     "en": {
         "file_ph_1": "Select File / Drag & Drop",
@@ -543,7 +572,36 @@ const EXTRA_TEXTS = {
         // File Preview
         "preview_file": "Preview File",
         "file_preview_title": "File Preview (First 10 Rows)",
-        "no_preview": "Upload a file first to preview."
+        "no_preview": "Upload a file first to preview.",
+
+        // === NEW COMPUTED TYPES (2024-12) ===
+        "comp_running_total": "Running Total",
+        "comp_moving_avg": "Moving Average",
+        "comp_growth_rate": "Growth Rate (%)",
+        "comp_percentile_rank": "Percentile Rank",
+        "comp_z_score": "Z-Score (Std Dev)",
+        "comp_age": "Calculate Age",
+        "comp_split": "Split Column",
+        "comp_normalize_turkish": "Normalize Turkish (İ→I)",
+        "comp_extract_numbers": "Extract Numbers",
+        "comp_weekday": "Weekday",
+        "comp_business_days": "Business Days",
+        "comp_duplicate_flag": "Flag Duplicates",
+        "comp_missing_flag": "Flag Missing Data",
+        "comp_correlation": "Correlation",
+        // New computed types - parameters
+        "new_cc_value_col": "Value Column",
+        "new_cc_group_col": "Group Column (Optional)",
+        "new_cc_window_size": "Window Size (N)",
+        "new_cc_date_col": "Date Column",
+        "new_cc_source_col": "Source Column",
+        "new_cc_separator": "Separator (,/-/etc.)",
+        "new_cc_part_index": "Part Index (0=first)",
+        "new_cc_check_col": "Check Column",
+        "new_cc_col1": "First Column",
+        "new_cc_col2": "Second Column",
+        "new_cc_date1": "Start Date Column",
+        "new_cc_date2": "End Date Column"
     }
 };
 
@@ -2249,6 +2307,21 @@ function renderDynamicForm(scenarioId, params) {
                                     <option value="yoy_change">${T.comp_yoy_change || 'YoY Değişim (%)'}</option>
                                     <option value="qoq_change">${T.comp_qoq_change || 'QoQ Değişim (%)'}</option>
                                     <option value="date_hierarchy">${T.comp_date_hierarchy || 'Tarih Hiyerarşisi'}</option>
+                                    <option disabled>──────────</option>
+                                    <option value="running_total">${T.comp_running_total || 'Kümülatif Toplam'}</option>
+                                    <option value="moving_avg">${T.comp_moving_avg || 'Hareketli Ortalama'}</option>
+                                    <option value="growth_rate">${T.comp_growth_rate || 'Büyüme Oranı (%)'}</option>
+                                    <option value="percentile_rank">${T.comp_percentile_rank || 'Yüzdelik Sıralama'}</option>
+                                    <option value="z_score">${T.comp_z_score || 'Z-Skoru'}</option>
+                                    <option value="age">${T.comp_age || 'Yaş Hesapla'}</option>
+                                    <option value="split">${T.comp_split || 'Sütun Böl'}</option>
+                                    <option value="normalize_turkish">${T.comp_normalize_turkish || 'Türkçe Düzelt'}</option>
+                                    <option value="extract_numbers">${T.comp_extract_numbers || 'Sayı Çıkar'}</option>
+                                    <option value="weekday">${T.comp_weekday || 'Haftanın Günü'}</option>
+                                    <option value="business_days">${T.comp_business_days || 'İş Günü Farkı'}</option>
+                                    <option value="duplicate_flag">${T.comp_duplicate_flag || 'Tekrar İşaretle'}</option>
+                                    <option value="missing_flag">${T.comp_missing_flag || 'Eksik Veri İşaretle'}</option>
+                                    <option value="correlation">${T.comp_correlation || 'Korelasyon'}</option>
                                 </select>
                             </div>
                             <div id="${uniqueCompId}" class="pro-comp-fields" style="display:flex; gap:8px; width:100%; margin-top:5px; flex-wrap:wrap;">
@@ -2787,6 +2860,106 @@ function renderDynamicForm(scenarioId, params) {
                                 📅 Otomatik olarak Yıl, Ay, Gün, Çeyrek, Hafta sütunları oluşturur
                             </div>
                          `;
+                        } else if (type === 'running_total') {
+                            // KÜMÜLATİF TOPLAM
+                            div.innerHTML = `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                                <div style="flex:2; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_value_col || 'Değer Sütunu'}</label>
+                                    <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Toplanacak sütun' : 'Value column'}" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:120px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_group_col || 'Grup Sütunu (Opsiyonel)'}</label>
+                                    <input type="text" class="pro-comp-group" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Gruplama için' : 'For grouping'}" style="width:100%;">
+                                </div>
+                            </div>
+                         `;
+                        } else if (type === 'moving_avg') {
+                            // HAREKETLİ ORTALAMA
+                            div.innerHTML = `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                                <div style="flex:2; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_value_col || 'Değer Sütunu'}</label>
+                                    <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Ortalama alınacak sütun' : 'Value column'}" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:100px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_window_size || 'Pencere Boyutu (N)'}</label>
+                                    <input type="number" class="pro-comp-window" value="3" min="1" max="100" style="width:100%;">
+                                </div>
+                            </div>
+                         `;
+                        } else if (type === 'growth_rate' || type === 'percentile_rank' || type === 'z_score') {
+                            // BÜYÜME ORANI / YÜZDELİK SIRALAMA / Z-SKORU (tek sütun)
+                            const labels = {
+                                growth_rate: CURRENT_LANG === 'tr' ? 'Karşılaştırılacak sütun' : 'Value column',
+                                percentile_rank: CURRENT_LANG === 'tr' ? 'Sıralanacak sütun' : 'Value column',
+                                z_score: CURRENT_LANG === 'tr' ? 'Analiz edilecek sütun' : 'Value column'
+                            };
+                            div.innerHTML = `
+                            <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${labels[type]}" style="width:100%;">
+                         `;
+                        } else if (type === 'age' || type === 'weekday') {
+                            // YAŞ HESAPLA / HAFTANIN GÜNÜ (tarih sütunu)
+                            div.innerHTML = `
+                            <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${T.new_cc_date_col || 'Tarih Sütunu'}" style="width:100%;">
+                         `;
+                        } else if (type === 'split') {
+                            // SÜTUN BÖL
+                            div.innerHTML = `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                                <div style="flex:2; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_source_col || 'Kaynak Sütun'}</label>
+                                    <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Bölünecek sütun' : 'Source column'}" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:80px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_separator || 'Ayraç'}</label>
+                                    <input type="text" class="pro-comp-sep" value="," placeholder=", - /" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:80px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_part_index || 'Parça No'}</label>
+                                    <input type="number" class="pro-comp-index" value="0" min="0" max="10" style="width:100%;">
+                                </div>
+                            </div>
+                         `;
+                        } else if (type === 'normalize_turkish' || type === 'extract_numbers' || type === 'duplicate_flag' || type === 'missing_flag') {
+                            // TÜRKÇE DÜZELT / SAYI ÇIKAR / TEKRAR İŞARETLE / EKSİK VERİ (tek sütun)
+                            const labels = {
+                                normalize_turkish: CURRENT_LANG === 'tr' ? 'Düzeltilecek sütun' : 'Source column',
+                                extract_numbers: CURRENT_LANG === 'tr' ? 'Sayı çıkarılacak sütun' : 'Source column',
+                                duplicate_flag: CURRENT_LANG === 'tr' ? 'Kontrol edilecek sütun' : 'Check column',
+                                missing_flag: CURRENT_LANG === 'tr' ? 'Kontrol edilecek sütun' : 'Check column'
+                            };
+                            div.innerHTML = `
+                            <input type="text" class="pro-comp-cols" list="colOptions" placeholder="${labels[type]}" style="width:100%;">
+                         `;
+                        } else if (type === 'business_days') {
+                            // İŞ GÜNÜ FARKI
+                            div.innerHTML = `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                                <div style="flex:1; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_date1 || 'Başlangıç Tarihi'}</label>
+                                    <input type="text" class="pro-date-col1" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Başlangıç' : 'Start date'}" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_date2 || 'Bitiş Tarihi'}</label>
+                                    <input type="text" class="pro-date-col2" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Bitiş' : 'End date'}" style="width:100%;">
+                                </div>
+                            </div>
+                         `;
+                        } else if (type === 'correlation') {
+                            // KORELASYON
+                            div.innerHTML = `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                                <div style="flex:1; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_col1 || 'Birinci Sütun'}</label>
+                                    <input type="text" class="pro-comp-col1" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Sayısal sütun 1' : 'Numeric column 1'}" style="width:100%;">
+                                </div>
+                                <div style="flex:1; min-width:150px;">
+                                    <label style="font-size:0.75rem;">${T.new_cc_col2 || 'İkinci Sütun'}</label>
+                                    <input type="text" class="pro-comp-col2" list="colOptions" placeholder="${CURRENT_LANG === 'tr' ? 'Sayısal sütun 2' : 'Numeric column 2'}" style="width:100%;">
+                                </div>
+                            </div>
+                         `;
                         } else {
                             // Default: arithmetic
                             div.innerHTML = `
@@ -2906,6 +3079,98 @@ function renderDynamicForm(scenarioId, params) {
                                                 name: name,
                                                 ctype: 'date_hierarchy',
                                                 date_column: dateCol
+                                            });
+                                        }
+                                    } else if (ctype === 'running_total') {
+                                        const valueCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        const groupCol = body.querySelector('.pro-comp-group')?.value.trim();
+                                        if (valueCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'running_total',
+                                                value_column: valueCol,
+                                                group_column: groupCol || null
+                                            });
+                                        }
+                                    } else if (ctype === 'moving_avg') {
+                                        const valueCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        const windowSize = body.querySelector('.pro-comp-window')?.value || 3;
+                                        if (valueCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'moving_avg',
+                                                value_column: valueCol,
+                                                window_size: parseInt(windowSize)
+                                            });
+                                        }
+                                    } else if (ctype === 'growth_rate' || ctype === 'percentile_rank' || ctype === 'z_score') {
+                                        const valueCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        if (valueCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: ctype,
+                                                value_column: valueCol
+                                            });
+                                        }
+                                    } else if (ctype === 'age' || ctype === 'weekday') {
+                                        const dateCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        if (dateCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: ctype,
+                                                date_column: dateCol
+                                            });
+                                        }
+                                    } else if (ctype === 'split') {
+                                        const sourceCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        const separator = body.querySelector('.pro-comp-sep')?.value || ',';
+                                        const index = body.querySelector('.pro-comp-index')?.value || 0;
+                                        if (sourceCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'split',
+                                                source_column: sourceCol,
+                                                separator: separator,
+                                                index: parseInt(index)
+                                            });
+                                        }
+                                    } else if (ctype === 'normalize_turkish' || ctype === 'extract_numbers' || ctype === 'duplicate_flag' || ctype === 'missing_flag') {
+                                        const checkCol = body.querySelector('.pro-comp-cols')?.value.trim();
+                                        if (checkCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: ctype,
+                                                check_column: checkCol
+                                            });
+                                        }
+                                    } else if (ctype === 'business_days') {
+                                        const date1 = body.querySelector('.pro-date-col1')?.value.trim();
+                                        const date2 = body.querySelector('.pro-date-col2')?.value.trim();
+                                        if (date1 && date2) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'business_days',
+                                                date1_column: date1,
+                                                date2_column: date2
+                                            });
+                                        }
+                                    } else if (ctype === 'correlation') {
+                                        const col1 = body.querySelector('.pro-comp-col1')?.value.trim();
+                                        const col2 = body.querySelector('.pro-comp-col2')?.value.trim();
+                                        if (col1 && col2) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'correlation',
+                                                column1: col1,
+                                                column2: col2
                                             });
                                         }
                                     }
