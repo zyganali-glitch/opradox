@@ -750,3 +750,75 @@ Traceback (most recent call last):
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: '<=' not supported between instances of 'int' and 'str'
 
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:04:14.245573
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ teorik dersler (3).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","config":"{\"actions\":[{\"type\":\"union\",\"ignore_index\":true,\"use_crosssheet\":false,\"crosssheet_name\":null}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:08:29.446920
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ teorik dersler (3).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","config":"{\"actions\":[{\"type\":\"union\",\"ignore_index\":true,\"use_crosssheet\":false,\"crosssheet_name\":null}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:12:35.526030
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ teorik dersler (3).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"percent","config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"bjlbj\",\"ctype\":\"arithmetic\",\"columns\":[\"kontenjan\",\"yerleşen\"],\"operation\":\"percent\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:13:29.562109
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"percent","config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"fcgkjxktgfkxd\",\"ctype\":\"arithmetic\",\"columns\":[\"Kontenjan\",\"Yerleşen\"],\"operation\":\"percent\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:14:34.040264
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"desc","config":"{\"actions\":[{\"type\":\"sort\",\"column\":\"Üniversite Türü\",\"direction\":\"desc\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:15:17.560604
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"","config":"{\"actions\":[{\"type\":\"window\",\"wf_type\":\"rank\",\"alias\":\"seda\",\"partition_by\":\"Program Adı\",\"order_by\":\"En Küçük Puan\",\"direction\":\"desc\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:16:32.576698
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"","config":"{\"actions\":[{\"type\":\"window\",\"wf_type\":\"rank\",\"alias\":\"seda\",\"partition_by\":\"Program Adı\",\"order_by\":\"En Küçük Puan\",\"direction\":\"desc\"},{\"type\":\"output\"...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-18 14:24:35.649563
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.

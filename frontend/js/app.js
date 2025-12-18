@@ -268,7 +268,13 @@ const EXTRA_TEXTS = {
 
         // Cross-Sheet (Aynı dosyadan farklı sayfa)
         "use_same_file_sheet": "Ana dosyadan farklı sayfa kullan",
-        "select_sheet": "Sayfa seç:"
+        "select_sheet": "Sayfa seç:",
+
+        // Queue Modal
+        "queue_pos": "Sıra",
+        "elapsed_time": "Süre",
+        "server_load": "Sunucu Yükü",
+        "cancel_job": "İptal Et"
     },
     "en": {
         "file_ph_1": "Select File / Drag & Drop",
@@ -298,6 +304,12 @@ const EXTRA_TEXTS = {
         "preview_file": "Preview File",
         "file_preview_title": "File Preview (First 10 Rows)",
         "no_preview": "Upload a file first to preview.",
+
+        // Queue Modal
+        "queue_pos": "Position",
+        "elapsed_time": "Time",
+        "server_load": "Server Load",
+        "cancel_job": "Cancel",
         "info_cols": "columns",
         "column_ref_note": "💡 <strong>Click to copy</strong> column name, or type <strong>column name</strong>, <strong>letter code (A, B...)</strong> in parameter field, or <strong>select from dropdown</strong>. For multiple columns, separate with commas.",
 
@@ -3919,17 +3931,24 @@ async function runScenario(scenarioId) {
 
     formData.append("params", JSON.stringify(paramsData));
     const statusDiv = document.getElementById("statusMessage");
-    if (statusDiv) statusDiv.textContent = "Processing...";
+    if (statusDiv) {
+        statusDiv.style.display = "block";
+        statusDiv.innerHTML = `<i class="fas fa-cog fa-spin"></i> ${CURRENT_LANG === 'tr' ? 'İşleniyor...' : 'Processing...'}`;
+    }
 
     try {
         const res = await fetch(`${BACKEND_BASE_URL}/run/${scenarioId}`, { method: "POST", body: formData });
         const data = await res.json();
+        if (statusDiv) statusDiv.textContent = ""; // Clear loading
         if (res.ok) {
             // State'i güncelle ve render et
             LAST_RESULT_DATA = data;
             renderScenarioResult(data);
         } else { throw new Error(data.detail); }
-    } catch (e) { alert("Hata: " + e.message); }
+    } catch (e) {
+        if (statusDiv) statusDiv.textContent = ""; // Clear loading on error
+        alert("Hata: " + e.message);
+    }
 }
 
 // Yardımcı: JSON Syntax Highlighting
@@ -4724,3 +4743,68 @@ function updateAllCrossSheetWarnings() {
 // ============================================================================
 // END OF PHASE 1 FUNCTIONS
 // ============================================================================
+
+// ============================================================================
+// QUEUE SYSTEM (Smart Guard)
+// ============================================================================
+
+let POLL_INTERVAL = null;
+
+function showQueueModal() {
+    const modal = document.getElementById("queueModal");
+    if (modal && !modal.classList.contains("open")) {
+        modal.classList.add("open");
+        // Reset UI
+        const statusText = CURRENT_LANG === 'tr' ? 'Sıra Bekleniyor...' : 'Waiting in Queue...';
+        document.getElementById("qm_status").innerHTML = `<i class="fas fa-hourglass-half"></i> ${statusText}`;
+        document.getElementById("qm_position").textContent = "-";
+        document.getElementById("qm_time").textContent = "0s";
+        document.getElementById("qm_load_bar").style.width = "0%";
+        document.getElementById("qm_load_text").textContent = CURRENT_LANG === 'tr' ? '%0' : '0%';
+    }
+}
+
+function closeQueueModal() {
+    const modal = document.getElementById("queueModal");
+    if (modal) modal.classList.remove("open");
+    if (POLL_INTERVAL) {
+        clearInterval(POLL_INTERVAL);
+        POLL_INTERVAL = null;
+    }
+}
+
+function updateQueueModal(status, position, elapsed, load) {
+    const modal = document.getElementById("queueModal");
+    if (!modal || !modal.classList.contains("open")) return;
+
+    const statusEl = document.getElementById("qm_status");
+    const posEl = document.getElementById("qm_position");
+    const timeEl = document.getElementById("qm_time");
+    const loadBar = document.getElementById("qm_load_bar");
+    const loadText = document.getElementById("qm_load_text");
+
+    // Status text (localized)
+    if (status === 'queued') {
+        const txt = CURRENT_LANG === 'tr' ? 'Sırada Bekliyor' : 'Waiting in Queue';
+        statusEl.innerHTML = `<span style="color:#f59e0b"><i class="fas fa-clock"></i> ${txt}</span>`;
+        const posTxt = CURRENT_LANG === 'tr' ? `. Sırada` : ` in line`;
+        posEl.textContent = position > 0 ? `${position}${posTxt}` : "-";
+    } else if (status === 'processing') {
+        const txt = CURRENT_LANG === 'tr' ? 'İşleniyor...' : 'Processing...';
+        statusEl.innerHTML = `<span style="color:#3b82f6"><i class="fas fa-cog fa-spin"></i> ${txt}</span>`;
+        posEl.textContent = CURRENT_LANG === 'tr' ? "İşlemde" : "Processing";
+    }
+
+    // Time
+    if (elapsed !== undefined) timeEl.textContent = `${Math.round(elapsed)}s`;
+
+    // Load bar
+    if (load !== undefined && load !== null) {
+        loadBar.style.width = `${load}%`;
+        loadText.textContent = CURRENT_LANG === 'tr' ? `%${load}` : `${load}%`;
+        // Color based on load
+        if (load > 80) loadBar.style.backgroundColor = "#ef4444";
+        else if (load > 50) loadBar.style.backgroundColor = "#f59e0b";
+        else loadBar.style.backgroundColor = "#10b981";
+    }
+}

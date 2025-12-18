@@ -2099,3 +2099,227 @@ body.day-mode .gm-crosssheet-option {
     min-height: 36px !important;
     height: auto !important;
 }
+
+/* QUEUE MODAL */
+.gm-queue-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+}
+
+.gm-queue-modal.open {
+    display: flex;
+}
+
+.gm-queue-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-primary);
+    border-radius: 12px;
+    padding: 20px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(to bottom, rgba(44, 123, 229, 0.05), var(--gm-card-bg));
+}
+
+.gm-queue-icon {
+    font-size: 3rem;
+    color: var(--gm-primary);
+    margin-bottom: 15px;
+    animation: pulse 2s infinite;
+}
+
+.gm-queue-status {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--gm-text);
+}
+
+.gm-queue-details {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0;
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-queue-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.gm-queue-detail-value {
+    font-weight: 700;
+    color: var(--gm-accent);
+}
+
+.gm-queue-load {
+    margin-top: 15px;
+    text-align: left;
+}
+
+.gm-load-bar-bg {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.gm-load-bar {
+    height: 100%;
+    background: var(--gm-success);
+    width: 0%;
+    transition: width 0.5s ease, background-color 0.5s ease;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ============================================
+   QUEUE MODAL (Smart Guard System)
+   ============================================ */
+.gm-queue-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 6, 10, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.gm-queue-modal.open {
+    display: flex;
+}
+
+.gm-queue-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 16px;
+    padding: 40px 50px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gm-queue-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    animation: pulse 2s infinite;
+}
+
+.gm-queue-icon i {
+    font-size: 2rem;
+    color: white;
+}
+
+.gm-queue-status {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    margin-bottom: 24px;
+}
+
+.gm-queue-details {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 24px;
+}
+
+.gm-queue-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gm-queue-detail-item span:first-child {
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.gm-queue-detail-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gm-primary);
+}
+
+.gm-queue-load {
+    text-align: left;
+    color: var(--gm-text-muted);
+}
+
+.gm-load-bar-bg {
+    height: 8px;
+    background: var(--gm-divider);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gm-load-bar {
+    height: 100%;
+    background: var(--gm-success);
+    width: 0%;
+    transition: width 0.5s ease, background-color 0.5s ease;
+    border-radius: 4px;
+}
+
+/* Day Mode Override */
+body.day-mode .gm-queue-modal {
+    background: rgba(224, 240, 255, 0.95);
+}
+
+body.day-mode .gm-queue-card {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}

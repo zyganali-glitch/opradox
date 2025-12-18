@@ -273,6 +273,52 @@
         </div>
     </div>
 
+    <!-- QUEUE MODAL (Smart Guard) -->
+    <!-- Matches style.css .gm-queue-modal and app.js IDs (qm_*) -->
+    <div id="queueModal" class="gm-queue-modal">
+        <div class="gm-queue-card">
+            <!-- Icon -->
+            <div class="gm-queue-icon">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+
+            <!-- Status Message -->
+            <div id="qm_status" class="gm-queue-status">
+                Sıra Bekleniyor...
+            </div>
+
+            <!-- Details Grid -->
+            <div class="gm-queue-details">
+                <div class="gm-queue-detail-item">
+                    <span data-i18n="queue_pos">Sıra</span>
+                    <span id="qm_position" class="gm-queue-detail-value">-</span>
+                </div>
+                <div class="gm-queue-detail-item">
+                    <span data-i18n="elapsed_time">Süre</span>
+                    <span id="qm_time" class="gm-queue-detail-value">0s</span>
+                </div>
+            </div>
+
+            <!-- Server Load Bar -->
+            <div class="gm-queue-load">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;">
+                    <span data-i18n="server_load">Sunucu Yükü</span>
+                    <span id="qm_load_text" style="font-weight:600;">%0</span>
+                </div>
+                <div class="gm-load-bar-bg">
+                    <div id="qm_load_bar" class="gm-load-bar"></div>
+                </div>
+            </div>
+
+            <!-- Hidden close for emergency -->
+            <div style="margin-top:20px;">
+                <button onclick="closeQueueModal()" class="gm-pill-btn" style="font-size:0.75rem; opacity:0.7;">
+                    <i class="fas fa-times"></i> <span data-i18n="cancel_job">İptal Et</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
