@@ -476,7 +476,24 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 app.mount("/css", StaticFiles(directory=FRONTEND_DIR / "css"), name="css")
-app.mount("/img", StaticFiles(directory=FRONTEND_DIR / "img"), name="img")
+# app.mount("/img", StaticFiles(directory=FRONTEND_DIR / "img"), name="img")
+
+# IMG dosyaları için özel endpoint (no-cache headers ile) - LOGO/CACHE PRB ÇÖZÜMÜ
+@app.get("/img/{filename:path}")
+async def serve_img_no_cache(filename: str):
+    from fastapi.responses import FileResponse
+    img_path = FRONTEND_DIR / "img" / filename
+    if img_path.exists():
+        return FileResponse(
+            img_path, 
+            media_type="image/png", 
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    raise HTTPException(status_code=404, detail="Image file not found")
 
 # JS dosyaları için özel endpoint (no-cache headers ile)
 @app.get("/js/{filename:path}")

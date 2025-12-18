@@ -63,32 +63,7 @@ body {
     gap: 12px;
 }
 
-.gm-logo-icon {
-    display: grid;
-    grid-template-columns: repeat(3, 6px);
-    gap: 4px;
-}
 
-.gm-logo-icon span {
-    width: 6px;
-    height: 6px;
-    border-radius: 2px;
-    opacity: 0.9;
-}
-
-.gm-logo-icon span:nth-child(odd) {
-    background: var(--gm-accent);
-}
-
-.gm-logo-icon span:nth-child(even) {
-    background: var(--gm-primary);
-}
-
-.gm-logo-icon span:nth-child(5) {
-    background: #fff;
-    opacity: 1;
-    transform: scale(1.3);
-}
 
 .gm-logo-title {
     font-size: 1.5rem;
