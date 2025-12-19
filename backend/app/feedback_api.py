@@ -13,6 +13,7 @@ from .feedback_store import (
     list_feedback,
     update_feedback,
     delete_feedback,
+    get_feedback_stats,
 )
 
 router = APIRouter(tags=["feedback"])
@@ -47,7 +48,7 @@ class FeedbackCreate(BaseModel):
     )
     message: str = Field(
         ...,
-        min_length=3,
+        min_length=1,
         max_length=5000,
         description="Mesaj içeriği",
     )
@@ -64,6 +65,12 @@ class FeedbackCreate(BaseModel):
         None,
         description="Mesajın ilişkilendirildiği senaryo ID'si (opsiyonel)",
     )
+    rating: Optional[int] = Field(
+        None,
+        ge=1,
+        le=5,
+        description="1-5 arası yıldız puanı (opsiyonel)",
+    )
 
 
 class FeedbackAdminItem(BaseModel):
@@ -78,6 +85,7 @@ class FeedbackAdminItem(BaseModel):
     liked: bool
     admin_reply: Optional[str]
     admin_replied_at: Optional[str]
+    rating: Optional[int]
 
 
 class FeedbackUpdate(BaseModel):
@@ -109,6 +117,7 @@ async def create_feedback(payload: FeedbackCreate):
         message_type=payload.message_type,
         message=payload.message.strip(),
         scenario_id=payload.scenario_id,
+        rating=payload.rating,
     )
 
     return {
@@ -161,6 +170,7 @@ async def admin_list_feedback(
                 liked=bool(r["liked"]),
                 admin_reply=r["admin_reply"],
                 admin_replied_at=r["admin_replied_at"],
+                rating=r.get("rating"),
             )
         )
     return items
@@ -210,6 +220,7 @@ async def admin_update_feedback(
         liked=bool(target["liked"]),
         admin_reply=target["admin_reply"],
         admin_replied_at=target["admin_replied_at"],
+        rating=target.get("rating"),
     )
 
 
@@ -225,3 +236,66 @@ async def admin_delete_feedback(
     if not ok:
         raise HTTPException(status_code=404, detail="Kayıt bulunamadı.")
     return
+
+
+# ============================================================
+# YENİ ENDPOINT'LER: Dashboard Stats + Public Comments
+# ============================================================
+
+class FeedbackPublicItem(BaseModel):
+    """Topluluk panelinde gösterilecek public yorumlar."""
+    id: int
+    created_at: str
+    name: Optional[str]
+    message_type: str
+    message: str
+    scenario_id: Optional[str]
+    rating: Optional[int]
+    admin_reply: Optional[str]
+    admin_replied_at: Optional[str]
+
+
+@router.get("/admin/stats")
+async def get_admin_stats(
+    admin: str = Depends(get_current_admin),
+):
+    """
+    Admin dashboard için istatistikler.
+    """
+    return get_feedback_stats()
+
+
+@router.get("/feedback/public", response_model=List[FeedbackPublicItem])
+async def get_public_feedback(
+    limit: int = Query(20, ge=1, le=100),
+    scenario_id: Optional[str] = Query(None),
+):
+    """
+    Topluluk paneli için public yorumlar.
+    Sadece visible ve admin_reply olan yorumlar öncelikli.
+    """
+    rows = list_feedback(
+        status="visible",
+        scenario_id=scenario_id,
+        limit=limit,
+    )
+    
+    # Admin yanıtı olanları öne al
+    rows_sorted = sorted(rows, key=lambda x: (x.get("admin_reply") is not None, x["created_at"]), reverse=True)
+    
+    items: List[FeedbackPublicItem] = []
+    for r in rows_sorted[:limit]:
+        items.append(
+            FeedbackPublicItem(
+                id=r["id"],
+                created_at=r["created_at"],
+                name=r.get("name"),
+                message_type=r["message_type"],
+                message=r["message"],
+                scenario_id=r.get("scenario_id"),
+                rating=r.get("rating"),
+                admin_reply=r.get("admin_reply"),
+                admin_replied_at=r.get("admin_replied_at"),
+            )
+        )
+    return items

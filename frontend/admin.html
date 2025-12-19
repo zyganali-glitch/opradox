@@ -1,9 +1,33 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8" />
-    <title>opradox 2.0 – Admin Paneli</title>
+    <title>opradox – Admin Paneli</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BVYYQS8HWY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        const hostname = window.location.hostname;
+        if (hostname.includes('opradox.com.tr')) {
+            gtag('config', 'G-BVYYQS8HWY');
+        } else if (hostname.includes('opradox.com')) {
+            gtag('config', 'G-EDHVSD1LM1');
+        } else {
+            gtag('config', 'G-BVYYQS8HWY');
+            gtag('config', 'G-EDHVSD1LM1');
+        }
+    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/admin.css" />
@@ -12,37 +36,130 @@
 <body class="admin-body">
 
     <header class="admin-topbar">
-        <div class="admin-title">opradox Admin Panel</div>
-        <a href="index.html" class="admin-back">← Kullanıcı Arayüzüne Dön</a>
+        <div class="admin-title">
+            <i class="fas fa-shield-alt"></i> opradox Admin
+        </div>
+        <div class="admin-nav">
+            <button class="admin-nav-btn active" data-tab="dashboard">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="admin-nav-btn" data-tab="feedback">
+                <i class="fas fa-comments"></i> Mesajlar
+            </button>
+        </div>
+        <div class="admin-user-section">
+            <span class="admin-username"><i class="fas fa-user"></i> <span id="adminUsername">admin</span></span>
+            <button id="changePasswordBtn" class="admin-action-small" title="Şifre Değiştir">
+                <i class="fas fa-key"></i>
+            </button>
+            <button id="logoutBtn" class="admin-action-small logout" title="Çıkış Yap">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+            <a href="index.html" class="admin-back">
+                <i class="fas fa-arrow-left"></i> Siteye Dön
+            </a>
+        </div>
     </header>
 
     <main class="admin-main">
 
-        <!-- FILTER PANEL -->
-        <section class="admin-filters">
-            <input type="text" id="filterText" placeholder="Metne göre filtrele..." />
-            <select id="filterType">
-                <option value="">Tümü</option>
-                <option value="comment">Yorum</option>
-                <option value="bug">Hata Bildirimi</option>
-                <option value="request">İstek / Öneri</option>
-            </select>
-            <button id="filterBtn">Filtrele</button>
-        </section>
+        <!-- DASHBOARD TAB -->
+        <section id="dashboardTab" class="admin-tab active">
 
-        <!-- FEEDBACK LIST -->
-        <section class="admin-feedback-list">
-            <h2>Geri Bildirimler</h2>
-            <div id="adminFeedbackContainer" class="admin-fb-container">
-                <!-- Admin.js burayı dolduracak -->
+            <!-- Stats Cards -->
+            <div class="admin-stats-grid">
+                <div class="admin-stat-card">
+                    <div class="admin-stat-icon"><i class="fas fa-envelope"></i></div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-value" id="statTotal">-</span>
+                        <span class="admin-stat-label">Toplam Mesaj</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card accent">
+                    <div class="admin-stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-value" id="statToday">-</span>
+                        <span class="admin-stat-label">Bugün</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card warning">
+                    <div class="admin-stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-value" id="statUnanswered">-</span>
+                        <span class="admin-stat-label">Yanıtsız</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card success">
+                    <div class="admin-stat-icon"><i class="fas fa-star"></i></div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-value" id="statAvgRating">-</span>
+                        <span class="admin-stat-label">Ort. Puan</span>
+                    </div>
+                </div>
             </div>
+
+            <!-- Charts Row -->
+            <div class="admin-charts-grid">
+                <div class="admin-chart-card">
+                    <h3><i class="fas fa-pie-chart"></i> Mesaj Türü Dağılımı</h3>
+                    <div class="admin-chart-container">
+                        <canvas id="chartTypeDistribution"></canvas>
+                    </div>
+                </div>
+                <div class="admin-chart-card">
+                    <h3><i class="fas fa-trophy"></i> En Çok Mesaj Alan Senaryolar</h3>
+                    <div class="admin-chart-container">
+                        <canvas id="chartTopScenarios"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating Distribution -->
+            <div class="admin-chart-card full-width">
+                <h3><i class="fas fa-star-half-alt"></i> Puan Dağılımı</h3>
+                <div class="admin-chart-container-sm">
+                    <canvas id="chartRatingDistribution"></canvas>
+                </div>
+            </div>
+
         </section>
 
-        <!-- REPLY PANEL -->
-        <section class="admin-reply-panel">
-            <h3>Yanıt Gönder</h3>
-            <textarea id="replyMessage" placeholder="Yanıt metni..."></textarea>
-            <button id="replySendBtn">Yanıtla</button>
+        <!-- FEEDBACK TAB -->
+        <section id="feedbackTab" class="admin-tab">
+
+            <!-- FILTER PANEL -->
+            <div class="admin-filters">
+                <input type="text" id="filterText" placeholder="Metne göre filtrele..." />
+                <select id="filterType">
+                    <option value="">Tüm Türler</option>
+                    <option value="comment">Yorum</option>
+                    <option value="suggestion">Öneri</option>
+                    <option value="thanks">Teşekkür</option>
+                    <option value="bug">Hata Bildirimi</option>
+                    <option value="contact">İletişim</option>
+                </select>
+                <select id="filterStatus">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="visible">Görünür</option>
+                    <option value="hidden">Gizli</option>
+                </select>
+                <button id="filterBtn"><i class="fas fa-search"></i> Filtrele</button>
+            </div>
+
+            <!-- FEEDBACK LIST -->
+            <div class="admin-feedback-section">
+                <div class="admin-fb-container" id="adminFeedbackContainer">
+                    <!-- Admin.js burayı dolduracak -->
+                </div>
+
+                <!-- REPLY PANEL -->
+                <div class="admin-reply-panel">
+                    <h3 id="replyPanelTitle"><i class="fas fa-reply"></i> Yanıt Gönder</h3>
+                    <textarea id="replyMessage" placeholder="Yanıt metni..."></textarea>
+                    <button id="replySendBtn"><i class="fas fa-paper-plane"></i> Yanıtla</button>
+                </div>
+            </div>
+
         </section>
 
     </main>
@@ -50,10 +167,5 @@
     <!-- JS -->
     <script src="js/admin.js"></script>
 </body>
+
 </html>
-
-
-<table id="gm-feedback-table">
-<thead><tr><th>ID</th><th>Girdi</th></tr></thead>
-<tbody></tbody>
-</table>

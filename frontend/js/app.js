@@ -752,18 +752,27 @@ let CURRENT_FILE = null;  // Ana dosya referansı
 let CURRENT_FILE2 = null; // İkinci dosya referansı
 let FILE2_NAME = null;    // İkinci dosya adı (UI'da göstermek için)
 
-async function inspectFile(file, sheetName = null, skipDropdownRebuild = false) {
-    console.log("🔍 inspectFile called:", { fileName: file.name, sheetName, skipDropdownRebuild });
+async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, headerRow = null) {
+    // headerRow null ise global değişkeni kullan
+    const effectiveHeaderRow = headerRow !== null ? headerRow : SELECTED_HEADER_ROW;
+    console.log("🔍 inspectFile called:", { fileName: file.name, sheetName, skipDropdownRebuild, headerRow: effectiveHeaderRow });
 
     const formData = new FormData();
     formData.append("file", file);
 
-    // sheet_name'i URL query param olarak gönder (Form() ile sorun var)
+    // URL query params olarak gönder
     let url = `${BACKEND_BASE_URL}/ui/inspect`;
+    const params = new URLSearchParams();
     if (sheetName) {
-        url += `?sheet_name=${encodeURIComponent(sheetName)}`;
-        console.log("📄 sheet_name in URL:", sheetName);
+        params.append("sheet_name", sheetName);
     }
+    if (effectiveHeaderRow > 0) {
+        params.append("header_row", effectiveHeaderRow.toString());
+    }
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+    console.log("📄 inspect URL:", url);
 
     try {
         const res = await fetch(url, {
@@ -810,18 +819,27 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false) 
 }
 
 // İkinci dosya için inspect
-async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false) {
-    console.log("🔍 inspectFile2 called:", { fileName: file.name, sheetName, skipDropdownRebuild });
+async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false, headerRow = null) {
+    // headerRow null ise global değişkeni kullan
+    const effectiveHeaderRow = headerRow !== null ? headerRow : SELECTED_HEADER_ROW_2;
+    console.log("🔍 inspectFile2 called:", { fileName: file.name, sheetName, skipDropdownRebuild, headerRow: effectiveHeaderRow });
 
     const formData = new FormData();
     formData.append("file", file);
 
-    // sheet_name'i URL query param olarak gönder
+    // URL query params olarak gönder
     let url = `${BACKEND_BASE_URL}/ui/inspect`;
+    const params = new URLSearchParams();
     if (sheetName) {
-        url += `?sheet_name=${encodeURIComponent(sheetName)}`;
-        console.log("📄 file2 sheet_name in URL:", sheetName);
+        params.append("sheet_name", sheetName);
     }
+    if (effectiveHeaderRow > 0) {
+        params.append("header_row", effectiveHeaderRow.toString());
+    }
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+    console.log("📄 file2 inspect URL:", url);
 
     try {
         console.log("📤 Sending file2 to backend:", url);
@@ -883,6 +901,12 @@ async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false)
 let FILE_PREVIEW_HTML = ''; // Ana dosya preview cache
 let FILE2_PREVIEW_HTML = ''; // İkinci dosya preview cache
 
+// YENİ: Header row seçimi için global state
+let SELECTED_HEADER_ROW = 0;    // Ana dosya için seçili başlık satırı (0-indexed)
+let SELECTED_HEADER_ROW_2 = 0;  // İkinci dosya için
+let FILE_RAW_PREVIEW_ROWS = []; // Ana dosya ham satırları
+let FILE2_RAW_PREVIEW_ROWS = []; // İkinci dosya ham satırları
+
 function showFileInfo(data, fileNumber = 1, skipDropdownRebuild = false) {
     const panelId = fileNumber === 1 ? "fileInfoPanel" : "fileInfoPanel2";
     const rowCountId = fileNumber === 1 ? "fileRowCount" : "fileRowCount2";
@@ -911,6 +935,12 @@ function showFileInfo(data, fileNumber = 1, skipDropdownRebuild = false) {
     if (data.preview_html) {
         if (fileNumber === 1) FILE_PREVIEW_HTML = data.preview_html;
         else FILE2_PREVIEW_HTML = data.preview_html;
+    }
+
+    // YENİ: Ham satırları cache'le (başlık satırı seçimi için)
+    if (data.raw_preview_rows) {
+        if (fileNumber === 1) FILE_RAW_PREVIEW_ROWS = data.raw_preview_rows;
+        else FILE2_RAW_PREVIEW_ROWS = data.raw_preview_rows;
     }
 
     // YENİ: Sheet dropdown (çok sayfalı Excel için)
@@ -999,23 +1029,43 @@ function showFileInfo(data, fileNumber = 1, skipDropdownRebuild = false) {
         }).join("");
     }
 
-    // Önizle butonunu ekle
+    // Önizle butonunu ekle (header row indicator ile)
     let previewBtn = document.getElementById(previewBtnId);
     if (!previewBtn) {
         previewBtn = document.createElement("button");
         previewBtn.id = previewBtnId;
         previewBtn.className = "gm-btn-preview"; // Unified style
-        // İkon mavi, yazı koyu/bold olması için span içine aldık
-        previewBtn.innerHTML = `<i class="fas fa-table"></i> <span class="gm-preview-text">${EXTRA_TEXTS[CURRENT_LANG]?.preview_file || 'Dosyayı Önizle'}</span>`;
         previewBtn.onclick = () => showFilePreviewModal(fileNumber);
         panel.appendChild(previewBtn);
+    }
+    // Her seferinde içeriği güncelle (header row indicator için)
+    updatePreviewButtonText(fileNumber);
+}
+
+// YENİ: Preview buton metnini güncelle (header row indicator ile)
+function updatePreviewButtonText(fileNumber) {
+    const previewBtnId = fileNumber === 1 ? "filePreviewBtn" : "filePreviewBtn2";
+    const previewBtn = document.getElementById(previewBtnId);
+    if (!previewBtn) return;
+
+    const headerRow = fileNumber === 1 ? SELECTED_HEADER_ROW : SELECTED_HEADER_ROW_2;
+    const T = EXTRA_TEXTS[CURRENT_LANG];
+    const previewText = T?.preview_file || 'Dosyayı Önizle';
+
+    if (headerRow > 0) {
+        const rowLabel = CURRENT_LANG === 'tr' ? `Satır ${headerRow + 1} başlık` : `Row ${headerRow + 1} header`;
+        previewBtn.innerHTML = `<i class="fas fa-table"></i> <span class="gm-preview-text">${previewText}</span> <span class="gm-header-row-badge">${rowLabel}</span>`;
+    } else {
+        previewBtn.innerHTML = `<i class="fas fa-table"></i> <span class="gm-preview-text">${previewText}</span>`;
     }
 }
 
 // Dosya önizleme modalını göster (fileNumber: 1=ana, 2=ikinci)
+// YENİ: Başlık satırı seçimi için radio button'lı UI
 window.showFilePreviewModal = function (fileNumber = 1) {
     const T = EXTRA_TEXTS[CURRENT_LANG];
-    const previewHtml = fileNumber === 1 ? FILE_PREVIEW_HTML : FILE2_PREVIEW_HTML;
+    const rawRows = fileNumber === 1 ? FILE_RAW_PREVIEW_ROWS : FILE2_RAW_PREVIEW_ROWS;
+    const currentHeaderRow = fileNumber === 1 ? SELECTED_HEADER_ROW : SELECTED_HEADER_ROW_2;
     const titlePrefix = fileNumber === 2 ? (CURRENT_LANG === 'tr' ? '(İkinci Dosya) ' : '(Second File) ') : '';
 
     // Modal oluştur veya mevcut olanı kullan
@@ -1027,7 +1077,7 @@ window.showFilePreviewModal = function (fileNumber = 1) {
         modal.innerHTML = `
             <div class="gm-modal-content" style="max-width: 90vw; max-height: 85vh; overflow: auto;">
                 <div class="gm-modal-header">
-                    <h3 id="previewModalTitle"><i class="fas fa-table"></i> ${T?.file_preview_title || 'Dosya Önizleme (İlk 10 Satır)'}</h3>
+                    <h3 id="previewModalTitle"><i class="fas fa-table"></i> ${T?.file_preview_title || 'Dosya Önizleme'}</h3>
                     <button class="gm-modal-close" onclick="document.getElementById('filePreviewModal').style.display='none'">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1043,19 +1093,96 @@ window.showFilePreviewModal = function (fileNumber = 1) {
 
     // Başlığı güncelle
     const titleEl = document.getElementById("previewModalTitle");
+    const headerSelectTitle = CURRENT_LANG === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row';
     if (titleEl) {
-        titleEl.innerHTML = `<i class="fas fa-table"></i> ${titlePrefix}${T?.file_preview_title || 'Dosya Önizleme (İlk 10 Satır)'}`;
+        titleEl.innerHTML = `<i class="fas fa-table"></i> ${titlePrefix}${headerSelectTitle}`;
     }
 
     // İçeriği yerleştir
     const content = document.getElementById("filePreviewContent");
-    if (previewHtml) {
-        content.innerHTML = previewHtml;
+
+    if (rawRows && rawRows.length > 0) {
+        // Hint mesajı
+        const hintText = CURRENT_LANG === 'tr'
+            ? '📌 Seçilen satır <strong>başlık</strong> olarak kullanılacak. Üstündeki satırlar atlanacak.'
+            : '📌 Selected row will be used as <strong>header</strong>. Rows above will be skipped.';
+
+        let html = `<div class="gm-header-row-hint">${hintText}</div>`;
+        html += `<div class="gm-header-row-selector">`;
+
+        rawRows.forEach((row, idx) => {
+            const isSelected = idx === currentHeaderRow;
+            const rowClass = isSelected ? 'gm-header-row-option selected' : 'gm-header-row-option';
+            const radioName = `headerRowRadio_${fileNumber}`;
+
+            // Hücreleri göster (max 8 hücre, kısalt)
+            let cellsHtml = row.cells.slice(0, 8).map(cell => {
+                const displayVal = cell.length > 20 ? cell.substring(0, 17) + '...' : (cell || '-');
+                return `<span class="gm-header-cell">${displayVal}</span>`;
+            }).join('');
+
+            if (row.cells.length > 8) {
+                cellsHtml += `<span class="gm-header-cell-more">+${row.cells.length - 8}</span>`;
+            }
+
+            html += `
+                <label class="${rowClass}" data-row-index="${idx}">
+                    <input type="radio" name="${radioName}" value="${idx}" ${isSelected ? 'checked' : ''} 
+                           onchange="window.selectHeaderRow(${fileNumber}, ${idx})">
+                    <span class="gm-header-row-num">${CURRENT_LANG === 'tr' ? 'Satır' : 'Row'} ${idx + 1}</span>
+                    <div class="gm-header-cells">${cellsHtml}</div>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        content.innerHTML = html;
     } else {
         content.innerHTML = `<p style="color: var(--gm-text-muted);">${T?.no_preview || 'Önizleme için önce dosya yükleyin.'}</p>`;
     }
 
     modal.style.display = "flex";
+};
+
+// YENİ: Başlık satırı seçildiğinde çağrılır
+window.selectHeaderRow = function (fileNumber, rowIndex) {
+    if (fileNumber === 1) {
+        SELECTED_HEADER_ROW = rowIndex;
+    } else {
+        SELECTED_HEADER_ROW_2 = rowIndex;
+    }
+
+    // UI'daki seçimi güncelle
+    const modal = document.getElementById("filePreviewModal");
+    if (modal) {
+        modal.querySelectorAll('.gm-header-row-option').forEach(label => {
+            const idx = parseInt(label.dataset.rowIndex);
+            if (idx === rowIndex) {
+                label.classList.add('selected');
+            } else {
+                label.classList.remove('selected');
+            }
+        });
+    }
+
+    // Preview butonunu güncelle (indicator göster)
+    updatePreviewButtonText(fileNumber);
+
+    // YENİ: Sütunları yeniden yükle (seçili başlık satırına göre)
+    // Backend'den doğru sütun isimlerini al
+    const fileInput = fileNumber === 1 ? document.getElementById("fileInput") : document.getElementById("fileInput2");
+    if (fileInput && fileInput.files[0]) {
+        const sheetName = fileNumber === 1 ? FILE_SELECTED_SHEET : FILE2_SELECTED_SHEET;
+        console.log(`🔄 Refreshing columns with header_row=${rowIndex}...`);
+
+        if (fileNumber === 1) {
+            inspectFile(fileInput.files[0], sheetName, true, rowIndex);
+        } else {
+            inspectFile2(fileInput.files[0], sheetName, true, rowIndex);
+        }
+    }
+
+    console.log(`✓ Header row selected: File ${fileNumber}, Row ${rowIndex}`);
 };
 
 // Sütun referansını kopyala veya input'a yapıştır
@@ -1083,7 +1210,7 @@ function showCopyFeedback(chip, text) {
     const origBorder = chip.style.borderColor;
 
     // Yeşil arka plan, beyaz metin (okunabilir) - sadece tek ikon
-    chip.innerHTML = `<i class="fas fa-check"></i> ${text}`;
+    chip.innerHTML = `< i class="fas fa-check" ></i > ${text} `;
     chip.style.background = "var(--gm-success)";
     chip.style.borderColor = "var(--gm-success)";
     chip.style.color = "white";
@@ -1173,7 +1300,7 @@ function populateCrossSheetDropdown() {
 
     select.innerHTML = FILE_SHEET_NAMES
         .filter(s => s !== FILE_SELECTED_SHEET) // Seçili sayfayı hariç tut
-        .map(s => `<option value="${s}">${s}</option>`)
+        .map(s => `< option value = "${s}" > ${s}</option > `)
         .join('');
 }
 
@@ -1225,7 +1352,7 @@ window.fetchCrossSheetColumns = async function (selectElement) {
             const colList = wrapper.querySelector('.pro-crosssheet-column-list');
             if (colList) {
                 colList.innerHTML = FILE2_COLUMNS.map(c =>
-                    `<span class="gm-col-chip" style="font-size:0.75rem; padding:2px 6px; margin-right:4px; display:inline-block; background:rgba(255,255,255,0.1); border:1px solid var(--gm-card-border); border-radius:4px;">${c}</span>`
+                    `< span class="gm-col-chip" style = "font-size:0.75rem; padding:2px 6px; margin-right:4px; display:inline-block; background:rgba(255,255,255,0.1); border:1px solid var(--gm-card-border); border-radius:4px;" > ${c}</span > `
                 ).join('');
             }
         }
@@ -1239,14 +1366,14 @@ function getInlineCrossSheetHTML(uniqueId = '') {
 
     const T = EXTRA_TEXTS[CURRENT_LANG];
     const crossSheetOptions = hasMultipleSheets
-        ? (FILE_SHEET_NAMES || []).filter(s => s !== FILE_SELECTED_SHEET).map(s => `<option value="${s}">${s}</option>`).join('')
+        ? (FILE_SHEET_NAMES || []).filter(s => s !== FILE_SELECTED_SHEET).map(s => `< option value = "${s}" > ${s}</option > `).join('')
         : '';
 
     return `
-    <!-- Tek Satır Second File Source -->
-    <div class="gm-pro-merge-source" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:8px; background:rgba(59,130,246,0.1); border-radius:6px; border:1px dashed var(--gm-primary);">
-        
-        ${hasMultipleSheets ? `
+                    < !--Tek Satır Second File Source-- >
+                        <div class="gm-pro-merge-source" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:8px; background:rgba(59,130,246,0.1); border-radius:6px; border:1px dashed var(--gm-primary);">
+
+                            ${hasMultipleSheets ? `
         <!-- Cross-Sheet Checkbox -->
         <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; white-space:nowrap;">
             <input type="checkbox" class="pro-use-crosssheet" onchange="toggleProMergeSource(this)" style="width:16px; height:16px; accent-color:var(--gm-primary);">
@@ -1266,15 +1393,15 @@ function getInlineCrossSheetHTML(uniqueId = '') {
             </div>
         </div>
         ` : ''}
-        
-        <!-- İkinci Dosya Durum Mesajı -->
-        <div class="gm-sf-warning" style="color:${hasSecondFile ? 'var(--gm-success)' : '#ef4444'}; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
-            ${hasSecondFile
+
+                            <!-- İkinci Dosya Durum Mesajı -->
+                            <div class="gm-sf-warning" style="color:${hasSecondFile ? 'var(--gm-success)' : '#ef4444'}; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
+                                ${hasSecondFile
             ? `<i class="fas fa-check-circle"></i> ${FILE2_NAME}`
             : `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}`
         }
-        </div>
-    </div>`;
+                            </div>
+                        </div>`;
 }
 
 
@@ -1334,10 +1461,10 @@ window.toggleProMergeSource = function (checkbox) {
         // İkinci dosya varsa uyarıyı güncelle, yoksa kırmızı göster
         if (warning) {
             if (FILE2_NAME) {
-                warning.innerHTML = `<i class="fas fa-check-circle"></i> ${FILE2_NAME}`;
+                warning.innerHTML = `< i class="fas fa-check-circle" ></i > ${FILE2_NAME} `;
                 warning.style.color = 'var(--gm-success)';
             } else {
-                warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> İkinci dosya yükleyin veya yukarıdan sayfa seçin`;
+                warning.innerHTML = `< i class="fas fa-exclamation-triangle" ></i > İkinci dosya yükleyin veya yukarıdan sayfa seçin`;
                 warning.style.color = '#ef4444';
             }
             warning.style.display = 'block';
@@ -1356,22 +1483,22 @@ window.updateProBlockWarnings = function () {
         if (!checkbox || !checkbox.checked) {
             if (warning) {
                 if (FILE2_NAME) {
-                    warning.innerHTML = `<i class="fas fa-check-circle"></i> ${FILE2_NAME}`;
+                    warning.innerHTML = `< i class="fas fa-check-circle" ></i > ${FILE2_NAME} `;
                     warning.style.color = 'var(--gm-success)';
                 } else {
-                    warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}`;
+                    warning.innerHTML = `< i class="fas fa-exclamation-triangle" ></i > ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'} `;
                     warning.style.color = '#ef4444';
                 }
             }
         }
     });
-    console.log(`[updateProBlockWarnings] FILE2_NAME: ${FILE2_NAME}`);
+    console.log(`[updateProBlockWarnings] FILE2_NAME: ${FILE2_NAME} `);
 };
 
 // YENİ: Cross-sheet sütunlarını getir ve arayüzü güncelle
 window.fetchCrossSheetColumns = async function (select) {
     const sheetName = select.value;
-    console.log(`[DEBUG] fetchCrossSheetColumns çağrıldı. Sheet: ${sheetName}`);
+    console.log(`[DEBUG] fetchCrossSheetColumns çağrıldı.Sheet: ${sheetName} `);
 
     // Container'ı bul - birden fazla olası parent'ı kontrol et
     let container = select.closest('.pro-crosssheet-selector')
@@ -1404,8 +1531,8 @@ window.fetchCrossSheetColumns = async function (select) {
 
     const formData = new FormData();
     formData.append("file", fileInput.files[0]);
-    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
-    console.log(`[DEBUG] Fetching URL: ${url}`);
+    const url = `${BACKEND_BASE_URL} /ui/inspect ? sheet_name = ${encodeURIComponent(sheetName)} `;
+    console.log(`[DEBUG] Fetching URL: ${url} `);
 
     try {
         const res = await fetch(url, { method: "POST", body: formData });
@@ -1415,7 +1542,7 @@ window.fetchCrossSheetColumns = async function (select) {
         if (data.columns) {
             // 1. Görsel listeyi güncelle (capsule biçiminde - modern stil)
             columnList.innerHTML = data.columns.map(col =>
-                `<span class="gm-col-chip-modern" onclick="copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
+                `< span class="gm-col-chip-modern" onclick = "copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
             ).join('');
 
             // 2. Autocomplete listesini güncelle (file2-columns datalist)
@@ -4089,6 +4216,10 @@ async function runScenario(scenarioId) {
         formData.append("sheet_name", FILE_SELECTED_SHEET);
     }
 
+    // YENİ: Header row parametresini ekle (birleştirilmiş başlıkları atlamak için)
+    formData.append("header_row", SELECTED_HEADER_ROW.toString());
+    console.log("📑 Header row:", SELECTED_HEADER_ROW);
+
     const fileInput2 = document.getElementById("fileInput2");
 
     // YENİ: PRO builder inline crosssheet kontrolü
@@ -4135,6 +4266,9 @@ async function runScenario(scenarioId) {
         if (FILE2_SELECTED_SHEET) {
             formData.append("sheet_name2", FILE2_SELECTED_SHEET);
         }
+
+        // İkinci dosya için header_row parametresi
+        formData.append("header_row2", SELECTED_HEADER_ROW_2.toString());
     }
 
     const paramsData = {};
@@ -4209,6 +4343,19 @@ async function runScenario(scenarioId) {
             // State'i güncelle ve render et
             LAST_RESULT_DATA = data;
             renderScenarioResult(data);
+
+            // YENİ: Feedback widget'ı göster
+            if (typeof showInlineFeedbackWidget === 'function') {
+                showInlineFeedbackWidget(scenarioId);
+            }
+
+            // GA4: Senaryo çalıştırma eventi
+            if (typeof gtag === 'function') {
+                gtag('event', 'scenario_run', {
+                    'scenario_id': scenarioId,
+                    'status': 'success'
+                });
+            }
         } else { throw new Error(data.detail); }
     } catch (e) {
         if (statusDiv) statusDiv.textContent = ""; // Clear loading on error
@@ -5073,3 +5220,206 @@ function updateQueueModal(status, position, elapsed, load) {
         else loadBar.style.backgroundColor = "#10b981";
     }
 }
+
+// ============================================================
+// YENİ: INLINE FEEDBACK WİDGET SİSTEMİ
+// ============================================================
+let SELECTED_RATING = 0;
+let SELECTED_FEEDBACK_TYPE = "comment";
+let CURRENT_SCENARIO_FOR_FEEDBACK = null;
+
+// Sayfa yüklendiğinde feedback sistemini başlat
+document.addEventListener("DOMContentLoaded", () => {
+    initFeedbackWidget();
+    loadCommunityComments();
+});
+
+function initFeedbackWidget() {
+    // Yıldız rating olayları
+    document.querySelectorAll("#starRating .gm-star").forEach(star => {
+        star.addEventListener("click", () => {
+            SELECTED_RATING = parseInt(star.dataset.value);
+            updateStarDisplay(SELECTED_RATING);
+            // Formu göster
+            document.getElementById("feedbackForm").style.display = "block";
+        });
+
+        star.addEventListener("mouseenter", () => {
+            updateStarDisplay(parseInt(star.dataset.value));
+        });
+
+        star.addEventListener("mouseleave", () => {
+            updateStarDisplay(SELECTED_RATING);
+        });
+    });
+
+    // Feedback türü butonları
+    document.querySelectorAll(".gm-type-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".gm-type-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            SELECTED_FEEDBACK_TYPE = btn.dataset.type;
+        });
+    });
+
+    // Gönder butonu
+    const submitBtn = document.getElementById("submitFeedbackBtn");
+    if (submitBtn) {
+        submitBtn.addEventListener("click", submitInlineFeedback);
+    }
+}
+
+function updateStarDisplay(activeCount) {
+    document.querySelectorAll("#starRating .gm-star").forEach(star => {
+        const val = parseInt(star.dataset.value);
+        if (val <= activeCount) {
+            star.classList.add("active");
+        } else {
+            star.classList.remove("active");
+        }
+    });
+}
+
+// Sonuç render edildiğinde widget'ı göster
+function showInlineFeedbackWidget(scenarioId) {
+    CURRENT_SCENARIO_FOR_FEEDBACK = scenarioId;
+    SELECTED_RATING = 0;
+    SELECTED_FEEDBACK_TYPE = "comment";
+
+    // Reset widget
+    updateStarDisplay(0);
+    document.getElementById("feedbackForm").style.display = "none";
+    document.getElementById("feedbackSuccess").style.display = "none";
+    document.getElementById("feedbackName").value = "";
+    document.getElementById("feedbackMessage").value = "";
+    document.querySelectorAll(".gm-type-btn").forEach(b => b.classList.remove("active"));
+    document.querySelector(".gm-type-btn[data-type='comment']")?.classList.add("active");
+
+    // Widget'ı göster
+    const widget = document.getElementById("inlineFeedbackWidget");
+    if (widget) {
+        widget.style.display = "block";
+    }
+}
+
+async function submitInlineFeedback() {
+    const message = document.getElementById("feedbackMessage").value.trim();
+    const name = document.getElementById("feedbackName").value.trim();
+
+    // En az rating veya mesaj olmalı
+    if (!SELECTED_RATING && !message) {
+        alert(CURRENT_LANG === 'tr' ? 'Lütfen puan verin veya yorum yazın.' : 'Please rate or leave a comment.');
+        return;
+    }
+
+    const submitBtn = document.getElementById("submitFeedbackBtn");
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gönderiliyor...';
+
+    try {
+        const res = await fetch(`${BACKEND_BASE_URL}/feedback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message_type: SELECTED_FEEDBACK_TYPE,
+                message: message || `${SELECTED_RATING} yıldız puan`,
+                name: name || null,
+                scenario_id: CURRENT_SCENARIO_FOR_FEEDBACK,
+                rating: SELECTED_RATING || null
+            })
+        });
+
+        if (res.ok) {
+            // Başarı göster
+            document.getElementById("feedbackForm").style.display = "none";
+            document.getElementById("starRating").style.display = "none";
+            document.getElementById("feedbackSuccess").style.display = "flex";
+
+            // GA4: Feedback gönderme eventi
+            if (typeof gtag === 'function') {
+                gtag('event', 'feedback_submit', {
+                    'scenario_id': CURRENT_SCENARIO_FOR_FEEDBACK,
+                    'rating': SELECTED_RATING,
+                    'feedback_type': SELECTED_FEEDBACK_TYPE
+                });
+            }
+
+            // Topluluk yorumlarını yenile
+            setTimeout(() => loadCommunityComments(), 1000);
+        } else {
+            throw new Error("Gönderim başarısız");
+        }
+    } catch (err) {
+        console.error("Feedback gönderme hatası:", err);
+        alert(CURRENT_LANG === 'tr' ? 'Gönderim sırasında hata oluştu.' : 'Error sending feedback.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Gönder';
+    }
+}
+
+// ============================================================
+// TOPLULUK YORUMLARI (Public Comments)
+// ============================================================
+async function loadCommunityComments() {
+    const container = document.getElementById("commentsList");
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${BACKEND_BASE_URL}/feedback/public?limit=15`);
+        if (!res.ok) return;
+
+        const comments = await res.json();
+
+        if (!comments.length) {
+            container.innerHTML = `<div class="gm-no-comments">${CURRENT_LANG === 'tr' ? 'Henüz yorum yok. İlk yorumu sen yap!' : 'No comments yet. Be the first!'}</div>`;
+            return;
+        }
+
+        container.innerHTML = comments.map(c => {
+            const ratingHtml = c.rating ? `<span class="gm-comment-rating">${'⭐'.repeat(c.rating)}</span>` : '';
+            const replyHtml = c.admin_reply ? `
+                <div class="gm-admin-reply">
+                    <span class="gm-admin-badge">✓ Opradox</span>
+                    ${c.admin_reply}
+                </div>
+            ` : '';
+
+            return `
+                <div class="gm-community-comment">
+                    <div class="gm-comment-header">
+                        <span class="gm-comment-name">${c.name || 'Anonim'}</span>
+                        ${ratingHtml}
+                        <span class="gm-comment-date">${formatRelativeTime(c.created_at)}</span>
+                    </div>
+                    <div class="gm-comment-message">${c.message}</div>
+                    ${replyHtml}
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Topluluk yorumları yüklenemedi:", err);
+    }
+}
+
+function formatRelativeTime(isoDate) {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return CURRENT_LANG === 'tr' ? 'Az önce' : 'Just now';
+    if (diffMins < 60) return `${diffMins} ${CURRENT_LANG === 'tr' ? 'dk önce' : 'min ago'}`;
+    if (diffHours < 24) return `${diffHours} ${CURRENT_LANG === 'tr' ? 'saat önce' : 'hours ago'}`;
+    if (diffDays < 7) return `${diffDays} ${CURRENT_LANG === 'tr' ? 'gün önce' : 'days ago'}`;
+    return date.toLocaleDateString(CURRENT_LANG === 'tr' ? 'tr-TR' : 'en-US');
+}
+
+// Export for global access
+window.showInlineFeedbackWidget = showInlineFeedbackWidget;
+window.loadCommunityComments = loadCommunityComments;
+
+console.log("📝 Feedback widget system loaded");

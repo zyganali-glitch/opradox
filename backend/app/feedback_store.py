@@ -21,6 +21,7 @@ def get_connection() -> sqlite3.Connection:
 def init_feedback_db() -> None:
     """
     feedback.db içinde feedback tablosunu oluşturur (yoksa).
+    Mevcut tabloya rating kolonu ekler (migration).
     """
     conn = get_connection()
     cur = conn.cursor()
@@ -37,10 +38,18 @@ def init_feedback_db() -> None:
             status TEXT NOT NULL,
             liked INTEGER NOT NULL DEFAULT 0,
             admin_reply TEXT,
-            admin_replied_at TEXT
+            admin_replied_at TEXT,
+            rating INTEGER DEFAULT NULL
         )
         """
     )
+    
+    # Migration: rating kolonu yoksa ekle
+    try:
+        cur.execute("ALTER TABLE feedback ADD COLUMN rating INTEGER DEFAULT NULL")
+    except sqlite3.OperationalError:
+        pass  # Kolon zaten var
+    
     conn.commit()
     conn.close()
 
@@ -52,6 +61,7 @@ def insert_feedback(
     message_type: str,
     message: str,
     scenario_id: Optional[str],
+    rating: Optional[int] = None,
 ) -> int:
     now = datetime.utcnow().isoformat()
     status = "visible"
@@ -63,11 +73,11 @@ def insert_feedback(
         """
         INSERT INTO feedback (
             created_at, name, email, message_type,
-            message, scenario_id, status, liked
+            message, scenario_id, status, liked, rating
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (now, name, email, message_type, message, scenario_id, status, liked),
+        (now, name, email, message_type, message, scenario_id, status, liked, rating),
     )
     feedback_id = cur.lastrowid
     conn.commit()
@@ -159,3 +169,70 @@ def delete_feedback(feedback_id: int) -> bool:
     changed = cur.rowcount > 0
     conn.close()
     return changed
+
+
+def get_feedback_stats() -> Dict[str, Any]:
+    """
+    Admin dashboard için istatistikler döndürür.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Toplam sayılar
+    cur.execute("SELECT COUNT(*) as total FROM feedback")
+    total = cur.fetchone()["total"]
+    
+    cur.execute("SELECT COUNT(*) as today FROM feedback WHERE date(created_at) = date('now')")
+    today = cur.fetchone()["today"]
+    
+    cur.execute("SELECT COUNT(*) as this_week FROM feedback WHERE created_at >= datetime('now', '-7 days')")
+    this_week = cur.fetchone()["this_week"]
+    
+    cur.execute("SELECT COUNT(*) as unanswered FROM feedback WHERE admin_reply IS NULL AND status = 'visible'")
+    unanswered = cur.fetchone()["unanswered"]
+    
+    # Mesaj türü dağılımı
+    cur.execute("""
+        SELECT message_type, COUNT(*) as count 
+        FROM feedback 
+        GROUP BY message_type
+    """)
+    type_distribution = {row["message_type"]: row["count"] for row in cur.fetchall()}
+    
+    # En çok mesaj alan senaryolar (Top 5)
+    cur.execute("""
+        SELECT scenario_id, COUNT(*) as count 
+        FROM feedback 
+        WHERE scenario_id IS NOT NULL 
+        GROUP BY scenario_id 
+        ORDER BY count DESC 
+        LIMIT 5
+    """)
+    top_scenarios = [{"scenario_id": row["scenario_id"], "count": row["count"]} for row in cur.fetchall()]
+    
+    # Ortalama rating
+    cur.execute("SELECT AVG(rating) as avg_rating FROM feedback WHERE rating IS NOT NULL")
+    avg_rating_row = cur.fetchone()
+    avg_rating = round(avg_rating_row["avg_rating"], 1) if avg_rating_row["avg_rating"] else None
+    
+    # Rating dağılımı
+    cur.execute("""
+        SELECT rating, COUNT(*) as count 
+        FROM feedback 
+        WHERE rating IS NOT NULL 
+        GROUP BY rating
+    """)
+    rating_distribution = {row["rating"]: row["count"] for row in cur.fetchall()}
+    
+    conn.close()
+    
+    return {
+        "total": total,
+        "today": today,
+        "this_week": this_week,
+        "unanswered": unanswered,
+        "type_distribution": type_distribution,
+        "top_scenarios": top_scenarios,
+        "avg_rating": avg_rating,
+        "rating_distribution": rating_distribution,
+    }

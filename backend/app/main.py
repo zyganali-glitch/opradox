@@ -15,6 +15,7 @@ from .feedback_api import router as feedback_router
 from .feedback_store import init_feedback_db
 from .scenario_registry import LAST_EXCEL_STORE
 from .excel_utils import read_table_from_upload 
+from .auth import router as auth_router
 
 # -------------------------------------------------------
 # Opradox 2.0 – Main Application
@@ -46,6 +47,7 @@ app.add_middleware(
 # -------------------------------------------------------
 # Include Routers
 # -------------------------------------------------------
+app.include_router(auth_router)         # /auth/*
 app.include_router(ui_router)          # /ui/*
 app.include_router(feedback_router)    # /feedback + /admin/feedback
 
@@ -64,12 +66,27 @@ async def run_scenario(
     params: str = Form("{}"),
     sheet_name: str = Form(None),    # YENİ: Ana dosya sayfa seçimi
     sheet_name2: str = Form(None),   # YENİ: İkinci dosya sayfa seçimi
+    header_row: str = Form("0"),     # YENİ: Başlık satırı (birleştirilmiş hücreleri atlamak için)
+    header_row2: str = Form("0"),    # YENİ: İkinci dosya başlık satırı
 ):
     """
     Senaryoyu Excel dosyası ve parametrelerle çalıştırır.
     sheet_name: Ana Excel dosyasının okunacak sayfası
     sheet_name2: İkinci Excel dosyasının okunacak sayfası
+    header_row: Başlık satırı indeksi (0-indexed, birleştirilmiş başlıkları atlamak için)
+    header_row2: İkinci dosya için başlık satırı indeksi
     """
+    # Header row'u int'e çevir
+    try:
+        header_row_int = int(header_row)
+    except:
+        header_row_int = 0
+    
+    try:
+        header_row2_int = int(header_row2)
+    except:
+        header_row2_int = 0
+    
     # DEBUG LOGGING TO FILE
     try:
         with open("server_debug.log", "a", encoding="utf-8") as f:
@@ -78,13 +95,14 @@ async def run_scenario(
             f.write(f"Scenario ID: {scenario_id}\n")
             f.write(f"Filename: {file.filename}\n")
             f.write(f"Sheet: {sheet_name}\n")
+            f.write(f"Header Row: {header_row_int}\n")
             f.write(f"Params Raw: {params[:200]}...\n")
     except Exception as e:
         print(f"Log yazma hatası: {e}")
 
-    # --- 1) Excel okuma (sheet_name desteği eklendi) ---
+    # --- 1) Excel okuma (sheet_name + header_row desteği eklendi) ---
     try:
-        df = read_table_from_upload(file, sheet_name=sheet_name)
+        df = read_table_from_upload(file, sheet_name=sheet_name, header_row=header_row_int)
     except Exception as e:
         with open("server_debug.log", "a") as f: f.write(f"Excel Read Error: {e}\n")
         raise HTTPException(status_code=500, detail=f"Dosya okuma hatası: {str(e)}")
@@ -108,10 +126,10 @@ async def run_scenario(
 
     # --- 4) Senaryoyu çalıştır ---
     try:
-        # İkinci dosya varsa params'a ekle (sheet_name2 desteği eklendi)
+        # İkinci dosya varsa params'a ekle (sheet_name2 + header_row2 desteği eklendi)
         if file2:
             try:
-                df2 = read_table_from_upload(file2, sheet_name=sheet_name2)
+                df2 = read_table_from_upload(file2, sheet_name=sheet_name2, header_row=header_row2_int)
                 params_dict["df2"] = df2
             except Exception as e:
                 with open("server_debug.log", "a") as f: f.write(f"Second File Error: {e}\n")
@@ -537,6 +555,28 @@ async def serve_config(filename: str):
 async def read_index():
     return FileResponse(
         FRONTEND_DIR / "index.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/login.html")
+async def read_login():
+    return FileResponse(
+        FRONTEND_DIR / "login.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/admin.html")
+async def read_admin():
+    return FileResponse(
+        FRONTEND_DIR / "admin.html",
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
