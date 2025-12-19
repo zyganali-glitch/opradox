@@ -831,3 +831,100 @@ Sheet: Sayfa1
 Params Raw: {"":"","config":"{\"actions\":[{\"type\":\"output\",\"output_type\":\"sheet_per_group\",\"group_by_sheet\":\"Üniversite Türü\",\"summary_sheet\":true,\"slicers\":null,\"column_descriptions\":null}]}"}...
 Calling runner for custom-report-builder-pro...
 Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 17:59:54.224784
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Excel Read Error: read_table_from_upload() got an unexpected keyword argument 'header_row'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:00:00.797623
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Excel Read Error: read_table_from_upload() got an unexpected keyword argument 'header_row'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:00:10.677336
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa2
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Excel Read Error: read_table_from_upload() got an unexpected keyword argument 'header_row'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:02:35.950040
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:19:02.857436
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:19:48.148611
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:20:10.597366
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:22:11.612136
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 18:24:01.812044
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-19 19:21:17.041522
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.

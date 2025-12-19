@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -223,8 +223,8 @@
     </div>
 
     <script>
-        // API root - production'da domain adresine değiştir
-        const API_ROOT = window.location.protocol + '//' + window.location.host;
+        // API root - use same origin when running from backend server
+        const API_ROOT = window.location.origin;
 
         // Sayfa yüklendiğinde token kontrolü
         document.addEventListener('DOMContentLoaded', () => {

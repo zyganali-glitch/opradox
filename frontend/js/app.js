@@ -1,4 +1,4 @@
-console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
+﻿console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
 const BACKEND_BASE_URL = "http://127.0.0.1:8100"; // Direct backend URL for development
 
 let SCENARIO_CATALOG = {};
@@ -276,6 +276,17 @@ const EXTRA_TEXTS = {
         "server_load": "Sunucu Yükü",
         "cancel_job": "İptal Et",
 
+        // Feedback Widget
+        "feedback_question": "Bu sonuç işinize yaradı mı?",
+        "feedback_name_placeholder": "İsminiz (opsiyonel)",
+        "feedback_message_placeholder": "Görüşünüz...",
+        "feedback_type_thanks": "Teşekkür",
+        "feedback_type_suggestion": "Öneri",
+        "feedback_type_comment": "Yorum",
+        "feedback_type_bug": "Hata",
+        "feedback_submit_btn": "Gönder",
+        "feedback_success_message": "✨ Teşekkürler! Görüşünüz bizim için değerli.",
+
         // === YENİ HESAPLAMA TİPLERİ (2024-12) ===
         "comp_running_total": "Kümülatif Toplam",
         "comp_moving_avg": "Hareketli Ortalama",
@@ -340,6 +351,17 @@ const EXTRA_TEXTS = {
         "server_load": "Server Load",
         "cancel_job": "Cancel",
         "info_cols": "columns",
+
+        // Feedback Widget
+        "feedback_question": "Was this result helpful?",
+        "feedback_name_placeholder": "Your name (optional)",
+        "feedback_message_placeholder": "Your feedback...",
+        "feedback_type_thanks": "Thanks",
+        "feedback_type_suggestion": "Suggestion",
+        "feedback_type_comment": "Comment",
+        "feedback_type_bug": "Bug",
+        "feedback_submit_btn": "Submit",
+        "feedback_success_message": "✨ Thank you! Your feedback is valuable to us.",
         "column_ref_note": "💡 <strong>Click to copy</strong> column name, or type <strong>column name</strong>, <strong>letter code (A, B...)</strong> in parameter field, or <strong>select from dropdown</strong>. For multiple columns, separate with commas.",
 
         // Cross-Sheet (Same file, different sheet)
@@ -731,6 +753,17 @@ function updateUITexts() {
         if (countMatch) {
             badge.textContent = `${countMatch[0]} ${countText}`;
         }
+    });
+
+    // Feedback widget placeholder ve title'larÄ± (YENÄ°)
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+        const key = el.getAttribute("data-i18n-placeholder");
+        if (T[key]) el.placeholder = T[key];
+    });
+
+    document.querySelectorAll("[data-i18n-title]").forEach(el => {
+        const key = el.getAttribute("data-i18n-title");
+        if (T[key]) el.title = T[key];
     });
 
     // Önizle butonu metinleri
@@ -1531,7 +1564,7 @@ window.fetchCrossSheetColumns = async function (select) {
 
     const formData = new FormData();
     formData.append("file", fileInput.files[0]);
-    const url = `${BACKEND_BASE_URL} /ui/inspect ? sheet_name = ${encodeURIComponent(sheetName)} `;
+    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
     console.log(`[DEBUG] Fetching URL: ${url} `);
 
     try {
@@ -4818,9 +4851,38 @@ function bindEvents() {
     }
 
     // 5. Yorum Gönder
-    document.getElementById("sendCommentBtn").addEventListener("click", () => {
+    document.getElementById("sendCommentBtn").addEventListener("click", async () => {
         const txt = document.getElementById("publicComment");
-        if (txt.value.trim()) { renderComment(txt.value); txt.value = ""; }
+        const msg = txt.value.trim();
+        if (!msg) return;
+
+        const btn = document.getElementById("sendCommentBtn");
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            const res = await fetch(`${BACKEND_BASE_URL}/feedback`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message_type: "comment",
+                    message: msg
+                })
+            });
+            if (res.ok) {
+                txt.value = "";
+                loadCommunityComments(); // Listeyi yenile
+            } else {
+                alert(CURRENT_LANG === 'tr' ? 'Gönderilemedi.' : 'Failed to send.');
+            }
+        } catch (err) {
+            console.error("Comment send error:", err);
+            alert(CURRENT_LANG === 'tr' ? 'Hata oluştu.' : 'Error occurred.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     });
 
     // 6. Dil Değiştirme
@@ -4848,8 +4910,64 @@ function bindEvents() {
 
     // 8. Modal (Bize Ulaşın)
     const modal = document.getElementById("contactModal");
-    document.querySelector(".gm-close-modal").addEventListener("click", () => modal.classList.remove("show"));
+    const contactBtn = document.getElementById("contactBtn");
+    if (contactBtn) {
+        contactBtn.addEventListener("click", () => modal.classList.add("show"));
+    }
+    const closeBtn = document.querySelector(".gm-close-modal");
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => modal.classList.remove("show"));
+    }
     window.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
+
+    const contactForm = document.getElementById("contactForm");
+    if (contactForm) {
+        contactForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nameEl = document.getElementById("contactName");
+            const emailEl = document.getElementById("contactEmail");
+            const msgEl = document.getElementById("contactMessage");
+
+            const name = nameEl ? nameEl.value.trim() : null;
+            const email = emailEl ? emailEl.value.trim() : null;
+            const message = msgEl ? msgEl.value.trim() : "";
+
+            const submitBtn = contactForm.querySelector("button[type='submit']");
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const res = await fetch(`${BACKEND_BASE_URL}/feedback`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        message_type: "contact",
+                        message: message,
+                        name: name || null,
+                        email: email || null
+                    })
+                });
+                if (res.ok) {
+                    alert(CURRENT_LANG === 'tr' ? 'Mesajınız iletildi, teşekkürler!' : 'Message sent, thank you!');
+                    contactForm.reset();
+                    modal.classList.remove("show");
+                } else {
+                    const errorData = await res.json();
+                    let errorMsg = errorData.detail;
+                    if (typeof errorMsg === 'object') errorMsg = JSON.stringify(errorMsg);
+                    console.error("API Error Detail:", errorData);
+                    throw new Error(errorMsg || "API call failed");
+                }
+            } catch (err) {
+                console.error("Contact form error:", err);
+                alert((CURRENT_LANG === 'tr' ? 'Gönderim sırasında hata oluştu: ' : 'Error sending message: ') + (err.message || ''));
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+    }
 }
 
 // ============================================================================

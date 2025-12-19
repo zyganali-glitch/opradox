@@ -3,7 +3,8 @@
 // JWT Authentication ile korumalı
 // ============================================================
 
-const API_ROOT = window.location.origin;
+// API root - use same origin
+const API_ROOT = "http://127.0.0.1:8100";
 
 let ADMIN_FEEDBACK_CACHE = [];
 let SELECTED_FEEDBACK_ID = null;
@@ -50,16 +51,23 @@ async function verifyTokenAndInit() {
     }
 
     try {
-        const res = await fetch(`${API_ROOT}/auth/verify`, {
+        console.log("DEBUG: verifyTokenAndInit starting...");
+        console.log("DEBUG: API_ROOT:", API_ROOT);
+
+        const res = await fetch(`${API_ROOT}/auth/check-status`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!res.ok) {
-            throw new Error('Token geçersiz');
+        const data = await res.json();
+        console.log("DEBUG: Server response:", data);
+
+        if (!data.valid) {
+            console.error('❌ Token geçersiz:', data.reason);
+            throw new Error('Token geçersiz: ' + data.reason);
         }
 
-        const data = await res.json();
+        // Token geçerli
         AUTH_TOKEN = token;
         ADMIN_USERNAME = data.username;
 
@@ -83,7 +91,6 @@ function initAdminPage() {
     loadDashboardStats();
     loadAdminFeedback();
     bindFilters();
-    bindReplyButton();
     bindTabNavigation();
     bindLogoutButton();
     bindPasswordChange();
@@ -462,6 +469,11 @@ function renderAdminFeedbackList() {
         box.className = `admin-item ${item.status === 'hidden' ? 'admin-status-hidden' : ''}`;
 
         const ratingHtml = item.rating ? `<span class="admin-item-rating">${'⭐'.repeat(item.rating)}</span>` : '';
+        const emailHtml = item.email ? `
+            <span class="admin-item-email" style="background: rgba(var(--gm-accent-rgb), 0.1); padding: 2px 8px; border-radius: 4px; font-size: 0.85em; cursor: pointer; border: 1px solid var(--border-dark);" onclick="navigator.clipboard.writeText('${item.email}'); alert('E-posta kopyalandı!')">
+                <i class="fas fa-envelope"></i> ${item.email} <i class="fas fa-copy" style="font-size: 0.8em; margin-left: 4px; opacity: 0.6;"></i>
+            </span>
+        ` : '';
 
         box.innerHTML = `
             <div class="admin-item-header">
@@ -471,6 +483,7 @@ function renderAdminFeedbackList() {
             <div class="admin-item-info">
                 <span class="admin-item-name">${item.name || "Anonim"}</span>
                 <span class="admin-item-scenario">📁 ${item.scenario_id || 'Genel'}</span>
+                ${emailHtml}
                 ${ratingHtml}
             </div>
             
@@ -479,7 +492,7 @@ function renderAdminFeedbackList() {
             ${item.admin_reply ? `<div class="admin-item-reply"><strong>✓ Admin:</strong> ${item.admin_reply}</div>` : ''}
             
             <div class="admin-btns">
-                <button class="admin-action-btn" data-action="reply" data-id="${item.id}">
+                <button class="admin-action-btn" onclick="toggleInlineReply(${item.id})">
                     <i class="fas fa-reply"></i> Yanıtla
                 </button>
                 <button class="admin-action-btn" data-action="toggle-like" data-id="${item.id}">
@@ -493,6 +506,17 @@ function renderAdminFeedbackList() {
                     <i class="fas fa-trash"></i> Sil
                 </button>
             </div>
+
+            <!-- INLINE REPLY FORM (Initially Hidden) -->
+            <div id="inline-reply-${item.id}" class="inline-reply-container" style="display:none; margin-top:12px; border-top:1px solid var(--border-dark); padding-top:12px;">
+                <textarea id="reply-text-${item.id}" style="width:100%; height:80px; background:var(--panel-dark); border:1px solid var(--border-dark); border-radius:6px; color:white; padding:8px; font-size:13px; margin-bottom:8px;" placeholder="Yanıtınızı buraya yazın...">${item.admin_reply || ''}</textarea>
+                <div style="display:flex; gap:8px;">
+                    <button class="admin-action-btn" style="background:var(--accent); color:white; border:none;" onclick="sendInlineReply(${item.id})">
+                        <i class="fas fa-paper-plane"></i> Gönder
+                    </button>
+                    <button class="admin-action-btn" onclick="toggleInlineReply(${item.id})">İptal</button>
+                </div>
+            </div>
         `;
 
         container.appendChild(box);
@@ -501,23 +525,47 @@ function renderAdminFeedbackList() {
     bindAdminButtons();
 }
 
+/**
+ * Yanıt panelini aç/kapat (Global function for onclick)
+ */
+window.toggleInlineReply = function (id) {
+    const el = document.getElementById(`inline-reply-${id}`);
+    if (el) {
+        const isHidden = el.style.display === 'none';
+        el.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            document.getElementById(`reply-text-${id}`).focus();
+        }
+    }
+}
+
+/**
+ * Satır içi yanıt gönder (Global function for onclick)
+ */
+window.sendInlineReply = async function (id) {
+    const txt = document.getElementById(`reply-text-${id}`);
+    const msg = txt.value.trim();
+    if (!msg) return alert("Yanıt metni boş olamaz.");
+
+    const success = await patchFeedback(id, { admin_reply: msg });
+    if (success) {
+        alert("Yanıt başarıyla kaydedildi ve e-posta tetiklendi.");
+        loadAdminFeedback();
+    }
+}
+
 // ------------------------------------------------------------
 // BUTTON EVENTLERİNİ BAĞLA
 // ------------------------------------------------------------
 function bindAdminButtons() {
     document.querySelectorAll(".admin-action-btn").forEach(btn => {
+        // ID set olmayan veya onclick ile zaten yönetilen butonları pas geç
+        if (!btn.dataset.id) return;
+
         btn.addEventListener("click", async () => {
             const id = parseInt(btn.dataset.id);
             const action = btn.dataset.action;
             const item = ADMIN_FEEDBACK_CACHE.find(i => i.id === id);
-
-            if (action === "reply") {
-                SELECTED_FEEDBACK_ID = id;
-                document.getElementById("replyMessage").value = item.admin_reply || "";
-                document.getElementById("replyPanelTitle").innerHTML =
-                    `<i class="fas fa-reply"></i> Yanıt Gönder <small style="opacity:0.7">(ID: ${id})</small>`;
-                document.getElementById("replyMessage").focus();
-            }
 
             if (action === "toggle-like") {
                 await toggleLike(id, item.liked);
@@ -542,10 +590,7 @@ function bindAdminButtons() {
 async function toggleHide(id, currentStatus) {
     const newStatus = currentStatus === 'visible' ? 'hidden' : 'visible';
     const success = await patchFeedback(id, { status: newStatus });
-
-    if (success) {
-        loadAdminFeedback();
-    }
+    if (success) loadAdminFeedback();
 }
 
 // ------------------------------------------------------------
@@ -553,10 +598,7 @@ async function toggleHide(id, currentStatus) {
 // ------------------------------------------------------------
 async function toggleLike(id, currentLiked) {
     const success = await patchFeedback(id, { liked: !currentLiked });
-
-    if (success) {
-        loadAdminFeedback();
-    }
+    if (success) loadAdminFeedback();
 }
 
 // ------------------------------------------------------------
@@ -565,48 +607,18 @@ async function toggleLike(id, currentLiked) {
 async function deleteFeedback(id) {
     try {
         const res = await fetch(`${API_ROOT}/admin/feedback/${id}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: getAuthHeaders()
         });
-
-        if (res.status === 204) {
+        if (res.status === 204 || res.ok) {
             loadAdminFeedback();
-            loadDashboardStats(); // Stats'ı da güncelle
+            loadDashboardStats();
         } else {
             const errData = await res.json();
             alert(`Silme hatası: ${errData.detail}`);
         }
-
     } catch (err) {
         console.error("Silme hatası:", err);
-    }
-}
-
-// ------------------------------------------------------------
-// YANIT GÖNDERME İŞLEMİ (PATCH)
-// ------------------------------------------------------------
-function bindReplyButton() {
-    document.getElementById("replySendBtn").addEventListener("click", sendReply);
-}
-
-async function sendReply() {
-    const msg = document.getElementById("replyMessage").value.trim();
-
-    if (!msg) {
-        alert("Yanıt metni boş olamaz.");
-        return;
-    }
-    if (!SELECTED_FEEDBACK_ID) {
-        alert("Yanıtlanacak kayıt seçilmedi. Listeden 'Yanıtla' butonuna tıklayın.");
-        return;
-    }
-
-    const success = await patchFeedback(SELECTED_FEEDBACK_ID, { admin_reply: msg });
-
-    if (success) {
-        document.getElementById("replyMessage").value = "";
-        SELECTED_FEEDBACK_ID = null;
-        document.getElementById("replyPanelTitle").innerHTML = `<i class="fas fa-reply"></i> Yanıt Gönder`;
-        loadAdminFeedback();
     }
 }
 

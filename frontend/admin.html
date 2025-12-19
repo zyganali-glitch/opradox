@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -66,6 +66,15 @@
         <!-- DASHBOARD TAB -->
         <section id="dashboardTab" class="admin-tab active">
 
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                <a href="https://analytics.google.com/analytics/web/" target="_blank"
+                    style="background: linear-gradient(135deg, #f9ab00, #ea4335); color: white; border: none; padding: 8px 16px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(234, 67, 53, 0.2); transition: transform 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'"
+                    onmouseout="this.style.transform='translateY(0)'">
+                    <i class="fas fa-chart-line"></i> Google Analytics
+                </a>
+            </div>
+
             <!-- Stats Cards -->
             <div class="admin-stats-grid">
                 <div class="admin-stat-card">
@@ -97,6 +106,8 @@
                     </div>
                 </div>
             </div>
+
+
 
             <!-- Charts Row -->
             <div class="admin-charts-grid">
@@ -147,16 +158,9 @@
             </div>
 
             <!-- FEEDBACK LIST -->
-            <div class="admin-feedback-section">
+            <div class="admin-feedback-section" style="grid-template-columns: 1fr;">
                 <div class="admin-fb-container" id="adminFeedbackContainer">
                     <!-- Admin.js burayı dolduracak -->
-                </div>
-
-                <!-- REPLY PANEL -->
-                <div class="admin-reply-panel">
-                    <h3 id="replyPanelTitle"><i class="fas fa-reply"></i> Yanıt Gönder</h3>
-                    <textarea id="replyMessage" placeholder="Yanıt metni..."></textarea>
-                    <button id="replySendBtn"><i class="fas fa-paper-plane"></i> Yanıtla</button>
                 </div>
             </div>
 

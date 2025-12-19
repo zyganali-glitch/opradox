@@ -2652,7 +2652,7 @@ body.day-mode .gm-header-cell {
 
 /* Day Mode Overrides */
 body.day-mode .gm-inline-feedback {
-    background: linear-gradient(135deg, rgba(185, 19, 79, 0.05), rgba(44, 123, 229, 0.05));
+    background: var(--gm-bg);
 }
 
 body.day-mode .gm-feedback-form input,

@@ -8,7 +8,7 @@ from fastapi import UploadFile, HTTPException
 ALLOWED_EXTENSIONS = {".xlsx", ".xls", ".csv"}
 
 
-def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None) -> pd.DataFrame:
+def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None, header_row: int = 0) -> pd.DataFrame:
     """
     Yüklenen UploadFile nesnesini pandas DataFrame'e çevirir.
     Sadece .xlsx, .xls ve .csv dosyalarını kabul eder.
@@ -16,6 +16,7 @@ def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None) -> p
     Args:
         upload_file: FastAPI UploadFile nesnesi
         sheet_name: Excel sayfası adı (None ise ilk sayfa okunur)
+        header_row: Başlık satırı numarası (0-indexed, varsayılan 0)
     """
     ext = Path(upload_file.filename).suffix.lower()
 
@@ -37,10 +38,10 @@ def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None) -> p
 
     try:
         if ext == ".csv":
-            df = pd.read_csv(buffer)
+            df = pd.read_csv(buffer, header=header_row)
         else:
-            # Excel için sheet_name parametresi kullan
-            df = pd.read_excel(buffer, sheet_name=sheet_name)
+            # Excel için sheet_name ve header parametrelerini kullan
+            df = pd.read_excel(buffer, sheet_name=sheet_name, header=header_row)
     except Exception as e:
         raise HTTPException(
             status_code=400,

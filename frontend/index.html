@@ -230,24 +230,27 @@
                             <span class="gm-star" data-value="5">★</span>
                         </div>
                         <div class="gm-feedback-form" id="feedbackForm" style="display:none;">
-                            <input type="text" id="feedbackName" placeholder="İsminiz (opsiyonel)" maxlength="100">
-                            <textarea id="feedbackMessage" placeholder="Görüşünüz..." rows="2"
-                                maxlength="1000"></textarea>
+                            <input type="text" id="feedbackName" data-i18n-placeholder="feedback_name_placeholder"
+                                placeholder="İsminiz (opsiyonel)" maxlength="100">
+                            <textarea id="feedbackMessage" data-i18n-placeholder="feedback_message_placeholder"
+                                placeholder="Görüşünüz..." rows="2" maxlength="1000"></textarea>
                             <div class="gm-feedback-type-btns">
                                 <button type="button" class="gm-type-btn" data-type="thanks"
-                                    title="Teşekkür">💚</button>
+                                    data-i18n-title="feedback_type_thanks" title="Teşekkür">💚</button>
                                 <button type="button" class="gm-type-btn" data-type="suggestion"
-                                    title="Öneri">💡</button>
+                                    data-i18n-title="feedback_type_suggestion" title="Öneri">💡</button>
                                 <button type="button" class="gm-type-btn active" data-type="comment"
-                                    title="Yorum">💬</button>
-                                <button type="button" class="gm-type-btn" data-type="bug" title="Hata">🐛</button>
+                                    data-i18n-title="feedback_type_comment" title="Yorum">💬</button>
+                                <button type="button" class="gm-type-btn" data-type="bug"
+                                    data-i18n-title="feedback_type_bug" title="Hata">🐛</button>
                             </div>
                             <button id="submitFeedbackBtn" class="gm-gradient-btn">
-                                <i class="fas fa-paper-plane"></i> Gönder
+                                <i class="fas fa-paper-plane"></i> <span data-i18n="feedback_submit_btn">Gönder</span>
                             </button>
                         </div>
                         <div id="feedbackSuccess" class="gm-feedback-success" style="display:none;">
-                            <span>✨ Teşekkürler! Görüşünüz bizim için değerli.</span>
+                            <span data-i18n="feedback_success_message">✨ Teşekkürler! Görüşünüz bizim için
+                                değerli.</span>
                         </div>
                     </div>
                 </div>
@@ -310,12 +313,18 @@
                 <h2 data-i18n="contact_modal_title" style="color:var(--gm-text); margin-bottom:15px; border:none;">Bize
                     Ulaşın</h2>
                 <form id="contactForm">
-                    <div class="gm-form-row"><label data-i18n="lbl_name">Ad Soyad</label><input type="text" required>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_name">Ad Soyad</label>
+                        <input type="text" id="contactName" required>
                     </div>
-                    <div class="gm-form-row"><label data-i18n="lbl_email">E-posta</label><input type="email" required>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_email">E-posta</label>
+                        <input type="email" id="contactEmail" required>
                     </div>
-                    <div class="gm-form-row"><label data-i18n="lbl_msg">Mesajınız</label><textarea rows="3"
-                            required></textarea></div>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_msg">Mesajınız</label>
+                        <textarea id="contactMessage" rows="3" required></textarea>
+                    </div>
                     <button type="submit" class="gm-gradient-btn" style="width:100%"
                         data-i18n="send_btn">Gönder</button>
                 </form>

@@ -161,6 +161,15 @@ def update_feedback(
     return changed
 
 
+def get_feedback(feedback_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM feedback WHERE id = ?", (feedback_id,))
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def delete_feedback(feedback_id: int) -> bool:
     conn = get_connection()
     cur = conn.cursor()

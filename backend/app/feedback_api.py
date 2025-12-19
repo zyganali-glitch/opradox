@@ -1,45 +1,31 @@
 from __future__ import annotations
 
 import os
-import secrets
 from typing import Literal, Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
+
+# Email utility import
+from .email_utils import send_admin_reply_email
+
+# JWT BASE AUTH İMPORT (DÜZELTME)
+from .auth import get_current_admin 
+from .email_utils import log_to_file
 
 from .feedback_store import (
     insert_feedback,
     list_feedback,
     update_feedback,
     delete_feedback,
+    get_feedback,
     get_feedback_stats,
 )
 
 router = APIRouter(tags=["feedback"])
 
-security = HTTPBasic()
-
-ADMIN_USERNAME = os.getenv("GM_ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("GM_ADMIN_PASSWORD", "opradox-secret")
-
-
-def get_current_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-    """
-    Basit HTTP Basic auth.
-    """
-    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
-    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
-
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Yetkisiz erişim",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
-    return credentials.username
-
+# ESKİ HTTP BASIC AUTH SİLİNDİ (POP-UP SEBEBİ BUYDU)
 
 class FeedbackCreate(BaseModel):
     message_type: Literal["comment", "suggestion", "thanks", "bug", "contact"] = Field(
@@ -57,7 +43,7 @@ class FeedbackCreate(BaseModel):
         max_length=200,
         description="İsim / takma ad (opsiyonel)",
     )
-    email: Optional[EmailStr] = Field(
+    email: Optional[str] = Field(
         None,
         description="E-posta (opsiyonel)",
     )
@@ -95,22 +81,11 @@ class FeedbackUpdate(BaseModel):
 
 
 def _load_feedback_by_id(feedback_id: int) -> Optional[dict]:
-    """
-    Basit bir yardımcı: ID'ye göre tek bir feedback kaydı döndürür.
-    """
-    rows = list_feedback(limit=1000)
-    for r in rows:
-        if r["id"] == feedback_id:
-            return r
-    return None
+    return get_feedback(feedback_id)
 
 
 @router.post("/feedback", status_code=201)
 async def create_feedback(payload: FeedbackCreate):
-    """
-    Kullanıcıların yorum / öneri / teşekkür / hata bildirimi / bize ulaşın
-    göndereceği endpoint. Auth gerektirmez.
-    """
     feedback_id = insert_feedback(
         name=payload.name,
         email=payload.email,
@@ -119,7 +94,6 @@ async def create_feedback(payload: FeedbackCreate):
         scenario_id=payload.scenario_id,
         rating=payload.rating,
     )
-
     return {
         "id": feedback_id,
         "message": "Geri bildirimin alındı. Teşekkür ederiz.",
@@ -128,25 +102,17 @@ async def create_feedback(payload: FeedbackCreate):
 
 @router.get("/admin/feedback", response_model=List[FeedbackAdminItem])
 async def admin_list_feedback(
-    status: Optional[str] = Query(
-        None,
-        description="Filtre: visible / hidden veya boş (tümü)",
-    ),
-    message_type: Optional[str] = Query(
-        None,
-        description="Filtre: comment / suggestion / thanks / bug / contact",
-    ),
-    scenario_id: Optional[str] = Query(
-        None,
-        description="Filtre: belirli bir senaryo ID'si",
-    ),
+    status: Optional[str] = Query(None),
+    message_type: Optional[str] = Query(None),
+    scenario_id: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     admin: str = Depends(get_current_admin),
 ):
-    """
-    Admin için geri bildirim listesi.
-    """
+    # POP-UP ENGELLEME CHECK (Şık ve güvenli)
+    if not admin:
+        return JSONResponse(status_code=200, content=[]) # Sessizce boş liste dön
+
     rows = list_feedback(
         status=status,
         message_type=message_type,
@@ -180,14 +146,16 @@ async def admin_list_feedback(
 async def admin_update_feedback(
     feedback_id: int,
     payload: FeedbackUpdate,
+    background_tasks: BackgroundTasks,
     admin: str = Depends(get_current_admin),
 ):
-    """
-    Admin için:
-    - status: visible / hidden
-    - liked: true / false
-    - admin_reply: cevap metni
-    """
+    if not admin:
+        raise HTTPException(status_code=403, detail="Yetkisiz")
+
+    # Get target before update to see if email exists and if reply is new
+    target = get_feedback(feedback_id)
+    print(f"DEBUG: Found target for feedback_id {feedback_id}: {target}")
+
     changed = update_feedback(
         feedback_id,
         status=payload.status,
@@ -196,18 +164,26 @@ async def admin_update_feedback(
     )
 
     if not changed:
-        raise HTTPException(
-            status_code=404,
-            detail="Kayıt bulunamadı veya değişiklik yok.",
-        )
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı.")
 
-    target = _load_feedback_by_id(feedback_id)
-    if target is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Güncellenen kayıt tekrar alınamadı.",
-        )
+    # Email sending logic
+    if payload.admin_reply and target:
+        user_email = target.get("email")
+        original_msg = target.get("message")
+        log_to_file(f"DEBUG: admin_reply found for ID {feedback_id}, user_email: {user_email}")
+        if user_email:
+            # Send email in background
+            log_to_file(f"DEBUG: Adding background task send_admin_reply_email to {user_email}")
+            background_tasks.add_task(
+                send_admin_reply_email, 
+                user_email, 
+                original_msg, 
+                payload.admin_reply
+            )
+        else:
+            log_to_file(f"DEBUG: No email found for feedback ID {feedback_id}")
 
+    target = get_feedback(feedback_id)
     return FeedbackAdminItem(
         id=target["id"],
         created_at=target["created_at"],
@@ -229,73 +205,45 @@ async def admin_delete_feedback(
     feedback_id: int,
     admin: str = Depends(get_current_admin),
 ):
-    """
-    Admin için kaydı tamamen silme endpoint'i.
-    """
-    ok = delete_feedback(feedback_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Kayıt bulunamadı.")
+    if not admin:
+        raise HTTPException(status_code=403, detail="Yetkisiz")
+    delete_feedback(feedback_id)
     return
-
-
-# ============================================================
-# YENİ ENDPOINT'LER: Dashboard Stats + Public Comments
-# ============================================================
-
-class FeedbackPublicItem(BaseModel):
-    """Topluluk panelinde gösterilecek public yorumlar."""
-    id: int
-    created_at: str
-    name: Optional[str]
-    message_type: str
-    message: str
-    scenario_id: Optional[str]
-    rating: Optional[int]
-    admin_reply: Optional[str]
-    admin_replied_at: Optional[str]
 
 
 @router.get("/admin/stats")
 async def get_admin_stats(
     admin: str = Depends(get_current_admin),
 ):
-    """
-    Admin dashboard için istatistikler.
-    """
+    # POP-UP ENGELLEME CHECK
+    if not admin:
+        return JSONResponse(status_code=200, content={"total": 0, "today": 0, "unanswered": 0})
+        
     return get_feedback_stats()
 
 
-@router.get("/feedback/public", response_model=List[FeedbackPublicItem])
+@router.get("/feedback/public")
 async def get_public_feedback(
     limit: int = Query(20, ge=1, le=100),
     scenario_id: Optional[str] = Query(None),
 ):
-    """
-    Topluluk paneli için public yorumlar.
-    Sadece visible ve admin_reply olan yorumlar öncelikli.
-    """
-    rows = list_feedback(
-        status="visible",
-        scenario_id=scenario_id,
-        limit=limit,
-    )
+    rows = list_feedback(status="visible", scenario_id=scenario_id, limit=limit * 2) # Get more to allow filtering
+    # Exclude contact messages from public view
+    rows = [r for r in rows if r.get("message_type") != "contact"]
     
-    # Admin yanıtı olanları öne al
     rows_sorted = sorted(rows, key=lambda x: (x.get("admin_reply") is not None, x["created_at"]), reverse=True)
     
-    items: List[FeedbackPublicItem] = []
+    items = []
     for r in rows_sorted[:limit]:
-        items.append(
-            FeedbackPublicItem(
-                id=r["id"],
-                created_at=r["created_at"],
-                name=r.get("name"),
-                message_type=r["message_type"],
-                message=r["message"],
-                scenario_id=r.get("scenario_id"),
-                rating=r.get("rating"),
-                admin_reply=r.get("admin_reply"),
-                admin_replied_at=r.get("admin_replied_at"),
-            )
-        )
+        items.append({
+            "id": r["id"],
+            "created_at": r["created_at"],
+            "name": r.get("name"),
+            "message_type": r["message_type"],
+            "message": r["message"],
+            "scenario_id": r.get("scenario_id"),
+            "rating": r.get("rating"),
+            "admin_reply": r.get("admin_reply"),
+            "admin_replied_at": r.get("admin_replied_at"),
+        })
     return items
