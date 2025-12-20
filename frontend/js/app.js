@@ -785,6 +785,8 @@ let CURRENT_FILE = null;  // Ana dosya referansı
 let CURRENT_FILE2 = null; // İkinci dosya referansı
 let FILE2_NAME = null;    // İkinci dosya adı (UI'da göstermek için)
 
+
+
 async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, headerRow = null) {
     // headerRow null ise global değişkeni kullan
     const effectiveHeaderRow = headerRow !== null ? headerRow : SELECTED_HEADER_ROW;
@@ -826,6 +828,26 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
 
             FILE_COLUMN_LETTERS = data.column_letters || {};
             updateColumnDatalist();
+
+            // YENİ: Backend'den gelen ham satırları kaydet (başlık satırı seçimi için)
+            // Backend artık doğrudan raw_rows formatında döndürüyor
+            if (data.raw_rows && data.raw_rows.length > 0) {
+                FILE_RAW_PREVIEW_ROWS = data.raw_rows;
+                console.log('✓ FILE_RAW_PREVIEW_ROWS set:', FILE_RAW_PREVIEW_ROWS.length, 'rows');
+            } else if (data.preview_rows && data.preview_rows.length > 0) {
+                // Fallback: Eski format (preview_rows sözlük formatında)
+                FILE_RAW_PREVIEW_ROWS = data.preview_rows.map(row => ({
+                    cells: Object.values(row).map(val => val !== null && val !== undefined ? String(val) : '')
+                }));
+                // Başlık satırını da ekle (sütun isimleri)
+                if (data.columns && data.columns.length > 0) {
+                    FILE_RAW_PREVIEW_ROWS.unshift({
+                        cells: data.columns.map(c => String(c))
+                    });
+                }
+                console.log('✓ FILE_RAW_PREVIEW_ROWS set (fallback):', FILE_RAW_PREVIEW_ROWS.length, 'rows');
+            }
+
             showFileInfo(data, 1, skipDropdownRebuild);
 
             // YENİ (BUG 2 FIX): Cross-sheet dropdown'ları senkronize et
@@ -907,6 +929,24 @@ async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false,
             }
 
             updateColumnDatalist();
+
+            // YENİ: Backend'den gelen ham satırları kaydet (başlık satırı seçimi için)
+            if (data.raw_rows && data.raw_rows.length > 0) {
+                FILE2_RAW_PREVIEW_ROWS = data.raw_rows;
+                console.log('✓ FILE2_RAW_PREVIEW_ROWS set:', FILE2_RAW_PREVIEW_ROWS.length, 'rows');
+            } else if (data.preview_rows && data.preview_rows.length > 0) {
+                // Fallback: Eski format
+                FILE2_RAW_PREVIEW_ROWS = data.preview_rows.map(row => ({
+                    cells: Object.values(row).map(val => val !== null && val !== undefined ? String(val) : '')
+                }));
+                if (data.columns && data.columns.length > 0) {
+                    FILE2_RAW_PREVIEW_ROWS.unshift({
+                        cells: data.columns.map(c => String(c))
+                    });
+                }
+                console.log('✓ FILE2_RAW_PREVIEW_ROWS set (fallback):', FILE2_RAW_PREVIEW_ROWS.length, 'rows');
+            }
+
             showFileInfo(data, 2, skipDropdownRebuild); // İkinci dosya için
 
             // YENİ (PHASE 1): İkinci dosya sütunlarını datalist'e ekle
@@ -1178,7 +1218,7 @@ window.showFilePreviewModal = function (fileNumber = 1) {
 };
 
 // YENİ: Başlık satırı seçildiğinde çağrılır
-window.selectHeaderRow = function (fileNumber, rowIndex) {
+window.selectHeaderRow = async function (fileNumber, rowIndex) {
     if (fileNumber === 1) {
         SELECTED_HEADER_ROW = rowIndex;
     } else {
@@ -1209,9 +1249,20 @@ window.selectHeaderRow = function (fileNumber, rowIndex) {
         console.log(`🔄 Refreshing columns with header_row=${rowIndex}...`);
 
         if (fileNumber === 1) {
-            inspectFile(fileInput.files[0], sheetName, true, rowIndex);
+            await inspectFile(fileInput.files[0], sheetName, true, rowIndex);
         } else {
-            inspectFile2(fileInput.files[0], sheetName, true, rowIndex);
+            await inspectFile2(fileInput.files[0], sheetName, true, rowIndex);
+        }
+
+        // ✨ KRİTİK FIX: Sütunlar güncellendikten sonra aktif senaryo varsa formu yeniden render et
+        // Bu sayede parametre alanlarındaki autocomplete listesi güncel sütunlarla yenilenir
+        if (ACTIVE_SCENARIO_ID && fileNumber === 1) {
+            console.log(`🔄 Re-rendering form for scenario: ${ACTIVE_SCENARIO_ID} with updated columns...`);
+            const scenario = SCENARIO_LIST.find(s => s.id === ACTIVE_SCENARIO_ID);
+            if (scenario) {
+                renderDynamicForm(ACTIVE_SCENARIO_ID, scenario.params || []);
+                console.log(`✅ Form re-rendered with ${FILE_COLUMNS.length} updated columns`);
+            }
         }
     }
 

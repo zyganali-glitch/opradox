@@ -1,7 +1,7 @@
 from __future__ import annotations
-# Force Reload Trigger 2024-12-16
+# Force Reload Trigger 2024-12-20-v3-HEADER-ROW-FIX
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from typing import Dict, Any, List, Optional
 import json
 import pandas as pd
@@ -154,14 +154,28 @@ async def get_ui_settings():
     return SETTINGS
 
 
+
 @router.post("/ui/inspect")
-async def inspect_file(file: UploadFile = File(...), sheet_name: str = None):
+async def inspect_file(
+    file: UploadFile = File(...), 
+    sheet_name: str = Query(None, description="Sheet adı"),
+    header_row: int = Query(0, description="Başlık satırı (0-indexed)")
+):
     """
     Yüklenen Excel/CSV dosyasının sütunlarını analiz eder ve listeyi döner.
     Frontend'de autocomplete ve bilgi paneli için kullanılır.
     YENİ: Sheet listesi döner ve seçilen sheet'i okur.
+    YENİ: header_row parametresi ile hangi satırın başlık olarak kullanılacağı belirlenir.
+    
+    Parametreler Query string olarak gelir: /ui/inspect?sheet_name=Sheet1&header_row=1
     """
-    print(f"[DEBUG] /ui/inspect called - sheet_name received: '{sheet_name}'")
+    # header_row'u güvenli şekilde int'e çevir
+    try:
+        header_row_int = int(header_row) if header_row is not None else 0
+    except (ValueError, TypeError):
+        header_row_int = 0
+        
+    print(f"[DEBUG] /ui/inspect called - sheet_name: '{sheet_name}', header_row: {header_row_int}")
     
     try:
         content = await file.read()
@@ -171,9 +185,16 @@ async def inspect_file(file: UploadFile = File(...), sheet_name: str = None):
         sheet_names = []
         active_sheet = None
         
+        # Header row için pandas parametresi (0-indexed)
+        pandas_header = header_row_int if header_row_int >= 0 else 0
+        
         if filename.endswith(".csv"):
-            df_preview = pd.read_csv(BytesIO(content), nrows=10)
-            df_full = pd.read_csv(BytesIO(content))
+            # CSV için header parametresi ve skiprows
+            df_preview = pd.read_csv(BytesIO(content), header=pandas_header, nrows=10)
+            df_full = pd.read_csv(BytesIO(content), header=pandas_header)
+            
+            # Ham satırları al (başlık seçimi UI için)
+            raw_df = pd.read_csv(BytesIO(content), header=None, nrows=10)
         else:
             # Excel dosyası - sheet listesini al
             xls = pd.ExcelFile(BytesIO(content))
@@ -183,8 +204,13 @@ async def inspect_file(file: UploadFile = File(...), sheet_name: str = None):
             active_sheet = sheet_name if sheet_name in sheet_names else sheet_names[0]
             print(f"[DEBUG] sheet_names: {sheet_names}, active_sheet: {active_sheet}")
             
-            df_preview = pd.read_excel(BytesIO(content), sheet_name=active_sheet, nrows=10)
-            df_full = pd.read_excel(BytesIO(content), sheet_name=active_sheet)
+            # Header parametresi ile oku
+            df_preview = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=pandas_header, nrows=10)
+            df_full = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=pandas_header)
+            
+            # Ham satırları al (başlık seçimi UI için)
+            raw_df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=None, nrows=10)
+            
             print(f"[DEBUG] Read from '{active_sheet}': {len(df_full)} rows, columns: {list(df_preview.columns)[:3]}...")
         
         columns = list(df_preview.columns)
@@ -212,6 +238,13 @@ async def inspect_file(file: UploadFile = File(...), sheet_name: str = None):
         # BUG FIX: NaN değerlerini None'a çevir (JSON compliant)
         preview_records = df_preview.head(10).fillna("").to_dict(orient="records")
         
+        # YENİ: Ham satırları da döndür (başlık seçimi UI için)
+        raw_rows = []
+        for idx, row in raw_df.iterrows():
+            raw_rows.append({
+                "cells": [str(cell) if pd.notna(cell) else "" for cell in row.values]
+            })
+        
         return {
             "columns": columns,
             "row_count": row_count,
@@ -219,8 +252,10 @@ async def inspect_file(file: UploadFile = File(...), sheet_name: str = None):
             "column_letters": column_letters,
             "preview_html": preview_html,
             "preview_rows": preview_records,  # NaN-free
-            "sheet_names": sheet_names,      # YENİ
-            "active_sheet": active_sheet,    # YENİ
+            "raw_rows": raw_rows,             # YENİ: Ham satırlar (başlık seçimi için)
+            "sheet_names": sheet_names,       # YENİ
+            "active_sheet": active_sheet,     # YENİ
+            "header_row": header_row_int,         # YENİ: Seçili başlık satırı
         }
     except Exception as e:
         print(f"[HATA] Dosya analiz hatası: {e}")
