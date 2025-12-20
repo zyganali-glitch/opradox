@@ -35,7 +35,7 @@ const EXTRA_TEXTS = {
         "add_second_file": "İkinci Dosya Ekle",
         "info_rows": "satır",
         "info_cols": "sütun",
-        "column_ref_note": "💡 Sütun adını <strong>tıklayarak kopyalayın</strong>, veya parametre alanına <strong>sütun adı</strong>, <strong>harf kodu (A, B...)</strong> yazın ya da <strong>listeden seçin</strong>. Birden fazla sütun için virgülle ayırın.",
+        "column_ref_note": "💡 İşlem sayfasının başında birleştirilmiş hücrelerden oluşan başlık varsa <strong>Önizleme</strong> butonundan sütun isimlerinin olduğu satırı seçin. Buradan sütun adını <strong>tıklayarak kopyalayabilirsiniz</strong>. Ayrıca parametre alanına <strong>sütun adı</strong>, <strong>harf kodu (A, B...)</strong> da yazabilir ya da <strong>listeden seçebilirsiniz</strong>. Aynı parametrede birden fazla sütun için işlem yapılacaksa sütun isimlerini virgül ve boşluk bırakarak yazın.",
 
         // Builder
         "btn_filter": "Filtre", "btn_group": "Grup", "btn_agg": "İşlem", "btn_sort": "Sırala", "btn_select": "Sütun",
@@ -362,7 +362,7 @@ const EXTRA_TEXTS = {
         "feedback_type_bug": "Bug",
         "feedback_submit_btn": "Submit",
         "feedback_success_message": "✨ Thank you! Your feedback is valuable to us.",
-        "column_ref_note": "💡 <strong>Click to copy</strong> column name, or type <strong>column name</strong>, <strong>letter code (A, B...)</strong> in parameter field, or <strong>select from dropdown</strong>. For multiple columns, separate with commas.",
+        "column_ref_note": "💡 If there are merged header cells at the top of your worksheet, use the <strong>Preview</strong> button to select the row containing column names. You can <strong>click to copy</strong> column names from there. You can also type <strong>column name</strong>, <strong>letter code (A, B...)</strong> in the parameter field, or <strong>select from dropdown</strong>. For multiple columns in the same parameter, separate column names with a comma and space.",
 
         // Cross-Sheet (Same file, different sheet)
         "use_same_file_sheet": "Use different sheet from same file",

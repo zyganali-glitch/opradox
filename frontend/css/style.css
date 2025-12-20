@@ -743,6 +743,184 @@ body.day-mode .gm-col-chip strong {
     color: var(--gm-text-muted);
 }
 
+/* ============================================
+   FILE PREVIEW MODAL (Başlık satırı seçici)
+   ============================================ */
+#filePreviewModal .gm-modal-content {
+    flex-direction: column;
+    width: auto;
+    min-width: 600px;
+    max-width: 90vw;
+    max-height: 85vh;
+}
+
+.gm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gm-card-border);
+    background: var(--gm-card-bg);
+}
+
+.gm-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gm-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--gm-text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.gm-modal-close:hover {
+    background: rgba(255, 0, 0, 0.1);
+    color: #ef4444;
+}
+
+.gm-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+/* Header Row Hint */
+.gm-header-row-hint {
+    padding: 12px 16px;
+    background: rgba(44, 123, 229, 0.1);
+    border: 1px solid var(--gm-primary);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    color: var(--gm-text);
+}
+
+/* Header Row Selector Container */
+.gm-header-row-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Header Row Option (her satır) */
+.gm-header-row-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--gm-card-bg);
+    border: 2px solid var(--gm-card-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gm-header-row-option:hover {
+    border-color: var(--gm-primary);
+    background: rgba(44, 123, 229, 0.05);
+}
+
+.gm-header-row-option.selected {
+    border-color: var(--gm-success);
+    background: rgba(0, 217, 126, 0.08);
+}
+
+.gm-header-row-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--gm-success);
+    cursor: pointer;
+}
+
+/* Row Number Badge */
+.gm-header-row-num {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--gm-primary);
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+/* Cells Container */
+.gm-header-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+/* Individual Cell */
+.gm-header-cell {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    color: var(--gm-text);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gm-header-cell-more {
+    background: var(--gm-primary);
+    color: white;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Preview Button */
+.gm-btn-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, var(--gm-primary), #1d4ed8);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gm-btn-preview:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(44, 123, 229, 0.3);
+}
+
+.gm-btn-preview i {
+    font-size: 0.9rem;
+}
+
+.gm-preview-text {
+    font-weight: 600;
+}
+
+/* Header Row Badge (seçili satır göstergesi) */
+.gm-header-row-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
 .gm-comments-wrapper {
     position: fixed;
     bottom: 0;
