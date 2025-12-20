@@ -585,6 +585,61 @@ async def read_admin():
         }
     )
 
+@app.get("/hub.html")
+async def read_hub():
+    return FileResponse(
+        FRONTEND_DIR / "hub.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/excel.html")
+async def read_excel():
+    return FileResponse(
+        FRONTEND_DIR / "excel.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/viz.html")
+async def read_viz():
+    return FileResponse(
+        FRONTEND_DIR / "viz.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/pdf.html")
+async def read_pdf():
+    return FileResponse(
+        FRONTEND_DIR / "pdf.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/ocr.html")
+async def read_ocr():
+    return FileResponse(
+        FRONTEND_DIR / "ocr.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
 # -------------------------------------------------------
 # LOCAL SERVER
 # -------------------------------------------------------

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Opradox – PDF Tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Opradox PDF Tools - PDF birleştir, böl, sıkıştır ve dönüştür" />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BVYYQS8HWY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        const hostname = window.location.hostname;
+        if (hostname.includes('opradox.com.tr')) {
+            gtag('config', 'G-BVYYQS8HWY');
+        } else if (hostname.includes('opradox.com')) {
+            gtag('config', 'G-EDHVSD1LM1');
+        } else {
+            gtag('config', 'G-BVYYQS8HWY');
+            gtag('config', 'G-EDHVSD1LM1');
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+
+    <script defer src="js/fileDocker.js"></script>
+    <script defer src="js/pdf.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="pdf-tools-root">
+
+        <!-- HEADER with Navigation -->
+        <header class="gm-header">
+            <div class="gm-logo-box">
+                <a href="hub.html" class="gm-back-to-hub" title="Hub'a Dön">
+                    <i class="fas fa-th-large"></i>
+                </a>
+                <img src="img/opradox_logo_dark.png?v=5" alt="Opradox Logo" class="gm-logo-img" id="pdfLogo">
+                <span class="gm-logo-subtitle" data-i18n="pdf_subtitle">PDF Tools</span>
+            </div>
+
+            <!-- Module Navigation -->
+            <nav class="gm-module-nav">
+                <a href="excel.html" class="gm-module-tab" data-module="excel">
+                    <i class="fas fa-file-excel"></i> <span data-i18n="module_excel">Excel</span>
+                </a>
+                <a href="viz.html" class="gm-module-tab" data-module="viz">
+                    <i class="fas fa-chart-line"></i> <span data-i18n="module_viz">Viz</span>
+                </a>
+                <a href="pdf.html" class="gm-module-tab active" data-module="pdf">
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="module_pdf">PDF</span>
+                </a>
+                <a href="ocr.html" class="gm-module-tab" data-module="ocr">
+                    <i class="fas fa-eye"></i> <span data-i18n="module_ocr">OCR</span>
+                </a>
+            </nav>
+
+            <div class="gm-header-right">
+                <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
+                        class="fas fa-sun"></i></button>
+                <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
+            </div>
+        </header>
+
+        <main class="pdf-main">
+            <!-- ARAÇ ÇUBUĞU -->
+            <div class="pdf-toolbar">
+                <button class="pdf-tool-btn active" data-tool="merge" id="toolMerge">
+                    <i class="fas fa-object-group"></i>
+                    <span data-i18n="pdf_merge">Birleştir</span>
+                </button>
+                <button class="pdf-tool-btn" data-tool="split" id="toolSplit">
+                    <i class="fas fa-cut"></i>
+                    <span data-i18n="pdf_split">Böl</span>
+                </button>
+                <button class="pdf-tool-btn" data-tool="compress" id="toolCompress">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                    <span data-i18n="pdf_compress">Sıkıştır</span>
+                </button>
+                <button class="pdf-tool-btn" data-tool="convert" id="toolConvert">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span data-i18n="pdf_convert">Dönüştür</span>
+                </button>
+            </div>
+
+            <!-- ANA İÇERİK ALANI -->
+            <div class="pdf-content">
+                <!-- SOL: DROP ZONE & DOSYA LİSTESİ -->
+                <section class="pdf-left-section">
+                    <div class="gm-card pdf-upload-card">
+                        <div class="pdf-drop-zone" id="pdfDropZone">
+                            <i class="fas fa-file-pdf"></i>
+                            <h3 data-i18n="pdf_drop_title">PDF Dosyalarını Sürükleyin</h3>
+                            <p data-i18n="pdf_drop_desc">veya tıklayarak seçin</p>
+                            <input type="file" id="pdfFileInput" accept=".pdf" multiple style="display:none;">
+                        </div>
+
+                        <!-- Yüklenen Dosyalar -->
+                        <div class="pdf-file-list" id="pdfFileList" style="display:none;">
+                            <div class="pdf-file-header">
+                                <h4><i class="fas fa-folder-open"></i> <span data-i18n="uploaded_files">Yüklenen
+                                        Dosyalar</span></h4>
+                                <button class="gm-pill-btn pdf-clear-btn" id="clearFilesBtn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="pdf-files-container" id="pdfFilesContainer">
+                                <!-- Dosyalar buraya eklenecek -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SAĞ: ARAÇ AYARLARI & SONUÇ -->
+                <section class="pdf-right-section">
+                    <!-- MERGE Ayarları -->
+                    <div class="gm-card pdf-settings-card" id="mergeSettings">
+                        <h3><i class="fas fa-object-group"></i> <span data-i18n="pdf_merge">PDF Birleştir</span></h3>
+                        <p class="pdf-tool-desc" data-i18n="merge_desc">Birden fazla PDF dosyasını tek bir dosyada
+                            birleştirin.</p>
+
+                        <div class="pdf-option-group">
+                            <label data-i18n="output_filename">Çıktı Dosya Adı</label>
+                            <input type="text" id="mergeOutputName" placeholder="merged.pdf" value="merged.pdf">
+                        </div>
+
+                        <button class="gm-gradient-btn pdf-run-btn" id="runMergeBtn">
+                            <i class="fas fa-play"></i> <span data-i18n="run">Çalıştır</span>
+                        </button>
+                    </div>
+
+                    <!-- SPLIT Ayarları -->
+                    <div class="gm-card pdf-settings-card" id="splitSettings" style="display:none;">
+                        <h3><i class="fas fa-cut"></i> <span data-i18n="pdf_split">PDF Böl</span></h3>
+                        <p class="pdf-tool-desc" data-i18n="split_desc">PDF'i sayfa aralıklarına veya tek tek sayfalara
+                            bölün.</p>
+
+                        <div class="pdf-option-group">
+                            <label data-i18n="split_mode">Bölme Modu</label>
+                            <select id="splitMode">
+                                <option value="pages" data-i18n="split_all_pages">Her Sayfayı Ayrı</option>
+                                <option value="range" data-i18n="split_range">Sayfa Aralığı</option>
+                                <option value="extract" data-i18n="split_extract">Belirli Sayfaları Çıkar</option>
+                            </select>
+                        </div>
+
+                        <div class="pdf-option-group" id="splitRangeOptions" style="display:none;">
+                            <label data-i18n="page_range">Sayfa Aralığı (örn: 1-5, 8, 10-12)</label>
+                            <input type="text" id="splitRange" placeholder="1-5, 8, 10-12">
+                        </div>
+
+                        <button class="gm-gradient-btn pdf-run-btn" id="runSplitBtn">
+                            <i class="fas fa-play"></i> <span data-i18n="run">Çalıştır</span>
+                        </button>
+                    </div>
+
+                    <!-- COMPRESS Ayarları -->
+                    <div class="gm-card pdf-settings-card" id="compressSettings" style="display:none;">
+                        <h3><i class="fas fa-compress-arrows-alt"></i> <span data-i18n="pdf_compress">PDF
+                                Sıkıştır</span></h3>
+                        <p class="pdf-tool-desc" data-i18n="compress_desc">PDF dosya boyutunu küçültün.</p>
+
+                        <div class="pdf-option-group">
+                            <label data-i18n="compression_level">Sıkıştırma Seviyesi</label>
+                            <select id="compressionLevel">
+                                <option value="low" data-i18n="compress_low">Düşük (Kaliteli)</option>
+                                <option value="medium" selected data-i18n="compress_medium">Orta</option>
+                                <option value="high" data-i18n="compress_high">Yüksek (Küçük Boyut)</option>
+                            </select>
+                        </div>
+
+                        <button class="gm-gradient-btn pdf-run-btn" id="runCompressBtn">
+                            <i class="fas fa-play"></i> <span data-i18n="run">Çalıştır</span>
+                        </button>
+                    </div>
+
+                    <!-- CONVERT Ayarları -->
+                    <div class="gm-card pdf-settings-card" id="convertSettings" style="display:none;">
+                        <h3><i class="fas fa-exchange-alt"></i> <span data-i18n="pdf_convert">Dönüştür</span></h3>
+                        <p class="pdf-tool-desc" data-i18n="convert_desc">PDF'i farklı formatlara dönüştürün.</p>
+
+                        <div class="pdf-option-group">
+                            <label data-i18n="convert_to">Dönüştür:</label>
+                            <div class="pdf-convert-grid">
+                                <button class="pdf-convert-btn active" data-format="jpg">
+                                    <i class="fas fa-image"></i> JPG
+                                </button>
+                                <button class="pdf-convert-btn" data-format="png">
+                                    <i class="fas fa-image"></i> PNG
+                                </button>
+                                <button class="pdf-convert-btn" data-format="word">
+                                    <i class="fas fa-file-word"></i> Word
+                                </button>
+                                <button class="pdf-convert-btn" data-format="excel">
+                                    <i class="fas fa-file-excel"></i> Excel
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="gm-gradient-btn pdf-run-btn" id="runConvertBtn">
+                            <i class="fas fa-play"></i> <span data-i18n="run">Çalıştır</span>
+                        </button>
+                    </div>
+
+                    <!-- SONUÇ ALANI -->
+                    <div class="gm-card pdf-result-card" id="pdfResultCard" style="display:none;">
+                        <div class="pdf-result-header">
+                            <h3><i class="fas fa-check-circle"></i> <span data-i18n="result">Sonuç</span></h3>
+                        </div>
+                        <div class="pdf-result-content" id="pdfResultContent">
+                            <!-- Sonuç içeriği -->
+                        </div>
+                        <div class="pdf-result-actions">
+                            <button class="gm-gradient-btn" id="downloadResultBtn">
+                                <i class="fas fa-download"></i> <span data-i18n="download">İndir</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+    </div>
+
+</body>
+
+</html>

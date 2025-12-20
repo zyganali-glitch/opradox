@@ -1,11 +1,12 @@
-/* style.css - opradox Ultimate Final */
+/* style.css - opradox Ultimate Final v2 */
 
 :root {
-    --gm-bg: #05060a;
-    --gm-card-bg: #10121b;
+    /* v2 Renk Paleti - Dark Mode */
+    --gm-bg: #1a1a2e;
+    --gm-card-bg: #16213e;
     --gm-card-border: #2a2e45;
-    --gm-primary: #2c7be5;
-    --gm-accent: #b9134f;
+    --gm-primary: #4a90d9;
+    --gm-accent: #9a3050;
     --gm-text: #f1f5f9;
     --gm-text-muted: #94a3b8;
     --gm-divider: #1e2233;
@@ -16,14 +17,15 @@
 }
 
 body.day-mode {
-    --gm-bg: #e0f0ff;
-    /* Gök Mavisi */
+    /* v2 Renk Paleti - Light Mode */
+    --gm-bg: #f8f9fa;
     --gm-card-bg: #ffffff;
-    --gm-card-border: #c9d7e8;
+    --gm-card-border: #e2e8f0;
     --gm-text: #0e1a2b;
     --gm-text-muted: #4c5d73;
-    --gm-primary: #1d75d2;
-    --gm-divider: #dcebf7;
+    --gm-primary: #4a90d9;
+    --gm-accent: #9a3050;
+    --gm-divider: #e2e8f0;
     --x-color: #000000;
 }
 
@@ -191,6 +193,31 @@ body {
     height: 100%;
     overflow-y: auto;
     padding-right: 5px;
+}
+
+/* Kılavuz Toggle için Stiller */
+.gm-main.help-collapsed {
+    grid-template-columns: 320px 1fr 0px;
+}
+
+.gm-main.help-collapsed .gm-right-pane {
+    display: none;
+}
+
+/* Kılavuz Kapatma Butonu */
+.gm-help-card .gm-help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.help-close-btn {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.help-close-btn:hover {
+    opacity: 1;
 }
 
 /* Sol Panel - SPLIT LAYOUT: Dosyalar (Üst, Kompakt) + Senaryolar (Alt, Geniş) */
@@ -2844,4 +2871,2435 @@ body.day-mode .gm-community-comment {
 
 body.day-mode .gm-admin-reply {
     background: rgba(0, 217, 126, 0.05);
+}
+
+/* =====================================================
+   HUB SAYFASI STİLLERİ
+   ===================================================== */
+
+/* Hub Root Container */
+.hub-app-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Hub Main Content */
+.hub-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 40px;
+    overflow-y: auto;
+    gap: 30px;
+}
+
+/* Hub Intro Section */
+.hub-intro {
+    text-align: center;
+    max-width: 600px;
+}
+
+.hub-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hub-desc {
+    font-size: 1rem;
+    color: var(--gm-text-muted);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Hub Cards Grid */
+.hub-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+}
+
+@media (max-width: 1100px) {
+    .hub-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .hub-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Hub Card */
+.hub-card {
+    position: relative;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 16px;
+    padding: 25px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow: hidden;
+}
+
+.hub-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--gm-primary), var(--gm-accent));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.hub-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    border-color: var(--gm-primary);
+}
+
+.hub-card:hover::before {
+    opacity: 1;
+}
+
+.hub-card.card-hover {
+    border-color: var(--gm-primary);
+}
+
+/* Card Icon */
+.hub-card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.15), rgba(154, 48, 80, 0.1));
+}
+
+.hub-card-icon.excel {
+    color: #217346;
+    background: rgba(33, 115, 70, 0.12);
+}
+
+.hub-card-icon.viz {
+    color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.12);
+}
+
+.hub-card-icon.pdf {
+    color: #d32f2f;
+    background: rgba(211, 47, 47, 0.12);
+}
+
+.hub-card-icon.ocr {
+    color: #7b1fa2;
+    background: rgba(123, 31, 162, 0.12);
+}
+
+/* Card Content */
+.hub-card-content h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--gm-text);
+}
+
+.hub-card-content p {
+    margin: 5px 0 0 0;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+    line-height: 1.4;
+}
+
+/* Card Badge */
+.hub-card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--gm-accent);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Card Arrow */
+.hub-card-arrow {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(74, 144, 217, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gm-primary);
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+}
+
+.hub-card:hover .hub-card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* =====================================================
+   FILE DOCKER STİLLERİ
+   ===================================================== */
+
+.file-docker-container {
+    width: 100%;
+    max-width: 1200px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 16px;
+    padding: 15px 20px;
+    margin-top: auto;
+}
+
+.file-docker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.file-docker-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--gm-accent);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-docker-header h4 i {
+    color: var(--gm-primary);
+}
+
+.docker-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Drop Zone */
+.file-docker-drop-zone {
+    min-height: 80px;
+    border: 2px dashed var(--gm-card-border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 15px;
+}
+
+.file-docker-drop-zone:hover,
+.file-docker-drop-zone.drag-over {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.05);
+}
+
+.file-docker-drop-zone.drag-over {
+    border-style: solid;
+    box-shadow: inset 0 0 20px rgba(74, 144, 217, 0.1);
+}
+
+/* Empty State */
+.docker-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--gm-text-muted);
+}
+
+.docker-empty-state i {
+    font-size: 2rem;
+    color: var(--gm-primary);
+    opacity: 0.6;
+}
+
+.docker-empty-state span {
+    font-size: 0.85rem;
+}
+
+/* File List */
+.docker-file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+/* File Chip */
+.docker-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(74, 144, 217, 0.08);
+    border: 1px solid var(--chip-color, var(--gm-primary));
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    color: var(--gm-text);
+    animation: chipSlideIn 0.3s ease;
+}
+
+@keyframes chipSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.docker-file-chip i {
+    color: var(--chip-color, var(--gm-primary));
+    font-size: 0.9rem;
+}
+
+.chip-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip-size {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+
+.chip-remove {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    font-size: 0.8rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.chip-remove:hover {
+    color: #ef4444;
+}
+
+/* Smart Route Suggestion */
+.smart-route-suggestion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+.suggestion-label {
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.suggestion-btn {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+}
+
+.suggestion-btn i {
+    margin-right: 6px;
+}
+
+/* =====================================================
+   HUB FOOTER
+   ===================================================== */
+
+.hub-footer {
+    background: var(--gm-card-bg);
+    border-top: 1px solid var(--gm-card-border);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 20px;
+}
+
+.footer-links a {
+    color: var(--gm-text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: var(--gm-primary);
+}
+
+.footer-copy {
+    color: var(--gm-text-muted);
+}
+
+/* =====================================================
+   PAYLAŞIM DROPDOWN
+   ===================================================== */
+
+.share-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 8px;
+    min-width: 160px;
+    z-index: 1000;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: dropdownSlide 0.2s ease;
+}
+
+@keyframes dropdownSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.share-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--gm-text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.share-item:hover {
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.share-item i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* Day Mode Overrides for Hub */
+body.day-mode .hub-card {
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+}
+
+body.day-mode .hub-card:hover {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+}
+
+body.day-mode .docker-file-chip {
+    background: rgba(74, 144, 217, 0.05);
+}
+
+body.day-mode .chip-size {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.day-mode .share-dropdown-menu {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* =====================================================
+   EXCEL STUDIO STİLLERİ
+   ===================================================== */
+
+/* Excel Studio Root */
+.excel-studio-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Module Navigation */
+.gm-module-nav {
+    display: flex;
+    gap: 4px;
+    background: var(--gm-bg);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.gm-module-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: var(--gm-text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.gm-module-tab:hover {
+    color: var(--gm-text);
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.gm-module-tab.active {
+    color: white;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+}
+
+.gm-module-tab i {
+    font-size: 0.9rem;
+}
+
+/* Back to Hub Button */
+.gm-back-to-hub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: var(--gm-text-muted);
+    background: var(--gm-bg);
+    margin-right: 12px;
+    transition: all 0.2s;
+}
+
+.gm-back-to-hub:hover {
+    color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.15);
+}
+
+/* Excel Main Layout - 3 Column */
+.excel-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 360px;
+    gap: 15px;
+    padding: 15px;
+    overflow: hidden;
+    height: calc(100vh - var(--header-h));
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* Kılavuz gizli olduğunda */
+.excel-main.help-collapsed {
+    grid-template-columns: 280px 1fr 0px;
+}
+
+.excel-main.help-collapsed .excel-right-pane {
+    display: none;
+}
+
+/* Sol Panel - Sadece Senaryo Listesi */
+.excel-left-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.excel-left-pane .gm-scenario-list-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+}
+
+.excel-left-pane .gm-scenario-list-card h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.excel-left-pane .gm-accordion-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Orta Panel - Docker + Form + Sonuç */
+.excel-middle-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Docker Section */
+.excel-docker-section {
+    flex-shrink: 0;
+}
+
+.excel-docker-card {
+    padding: 12px 15px;
+}
+
+.excel-docker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.excel-docker-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--gm-accent);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.excel-docker-header h3 i {
+    color: #217346;
+}
+
+.excel-docker-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Excel File Drop Zone */
+.excel-file-drop {
+    min-height: 60px;
+    border: 2px dashed var(--gm-card-border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 12px;
+}
+
+.excel-file-drop:hover,
+.excel-file-drop.drag-over {
+    border-color: #217346;
+    background: rgba(33, 115, 70, 0.05);
+}
+
+.excel-drop-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gm-text-muted);
+}
+
+.excel-drop-empty i {
+    font-size: 1.5rem;
+    color: #217346;
+    opacity: 0.7;
+}
+
+.excel-drop-empty span {
+    font-size: 0.85rem;
+}
+
+/* Excel File Chips */
+.excel-file-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+.excel-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(33, 115, 70, 0.1);
+    border: 1px solid #217346;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    color: var(--gm-text);
+}
+
+.excel-file-chip i {
+    color: #217346;
+}
+
+.excel-file-chip .chip-remove {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    font-size: 0.75rem;
+    transition: color 0.2s;
+}
+
+.excel-file-chip .chip-remove:hover {
+    color: #ef4444;
+}
+
+/* File Controls */
+.excel-file-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.excel-sheet-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.excel-sheet-controls select {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+}
+
+/* Sağ Panel - Kılavuz */
+.excel-right-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.excel-right-pane .gm-help-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.gm-help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 8px;
+}
+
+.gm-help-header h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.help-close-btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+#helpContentArea {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Scenario Card with Icons */
+.gm-scenario-card .gm-card-header h2,
+.gm-result-card .gm-result-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gm-result-card .gm-result-header h2 i {
+    color: var(--gm-success);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .excel-main {
+        grid-template-columns: 250px 1fr 300px;
+    }
+}
+
+@media (max-width: 992px) {
+    .excel-main {
+        grid-template-columns: 220px 1fr;
+    }
+
+    .excel-right-pane {
+        display: none;
+    }
+
+    .gm-module-nav {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .excel-main {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .excel-left-pane {
+        max-height: 200px;
+    }
+}
+
+/* =====================================================
+   EXCEL STUDIO v2 - MODERN SENARYO KARTLARI
+   ===================================================== */
+
+/* Senaryo Kartları - Modern Grid */
+.gm-scenario-list-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.gm-scenario-list-card h2 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-scenario-list-card h2 i {
+    color: var(--gm-primary);
+}
+
+/* Arama Kutusu */
+.gm-search-wrapper {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.gm-search-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gm-text-muted);
+    font-size: 0.85rem;
+}
+
+.gm-scenario-search {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+    transition: border-color 0.2s;
+}
+
+.gm-scenario-search:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+/* Accordion Konteyner */
+.gm-accordion-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Kategori Header */
+.gm-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.gm-accordion-header:hover {
+    border-color: var(--gm-primary);
+}
+
+.gm-accordion-header i {
+    color: var(--gm-accent);
+    font-size: 1.1rem;
+}
+
+.gm-accordion-header .gm-accordion-icon {
+    margin-left: auto;
+    transition: transform 0.3s;
+}
+
+.gm-accordion-header.active .gm-accordion-icon {
+    transform: rotate(180deg);
+}
+
+/* Senaryo Liste */
+.gm-accordion-body {
+    padding: 8px 0 8px 16px;
+    display: none;
+}
+
+.gm-accordion-body.show {
+    display: block;
+}
+
+.gm-scenario-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    margin: 4px 0;
+    background: rgba(74, 144, 217, 0.03);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gm-scenario-item:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.08);
+}
+
+.gm-scenario-item.active {
+    border-color: var(--gm-accent);
+    background: rgba(154, 48, 80, 0.1);
+    box-shadow: 0 2px 8px rgba(154, 48, 80, 0.15);
+}
+
+.gm-scenario-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.gm-scenario-icon i {
+    color: white;
+    font-size: 0.95rem;
+}
+
+.gm-scenario-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-scenario-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-scenario-desc {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-scenario-badge {
+    padding: 2px 8px;
+    background: rgba(0, 217, 126, 0.15);
+    color: var(--gm-success);
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+/* Settings Panel - Modern */
+.gm-scenario-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.gm-scenario-card .gm-card-header {
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-scenario-card .gm-card-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gm-scenario-card .gm-card-header h2 i {
+    color: var(--gm-primary);
+}
+
+/* Input Sources Box */
+.gm-input-sources {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.gm-input-sources h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--gm-text);
+}
+
+.gm-source-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.gm-source-item i {
+    color: #217346;
+}
+
+/* Toggle Switch */
+.gm-toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--gm-card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.gm-toggle-switch.active {
+    background: var(--gm-primary);
+}
+
+.gm-toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.gm-toggle-switch.active::after {
+    transform: translateX(20px);
+}
+
+/* Form Rows */
+.gm-form-row {
+    margin-bottom: 15px;
+}
+
+.gm-form-row label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 6px;
+}
+
+.gm-form-row input,
+.gm-form-row select,
+.gm-form-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    color: var(--gm-text);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.gm-form-row input:focus,
+.gm-form-row select:focus,
+.gm-form-row textarea:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+/* Run Button */
+.gm-gradient-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(74, 144, 217, 0.3);
+}
+
+.gm-gradient-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 144, 217, 0.4);
+}
+
+/* Result Card */
+.gm-result-card {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.gm-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-result-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gm-result-header h2 i {
+    color: var(--gm-success);
+}
+
+/* File Chip Active State */
+.excel-file-chip.active {
+    background: rgba(33, 115, 70, 0.15);
+    border-color: #217346;
+}
+
+/* =====================================================
+   VISUAL STUDIO STİLLERİ
+   ===================================================== */
+
+/* Viz Studio Root */
+.viz-studio-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Viz Main Layout - 3 Column */
+.viz-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 15px;
+    padding: 15px;
+    overflow: hidden;
+    height: calc(100vh - var(--header-h));
+}
+
+/* Sol Panel - Veri Sütunları */
+.viz-left-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viz-data-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.viz-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-data-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-data-header h3 i {
+    color: var(--gm-primary);
+}
+
+.viz-load-btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+/* Dosya Drop Zone */
+.viz-file-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border: 2px dashed var(--gm-card-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 12px;
+}
+
+.viz-file-drop:hover,
+.viz-file-drop.drag-over {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.05);
+}
+
+.viz-file-drop i {
+    font-size: 1.5rem;
+    color: var(--gm-primary);
+    opacity: 0.7;
+}
+
+.viz-file-drop span {
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+}
+
+/* Dosya Bilgisi */
+.viz-file-info {
+    padding: 8px 10px;
+    background: rgba(74, 144, 217, 0.08);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.viz-file-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.viz-file-name i {
+    color: #217346;
+}
+
+.viz-file-remove {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 2px;
+}
+
+.viz-file-remove:hover {
+    color: #ef4444;
+}
+
+/* Sütun Listesi */
+.viz-columns-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 5px 0;
+    margin-bottom: 15px;
+    max-height: 200px;
+}
+
+.viz-no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    color: var(--gm-text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.viz-no-data i {
+    font-size: 1.5rem;
+    opacity: 0.5;
+}
+
+.viz-column-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(74, 144, 217, 0.08);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.viz-column-chip:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.15);
+}
+
+.viz-column-chip i {
+    color: var(--gm-primary);
+    font-size: 0.75rem;
+}
+
+/* Grafik Tipleri */
+.viz-chart-types {
+    border-top: 1px solid var(--gm-card-border);
+    padding-top: 12px;
+}
+
+.viz-chart-types h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.viz-chart-types h4 i {
+    color: var(--gm-accent);
+}
+
+.viz-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.viz-chart-type {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 5px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.viz-chart-type:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.1);
+    transform: scale(1.02);
+}
+
+.viz-chart-type i {
+    font-size: 1.2rem;
+    color: var(--gm-primary);
+}
+
+.viz-chart-type span {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+}
+
+/* Orta Panel - Dashboard Canvas */
+.viz-middle-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viz-canvas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px 10px 0 0;
+}
+
+.viz-canvas-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-canvas-header h2 i {
+    color: var(--gm-accent);
+}
+
+.viz-canvas-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.viz-live-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(0, 217, 126, 0.15);
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--gm-success);
+}
+
+.viz-live-badge i {
+    font-size: 0.5rem;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Dashboard Grid */
+.viz-dashboard-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.viz-dashboard-grid.drag-over {
+    background: rgba(74, 144, 217, 0.05);
+    border-color: var(--gm-primary);
+}
+
+/* Boş Canvas */
+.viz-empty-canvas {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: var(--gm-text-muted);
+    text-align: center;
+    padding: 30px;
+}
+
+.viz-empty-canvas i {
+    font-size: 4rem;
+    opacity: 0.2;
+    color: var(--gm-primary);
+}
+
+.viz-empty-canvas h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--gm-text);
+}
+
+.viz-empty-canvas p {
+    margin: 0;
+    font-size: 0.9rem;
+    max-width: 300px;
+}
+
+/* Grafik Widget */
+.viz-chart-widget {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 250px;
+}
+
+.viz-chart-widget:hover {
+    border-color: var(--gm-primary);
+}
+
+.viz-chart-widget.selected {
+    border-color: var(--gm-accent);
+    box-shadow: 0 0 0 2px rgba(154, 48, 80, 0.2);
+}
+
+.viz-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-widget-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.viz-widget-settings {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 0.8rem;
+    transition: color 0.2s;
+}
+
+.viz-widget-settings:hover {
+    color: var(--gm-primary);
+}
+
+.viz-widget-chart {
+    height: 220px;
+    padding: 5px;
+}
+
+/* Sağ Panel - Ayarlar */
+.viz-right-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viz-settings-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.viz-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-settings-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-settings-header h3 i {
+    color: var(--gm-accent);
+}
+
+.viz-settings-close {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+.viz-no-selection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--gm-text-muted);
+    text-align: center;
+}
+
+.viz-no-selection i {
+    font-size: 2rem;
+    opacity: 0.4;
+}
+
+.viz-no-selection p {
+    font-size: 0.85rem;
+}
+
+/* Form Groups */
+.viz-form-group {
+    margin-bottom: 15px;
+}
+
+.viz-form-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 5px;
+}
+
+.viz-form-group input,
+.viz-form-group select {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+}
+
+.viz-form-group input:focus,
+.viz-form-group select:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+/* Color Picker */
+.viz-color-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.viz-color-picker input[type="color"] {
+    width: 50px;
+    height: 36px;
+    padding: 2px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.viz-color-preview {
+    flex: 1;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--gm-card-border);
+}
+
+/* Delete Button */
+.viz-delete-chart {
+    color: #ef4444 !important;
+    border-color: #ef4444 !important;
+}
+
+.viz-delete-chart:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .viz-main {
+        grid-template-columns: 250px 1fr 260px;
+    }
+}
+
+@media (max-width: 900px) {
+    .viz-main {
+        grid-template-columns: 220px 1fr;
+    }
+
+    .viz-right-pane {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .viz-main {
+        grid-template-columns: 1fr;
+    }
+
+    .viz-left-pane {
+        max-height: 250px;
+    }
+}
+
+/* =====================================================
+   PDF TOOLS STİLLERİ
+   ===================================================== */
+
+/* PDF Tools Root */
+.pdf-tools-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* PDF Main */
+.pdf-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+    overflow: hidden;
+}
+
+/* Araç Çubuğu */
+.pdf-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+}
+
+.pdf-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 15px 25px;
+    background: var(--gm-bg);
+    border: 2px solid var(--gm-card-border);
+    border-radius: 12px;
+    color: var(--gm-text);
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 100px;
+}
+
+.pdf-tool-btn:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.pdf-tool-btn.active {
+    border-color: #d32f2f;
+    background: rgba(211, 47, 47, 0.1);
+    color: #d32f2f;
+}
+
+.pdf-tool-btn i {
+    font-size: 1.5rem;
+}
+
+.pdf-tool-btn span {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* PDF Content Area */
+.pdf-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    overflow: hidden;
+}
+
+/* Sol Section - Drop Zone */
+.pdf-left-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-upload-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-drop-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    border: 3px dashed var(--gm-card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-height: 250px;
+}
+
+.pdf-drop-zone:hover,
+.pdf-drop-zone.drag-over {
+    border-color: #d32f2f;
+    background: rgba(211, 47, 47, 0.05);
+}
+
+.pdf-drop-zone i {
+    font-size: 4rem;
+    color: #d32f2f;
+    opacity: 0.6;
+}
+
+.pdf-drop-zone h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--gm-text);
+}
+
+.pdf-drop-zone p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+}
+
+/* File List */
+.pdf-file-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-file-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.pdf-file-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pdf-file-header h4 i {
+    color: #d32f2f;
+}
+
+.pdf-clear-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+.pdf-files-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pdf-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.pdf-file-item:hover {
+    border-color: var(--gm-primary);
+}
+
+.pdf-file-item.dragging {
+    opacity: 0.5;
+}
+
+.pdf-file-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(211, 47, 47, 0.1);
+    border-radius: 8px;
+    color: #d32f2f;
+    font-size: 1.2rem;
+}
+
+.pdf-file-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pdf-file-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.pdf-file-size {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.pdf-file-remove {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 5px;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.pdf-file-remove:hover {
+    color: #ef4444;
+}
+
+/* Sağ Section - Settings */
+.pdf-right-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.pdf-settings-card {
+    padding: 20px;
+}
+
+.pdf-settings-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pdf-settings-card h3 i {
+    color: #d32f2f;
+}
+
+.pdf-tool-desc {
+    color: var(--gm-text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 20px 0;
+}
+
+.pdf-option-group {
+    margin-bottom: 15px;
+}
+
+.pdf-option-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 6px;
+}
+
+.pdf-option-group input,
+.pdf-option-group select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    color: var(--gm-text);
+    font-size: 0.9rem;
+}
+
+.pdf-option-group input:focus,
+.pdf-option-group select:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+.pdf-run-btn {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Convert Grid */
+.pdf-convert-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.pdf-convert-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 8px;
+    background: var(--gm-bg);
+    border: 2px solid var(--gm-card-border);
+    border-radius: 8px;
+    color: var(--gm-text);
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.pdf-convert-btn:hover {
+    border-color: var(--gm-primary);
+}
+
+.pdf-convert-btn.active {
+    border-color: #d32f2f;
+    background: rgba(211, 47, 47, 0.1);
+}
+
+.pdf-convert-btn i {
+    font-size: 1.2rem;
+}
+
+/* Result Card */
+.pdf-result-card {
+    padding: 15px 20px;
+}
+
+.pdf-result-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.pdf-result-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pdf-result-header h3 i {
+    color: var(--gm-success);
+}
+
+.pdf-result-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+}
+
+.pdf-result-message i {
+    font-size: 1.2rem;
+}
+
+.pdf-result-actions {
+    margin-top: 15px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .pdf-content {
+        grid-template-columns: 1fr;
+    }
+
+    .pdf-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .pdf-tool-btn {
+        min-width: 80px;
+        padding: 10px 15px;
+    }
+}
+
+@media (max-width: 600px) {
+    .pdf-convert-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* =====================================================
+   OCR LAB STİLLERİ
+   ===================================================== */
+
+/* OCR Lab Root */
+.ocr-lab-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* OCR Main - Split View */
+.ocr-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 15px;
+    overflow: hidden;
+}
+
+/* Sol Panel - Görsel */
+.ocr-left-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.ocr-image-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ocr-image-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.ocr-image-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ocr-image-header h3 i {
+    color: #8b5cf6;
+}
+
+/* Drop Zone */
+.ocr-drop-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    border: 3px dashed var(--gm-card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-height: 300px;
+}
+
+.ocr-drop-zone:hover,
+.ocr-drop-zone.drag-over {
+    border-color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.ocr-drop-zone i {
+    font-size: 4rem;
+    color: #8b5cf6;
+    opacity: 0.6;
+}
+
+.ocr-drop-zone h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--gm-text);
+}
+
+.ocr-drop-zone p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+}
+
+/* Preview Container */
+.ocr-preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ocr-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.ocr-preview-header span {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.ocr-preview-remove {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.ocr-preview-remove:hover {
+    color: #ef4444;
+}
+
+.ocr-preview-image {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.ocr-preview-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* OCR Settings */
+.ocr-settings {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+.ocr-settings h4 {
+    margin: 0 0 15px 0;
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ocr-settings h4 i {
+    color: #8b5cf6;
+}
+
+.ocr-option-group {
+    margin-bottom: 12px;
+}
+
+.ocr-option-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 5px;
+}
+
+.ocr-option-group select {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+}
+
+.ocr-option-group select:focus {
+    outline: none;
+    border-color: #8b5cf6;
+}
+
+.ocr-run-btn {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Sağ Panel - Çıktı */
+.ocr-right-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.ocr-output-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ocr-output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.ocr-output-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ocr-output-header h3 i {
+    color: var(--gm-success);
+}
+
+.ocr-output-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Empty / Processing / Result States */
+.ocr-output-empty,
+.ocr-output-processing {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: var(--gm-text-muted);
+    text-align: center;
+}
+
+.ocr-output-empty i,
+.ocr-output-processing i {
+    font-size: 3rem;
+    opacity: 0.3;
+}
+
+.ocr-output-empty p,
+.ocr-output-processing p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.ocr-output-result {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ocr-output-stats {
+    display: flex;
+    gap: 15px;
+    padding: 8px 12px;
+    background: rgba(0, 217, 126, 0.1);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+}
+
+.ocr-output-text {
+    flex: 1;
+    margin: 0;
+    padding: 15px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .ocr-main {
+        grid-template-columns: 1fr;
+    }
+
+    .ocr-left-pane {
+        max-height: 50vh;
+    }
 }

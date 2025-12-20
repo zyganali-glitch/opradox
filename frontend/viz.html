@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Opradox – Visual Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description"
+        content="Opradox Visual Studio - Canlı dashboard oluşturun, grafiklerinizi sürükle bırak ile tasarlayın" />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BVYYQS8HWY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        const hostname = window.location.hostname;
+        if (hostname.includes('opradox.com.tr')) {
+            gtag('config', 'G-BVYYQS8HWY');
+        } else if (hostname.includes('opradox.com')) {
+            gtag('config', 'G-EDHVSD1LM1');
+        } else {
+            gtag('config', 'G-BVYYQS8HWY');
+            gtag('config', 'G-EDHVSD1LM1');
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+
+    <!-- ECharts for Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <script defer src="js/fileDocker.js"></script>
+    <script defer src="js/viz.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="viz-studio-root">
+
+        <!-- HEADER with Navigation -->
+        <header class="gm-header">
+            <div class="gm-logo-box">
+                <a href="hub.html" class="gm-back-to-hub" title="Hub'a Dön">
+                    <i class="fas fa-th-large"></i>
+                </a>
+                <img src="img/opradox_logo_dark.png?v=5" alt="Opradox Logo" class="gm-logo-img" id="vizLogo">
+                <span class="gm-logo-subtitle" data-i18n="viz_subtitle">Visual Studio</span>
+            </div>
+
+            <!-- Module Navigation -->
+            <nav class="gm-module-nav">
+                <a href="excel.html" class="gm-module-tab" data-module="excel">
+                    <i class="fas fa-file-excel"></i> <span data-i18n="module_excel">Excel</span>
+                </a>
+                <a href="viz.html" class="gm-module-tab active" data-module="viz">
+                    <i class="fas fa-chart-line"></i> <span data-i18n="module_viz">Viz</span>
+                </a>
+                <a href="pdf.html" class="gm-module-tab" data-module="pdf">
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="module_pdf">PDF</span>
+                </a>
+                <a href="ocr.html" class="gm-module-tab" data-module="ocr">
+                    <i class="fas fa-eye"></i> <span data-i18n="module_ocr">OCR</span>
+                </a>
+            </nav>
+
+            <div class="gm-header-right">
+                <button class="gm-pill-btn" id="saveBtn">
+                    <i class="fas fa-save"></i> <span data-i18n="save">Kaydet</span>
+                </button>
+                <button class="gm-pill-btn" id="exportBtn">
+                    <i class="fas fa-download"></i> <span data-i18n="export">Export</span>
+                </button>
+                <div class="gm-divider-v" style="width:1px; height:20px; background:var(--gm-divider); margin:0 8px;">
+                </div>
+                <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
+                        class="fas fa-sun"></i></button>
+                <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
+            </div>
+        </header>
+
+        <main class="viz-main">
+            <!-- SOL PANEL: VERİ SÜTUNLARI -->
+            <section class="viz-left-pane">
+                <div class="gm-card viz-data-card">
+                    <div class="viz-data-header">
+                        <h3><i class="fas fa-database"></i> <span data-i18n="data_columns">Veri Sütunları</span></h3>
+                        <button class="gm-pill-btn viz-load-btn" id="loadDataBtn">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                    </div>
+
+                    <!-- Dosya Yükleme -->
+                    <div class="viz-file-drop" id="vizDropZone">
+                        <i class="fas fa-file-excel"></i>
+                        <span data-i18n="drop_excel">Excel dosyası sürükleyin</span>
+                        <input type="file" id="vizFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+                    </div>
+
+                    <!-- Yüklenen Dosya Bilgisi -->
+                    <div class="viz-file-info" id="vizFileInfo" style="display:none;">
+                        <div class="viz-file-name">
+                            <i class="fas fa-file-excel"></i>
+                            <span id="vizFileName">dosya.xlsx</span>
+                            <button class="viz-file-remove" id="vizFileRemove"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Sütun Listesi (Sürüklenebilir) -->
+                    <div class="viz-columns-list" id="vizColumnsList">
+                        <div class="viz-no-data" data-i18n="no_data_loaded">
+                            <i class="fas fa-info-circle"></i>
+                            Veri yükleyin
+                        </div>
+                    </div>
+
+                    <!-- Grafik Tipleri -->
+                    <div class="viz-chart-types">
+                        <h4><i class="fas fa-chart-pie"></i> <span data-i18n="chart_types">Grafik Tipleri</span></h4>
+                        <div class="viz-chart-grid">
+                            <div class="viz-chart-type" data-type="bar" draggable="true">
+                                <i class="fas fa-chart-bar"></i>
+                                <span data-i18n="chart_bar">Sütun</span>
+                            </div>
+                            <div class="viz-chart-type" data-type="line" draggable="true">
+                                <i class="fas fa-chart-line"></i>
+                                <span data-i18n="chart_line">Çizgi</span>
+                            </div>
+                            <div class="viz-chart-type" data-type="pie" draggable="true">
+                                <i class="fas fa-chart-pie"></i>
+                                <span data-i18n="chart_pie">Pasta</span>
+                            </div>
+                            <div class="viz-chart-type" data-type="area" draggable="true">
+                                <i class="fas fa-chart-area"></i>
+                                <span data-i18n="chart_area">Alan</span>
+                            </div>
+                            <div class="viz-chart-type" data-type="scatter" draggable="true">
+                                <i class="fas fa-braille"></i>
+                                <span data-i18n="chart_scatter">Dağılım</span>
+                            </div>
+                            <div class="viz-chart-type" data-type="doughnut" draggable="true">
+                                <i class="fas fa-circle-notch"></i>
+                                <span data-i18n="chart_doughnut">Halka</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ORTA PANEL: CANLI DASHBOARD -->
+            <section class="viz-middle-pane">
+                <div class="viz-canvas-header">
+                    <h2><i class="fas fa-th-large"></i> <span data-i18n="dashboard">Dashboard</span></h2>
+                    <div class="viz-canvas-actions">
+                        <span class="viz-live-badge">
+                            <i class="fas fa-circle"></i> <span data-i18n="live">CANLI</span>
+                        </span>
+                        <button class="gm-pill-btn" id="addChartBtn">
+                            <i class="fas fa-plus"></i> <span data-i18n="add_chart">Grafik Ekle</span>
+                        </button>
+                        <button class="gm-pill-btn" id="clearCanvasBtn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="viz-dashboard-grid" id="vizDashboardGrid">
+                    <!-- Boş durum -->
+                    <div class="viz-empty-canvas" id="vizEmptyCanvas">
+                        <i class="fas fa-chart-line"></i>
+                        <h3 data-i18n="empty_dashboard_title">Dashboard'unuz Boş</h3>
+                        <p data-i18n="empty_dashboard_desc">Sol taraftan grafik tipini sürükleyin veya "Grafik Ekle"
+                            butonuna tıklayın</p>
+                    </div>
+
+                    <!-- Grafik Widget'ları buraya eklenecek -->
+                </div>
+            </section>
+
+            <!-- SAĞ PANEL: GRAFİK AYARLARI -->
+            <section class="viz-right-pane" id="vizSettingsPane">
+                <div class="gm-card viz-settings-card">
+                    <div class="viz-settings-header">
+                        <h3><i class="fas fa-cog"></i> <span data-i18n="chart_settings">Grafik Ayarları</span></h3>
+                        <button class="gm-pill-btn viz-settings-close" id="closeSettingsBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Grafik seçili değilken -->
+                    <div class="viz-no-selection" id="vizNoSelection">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <p data-i18n="select_chart">Düzenlemek için bir grafik seçin</p>
+                    </div>
+
+                    <!-- Grafik ayarları formu -->
+                    <div class="viz-settings-form" id="vizSettingsForm" style="display:none;">
+                        <!-- Grafik Başlığı -->
+                        <div class="viz-form-group">
+                            <label data-i18n="chart_title">Grafik Başlığı</label>
+                            <input type="text" id="chartTitle" placeholder="Başlık...">
+                        </div>
+
+                        <!-- X Ekseni -->
+                        <div class="viz-form-group">
+                            <label data-i18n="x_axis">X Ekseni (Kategori)</label>
+                            <select id="chartXAxis">
+                                <option value="">Seçin...</option>
+                            </select>
+                        </div>
+
+                        <!-- Y Ekseni -->
+                        <div class="viz-form-group">
+                            <label data-i18n="y_axis">Y Ekseni (Değer)</label>
+                            <select id="chartYAxis">
+                                <option value="">Seçin...</option>
+                            </select>
+                        </div>
+
+                        <!-- Agregasyon -->
+                        <div class="viz-form-group">
+                            <label data-i18n="aggregation">Agregasyon</label>
+                            <select id="chartAggregation">
+                                <option value="sum" data-i18n="agg_sum">Toplam</option>
+                                <option value="avg" data-i18n="agg_avg">Ortalama</option>
+                                <option value="count" data-i18n="agg_count">Sayı</option>
+                                <option value="min" data-i18n="agg_min">Minimum</option>
+                                <option value="max" data-i18n="agg_max">Maksimum</option>
+                            </select>
+                        </div>
+
+                        <!-- Renk -->
+                        <div class="viz-form-group">
+                            <label data-i18n="color">Renk</label>
+                            <div class="viz-color-picker">
+                                <input type="color" id="chartColor" value="#4a90d9">
+                                <span class="viz-color-preview" style="background:#4a90d9;"></span>
+                            </div>
+                        </div>
+
+                        <!-- Uygula Butonu -->
+                        <button class="gm-gradient-btn" id="applySettingsBtn" style="width:100%; margin-top:15px;">
+                            <i class="fas fa-check"></i> <span data-i18n="apply">Uygula</span>
+                        </button>
+
+                        <!-- Sil Butonu -->
+                        <button class="gm-pill-btn viz-delete-chart" id="deleteChartBtn"
+                            style="width:100%; margin-top:10px;">
+                            <i class="fas fa-trash"></i> <span data-i18n="delete_chart">Grafiği Sil</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+    </div>
+
+    <!-- Contact Modal (Mevcut yapıdan) -->
+    <div id="contactModal" class="gm-modal">
+        <div class="gm-modal-content">
+            <span class="gm-close-modal">&times;</span>
+            <div class="gm-modal-left">
+                <h2 data-i18n="modal_about_title">Hakkımızda</h2>
+                <p data-i18n="modal_about_desc">Opradox Visual Studio ile verilerinizi görselleştirin.</p>
+            </div>
+            <div class="gm-modal-right">
+                <h2 data-i18n="contact_modal_title" style="color:var(--gm-text); margin-bottom:15px; border:none;">Bize
+                    Ulaşın</h2>
+                <form id="contactForm">
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_name">Ad Soyad</label>
+                        <input type="text" id="contactName" required>
+                    </div>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_email">E-posta</label>
+                        <input type="email" id="contactEmail" required>
+                    </div>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_msg">Mesajınız</label>
+                        <textarea id="contactMessage" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="gm-gradient-btn" style="width:100%"
+                        data-i18n="send_btn">Gönder</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

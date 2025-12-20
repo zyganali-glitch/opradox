@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Opradox – OCR Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Opradox OCR Lab - Görsellerden metin çıkarın, belge tanıma" />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BVYYQS8HWY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        const hostname = window.location.hostname;
+        if (hostname.includes('opradox.com.tr')) {
+            gtag('config', 'G-BVYYQS8HWY');
+        } else if (hostname.includes('opradox.com')) {
+            gtag('config', 'G-EDHVSD1LM1');
+        } else {
+            gtag('config', 'G-BVYYQS8HWY');
+            gtag('config', 'G-EDHVSD1LM1');
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+
+    <script defer src="js/fileDocker.js"></script>
+    <script defer src="js/ocr.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="ocr-lab-root">
+
+        <!-- HEADER with Navigation -->
+        <header class="gm-header">
+            <div class="gm-logo-box">
+                <a href="hub.html" class="gm-back-to-hub" title="Hub'a Dön">
+                    <i class="fas fa-th-large"></i>
+                </a>
+                <img src="img/opradox_logo_dark.png?v=5" alt="Opradox Logo" class="gm-logo-img" id="ocrLogo">
+                <span class="gm-logo-subtitle" data-i18n="ocr_subtitle">OCR Lab</span>
+            </div>
+
+            <!-- Module Navigation -->
+            <nav class="gm-module-nav">
+                <a href="excel.html" class="gm-module-tab" data-module="excel">
+                    <i class="fas fa-file-excel"></i> <span data-i18n="module_excel">Excel</span>
+                </a>
+                <a href="viz.html" class="gm-module-tab" data-module="viz">
+                    <i class="fas fa-chart-line"></i> <span data-i18n="module_viz">Viz</span>
+                </a>
+                <a href="pdf.html" class="gm-module-tab" data-module="pdf">
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="module_pdf">PDF</span>
+                </a>
+                <a href="ocr.html" class="gm-module-tab active" data-module="ocr">
+                    <i class="fas fa-eye"></i> <span data-i18n="module_ocr">OCR</span>
+                </a>
+            </nav>
+
+            <div class="gm-header-right">
+                <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
+                        class="fas fa-sun"></i></button>
+                <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
+            </div>
+        </header>
+
+        <main class="ocr-main">
+            <!-- SOL PANEL: GÖRSEL ÖNİZLEME -->
+            <section class="ocr-left-pane">
+                <div class="gm-card ocr-image-card">
+                    <div class="ocr-image-header">
+                        <h3><i class="fas fa-image"></i> <span data-i18n="image_preview">Görsel Önizleme</span></h3>
+                        <button class="gm-pill-btn" id="loadImageBtn">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                    </div>
+
+                    <!-- Görsel Drop Zone -->
+                    <div class="ocr-drop-zone" id="ocrDropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3 data-i18n="ocr_drop_title">Görsel Yükleyin</h3>
+                        <p data-i18n="ocr_drop_desc">PNG, JPG, PDF desteklenir</p>
+                        <input type="file" id="ocrFileInput" accept="image/*,.pdf" style="display:none;">
+                    </div>
+
+                    <!-- Görsel Önizleme -->
+                    <div class="ocr-preview-container" id="ocrPreviewContainer" style="display:none;">
+                        <div class="ocr-preview-header">
+                            <span id="ocrFileName">image.png</span>
+                            <button class="ocr-preview-remove" id="removeImageBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="ocr-preview-image">
+                            <img id="ocrPreviewImg" src="" alt="Önizleme">
+                        </div>
+                    </div>
+
+                    <!-- OCR Ayarları -->
+                    <div class="ocr-settings" id="ocrSettings" style="display:none;">
+                        <h4><i class="fas fa-cog"></i> <span data-i18n="ocr_settings">Ayarlar</span></h4>
+
+                        <div class="ocr-option-group">
+                            <label data-i18n="ocr_language">Dil</label>
+                            <select id="ocrLanguage">
+                                <option value="tur">Türkçe</option>
+                                <option value="eng">English</option>
+                                <option value="tur+eng">Türkçe + English</option>
+                                <option value="deu">Deutsch</option>
+                                <option value="fra">Français</option>
+                            </select>
+                        </div>
+
+                        <div class="ocr-option-group">
+                            <label data-i18n="output_format">Çıktı Formatı</label>
+                            <select id="outputFormat">
+                                <option value="text" data-i18n="format_text">Düz Metin</option>
+                                <option value="json" data-i18n="format_json">JSON</option>
+                                <option value="table" data-i18n="format_table">Tablo (Excel)</option>
+                            </select>
+                        </div>
+
+                        <button class="gm-gradient-btn ocr-run-btn" id="runOcrBtn">
+                            <i class="fas fa-magic"></i> <span data-i18n="run_ocr">OCR Çalıştır</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SAĞ PANEL: METİN/JSON ÇIKTI -->
+            <section class="ocr-right-pane">
+                <div class="gm-card ocr-output-card">
+                    <div class="ocr-output-header">
+                        <h3><i class="fas fa-align-left"></i> <span data-i18n="ocr_output">Çıktı</span></h3>
+                        <div class="ocr-output-actions">
+                            <button class="gm-pill-btn" id="copyOutputBtn" title="Kopyala">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="gm-pill-btn" id="downloadOutputBtn" title="İndir">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Boş Durum -->
+                    <div class="ocr-output-empty" id="ocrOutputEmpty">
+                        <i class="fas fa-file-alt"></i>
+                        <p data-i18n="ocr_output_empty">OCR sonucu burada görünecek</p>
+                    </div>
+
+                    <!-- İşleniyor -->
+                    <div class="ocr-output-processing" id="ocrOutputProcessing" style="display:none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p data-i18n="processing">İşleniyor...</p>
+                    </div>
+
+                    <!-- Sonuç -->
+                    <div class="ocr-output-result" id="ocrOutputResult" style="display:none;">
+                        <div class="ocr-output-stats">
+                            <span id="ocrCharCount">0 karakter</span>
+                            <span id="ocrWordCount">0 kelime</span>
+                        </div>
+                        <pre class="ocr-output-text" id="ocrOutputText"></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+    </div>
+
+</body>
+
+</html>

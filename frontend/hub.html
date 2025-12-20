@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Opradox Hub – Modül Seçimi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Opradox Hub - Excel, PDF, Görselleştirme ve OCR araçlarına tek noktadan erişim" />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BVYYQS8HWY"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        const hostname = window.location.hostname;
+        if (hostname.includes('opradox.com.tr')) {
+            gtag('config', 'G-BVYYQS8HWY');
+        } else if (hostname.includes('opradox.com')) {
+            gtag('config', 'G-EDHVSD1LM1');
+        } else {
+            gtag('config', 'G-BVYYQS8HWY');
+            gtag('config', 'G-EDHVSD1LM1');
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+    <script defer src="js/fileDocker.js"></script>
+    <script defer src="js/hub.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="hub-app-root">
+
+        <!-- HEADER -->
+        <header class="gm-header">
+            <div class="gm-logo-box">
+                <img src="img/opradox_logo_dark.png?v=5" alt="Opradox Logo" class="gm-logo-img" id="hubLogo">
+                <span class="gm-logo-subtitle" data-i18n="hub_subtitle">Modülünüzü Seçin</span>
+            </div>
+
+            <div class="gm-header-right">
+                <div class="gm-site-share" id="headerShareContainer" style="position:relative;">
+                    <button class="gm-pill-btn" id="headerShareBtn">
+                        <i class="fas fa-share-alt"></i> <span data-i18n="recommend_site">Siteyi Tavsiye Et</span>
+                    </button>
+                    <div id="headerShareDropdown" style="display:none;"></div>
+                </div>
+
+                <div class="gm-divider-v" style="width:1px; height:20px; background:var(--gm-divider); margin:0 10px;">
+                </div>
+
+                <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
+                        class="fas fa-sun"></i></button>
+                <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
+                <button id="contactBtn" class="gm-pill-btn"><i class="fas fa-envelope"></i> <span
+                        data-i18n="contact">Bize Ulaşın</span></button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="hub-main">
+            <!-- HUB INTRO -->
+            <div class="hub-intro">
+                <h1 class="hub-title" data-i18n="hub_welcome_title">Opradox'a Hoş Geldiniz</h1>
+                <p class="hub-desc" data-i18n="hub_welcome_desc">Dosyalarınızı aşağıya sürükleyin, modülünüzü seçin ve
+                    işleme başlayın.</p>
+            </div>
+
+            <!-- MODULE CARDS GRID -->
+            <div class="hub-grid">
+                <!-- Excel Studio -->
+                <div class="hub-card" data-module="excel" onclick="navigateToModule('excel')">
+                    <div class="hub-card-icon excel">
+                        <i class="fas fa-file-excel"></i>
+                    </div>
+                    <div class="hub-card-content">
+                        <h3 data-i18n="module_excel">Excel Studio</h3>
+                        <p data-i18n="module_excel_desc">70+ senaryo ile Excel dosyalarınızı temizleyin, birleştirin,
+                            hesaplayın.</p>
+                    </div>
+                    <div class="hub-card-badge" id="excelBadge" style="display:none;">
+                        <span>0</span> <span data-i18n="files">dosya</span>
+                    </div>
+                    <div class="hub-card-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <!-- Visual Studio -->
+                <div class="hub-card" data-module="viz" onclick="navigateToModule('viz')">
+                    <div class="hub-card-icon viz">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="hub-card-content">
+                        <h3 data-i18n="module_viz">Visual Studio</h3>
+                        <p data-i18n="module_viz_desc">Canlı dashboard oluşturun, grafiklerinizi sürükle bırak ile
+                            tasarlayın.</p>
+                    </div>
+                    <div class="hub-card-badge" id="vizBadge" style="display:none;">
+                        <span>0</span> <span data-i18n="files">dosya</span>
+                    </div>
+                    <div class="hub-card-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <!-- PDF Tools -->
+                <div class="hub-card" data-module="pdf" onclick="navigateToModule('pdf')">
+                    <div class="hub-card-icon pdf">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="hub-card-content">
+                        <h3 data-i18n="module_pdf">PDF Tools</h3>
+                        <p data-i18n="module_pdf_desc">PDF dosyalarını birleştirin, bölün, sıkıştırın veya dönüştürün.
+                        </p>
+                    </div>
+                    <div class="hub-card-badge" id="pdfBadge" style="display:none;">
+                        <span>0</span> <span data-i18n="files">dosya</span>
+                    </div>
+                    <div class="hub-card-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <!-- OCR Lab -->
+                <div class="hub-card" data-module="ocr" onclick="navigateToModule('ocr')">
+                    <div class="hub-card-icon ocr">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="hub-card-content">
+                        <h3 data-i18n="module_ocr">OCR Lab</h3>
+                        <p data-i18n="module_ocr_desc">Görsellerden ve taranmış belgelerden metin çıkarın.</p>
+                    </div>
+                    <div class="hub-card-badge" id="ocrBadge" style="display:none;">
+                        <span>0</span> <span data-i18n="files">dosya</span>
+                    </div>
+                    <div class="hub-card-arrow"><i class="fas fa-arrow-right"></i></div>
+                </div>
+            </div>
+
+            <!-- FILE DOCKER (Yatay) -->
+            <div class="file-docker-container">
+                <div class="file-docker-header">
+                    <h4><i class="fas fa-folder-open"></i> <span data-i18n="docker_title">Dosya Docker</span></h4>
+                    <div class="docker-actions">
+                        <button class="gm-pill-btn docker-clear-btn" id="dockerClearBtn" style="display:none;">
+                            <i class="fas fa-trash"></i> <span data-i18n="docker_clear">Temizle</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="file-docker-drop-zone" id="dockerDropZone">
+                    <div class="docker-empty-state" id="dockerEmptyState">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span data-i18n="docker_empty">Dosyaları buraya sürükleyin veya tıklayın</span>
+                    </div>
+                    <div class="docker-file-list" id="dockerFileList">
+                        <!-- Dosya chip'leri buraya eklenecek -->
+                    </div>
+                    <input type="file" id="dockerFileInput" multiple
+                        accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.gif,.bmp,.tiff" style="display:none;">
+                </div>
+
+                <!-- Akıllı Yönlendirme Önerisi -->
+                <div class="smart-route-suggestion" id="smartRouteSuggestion" style="display:none;">
+                    <span class="suggestion-label" data-i18n="smart_route">Önerilen Modül:</span>
+                    <button class="gm-gradient-btn suggestion-btn" id="suggestionBtn">
+                        <i class="fas fa-magic"></i> <span id="suggestionModuleName">Excel Studio</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="hub-footer">
+            <div class="footer-links">
+                <a href="#" data-i18n="footer_about">Hakkımızda</a>
+                <a href="#" data-i18n="footer_privacy">Gizlilik</a>
+                <a href="#" data-i18n="footer_contact">İletişim</a>
+            </div>
+            <div class="footer-copy">
+                © 2024 Opradox. <span data-i18n="footer_rights">Tüm hakları saklıdır.</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Contact Modal (Mevcut yapıdan) -->
+    <div id="contactModal" class="gm-modal">
+        <div class="gm-modal-content">
+            <span class="gm-close-modal">&times;</span>
+            <div class="gm-modal-left">
+                <h2 data-i18n="modal_about_title">Hakkımızda</h2>
+                <p data-i18n="modal_about_desc">Opradox, veri işleme süreçlerinizi hızlandıran güçlü bir araç setidir.
+                </p>
+            </div>
+            <div class="gm-modal-right">
+                <h2 data-i18n="contact_modal_title" style="color:var(--gm-text); margin-bottom:15px; border:none;">Bize
+                    Ulaşın</h2>
+                <form id="contactForm">
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_name">Ad Soyad</label>
+                        <input type="text" id="contactName" required>
+                    </div>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_email">E-posta</label>
+                        <input type="email" id="contactEmail" required>
+                    </div>
+                    <div class="gm-form-row">
+                        <label data-i18n="lbl_msg">Mesajınız</label>
+                        <textarea id="contactMessage" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="gm-gradient-btn" style="width:100%"
+                        data-i18n="send_btn">Gönder</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
