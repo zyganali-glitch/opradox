@@ -31,6 +31,33 @@
     <!-- ECharts for Charts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
+    <!-- Simple Statistics for Statistical Analysis -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.3/dist/simple-statistics.min.js"></script>
+
+    <!-- ECharts GL for 3D Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+
+    <!-- jStat for Advanced Statistics (SPSS-like) -->
+    <script src="https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js"></script>
+
+    <!-- Regression.js for Trend Lines -->
+    <script src="https://cdn.jsdelivr.net/npm/regression@2.0.1/dist/regression.min.js"></script>
+
+    <!-- Mousetrap for Keyboard Shortcuts -->
+    <script src="https://cdn.jsdelivr.net/npm/mousetrap@1.6.5/mousetrap.min.js"></script>
+
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- html2canvas for Screenshot -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <!-- Fabric.js for Annotations -->
+    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+
+    <!-- LZString for URL Compression -->
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+
     <script defer src="js/fileDocker.js"></script>
     <script defer src="js/viz.js"></script>
 </head>
@@ -117,6 +144,11 @@
                     <!-- Grafik Tipleri -->
                     <div class="viz-chart-types">
                         <h4><i class="fas fa-chart-pie"></i> <span data-i18n="chart_types">Grafik Tipleri</span></h4>
+
+                        <!-- Temel Grafikler -->
+                        <div class="viz-chart-category">
+                            <span class="viz-category-label" data-i18n="basic_charts">Temel</span>
+                        </div>
                         <div class="viz-chart-grid">
                             <div class="viz-chart-type" data-type="bar" draggable="true">
                                 <i class="fas fa-chart-bar"></i>
@@ -141,6 +173,76 @@
                             <div class="viz-chart-type" data-type="doughnut" draggable="true">
                                 <i class="fas fa-circle-notch"></i>
                                 <span data-i18n="chart_doughnut">Halka</span>
+                            </div>
+                        </div>
+
+                        <!-- İleri Grafikler -->
+                        <div class="viz-chart-category">
+                            <span class="viz-category-label" data-i18n="advanced_charts">İleri</span>
+                        </div>
+                        <div class="viz-chart-grid">
+                            <div class="viz-chart-type viz-chart-advanced" data-type="dual-axis" draggable="true">
+                                <i class="fas fa-layer-group"></i>
+                                <span data-i18n="chart_dual_axis">Dual-Axis</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="stacked-bar" draggable="true">
+                                <i class="fas fa-align-left fa-rotate-90"></i>
+                                <span data-i18n="chart_stacked">Yığın</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="treemap" draggable="true">
+                                <i class="fas fa-th"></i>
+                                <span data-i18n="chart_treemap">Treemap</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="heatmap" draggable="true">
+                                <i class="fas fa-fire"></i>
+                                <span data-i18n="chart_heatmap">Isı Haritası</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="funnel" draggable="true">
+                                <i class="fas fa-filter"></i>
+                                <span data-i18n="chart_funnel">Huni</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="gauge" draggable="true">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span data-i18n="chart_gauge">Gösterge</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="waterfall" draggable="true">
+                                <i class="fas fa-water"></i>
+                                <span data-i18n="chart_waterfall">Şelale</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="radar" draggable="true">
+                                <i class="fas fa-spider"></i>
+                                <span data-i18n="chart_radar">Radar</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="boxplot" draggable="true">
+                                <i class="fas fa-square"></i>
+                                <span data-i18n="chart_boxplot">Kutu</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-advanced" data-type="pareto" draggable="true">
+                                <i class="fas fa-sort-amount-down"></i>
+                                <span data-i18n="chart_pareto">Pareto</span>
+                            </div>
+                        </div>
+
+                        <!-- 3D Grafikler -->
+                        <div class="viz-chart-category">
+                            <span class="viz-category-label" data-i18n="3d_charts">3D</span>
+                        </div>
+                        <div class="viz-chart-grid">
+                            <div class="viz-chart-type viz-chart-3d" data-type="scatter3d" draggable="true">
+                                <i class="fas fa-cube"></i>
+                                <span data-i18n="chart_scatter3d">3D Dağılım</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-3d" data-type="bar3d" draggable="true">
+                                <i class="fas fa-cubes"></i>
+                                <span data-i18n="chart_bar3d">3D Sütun</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-3d" data-type="surface3d" draggable="true">
+                                <i class="fas fa-mountain"></i>
+                                <span data-i18n="chart_surface3d">3D Yüzey</span>
+                            </div>
+                            <div class="viz-chart-type viz-chart-3d" data-type="line3d" draggable="true">
+                                <i class="fas fa-project-diagram"></i>
+                                <span data-i18n="chart_line3d">3D Çizgi</span>
                             </div>
                         </div>
                     </div>
@@ -179,8 +281,9 @@
             </section>
 
             <!-- SAĞ PANEL: GRAFİK AYARLARI -->
-            <section class="viz-right-pane" id="vizSettingsPane">
-                <div class="gm-card viz-settings-card">
+            <section class="viz-right-pane" id="vizSettingsPane"
+                style="max-height: calc(100vh - 80px); overflow-y: auto;">
+                <div class="gm-card viz-settings-card" style="max-height: calc(100vh - 120px); overflow-y: auto;">
                     <div class="viz-settings-header">
                         <h3><i class="fas fa-cog"></i> <span data-i18n="chart_settings">Grafik Ayarları</span></h3>
                         <button class="gm-pill-btn viz-settings-close" id="closeSettingsBtn">
@@ -249,11 +352,235 @@
                             style="width:100%; margin-top:10px;">
                             <i class="fas fa-trash"></i> <span data-i18n="delete_chart">Grafiği Sil</span>
                         </button>
+
+                        <!-- İstatistik Overlay Bölümü -->
+                        <div class="viz-stats-section">
+                            <h4><i class="fas fa-calculator"></i> <span data-i18n="stats_overlay">İstatistik
+                                    Overlay</span></h4>
+
+                            <div class="viz-stats-options">
+                                <label class="viz-checkbox">
+                                    <input type="checkbox" id="showMeanLine">
+                                    <span data-i18n="show_mean">Ortalama Çizgisi</span>
+                                </label>
+                                <label class="viz-checkbox">
+                                    <input type="checkbox" id="showMedianLine">
+                                    <span data-i18n="show_median">Medyan Çizgisi</span>
+                                </label>
+                                <label class="viz-checkbox">
+                                    <input type="checkbox" id="showStdBand">
+                                    <span data-i18n="show_std_band">Standart Sapma Bandı (±1σ)</span>
+                                </label>
+                                <label class="viz-checkbox">
+                                    <input type="checkbox" id="showTrendLine">
+                                    <span data-i18n="show_trend">Trend Çizgisi</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- İstatistik Özeti -->
+                        <div class="viz-stats-summary" id="vizStatsSummary" style="display:none;">
+                            <h4><i class="fas fa-chart-bar"></i> <span data-i18n="stats_summary">İstatistik Özeti</span>
+                            </h4>
+                            <div class="viz-stats-grid">
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_mean">Ortalama</span>
+                                    <span class="viz-stat-value" id="statMean">-</span>
+                                </div>
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_median">Medyan</span>
+                                    <span class="viz-stat-value" id="statMedian">-</span>
+                                </div>
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_stdev">Std Sapma</span>
+                                    <span class="viz-stat-value" id="statStdev">-</span>
+                                </div>
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_min">Min</span>
+                                    <span class="viz-stat-value" id="statMin">-</span>
+                                </div>
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_max">Maks</span>
+                                    <span class="viz-stat-value" id="statMax">-</span>
+                                </div>
+                                <div class="viz-stat-item">
+                                    <span class="viz-stat-label" data-i18n="stat_count">Sayı</span>
+                                    <span class="viz-stat-value" id="statCount">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İstatistiksel Analiz Bölümü (Faz 5) -->
+                        <div class="viz-spss-section viz-accordion-section">
+                            <div class="viz-accordion-header" onclick="toggleAccordion(this)">
+                                <h4><i class="fas fa-flask"></i> <span data-i18n="statistical_analysis">İstatistiksel
+                                        Analiz</span></h4>
+                                <i class="fas fa-chevron-down viz-accordion-icon"></i>
+                            </div>
+                            <div class="viz-accordion-content">
+
+                                <!-- Regresyon Tipi -->
+                                <div class="viz-form-group">
+                                    <label data-i18n="regression_type">Regresyon Tipi</label>
+                                    <select id="regressionType">
+                                        <option value="none" data-i18n="reg_none">Yok</option>
+                                        <option value="linear" data-i18n="reg_linear">Doğrusal</option>
+                                        <option value="polynomial" data-i18n="reg_polynomial">Polinom (2°)</option>
+                                        <option value="exponential" data-i18n="reg_exponential">Üstel</option>
+                                        <option value="logarithmic" data-i18n="reg_logarithmic">Logaritmik</option>
+                                    </select>
+                                </div>
+
+                                <!-- Regresyon Sonuçları -->
+                                <div class="viz-regression-results" id="regressionResults" style="display:none;">
+                                    <div class="viz-stat-item">
+                                        <span class="viz-stat-label">R²</span>
+                                        <span class="viz-stat-value" id="rSquared">-</span>
+                                    </div>
+                                    <div class="viz-stat-item">
+                                        <span class="viz-stat-label" data-i18n="equation">Denklem</span>
+                                        <span class="viz-stat-value viz-equation" id="regressionEquation">-</span>
+                                    </div>
+                                </div>
+
+                                <!-- İstatistik Testler -->
+                                <div class="viz-stat-tests">
+                                    <button class="viz-test-btn" onclick="runStatTest('ttest')">
+                                        <i class="fas fa-balance-scale"></i> t-Test
+                                    </button>
+                                    <button class="viz-test-btn" onclick="runStatTest('anova')">
+                                        <i class="fas fa-chart-bar"></i> ANOVA
+                                    </button>
+                                    <button class="viz-test-btn" onclick="runStatTest('correlation')">
+                                        <i class="fas fa-project-diagram"></i> Korelasyon
+                                    </button>
+                                    <button class="viz-test-btn" onclick="runStatTest('normality')">
+                                        <i class="fas fa-bell"></i> Normallik
+                                    </button>
+                                </div>
+
+                                <!-- Test Sonuçları -->
+                                <div class="viz-test-results" id="testResults" style="display:none;">
+                                    <div class="viz-test-result-header">
+                                        <span id="testName">-</span>
+                                        <span class="viz-p-value" id="testPValue">p = -</span>
+                                    </div>
+                                    <div class="viz-test-result-body" id="testResultBody">-</div>
+                                </div>
+                            </div>
+
+                            <!-- BI Insights Bölümü (Faz 6) -->
+                            <div class="viz-bi-section">
+                                <h4><i class="fas fa-brain"></i> <span data-i18n="bi_insights">BI Insights</span></h4>
+
+                                <!-- Cross-Filter Toggle -->
+                                <label class="viz-checkbox viz-cross-filter">
+                                    <input type="checkbox" id="crossFilterEnabled">
+                                    <span data-i18n="cross_filter">Cross-Filter Aktif</span>
+                                    <i class="fas fa-link" style="margin-left:auto; color:var(--gm-primary);"></i>
+                                </label>
+
+                                <!-- What-If Simulator -->
+                                <div class="viz-whatif-section">
+                                    <label data-i18n="whatif_title">What-If Simulator</label>
+                                    <div class="viz-whatif-slider">
+                                        <span class="viz-slider-label">-50%</span>
+                                        <input type="range" id="whatIfSlider" min="-50" max="50" value="0">
+                                        <span class="viz-slider-label">+50%</span>
+                                    </div>
+                                    <div class="viz-whatif-value">
+                                        <span data-i18n="change_rate">Değişim:</span>
+                                        <span id="whatIfValue" class="viz-whatif-percent">0%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Anomaly Detection -->
+                                <div class="viz-anomaly-section">
+                                    <button class="viz-test-btn viz-anomaly-btn" onclick="detectAnomalies()">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span data-i18n="detect_anomalies">Anomali Tespit</span>
+                                    </button>
+                                    <div class="viz-anomaly-results" id="anomalyResults" style="display:none;">
+                                        <div class="viz-anomaly-count">
+                                            <span id="anomalyCount">0</span>
+                                            <small data-i18n="anomalies_found">anomali bulundu</small>
+                                        </div>
+                                        <div class="viz-anomaly-list" id="anomalyList"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Trend Insight -->
+                                <div class="viz-trend-insight" id="trendInsight" style="display:none;">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span id="trendText">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Veri Profili Bölümü (Faz 7) -->
+                            <div class="viz-data-profile-section">
+                                <h4><i class="fas fa-database"></i> <span data-i18n="data_profile">Veri Profili</span>
+                                </h4>
+
+                                <!-- Profil Butonu -->
+                                <button class="viz-test-btn viz-profile-btn" onclick="runDataProfile()">
+                                    <i class="fas fa-microscope"></i>
+                                    <span data-i18n="analyze_data">Veri Analizi</span>
+                                </button>
+
+                                <!-- Profil Sonuçları -->
+                                <div class="viz-profile-results" id="profileResults" style="display:none;">
+                                    <!-- Genel Bilgi -->
+                                    <div class="viz-profile-summary">
+                                        <div class="viz-profile-stat">
+                                            <span class="viz-profile-value" id="profileRows">0</span>
+                                            <span class="viz-profile-label" data-i18n="total_rows">Satır</span>
+                                        </div>
+                                        <div class="viz-profile-stat">
+                                            <span class="viz-profile-value" id="profileCols">0</span>
+                                            <span class="viz-profile-label" data-i18n="total_cols">Sütun</span>
+                                        </div>
+                                        <div class="viz-profile-stat">
+                                            <span class="viz-profile-value" id="profileQuality">0%</span>
+                                            <span class="viz-profile-label" data-i18n="data_quality">Kalite</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sütun Tipleri -->
+                                    <div class="viz-column-types" id="columnTypes"></div>
+
+                                    <!-- Eksik Değerler -->
+                                    <div class="viz-missing-values">
+                                        <div class="viz-missing-header">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            <span data-i18n="missing_values">Eksik Değerler</span>
+                                        </div>
+                                        <div class="viz-missing-list" id="missingValuesList"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
             </section>
         </main>
 
+    </div>
+
+    <!-- Command Palette Modal (Faz 8) -->
+    <div id="commandPalette" class="viz-palette-overlay" style="display:none;">
+        <div class="viz-palette">
+            <div class="viz-palette-header">
+                <i class="fas fa-terminal"></i>
+                <input type="text" id="paletteSearch" placeholder="Komut ara... (ESC ile kapat)" autofocus>
+            </div>
+            <div class="viz-palette-commands" id="paletteCommands">
+                <!-- Commands rendered by JS -->
+            </div>
+            <div class="viz-palette-footer">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Gezin</span>
+                <span><kbd>Enter</kbd> Çalıştır</span>
+                <span><kbd>ESC</kbd> Kapat</span>
+            </div>
+        </div>
     </div>
 
     <!-- Contact Modal (Mevcut yapıdan) -->

@@ -17,6 +17,7 @@ from .feedback_store import init_feedback_db
 from .scenario_registry import LAST_EXCEL_STORE
 from .excel_utils import read_table_from_upload 
 from .auth import router as auth_router
+from .stats_service import router as viz_router
 
 # -------------------------------------------------------
 # Opradox 2.0 – Main Application
@@ -51,6 +52,7 @@ app.add_middleware(
 app.include_router(auth_router)         # /auth/*
 app.include_router(ui_router)          # /ui/*
 app.include_router(feedback_router)    # /feedback + /admin/feedback
+app.include_router(viz_router)         # /viz/* (Visual Studio)
 
 
 
