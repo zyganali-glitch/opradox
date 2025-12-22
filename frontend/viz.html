@@ -733,6 +733,18 @@
                             </div>
                         </div>
 
+                        <!-- Veri Limiti -->
+                        <div class="viz-form-group">
+                            <label>Gösterilecek Değer Sayısı</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="number" id="chartDataLimit" min="0" max="500" value="20"
+                                    style="width:80px;" placeholder="20">
+                                <span style="font-size:0.75rem; color:var(--gm-text-muted);">
+                                    0 = Sınırsız
+                                </span>
+                            </div>
+                        </div>
+
                         <!-- Font ve Stil -->
                         <div class="viz-form-group">
                             <label data-i18n="font_style">Font ve Stil</label>
@@ -998,7 +1010,31 @@
         </div>
 
         <!-- Contact Modal (Mevcut yapıdan) -->
+        <!-- PDF Preview Modal -->
+        <div id="pdfPreviewModal" class="gm-modal" style="display:none;">
+            <div class="gm-modal-content" style="max-width:900px; max-height:90vh;">
+                <span class="gm-close-modal" onclick="closePDFPreviewModal()">&times;</span>
+                <div style="padding:20px;">
+                    <h2 style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-file-pdf" style="color:#e74c3c;"></i>
+                        <span data-i18n="pdf_preview">PDF Önizleme</span>
+                    </h2>
+                    <div id="pdfPreviewContainer" style="background:#f5f5f5; border-radius:8px; overflow:hidden;">
+                        <iframe id="pdfPreviewIframe" style="width:100%; height:60vh; border:none;"></iframe>
+                    </div>
+                    <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+                        <button class="gm-gradient-btn" onclick="downloadPDFFromPreview()">
+                            <i class="fas fa-download"></i> <span data-i18n="download_pdf">PDF İndir</span>
+                        </button>
+                        <button class="gm-pill-btn" onclick="closePDFPreviewModal()">
+                            <span data-i18n="close">Kapat</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="contactModal" class="gm-modal">
+
             <div class="gm-modal-content">
                 <span class="gm-close-modal">&times;</span>
                 <div class="gm-modal-left">

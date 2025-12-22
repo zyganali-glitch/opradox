@@ -9586,3 +9586,609 @@ body.day-mode::before {
 body {
     transition: background 0.3s ease, color 0.3s ease;
 }
+
+/* =====================================================
+   VIZ STUDIO - SAĞ PANEL SCROLL ve STAT WİDGET STİLLERİ
+   ===================================================== */
+
+/* Sağ Panel Scroll */
+.viz-right-pane {
+    height: calc(100vh - 80px) !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 15px;
+    padding-right: 10px;
+}
+
+/* İçerideki settings card da scroll edilebilir olsun */
+.viz-right-pane .viz-settings-card {
+    height: 100%;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-right-pane .viz-settings-form {
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 20px;
+}
+
+.viz-right-pane::-webkit-scrollbar {
+    width: 6px;
+}
+
+.viz-right-pane::-webkit-scrollbar-track {
+    background: var(--gm-bg);
+    border-radius: 3px;
+}
+
+.viz-right-pane::-webkit-scrollbar-thumb {
+    background: var(--gm-card-border);
+    border-radius: 3px;
+}
+
+.viz-right-pane::-webkit-scrollbar-thumb:hover {
+    background: var(--gm-primary);
+}
+
+/* Stat Widget Stilleri */
+.viz-stat-widget {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-stat-widget .viz-widget-body {
+    padding: 12px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Stat widget table wrapper da esnek olsun */
+.viz-stat-widget .viz-stat-table-wrapper {
+    max-height: 100%;
+    overflow: auto;
+}
+
+.viz-stat-widget .viz-widget-close {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.viz-stat-widget .viz-widget-close:hover {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+}
+
+/* Stat Loading */
+.viz-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px;
+    color: var(--gm-text-muted);
+    font-size: 0.9rem;
+}
+
+.viz-loading i {
+    color: var(--gm-primary);
+}
+
+/* Stat Error */
+.viz-stat-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    border-radius: 8px;
+    color: #ff4757;
+    font-size: 0.85rem;
+}
+
+/* Stat Table */
+.viz-stat-table-wrapper {
+    overflow-x: auto;
+}
+
+.viz-stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.viz-stat-table th,
+.viz-stat-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-table th {
+    background: rgba(74, 144, 217, 0.1);
+    color: var(--gm-primary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.viz-stat-table td strong {
+    color: var(--gm-text);
+}
+
+.viz-stat-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Stat Result Cards */
+.viz-stat-result {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-result.viz-stat-success {
+    background: rgba(0, 217, 126, 0.1);
+    border-color: rgba(0, 217, 126, 0.3);
+}
+
+.viz-stat-result.viz-stat-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.viz-stat-icon {
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+}
+
+.viz-stat-success .viz-stat-icon {
+    color: #00d97e;
+}
+
+.viz-stat-warning .viz-stat-icon {
+    color: #ffc107;
+}
+
+.viz-stat-content h4 {
+    margin: 0 0 5px 0;
+    font-size: 1rem;
+    color: var(--gm-text);
+}
+
+.viz-stat-content p {
+    margin: 0 0 5px 0;
+    color: var(--gm-text-muted);
+    font-size: 0.9rem;
+}
+
+.viz-stat-detail {
+    font-size: 0.8rem !important;
+    color: var(--gm-text-muted) !important;
+    opacity: 0.8;
+}
+
+/* Stat Results Generic */
+.viz-stat-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.viz-stat-group {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.viz-stat-group h5 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: var(--gm-primary);
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 5px;
+}
+
+/* =====================================================
+   WİDGET AKSIYON MENÜSÜ ve BOYUTLANDIRMA
+   ===================================================== */
+
+/* Widget Dropdown Menü */
+.viz-widget-menu {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    min-width: 150px;
+    overflow: hidden;
+    animation: menuFadeIn 0.15s ease;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.viz-widget-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--gm-text);
+    transition: background 0.2s;
+}
+
+.viz-widget-menu-item:hover {
+    background: rgba(74, 144, 217, 0.15);
+}
+
+.viz-widget-menu-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--gm-text-muted);
+}
+
+.viz-widget-menu-item.viz-menu-danger {
+    color: #ff4757;
+}
+
+.viz-widget-menu-item.viz-menu-danger:hover {
+    background: rgba(255, 71, 87, 0.15);
+}
+
+/* Widget Resize Handle */
+.viz-widget-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 40%, var(--gm-primary) 40%);
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    border-radius: 0 0 8px 0;
+    z-index: 100;
+}
+
+.viz-widget-resize-handle:hover {
+    opacity: 1;
+    background: linear-gradient(135deg, transparent 40%, #6366f1 40%);
+}
+
+/* Widget Fullscreen */
+.viz-widget-fullscreen {
+    position: fixed !important;
+    top: 80px !important;
+    left: 20px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    width: auto !important;
+    height: auto !important;
+    z-index: 1000 !important;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+}
+
+.viz-widget-fullscreen .viz-widget-chart {
+    height: calc(100% - 50px) !important;
+}
+
+/* Widget position relative for resize handle */
+.viz-chart-widget {
+    position: relative;
+}
+
+/* =====================================================
+   GRAFİK WİDGET ESNEK BOYUTLANDIRMA  
+   ===================================================== */
+
+/* Widget flexbox layout */
+.viz-chart-widget {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    min-height: 150px;
+}
+
+/* Header sabit yükseklik */
+.viz-widget-header {
+    flex-shrink: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+}
+
+/* Chart container esnek yükseklik - WIDGET BÜYÜKLÜĞÜNE GÖRE */
+.viz-widget-chart {
+    flex: 1;
+    min-height: 100px;
+    width: 100%;
+    height: 100%;
+}
+
+/* =====================================================
+   DASHBOARD UI İYİLEŞTİRMELERİ
+   ===================================================== */
+
+/* 1. Dashboard Dot Grid Arka Plan */
+.viz-dashboard-grid {
+    background-image: radial-gradient(circle, rgba(74, 144, 217, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: center center;
+    min-height: calc(100vh - 180px);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* 2. Floating Header - Başlık kartın üstünde yüzüyor */
+.viz-chart-widget {
+    margin-top: 20px;
+    overflow: visible !important;
+}
+
+.viz-chart-widget .viz-widget-header {
+    position: relative;
+    top: -15px;
+    margin: 0 15px;
+    background: linear-gradient(135deg, var(--gm-primary), #6366f1);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(74, 144, 217, 0.3);
+    color: #fff;
+    z-index: 5;
+}
+
+.viz-chart-widget .viz-widget-header .viz-widget-title {
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.viz-chart-widget .viz-widget-header .viz-widget-settings {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.viz-chart-widget .viz-widget-header .viz-widget-settings:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Stat Widget Floating Header */
+.viz-stat-widget {
+    margin-top: 20px;
+    overflow: visible !important;
+}
+
+.viz-stat-widget .viz-widget-header {
+    position: relative;
+    top: -15px;
+    margin: 0 15px;
+    background: linear-gradient(135deg, #00d97e, #0dcaf0);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 217, 126, 0.3);
+    color: #fff;
+    z-index: 5;
+}
+
+.viz-stat-widget .viz-widget-header h4 {
+    color: #fff;
+    font-weight: 600;
+}
+
+.viz-stat-widget .viz-widget-close {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* 3. Boş Durum (Empty State) - Sadece arka plan, çerçeve yok */
+.viz-empty-canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 250px);
+    margin: 20px;
+    border: none;
+    border-radius: 20px;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.viz-empty-canvas:hover {
+    background: rgba(74, 144, 217, 0.02);
+}
+
+.viz-empty-canvas i {
+    font-size: 5rem;
+    color: rgba(74, 144, 217, 0.3);
+    margin-bottom: 20px;
+}
+
+.viz-empty-canvas h3 {
+    font-size: 1.8rem;
+    color: var(--gm-text);
+    margin-bottom: 10px;
+}
+
+.viz-empty-canvas p {
+    font-size: 1rem;
+    color: var(--gm-text-muted);
+    text-align: center;
+    max-width: 400px;
+}
+
+/* =====================================================
+   GÜNDÜZ MODU FLOATING HEADER
+   ===================================================== */
+
+body.day-mode .viz-chart-widget .viz-widget-header {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35);
+}
+
+body.day-mode .viz-stat-widget .viz-widget-header {
+    background: linear-gradient(135deg, #059669, #0891b2);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+}
+
+/* Dashboard grid gündüz modunda */
+body.day-mode .viz-dashboard-grid {
+    background-image: radial-gradient(circle, rgba(37, 99, 235, 0.12) 1px, transparent 1px);
+}
+
+/* =====================================================
+   VARSAYILAN GRAFİK BOYUTU (Daha Yüksek)
+   ===================================================== */
+
+.viz-chart-widget {
+    min-height: 350px;
+}
+
+.viz-stat-widget {
+    min-height: 200px;
+}
+
+/* =====================================================
+   STAT WIDGET PARAMETRE KONTROLLER
+   ===================================================== */
+
+/* Widget action butonları */
+.viz-widget-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viz-widget-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 5px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.viz-widget-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Stat widget parametre paneli */
+.viz-stat-params {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-info {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.viz-stat-selectors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.viz-param-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viz-param-group label {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+    white-space: nowrap;
+}
+
+.viz-param-group select {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    background: var(--gm-card-bg);
+    color: var(--gm-text);
+    max-width: 120px;
+}
+
+/* Stat embed overlay */
+.viz-stat-embed {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+}
+
+.viz-stat-embed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, var(--gm-primary), #6366f1);
+    border-radius: 8px 8px 0 0;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: move;
+}
+
+.viz-stat-embed-header button {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    padding: 2px 5px;
+}
+
+.viz-stat-embed-header button:hover {
+    color: #fff;
+}
+
+.viz-stat-embed-content {
+    padding: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 0.75rem;
+}
+
+/* Gündüz modunda stat params */
+body.day-mode .viz-stat-params {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.day-mode .viz-param-group select {
+    background: #fff;
+}

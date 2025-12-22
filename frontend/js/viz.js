@@ -285,7 +285,19 @@ const VIZ_TEXTS = {
         oauth_window_opened: 'Google OAuth penceresi açıldı',
         loaded_from_sheets: 'satır Google Sheets\'ten yüklendi',
         loaded_from_sql: 'satır SQL\'den yüklendi',
-        row_limit: 'satır limiti'
+        row_limit: 'satır limiti',
+        // PDF Preview & Eksik Anahtarlar
+        pdf_preview: 'PDF Önizleme',
+        download_pdf: 'PDF İndir',
+        close: 'Kapat',
+        statistics: 'İstatistik Analizleri',
+        special_charts: 'Özel Grafikler',
+        map_charts: 'Harita Grafikleri',
+        data_management: 'Veri Yönetimi',
+        select_dataset: 'Veri Seti',
+        theme_changed: 'Tema değiştirildi',
+        pdf_generating: 'PDF oluşturuluyor...',
+        pdf_ready: 'PDF hazır'
     },
 
     en: {
@@ -486,7 +498,19 @@ const VIZ_TEXTS = {
         oauth_window_opened: 'Google OAuth window opened',
         loaded_from_sheets: 'rows loaded from Google Sheets',
         loaded_from_sql: 'rows loaded from SQL',
-        row_limit: 'row limit'
+        row_limit: 'row limit',
+        // PDF Preview & Missing Keys
+        pdf_preview: 'PDF Preview',
+        download_pdf: 'Download PDF',
+        close: 'Close',
+        statistics: 'Statistical Analysis',
+        special_charts: 'Special Charts',
+        map_charts: 'Map Charts',
+        data_management: 'Data Management',
+        select_dataset: 'Dataset',
+        theme_changed: 'Theme changed',
+        pdf_generating: 'Generating PDF...',
+        pdf_ready: 'PDF ready'
     }
 };
 
@@ -642,6 +666,19 @@ function setupEventListeners() {
     // Save & Export buttons
     document.getElementById('saveBtn')?.addEventListener('click', showSaveMenu);
     document.getElementById('exportBtn')?.addEventListener('click', showExportMenu);
+
+    // Stats overlay checkbox listeners - checkbox değiştiğinde grafiği yeniden render et
+    ['showMeanLine', 'showMedianLine', 'showStdBand', 'showTrendLine'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+            if (VIZ_STATE.selectedChart) {
+                const config = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
+                if (config) {
+                    console.log(`📊 Stats overlay güncellendi: ${id}`);
+                    renderChart(config);
+                }
+            }
+        });
+    });
 }
 
 // -----------------------------------------------------
@@ -681,7 +718,15 @@ function setupDragAndDrop() {
         });
     });
 
-    // Dashboard drop
+    // İstatistik butonları için drag (data-stat-type attribute'u olanlar)
+    document.querySelectorAll('.viz-stat-btn[data-stat-type]').forEach(el => {
+        el.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('statType', el.dataset.statType);
+            console.log('📊 Stat drag başladı:', el.dataset.statType);
+        });
+    });
+
+    // Dashboard drop - hem chart hem stat tiplerini destekle
     const dashboard = document.getElementById('vizDashboardGrid');
     if (dashboard) {
         dashboard.addEventListener('dragover', (e) => {
@@ -696,9 +741,15 @@ function setupDragAndDrop() {
         dashboard.addEventListener('drop', (e) => {
             e.preventDefault();
             dashboard.classList.remove('drag-over');
+
             const chartType = e.dataTransfer.getData('chartType');
+            const statType = e.dataTransfer.getData('statType');
+
             if (chartType) {
                 addChart(chartType);
+            } else if (statType) {
+                console.log('📊 Stat widget oluşturuluyor:', statType);
+                createStatWidget(statType);
             }
         });
     }
@@ -1041,7 +1092,7 @@ function updateDropdowns() {
 // -----------------------------------------------------
 // AGGREGATION (Client-Side)
 // -----------------------------------------------------
-function aggregateData(data, xCol, yCol, aggType) {
+function aggregateData(data, xCol, yCol, aggType, dataLimit = 20) {
     if (!data || !data.length || !xCol || !yCol) {
         console.warn('aggregateData: Eksik parametre', { dataLen: data?.length, xCol, yCol });
         return { categories: [], values: [] };
@@ -1113,8 +1164,8 @@ function aggregateData(data, xCol, yCol, aggType) {
     // Değere göre sırala (büyükten küçüğe)
     result.sort((a, b) => b.value - a.value);
 
-    // Top 20 limit (grafik okunabilirliği için)
-    const limited = result.slice(0, 20);
+    // Veri limiti uygula (0 = sınırsız)
+    const limited = dataLimit && dataLimit > 0 ? result.slice(0, dataLimit) : result;
 
     return {
         categories: limited.map(r => r.category),
@@ -1136,6 +1187,7 @@ function addChart(type = 'bar') {
         yAxis: VIZ_STATE.columns[1] || VIZ_STATE.columns[0] || '',
         aggregation: 'sum',
         color: '#4a90d9',
+        dataLimit: 20,  // Varsayılan veri limiti (0 = sınırsız)
         datasetId: VIZ_STATE.activeDatasetId  // Multi-dataset desteği
     };
 
@@ -1159,11 +1211,12 @@ function createChartWidget(config) {
     widget.innerHTML = `
         <div class="viz-widget-header">
             <span class="viz-widget-title">${config.title}</span>
-            <button class="viz-widget-settings" onclick="selectChart('${config.id}')">
+            <button class="viz-widget-settings" onclick="event.stopPropagation(); showWidgetMenu('${config.id}', event)">
                 <i class="fas fa-cog"></i>
             </button>
         </div>
         <div class="viz-widget-chart" id="${config.id}_chart"></div>
+        <div class="viz-widget-resize-handle" onmousedown="startWidgetResize(event, '${config.id}')"></div>
     `;
 
     widget.addEventListener('click', () => selectChart(config.id));
@@ -1171,7 +1224,208 @@ function createChartWidget(config) {
 
     // Grafik render
     renderChart(config);
+
+    // ResizeObserver ile otomatik boyutlandırma
+    if (typeof ResizeObserver !== 'undefined') {
+        const chartContainer = document.getElementById(`${config.id}_chart`);
+        if (chartContainer) {
+            const resizeObserver = new ResizeObserver(() => {
+                const chart = VIZ_STATE.echartsInstances[config.id];
+                if (chart) {
+                    chart.resize();
+                }
+            });
+            resizeObserver.observe(chartContainer);
+
+            // Observer'ı temizleme için sakla
+            if (!VIZ_STATE.resizeObservers) VIZ_STATE.resizeObservers = {};
+            VIZ_STATE.resizeObservers[config.id] = resizeObserver;
+        }
+    }
 }
+
+/**
+ * Widget ayar menüsünü göster
+ */
+function showWidgetMenu(chartId, event) {
+    // Mevcut menüyü kapat
+    closeWidgetMenu();
+
+    const widget = document.getElementById(chartId);
+    const isFullscreen = widget && widget.classList.contains('viz-widget-fullscreen');
+
+    const menu = document.createElement('div');
+    menu.id = 'widgetActionMenu';
+    menu.className = 'viz-widget-menu';
+    menu.innerHTML = `
+        <div class="viz-widget-menu-item" onclick="editWidget('${chartId}'); closeWidgetMenu();">
+            <i class="fas fa-edit"></i> Düzenle
+        </div>
+        <div class="viz-widget-menu-item" onclick="toggleWidgetFullscreen('${chartId}'); closeWidgetMenu();">
+            <i class="fas ${isFullscreen ? 'fa-compress' : 'fa-expand'}"></i> ${isFullscreen ? 'Küçült' : 'Büyüt'}
+        </div>
+        <div class="viz-widget-menu-item" onclick="duplicateWidget('${chartId}'); closeWidgetMenu();">
+            <i class="fas fa-copy"></i> Kopyala
+        </div>
+        <div class="viz-widget-menu-item viz-menu-danger" onclick="removeWidget('${chartId}'); closeWidgetMenu();">
+            <i class="fas fa-trash"></i> Sil
+        </div>
+    `;
+
+    // Pozisyon - fullscreen'de sola kaydır
+    const rect = event.target.closest('button').getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 5}px`;
+    menu.style.zIndex = '10001';
+
+    // Ekran sağına taşmasın
+    const menuWidth = 160;
+    if (rect.left + menuWidth > window.innerWidth) {
+        menu.style.right = `${window.innerWidth - rect.right}px`;
+    } else {
+        menu.style.left = `${rect.left}px`;
+    }
+
+    document.body.appendChild(menu);
+
+    // Dışarı tıklayınca kapat
+    setTimeout(() => {
+        document.addEventListener('click', closeWidgetMenu);
+    }, 100);
+}
+
+function closeWidgetMenu() {
+    const menu = document.getElementById('widgetActionMenu');
+    if (menu) menu.remove();
+    document.removeEventListener('click', closeWidgetMenu);
+}
+
+/**
+ * Widget düzenleme - sağ paneli aç ve grafiği seç
+ */
+function editWidget(chartId) {
+    selectChart(chartId);
+
+    // Sağ panel görünür yap
+    const settingsPane = document.getElementById('vizSettingsPane');
+    if (settingsPane) {
+        settingsPane.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    showToast('Grafik seçildi - sağ panelden düzenleyebilirsiniz', 'info');
+}
+
+/**
+ * Widget tam ekran toggle
+ */
+function toggleWidgetFullscreen(chartId) {
+    const widget = document.getElementById(chartId);
+    if (!widget) return;
+
+    const isFullscreen = widget.classList.contains('viz-widget-fullscreen');
+
+    if (isFullscreen) {
+        // Küçült - eski boyutlara dön
+        widget.classList.remove('viz-widget-fullscreen');
+        widget.style.width = '';
+        widget.style.height = '';
+        showToast('Normal görünüm', 'info');
+    } else {
+        // Büyüt
+        widget.classList.add('viz-widget-fullscreen');
+        showToast('Tam ekran - çarktan "Küçült" ile çıkın', 'info');
+    }
+
+    // Grafik boyutunu güncelle
+    setTimeout(() => {
+        const chart = VIZ_STATE.echartsInstances[chartId];
+        if (chart) chart.resize();
+    }, 350);
+}
+
+/**
+ * Widget kopyala
+ */
+function duplicateWidget(chartId) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config) return;
+
+    const newConfig = {
+        ...config,
+        id: `chart_${++VIZ_STATE.chartCounter}`,
+        title: `${config.title} (Kopya)`
+    };
+
+    VIZ_STATE.charts.push(newConfig);
+    createChartWidget(newConfig);
+    showToast('Grafik kopyalandı', 'success');
+}
+
+/**
+ * Widget boyutlandırma başlat - canlı ECharts güncellemesi
+ */
+function startWidgetResize(event, chartId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const widget = document.getElementById(chartId);
+    if (!widget) return;
+
+    // Fullscreen modda resize yapma
+    if (widget.classList.contains('viz-widget-fullscreen')) return;
+
+    const chartContainer = document.getElementById(`${chartId}_chart`);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = widget.offsetWidth;
+    const startHeight = widget.offsetHeight;
+    const chart = VIZ_STATE.echartsInstances[chartId];
+    const headerHeight = 45; // Widget header yüksekliği
+
+    let resizeThrottle = null;
+
+    function doResize(e) {
+        const newWidth = Math.max(200, startWidth + e.clientX - startX);
+        const newHeight = Math.max(150, startHeight + e.clientY - startY);
+
+        widget.style.width = `${newWidth}px`;
+        widget.style.height = `${newHeight}px`;
+
+        // Chart container'a açık boyut ver
+        if (chartContainer) {
+            chartContainer.style.width = `${newWidth - 20}px`;
+            chartContainer.style.height = `${newHeight - headerHeight - 10}px`;
+        }
+
+        // Throttled ECharts resize
+        if (!resizeThrottle) {
+            resizeThrottle = setTimeout(() => {
+                if (chart) chart.resize();
+                resizeThrottle = null;
+            }, 30);
+        }
+    }
+
+    function stopResize() {
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+
+        // Final ECharts resize
+        if (chart) chart.resize();
+    }
+
+    document.addEventListener('mousemove', doResize);
+    document.addEventListener('mouseup', stopResize);
+}
+
+// Global exports
+window.showWidgetMenu = showWidgetMenu;
+window.closeWidgetMenu = closeWidgetMenu;
+window.toggleWidgetFullscreen = toggleWidgetFullscreen;
+window.duplicateWidget = duplicateWidget;
+window.startWidgetResize = startWidgetResize;
+window.editWidget = editWidget;
+
 
 function renderChart(config) {
     const chartDom = document.getElementById(`${config.id}_chart`);
@@ -1186,24 +1440,30 @@ function renderChart(config) {
     const chart = echarts.init(chartDom, theme);
     VIZ_STATE.echartsInstances[config.id] = chart;
 
+    // Multi-Dataset Desteği: Widget kendi dataset'ini kullanır
+    const dataset = config.datasetId
+        ? VIZ_STATE.getDatasetById(config.datasetId)
+        : VIZ_STATE.getActiveDataset();
+    const chartData = dataset?.data || VIZ_STATE.data || [];
+
     // Veri aggregation
     let xData, yData;
 
-    if (VIZ_STATE.data && VIZ_STATE.data.length > 0 && config.xAxis && config.yAxis) {
+    if (chartData && chartData.length > 0 && config.xAxis && config.yAxis) {
         // Cross-filter uygula
-        let filteredData = VIZ_STATE.data;
+        let filteredData = chartData;
         if (VIZ_STATE.crossFilterEnabled && VIZ_STATE.crossFilterValue) {
-            filteredData = VIZ_STATE.data.filter(row =>
+            filteredData = chartData.filter(row =>
                 Object.values(row).some(v => String(v) === VIZ_STATE.crossFilterValue)
             );
         }
 
-        const aggregated = aggregateData(filteredData, config.xAxis, config.yAxis, config.aggregation);
+        const aggregated = aggregateData(filteredData, config.xAxis, config.yAxis, config.aggregation, config.dataLimit || 20);
         xData = aggregated.categories;
         yData = aggregated.values;
 
-        // What-If Simulator - çarpan uygula
-        if (VIZ_STATE.whatIfMultiplier && VIZ_STATE.whatIfMultiplier !== 1) {
+        // What-If Simulator - çarpan SADECE SEÇİLİ GRAFİĞE uygula
+        if (VIZ_STATE.whatIfMultiplier && VIZ_STATE.whatIfMultiplier !== 1 && config.id === VIZ_STATE.selectedChart) {
             yData = yData.map(v => v * VIZ_STATE.whatIfMultiplier);
         }
     } else {
@@ -1212,6 +1472,7 @@ function renderChart(config) {
         yData = [120, 200, 150, 80, 70];
     }
 
+
     let option = {};
 
     switch (config.type) {
@@ -1219,9 +1480,29 @@ function renderChart(config) {
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: xData, axisLabel: { rotate: 45, interval: 0 } },
-                yAxis: { type: 'value' },
-                grid: { bottom: 80 },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 50,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            // 8 karakter + ... ile kısalt
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 120, left: 80, right: 20 },
                 series: [{ data: yData, type: 'bar', itemStyle: { color: config.color } }]
             };
             break;
@@ -1230,9 +1511,28 @@ function renderChart(config) {
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: xData, axisLabel: { rotate: 45, interval: 0 } },
-                yAxis: { type: 'value' },
-                grid: { bottom: 80 },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 35,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 100, left: 80 },
                 series: [{ data: yData, type: 'line', smooth: true, itemStyle: { color: config.color } }]
             };
             break;
@@ -1255,9 +1555,29 @@ function renderChart(config) {
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: xData, boundaryGap: false, axisLabel: { rotate: 45, interval: 0 } },
-                yAxis: { type: 'value' },
-                grid: { bottom: 80 },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 35,
+                    boundaryGap: false,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 100, left: 80 },
                 series: [{ data: yData, type: 'line', areaStyle: { color: config.color + '40' }, itemStyle: { color: config.color } }]
             };
             break;
@@ -1285,12 +1605,26 @@ function renderChart(config) {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
                 legend: { top: 30, data: ['Sütun', 'Çizgi'] },
-                xAxis: { type: 'category', data: xData, axisLabel: { rotate: 45, interval: 0 } },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 50,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
                 yAxis: [
-                    { type: 'value', name: 'Sol Eksen', position: 'left' },
+                    { type: 'value', name: config.yAxis || 'Sol Eksen', position: 'left', nameLocation: 'middle', nameGap: 50 },
                     { type: 'value', name: 'Sağ Eksen', position: 'right' }
                 ],
-                grid: { bottom: 80, top: 60 },
+                grid: { bottom: 120, left: 80, top: 60 },
                 series: [
                     { name: 'Sütun', type: 'bar', data: yData, itemStyle: { color: config.color } },
                     { name: 'Çizgi', type: 'line', yAxisIndex: 1, data: yData.map(v => v * 0.8), smooth: true, itemStyle: { color: '#ffc107' } }
@@ -1303,9 +1637,28 @@ function renderChart(config) {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 legend: { top: 30, data: ['Kategori A', 'Kategori B', 'Kategori C'] },
-                xAxis: { type: 'category', data: xData, axisLabel: { rotate: 45, interval: 0 } },
-                yAxis: { type: 'value' },
-                grid: { bottom: 80, top: 60 },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 50,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 120, left: 80, top: 60 },
                 series: [
                     { name: 'Kategori A', type: 'bar', stack: 'total', data: yData, itemStyle: { color: config.color } },
                     { name: 'Kategori B', type: 'bar', stack: 'total', data: yData.map(v => v * 0.6), itemStyle: { color: '#00d97e' } },
@@ -1343,8 +1696,25 @@ function renderChart(config) {
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { position: 'top', formatter: (p) => `${categories[p.data[0]]} - ${categories[p.data[1]]}: ${p.data[2]}` },
-                xAxis: { type: 'category', data: categories, splitArea: { show: true } },
-                yAxis: { type: 'category', data: categories, splitArea: { show: true } },
+                xAxis: {
+                    type: 'category',
+                    data: categories.map(c => String(c).length > 8 ? String(c).slice(0, 6) + '..' : c),
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 35,
+                    splitArea: { show: true },
+                    axisLabel: { fontSize: 10, rotate: 45 }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: categories.map(c => String(c).length > 8 ? String(c).slice(0, 6) + '..' : c),
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50,
+                    splitArea: { show: true },
+                    axisLabel: { fontSize: 10 }
+                },
+                grid: { bottom: 80, left: 80 },
                 visualMap: {
                     min: 0, max: 1,
                     calculable: true,
@@ -1430,9 +1800,28 @@ function renderChart(config) {
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: xData, axisLabel: { rotate: 45, interval: 0 } },
-                yAxis: { type: 'value' },
-                grid: { bottom: 80 },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 50,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 120, left: 80 },
                 series: [{
                     type: 'bar',
                     stack: 'waterfall',
@@ -1950,6 +2339,29 @@ function renderChart(config) {
 
     chart.setOption(option);
 
+    // Cross-filter: grafik öğesine tıklandığında diğer grafikleri filtrele
+    chart.off('click'); // Önceki listener'ları temizle
+    chart.on('click', (params) => {
+        if (!VIZ_STATE.crossFilterEnabled) return;
+
+        const clickedValue = params.name || params.data?.name || params.value;
+        if (!clickedValue) return;
+
+        console.log('🔗 Cross-filter tıklama:', clickedValue);
+
+        // Aynı değere tekrar tıklandıysa filtreyi kaldır
+        if (VIZ_STATE.crossFilterValue === clickedValue) {
+            VIZ_STATE.crossFilterValue = null;
+            showToast('Cross-filter kaldırıldı', 'info');
+        } else {
+            VIZ_STATE.crossFilterValue = String(clickedValue);
+            showToast(`Filtre: "${clickedValue}"`, 'info');
+        }
+
+        // Tüm grafikleri yeniden render et
+        rerenderAllCharts();
+    });
+
     // İstatistik overlay'ları uygula (Faz 2)
     if (config.overlays || document.getElementById('showMeanLine')?.checked ||
         document.getElementById('showMedianLine')?.checked ||
@@ -1962,6 +2374,15 @@ function renderChart(config) {
     const resizeHandler = () => chart.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);
+}
+
+/**
+ * Tüm grafikleri yeniden render et (cross-filter için)
+ */
+function rerenderAllCharts() {
+    VIZ_STATE.charts.forEach(config => {
+        renderChart(config);
+    });
 }
 
 function selectChart(chartId) {
@@ -1992,6 +2413,12 @@ function showSettings(chartId) {
     document.getElementById('chartAggregation').value = config.aggregation;
     document.getElementById('chartColor').value = config.color;
     document.querySelector('.viz-color-preview').style.background = config.color;
+
+    // Veri limiti - yeni alan
+    const dataLimitInput = document.getElementById('chartDataLimit');
+    if (dataLimitInput) {
+        dataLimitInput.value = config.dataLimit || 20;
+    }
 }
 
 function hideSettings() {
@@ -2015,6 +2442,12 @@ function applyChartSettings() {
     config.aggregation = document.getElementById('chartAggregation').value;
     config.color = document.getElementById('chartColor').value;
 
+    // Veri limiti
+    const dataLimitInput = document.getElementById('chartDataLimit');
+    if (dataLimitInput) {
+        config.dataLimit = parseInt(dataLimitInput.value) || 0;
+    }
+
     // Widget başlığını güncelle
     const widget = document.getElementById(config.id);
     if (widget) {
@@ -2023,6 +2456,7 @@ function applyChartSettings() {
 
     // Grafiği yeniden render et
     renderChart(config);
+    showToast('Grafik ayarları uygulandı', 'success');
 }
 
 function deleteSelectedChart() {
@@ -12359,3 +12793,764 @@ window.createScheduledReport = createScheduledReport;
 window.loadScheduledReports = loadScheduledReports;
 window.toggleScheduledReport = toggleScheduledReport;
 window.runScheduledReportNow = runScheduledReportNow;
+
+// -----------------------------------------------------
+// PDF PREVIEW MODAL FUNCTIONS
+// -----------------------------------------------------
+let currentPDFBlob = null;
+
+async function showPDFPreviewModal() {
+    const modal = document.getElementById('pdfPreviewModal');
+    const iframe = document.getElementById('pdfPreviewIframe');
+    if (!modal || !iframe) {
+        showToast('PDF Preview modal bulunamadı', 'error');
+        return;
+    }
+
+    showToast(getText('pdf_generating', 'PDF oluşturuluyor...'), 'info');
+
+    try {
+        // jsPDF kullanarak dashboard'u PDF'e çevir
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+
+        const dashboard = document.getElementById('vizDashboardGrid');
+        if (!dashboard || VIZ_STATE.charts.length === 0) {
+            showToast('Dashboard boş veya grafik yok', 'warning');
+            return;
+        }
+
+        // Başlık ekle
+        pdf.setFontSize(18);
+        pdf.text('Opradox Visual Studio - Dashboard Report', 15, 15);
+        pdf.setFontSize(10);
+        pdf.text(`Oluşturulma: ${new Date().toLocaleString('tr-TR')}`, 15, 22);
+        pdf.text(`Grafik Sayısı: ${VIZ_STATE.charts.length}`, 15, 27);
+
+        let yPos = 35;
+        const pageHeight = pdf.internal.pageSize.height;
+        const pageWidth = pdf.internal.pageSize.width;
+
+        // Her grafiği PNG olarak al ve PDF'e ekle
+        for (const chart of VIZ_STATE.charts) {
+            const instance = VIZ_STATE.echartsInstances[chart.id];
+            if (instance) {
+                const dataUrl = instance.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: '#fff'
+                });
+
+                // Grafik başlığı
+                pdf.setFontSize(12);
+                pdf.text(chart.title || `Grafik ${chart.id}`, 15, yPos);
+                yPos += 5;
+
+                // Grafik görseli
+                const imgWidth = (pageWidth - 30) / 2;
+                const imgHeight = 60;
+
+                if (yPos + imgHeight > pageHeight - 20) {
+                    pdf.addPage();
+                    yPos = 15;
+                }
+
+                pdf.addImage(dataUrl, 'PNG', 15, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 10;
+            }
+        }
+
+        // Footer
+        const pageCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(8);
+            pdf.text(
+                `Opradox.com.tr - Sayfa ${i}/${pageCount}`,
+                pageWidth / 2,
+                pageHeight - 10,
+                { align: 'center' }
+            );
+        }
+
+        // PDF blob oluştur
+        currentPDFBlob = pdf.output('blob');
+        const blobUrl = URL.createObjectURL(currentPDFBlob);
+
+        // iframe'de göster
+        iframe.src = blobUrl;
+
+        // Modal'ı göster
+        modal.style.display = 'flex';
+        showToast(getText('pdf_ready', 'PDF hazır'), 'success');
+
+    } catch (error) {
+        console.error('PDF oluşturma hatası:', error);
+        showToast('PDF oluşturulamadı: ' + error.message, 'error');
+    }
+}
+
+function closePDFPreviewModal() {
+    const modal = document.getElementById('pdfPreviewModal');
+    const iframe = document.getElementById('pdfPreviewIframe');
+    if (modal) modal.style.display = 'none';
+    if (iframe) {
+        URL.revokeObjectURL(iframe.src);
+        iframe.src = '';
+    }
+    currentPDFBlob = null;
+}
+
+function downloadPDFFromPreview() {
+    if (!currentPDFBlob) {
+        showToast('İndirilecek PDF yok', 'warning');
+        return;
+    }
+
+    const filename = `Opradox_Dashboard_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(currentPDFBlob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast('PDF indirildi: ' + filename, 'success');
+}
+
+// Global exports for PDF Preview
+window.showPDFPreviewModal = showPDFPreviewModal;
+window.closePDFPreviewModal = closePDFPreviewModal;
+window.downloadPDFFromPreview = downloadPDFFromPreview;
+
+// =====================================================
+// İSTATİSTİK WİDGET SİSTEMİ (Stat Drag-Drop)
+// Dashboard'a istatistik butonları sürüklendiğinde widget oluşturur
+// =====================================================
+
+/**
+ * İstatistik türü için başlık döndürür
+ */
+function getStatTitle(statType) {
+    const titles = {
+        'ttest': 't-Test Analizi',
+        'anova': 'ANOVA Analizi',
+        'chi-square': 'Ki-Kare Testi',
+        'correlation': 'Korelasyon Matrisi',
+        'normality': 'Normallik Testi',
+        'descriptive': 'Betimsel İstatistik',
+        'mann-whitney': 'Mann-Whitney U',
+        'wilcoxon': 'Wilcoxon Testi',
+        'kruskal': 'Kruskal-Wallis',
+        'levene': 'Levene Testi',
+        'effect-size': 'Etki Büyüklüğü',
+        'frequency': 'Frekans Analizi',
+        'pca': 'PCA Analizi',
+        'kmeans': 'K-Means Kümeleme',
+        'cronbach': 'Cronbach Alpha',
+        'logistic': 'Lojistik Regresyon',
+        'timeseries': 'Zaman Serisi',
+        'apa': 'APA Raporu',
+        'friedman': 'Friedman Testi',
+        'power': 'Güç Analizi',
+        'regression-coef': 'Regresyon Katsayıları',
+        'discriminant': 'Diskriminant Analizi',
+        'survival': 'Sağkalım Analizi'
+    };
+    return titles[statType] || `${statType} Analizi`;
+}
+
+/**
+ * Dashboard'a istatistik widget'ı ekler
+ */
+async function createStatWidget(statType) {
+    // Veri kontrolü
+    if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) {
+        showToast('Önce veri yükleyin', 'warning');
+        return;
+    }
+
+    const widgetId = `stat_${++VIZ_STATE.chartCounter}`;
+    const datasetId = VIZ_STATE.activeDatasetId;
+    const dataset = VIZ_STATE.getDatasetById(datasetId);
+
+    if (!dataset) {
+        showToast('Veri seti bulunamadı', 'error');
+        return;
+    }
+
+    console.log(`📊 Stat widget oluşturuluyor: ${widgetId}, tip: ${statType}, dataset: ${datasetId}`);
+
+    // Seçili grafikten varsayılan X/Y eksenlerini al
+    let defaultX = dataset.columns[0] || '';
+    let defaultY = dataset.columns[1] || dataset.columns[0] || '';
+
+    if (VIZ_STATE.selectedChart) {
+        const selectedConfig = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
+        if (selectedConfig) {
+            defaultX = selectedConfig.xAxis || defaultX;
+            defaultY = selectedConfig.yAxis || defaultY;
+        }
+    }
+
+    // Analiz türüne göre gerekli sütun bilgisi
+    const analysisInfo = getAnalysisRequirements(statType);
+
+    // Sütun opsiyonlarını oluştur
+    const columnOptions = dataset.columns.map(col =>
+        `<option value="${col}">${col}</option>`
+    ).join('');
+
+    // Widget DOM oluştur
+    const dashboard = document.getElementById('vizDashboardGrid');
+    if (!dashboard) {
+        console.error('Dashboard bulunamadı');
+        return;
+    }
+
+    const widget = document.createElement('div');
+    widget.className = 'viz-chart-widget viz-stat-widget';
+    widget.id = widgetId;
+    widget.dataset.statType = statType;
+    widget.dataset.datasetId = datasetId;
+
+    widget.innerHTML = `
+        <div class="viz-widget-header">
+            <span class="viz-widget-title">${getStatTitle(statType)}</span>
+            <div class="viz-widget-actions">
+                <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}')" title="Yenile">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="viz-widget-btn" onclick="embedStatToChart('${widgetId}')" title="Grafiğe Göm">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                </button>
+                <button class="viz-widget-close" onclick="removeWidget('${widgetId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="viz-stat-params" id="${widgetId}_params">
+            <div class="viz-stat-info">${analysisInfo.description}</div>
+            <div class="viz-stat-selectors">
+                ${analysisInfo.needsX ? `
+                <div class="viz-param-group">
+                    <label>X (Grup/Kategori):</label>
+                    <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
+                        ${columnOptions}
+                    </select>
+                </div>` : ''}
+                ${analysisInfo.needsY ? `
+                <div class="viz-param-group">
+                    <label>Y (Değer/Sayısal):</label>
+                    <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                        ${columnOptions}
+                    </select>
+                </div>` : ''}
+            </div>
+        </div>
+        <div class="viz-widget-body viz-stat-body" id="${widgetId}_body">
+            <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hesaplanıyor...</div>
+        </div>
+        <div class="viz-widget-resize-handle" onmousedown="startWidgetResize(event, '${widgetId}')"></div>
+    `;
+
+    dashboard.appendChild(widget);
+    updateEmptyState();
+
+    // Varsayılan sütun değerlerini ayarla
+    const xColSelect = document.getElementById(`${widgetId}_xCol`);
+    const yColSelect = document.getElementById(`${widgetId}_yCol`);
+    if (xColSelect) xColSelect.value = defaultX;
+    if (yColSelect) yColSelect.value = defaultY;
+
+    // İstatistik hesapla ve göster
+    await runStatForWidget(widgetId, statType, datasetId);
+}
+
+/**
+ * Analiz türüne göre gerekli parametreleri döndürür
+ */
+function getAnalysisRequirements(statType) {
+    const requirements = {
+        'descriptive': { needsX: false, needsY: true, description: 'Seçili sütunun ortalama, medyan, standart sapma gibi istatistiklerini hesaplar.' },
+        'ttest': { needsX: false, needsY: true, description: 'İki grup ortalamasını karşılaştırır. Y: sayısal değer sütunu gerekli.' },
+        'anova': { needsX: true, needsY: true, description: 'X: grup sütunu (kategorik), Y: değer sütunu (sayısal).' },
+        'chi-square': { needsX: true, needsY: true, description: 'X ve Y: iki kategorik sütun gerekli.' },
+        'correlation': { needsX: false, needsY: true, description: 'Y sütununun diğer sütunlarla korelasyonunu hesaplar.' },
+        'normality': { needsX: false, needsY: true, description: 'Y sütununun normal dağılıma uygunluğunu test eder.' },
+        'mann-whitney': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (non-parametrik).' },
+        'wilcoxon': { needsX: false, needsY: true, description: 'Eşleştirilmiş örnekler için Y sütunu gerekli.' },
+        'kruskal': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (non-parametrik ANOVA).' },
+        'levene': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (varyans homojenliği).' },
+        'effect-size': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (Cohen d hesaplar).' },
+        'frequency': { needsX: true, needsY: false, description: 'X sütunundaki kategorilerin frekansını hesaplar.' },
+        'pca': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için PCA analizi.' },
+        'kmeans': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için kümeleme.' },
+        'cronbach': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için güvenilirlik.' },
+        'logistic': { needsX: true, needsY: true, description: 'X: bağımlı değişken, Y: bağımsız değişken.' },
+        'timeseries': { needsX: true, needsY: true, description: 'X: tarih/zaman sütunu, Y: değer sütunu.' },
+        'apa': { needsX: false, needsY: true, description: 'APA formatında rapor oluşturur.' },
+        'friedman': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: tekrarlı ölçümler.' },
+        'power': { needsX: false, needsY: true, description: 'İstatistiksel güç analizi.' },
+        'regression-coef': { needsX: true, needsY: true, description: 'X: bağımsız değişken, Y: bağımlı değişken.' },
+        'discriminant': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: ayırt edici değişkenler.' },
+        'survival': { needsX: true, needsY: true, description: 'X: zaman sütunu, Y: olay sütunu.' }
+    };
+    return requirements[statType] || { needsX: true, needsY: true, description: 'Analiz için X ve Y sütunları seçin.' };
+}
+
+/**
+ * Stat widget'ı yeniler
+ */
+async function refreshStatWidget(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    const statType = widget.dataset.statType;
+    const datasetId = widget.dataset.datasetId;
+
+    // Seçili sütunları al
+    const xColSelect = document.getElementById(`${widgetId}_xCol`);
+    const yColSelect = document.getElementById(`${widgetId}_yCol`);
+
+    const xCol = xColSelect ? xColSelect.value : null;
+    const yCol = yColSelect ? yColSelect.value : null;
+
+    // Widget'a sütun bilgilerini kaydet
+    widget.dataset.xCol = xCol || '';
+    widget.dataset.yCol = yCol || '';
+
+    await runStatForWidget(widgetId, statType, datasetId, xCol, yCol);
+}
+
+/**
+ * Stat sonucunu grafiğe gömer (overlay olarak)
+ */
+function embedStatToChart(widgetId) {
+    if (!VIZ_STATE.selectedChart) {
+        showToast('Önce bir grafik seçin', 'warning');
+        return;
+    }
+
+    const statWidget = document.getElementById(widgetId);
+    const chartWidget = document.getElementById(VIZ_STATE.selectedChart);
+
+    if (!statWidget || !chartWidget) return;
+
+    const statBody = document.getElementById(`${widgetId}_body`);
+    if (!statBody) return;
+
+    // Mevcut embed varsa kaldır
+    const existingEmbed = chartWidget.querySelector('.viz-stat-embed');
+    if (existingEmbed) existingEmbed.remove();
+
+    // Embed oluştur
+    const embed = document.createElement('div');
+    embed.className = 'viz-stat-embed';
+    embed.innerHTML = `
+        <div class="viz-stat-embed-header">
+            <span>${statWidget.querySelector('.viz-widget-title').textContent}</span>
+            <button onclick="this.closest('.viz-stat-embed').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="viz-stat-embed-content">${statBody.innerHTML}</div>
+    `;
+
+    // Sürüklenebilir ve boyutlandırılabilir yap
+    embed.style.cssText = 'position:absolute; right:10px; bottom:40px; width:250px; max-height:200px; overflow:auto; cursor:move;';
+
+    // Drag functionality
+    let isDragging = false, startX, startY, startLeft, startTop;
+    embed.querySelector('.viz-stat-embed-header').addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = embed.offsetLeft;
+        startTop = embed.offsetTop;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        embed.style.left = (startLeft + e.clientX - startX) + 'px';
+        embed.style.top = (startTop + e.clientY - startY) + 'px';
+        embed.style.right = 'auto';
+        embed.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => { isDragging = false; });
+
+    chartWidget.appendChild(embed);
+    showToast('İstatistik grafiğe gömüldü', 'success');
+}
+
+/**
+ * Widget için istatistik hesaplar ve gösterir
+ */
+async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol = null) {
+    const bodyEl = document.getElementById(`${widgetId}_body`);
+    if (!bodyEl) return;
+
+    // Loading göster
+    bodyEl.innerHTML = '<div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hesaplanıyor...</div>';
+
+    const dataset = VIZ_STATE.getDatasetById(datasetId);
+    if (!dataset) {
+        bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> Veri seti bulunamadı</div>';
+        return;
+    }
+
+    // Parametreleri widget'tan veya dropdown'lardan al
+    if (!xCol) {
+        const xColSelect = document.getElementById(`${widgetId}_xCol`);
+        xCol = xColSelect ? xColSelect.value : dataset.columns[0];
+    }
+    if (!yCol) {
+        const yColSelect = document.getElementById(`${widgetId}_yCol`);
+        yCol = yColSelect ? yColSelect.value : dataset.columns[1] || dataset.columns[0];
+    }
+
+    // Sayısal sütun ve grup sütunu belirle
+    let numericColumns = yCol ? [yCol] : [];
+    let groupColumn = xCol || null;
+
+    console.log(`📊 Stat analizi: ${statType}, X=${groupColumn}, Y=${numericColumns.join(',')}`);
+
+    // Eğer Y sütunu yoksa varsayılan bul
+    if (numericColumns.length === 0) {
+        numericColumns = dataset.columnsInfo
+            ?.filter(c => c.type === 'numeric')
+            .map(c => c.name) || [];
+
+        if (numericColumns.length === 0) {
+            numericColumns.push(...dataset.columns.slice(0, 5));
+        }
+
+        // İlk kategorik sütunu grup olarak kullan
+        groupColumn = dataset.columns.find(c => !numericColumns.includes(c)) || dataset.columns[0];
+    }
+
+    // Endpoint mapping
+    const endpoints = {
+        'descriptive': '/viz/stats/descriptive',
+        'ttest': '/viz/stats/ttest',
+        'anova': '/viz/stats/anova',
+        'chi-square': '/viz/stats/chi-square',
+        'correlation': '/viz/stats/correlation-matrix',
+        'normality': '/viz/stats/normality',
+        'mann-whitney': '/viz/stats/mann-whitney',
+        'wilcoxon': '/viz/stats/wilcoxon',
+        'kruskal': '/viz/stats/kruskal-wallis',
+        'levene': '/viz/stats/levene',
+        'effect-size': '/viz/stats/effect-size',
+        'frequency': '/viz/stats/frequency'
+    };
+
+    const endpoint = endpoints[statType];
+
+    // Client-side hesaplama yapılabilecek basit analizler
+    if (statType === 'descriptive') {
+        const results = calculateDescriptiveStatsLocal(dataset.data, numericColumns);
+        renderStatResults(widgetId, statType, results);
+        return;
+    }
+
+    if (!endpoint) {
+        // Backend endpoint yok, client-side hesapla
+        const results = calculateLocalStat(statType, dataset.data, numericColumns);
+        renderStatResults(widgetId, statType, results);
+        return;
+    }
+
+    // Backend API çağrısı
+    if (!dataset.file) {
+        bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> Dosya referansı bulunamadı. Client-side analiz yapılıyor...</div>';
+        const results = calculateLocalStat(statType, dataset.data, numericColumns);
+        renderStatResults(widgetId, statType, results);
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('file', dataset.file);
+        formData.append('columns', JSON.stringify(numericColumns));
+
+        // Test türüne göre ek parametreler
+        if (statType === 'ttest' && numericColumns.length >= 2) {
+            formData.append('column1', numericColumns[0]);
+            formData.append('column2', numericColumns[1]);
+            formData.append('test_type', 'independent');
+        } else if (statType === 'normality' && numericColumns.length >= 1) {
+            formData.append('column', numericColumns[0]);
+        } else if ((statType === 'anova' || statType === 'kruskal') && numericColumns.length >= 1) {
+            formData.append('value_column', numericColumns[0]);
+            formData.append('group_column', groupColumn || dataset.columns[0]);
+        }
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const results = await response.json();
+        renderStatResults(widgetId, statType, results);
+
+    } catch (error) {
+        console.error('Stat API hatası:', error);
+        // Fallback: Client-side hesaplama
+        console.log('Client-side hesaplamaya geçiliyor...');
+        const results = calculateLocalStat(statType, dataset.data, numericColumns);
+        renderStatResults(widgetId, statType, results);
+    }
+}
+
+/**
+ * Client-side betimsel istatistik hesaplama
+ */
+function calculateDescriptiveStatsLocal(data, columns) {
+    const results = {};
+
+    columns.forEach(col => {
+        const values = data
+            .map(row => {
+                let val = row[col];
+                if (typeof val === 'string') {
+                    val = val.replace(/\./g, '').replace(',', '.');
+                }
+                return parseFloat(val);
+            })
+            .filter(v => !isNaN(v));
+
+        if (values.length > 0) {
+            const stats = calculateStatistics(values);
+            if (stats) {
+                results[col] = stats;
+            }
+        }
+    });
+
+    return { type: 'descriptive', columns: results };
+}
+
+/**
+ * Client-side genel istatistik hesaplama (fallback)
+ */
+function calculateLocalStat(statType, data, columns) {
+    if (!data || data.length === 0 || columns.length === 0) {
+        return { error: 'Yetersiz veri' };
+    }
+
+    // İlk sayısal sütunun değerlerini al
+    const values = data
+        .map(row => {
+            let val = row[columns[0]];
+            if (typeof val === 'string') {
+                val = val.replace(/\./g, '').replace(',', '.');
+            }
+            return parseFloat(val);
+        })
+        .filter(v => !isNaN(v));
+
+    if (values.length === 0) {
+        return { error: 'Sayısal değer bulunamadı' };
+    }
+
+    const stats = calculateStatistics(values);
+
+    // Basit sonuçlar
+    const result = {
+        type: statType,
+        column: columns[0],
+        n: values.length,
+        ...stats
+    };
+
+    // Normallik için ek bilgi
+    if (statType === 'normality' && stats) {
+        const skewness = calculateSkewness(values, stats.mean, stats.stdev);
+        const kurtosis = calculateKurtosis(values, stats.mean, stats.stdev);
+        result.skewness = skewness;
+        result.kurtosis = kurtosis;
+        result.isNormal = Math.abs(skewness) < 2 && Math.abs(kurtosis) < 7;
+        result.interpretation = result.isNormal
+            ? 'Veri normal dağılıma yakın görünüyor'
+            : 'Veri normal dağılımdan sapma gösteriyor';
+    }
+
+    return result;
+}
+
+/**
+ * Çarpıklık hesaplama
+ */
+function calculateSkewness(values, mean, stdev) {
+    if (!values.length || stdev === 0) return 0;
+    const n = values.length;
+    const sum = values.reduce((acc, v) => acc + Math.pow((v - mean) / stdev, 3), 0);
+    return (n / ((n - 1) * (n - 2))) * sum;
+}
+
+/**
+ * Basıklık hesaplama
+ */
+function calculateKurtosis(values, mean, stdev) {
+    if (!values.length || stdev === 0) return 0;
+    const n = values.length;
+    const sum = values.reduce((acc, v) => acc + Math.pow((v - mean) / stdev, 4), 0);
+    return ((n * (n + 1)) / ((n - 1) * (n - 2) * (n - 3))) * sum - (3 * (n - 1) * (n - 1)) / ((n - 2) * (n - 3));
+}
+
+/**
+ * Widget'ta istatistik sonuçlarını gösterir
+ */
+function renderStatResults(widgetId, statType, results) {
+    const bodyEl = document.getElementById(`${widgetId}_body`);
+    if (!bodyEl) return;
+
+    if (results.error) {
+        bodyEl.innerHTML = `<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> ${results.error}</div>`;
+        return;
+    }
+
+    let html = '';
+
+    if (statType === 'descriptive' && results.columns) {
+        // Betimsel istatistik tablosu
+        html = `<div class="viz-stat-table-wrapper"><table class="viz-stat-table">
+            <thead>
+                <tr>
+                    <th>Sütun</th>
+                    <th>Ort.</th>
+                    <th>Medyan</th>
+                    <th>Std</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>N</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for (const [col, stats] of Object.entries(results.columns)) {
+            html += `<tr>
+                <td><strong>${col}</strong></td>
+                <td>${formatNumber(stats.mean)}</td>
+                <td>${formatNumber(stats.median)}</td>
+                <td>${formatNumber(stats.stdev)}</td>
+                <td>${formatNumber(stats.min)}</td>
+                <td>${formatNumber(stats.max)}</td>
+                <td>${stats.count}</td>
+            </tr>`;
+        }
+
+        html += '</tbody></table></div>';
+
+    } else if (statType === 'normality') {
+        // Normallik testi sonucu
+        const isNormal = results.isNormal || results.p_value > 0.05;
+        html = `
+            <div class="viz-stat-result ${isNormal ? 'viz-stat-success' : 'viz-stat-warning'}">
+                <div class="viz-stat-icon">
+                    <i class="fas ${isNormal ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+                </div>
+                <div class="viz-stat-content">
+                    <h4>${results.column || 'Sütun'}</h4>
+                    <p>${results.interpretation || (isNormal ? 'Normal dağılım varsayımı sağlanıyor' : 'Normal dağılım varsayımı sağlanmıyor')}</p>
+                    ${results.p_value !== undefined ? `<p class="viz-stat-detail">p-değeri: ${results.p_value.toFixed(4)}</p>` : ''}
+                    ${results.skewness !== undefined ? `<p class="viz-stat-detail">Çarpıklık: ${results.skewness.toFixed(3)}</p>` : ''}
+                    ${results.kurtosis !== undefined ? `<p class="viz-stat-detail">Basıklık: ${results.kurtosis.toFixed(3)}</p>` : ''}
+                </div>
+            </div>
+        `;
+
+    } else {
+        // Genel sonuç gösterimi
+        html = '<div class="viz-stat-results">';
+
+        for (const [key, value] of Object.entries(results)) {
+            if (key === 'type' || key === 'columns') continue;
+
+            if (typeof value === 'object' && value !== null) {
+                html += `<div class="viz-stat-group"><h5>${key}</h5>`;
+                for (const [k2, v2] of Object.entries(value)) {
+                    html += `<div class="viz-stat-row"><span>${k2}:</span> <strong>${formatStatValue(v2)}</strong></div>`;
+                }
+                html += '</div>';
+            } else {
+                html += `<div class="viz-stat-row"><span>${key}:</span> <strong>${formatStatValue(value)}</strong></div>`;
+            }
+        }
+
+        html += '</div>';
+    }
+
+    bodyEl.innerHTML = html;
+}
+
+/**
+ * İstatistik değerini formatla
+ */
+function formatStatValue(value) {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'boolean') return value ? 'Evet' : 'Hayır';
+    if (typeof value === 'number') {
+        if (Number.isInteger(value)) return value.toLocaleString('tr-TR');
+        return value.toFixed(4);
+    }
+    // Array kontrolü
+    if (Array.isArray(value)) {
+        return value.map(v => formatStatValue(v)).join(', ');
+    }
+    // İç içe obje kontrolü
+    if (typeof value === 'object') {
+        try {
+            // Objenin basit değerlerini çıkar
+            const keys = Object.keys(value);
+            if (keys.length === 0) return '-';
+            if (keys.length <= 3) {
+                return keys.map(k => `${k}: ${formatStatValue(value[k])}`).join(', ');
+            }
+            return JSON.stringify(value);
+        } catch (e) {
+            return '-';
+        }
+    }
+    return String(value);
+}
+
+/**
+ * Widget'ı kaldır
+ */
+function removeWidget(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (widget) {
+        widget.remove();
+        console.log(`🗑️ Widget kaldırıldı: ${widgetId}`);
+
+        // Charts listesinden de kaldır (eğer grafik ise)
+        VIZ_STATE.charts = VIZ_STATE.charts.filter(c => c.id !== widgetId);
+
+        // ECharts instance temizle
+        if (VIZ_STATE.echartsInstances[widgetId]) {
+            VIZ_STATE.echartsInstances[widgetId].dispose();
+            delete VIZ_STATE.echartsInstances[widgetId];
+        }
+
+        // ResizeObserver temizle
+        if (VIZ_STATE.resizeObservers && VIZ_STATE.resizeObservers[widgetId]) {
+            VIZ_STATE.resizeObservers[widgetId].disconnect();
+            delete VIZ_STATE.resizeObservers[widgetId];
+        }
+
+        updateEmptyState();
+    }
+}
+
+// Global exports for Stat Widget System
+window.createStatWidget = createStatWidget;
+window.removeWidget = removeWidget;
+window.runStatForWidget = runStatForWidget;
+window.getStatTitle = getStatTitle;
+window.refreshStatWidget = refreshStatWidget;
+window.embedStatToChart = embedStatToChart;
+window.getAnalysisRequirements = getAnalysisRequirements;
