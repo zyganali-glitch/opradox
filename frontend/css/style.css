@@ -1,5 +1,8 @@
 /* style.css - opradox Ultimate Final v2 */
 
+/* Google Fonts - Inter & Outfit */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
 :root {
     /* v2 Renk Paleti - Dark Mode */
     --gm-bg: #1a1a2e;
@@ -10,11 +13,12 @@
     --gm-text: #f1f5f9;
     --gm-text-muted: #94a3b8;
     --gm-divider: #1e2233;
-    --gm-font: 'Segoe UI', Inter, sans-serif;
+    --gm-font: 'Inter', 'Segoe UI', sans-serif;
     --gm-success: #00d97e;
     --x-color: #ffffff;
     --header-h: 64px;
 }
+
 
 body.day-mode {
     /* v2 Renk Paleti - Light Mode */
@@ -4085,14 +4089,16 @@ body.day-mode .share-dropdown-menu {
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
 .viz-data-card {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
 .viz-data-header {
@@ -4166,6 +4172,155 @@ body.day-mode .share-dropdown-menu {
     align-items: center;
     gap: 8px;
     font-size: 0.85rem;
+}
+
+/* Veri Profili - Basit */
+.viz-data-profile {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(154, 48, 80, 0.08);
+    border-radius: 8px;
+    border-left: 3px solid var(--gm-accent);
+}
+
+.viz-data-profile h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* TAM VERİ PROFİLİ - Sol Bar */
+.viz-data-profile-full {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(154, 48, 80, 0.08);
+    border-radius: 8px;
+    border-left: 3px solid var(--gm-accent);
+}
+
+.viz-data-profile-full h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-profile-summary-left {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-profile-stat-left {
+    text-align: center;
+    flex: 1;
+}
+
+.viz-profile-value-left {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gm-primary);
+}
+
+.viz-profile-label-left {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+}
+
+/* Sütun Tipleri */
+.viz-column-types-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.viz-column-type-item-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--gm-bg);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    border-left: 3px solid;
+}
+
+.viz-column-type-item-left i {
+    font-size: 0.7rem;
+}
+
+/* Eksik Değerler */
+.viz-missing-values-left {
+    margin-top: 8px;
+}
+
+.viz-missing-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--gm-text-muted);
+    margin-bottom: 6px;
+}
+
+.viz-missing-header-left i {
+    color: #f59e0b;
+}
+
+.viz-missing-list-left {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-missing-item-left {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+}
+
+.viz-missing-item-left .count {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.viz-profile-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.viz-profile-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.viz-stat-label {
+    color: var(--gm-text-muted);
+}
+
+.viz-stat-value {
+    font-weight: 600;
+    color: var(--gm-primary);
+}
+
+.viz-quality-good {
+    color: #22c55e;
+}
+
+.viz-quality-warning {
+    color: #f59e0b;
 }
 
 .viz-file-name i {
@@ -4421,6 +4576,17 @@ body.day-mode .share-dropdown-menu {
     cursor: pointer;
     transition: all 0.2s;
     min-height: 250px;
+    /* İlk grafik tam genişlik sorunu düzeltmesi */
+    max-width: 100%;
+}
+
+/* Dashboard Grid - 2 sütunluk layout */
+.viz-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    min-height: 400px;
 }
 
 .viz-chart-widget:hover {
@@ -6781,4 +6947,2642 @@ body.day-mode .viz-stat-value {
 
 .viz-share-content button:hover {
     transform: translateY(-2px);
+}
+
+/* =====================================================
+   VISUAL STUDIO LAYOUT (Sprint 1 Fixes)
+   ===================================================== */
+
+/* Main Layout - 3 Column Grid */
+.viz-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 340px 1fr 320px;
+    gap: 15px;
+    padding: 15px;
+    height: calc(100vh - 64px);
+    overflow: hidden;
+}
+
+/* Left Panel - Expanded for Data Profile */
+.viz-left-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+
+/* Left Panel Scrollbar Styling */
+.viz-left-pane::-webkit-scrollbar {
+    width: 8px;
+}
+
+.viz-left-pane::-webkit-scrollbar-track {
+    background: var(--gm-bg);
+    border-radius: 4px;
+}
+
+.viz-left-pane::-webkit-scrollbar-thumb {
+    background: var(--gm-primary);
+    border-radius: 4px;
+}
+
+.viz-left-pane::-webkit-scrollbar-thumb:hover {
+    background: var(--gm-accent);
+}
+
+/* Data Card in Left Panel */
+.viz-data-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.viz-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.viz-data-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-load-btn {
+    padding: 6px 10px !important;
+}
+
+/* File Info Section */
+.viz-file-info {
+    background: rgba(74, 144, 217, 0.08);
+    border: 1px solid var(--gm-primary);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
+.viz-file-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--gm-text);
+}
+
+.viz-file-name i {
+    color: #27ae60;
+}
+
+.viz-file-remove {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.viz-file-remove:hover {
+    color: #e74c3c;
+}
+
+/* Sheet & Header Row Selectors */
+.viz-file-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+.viz-file-option {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.viz-file-option label {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.viz-file-option label i {
+    color: var(--gm-primary);
+}
+
+.viz-file-option select {
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.viz-file-option select:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+/* Supported File Types Text */
+.viz-file-types {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    margin-top: 8px;
+    text-align: center;
+}
+
+.viz-file-types i {
+    color: var(--gm-primary);
+    margin-right: 4px;
+}
+
+/* Columns List */
+.viz-columns-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    padding-right: 3px;
+    margin-bottom: 15px;
+}
+
+.viz-no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    color: var(--gm-text-muted);
+    font-size: 0.85rem;
+}
+
+.viz-no-data i {
+    font-size: 1.5rem;
+    opacity: 0.5;
+}
+
+/* Full Data Profile in Left Panel */
+.viz-data-profile-full {
+    padding: 15px;
+    background: var(--gm-bg);
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.viz-data-profile-full h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--gm-card-border);
+    padding-bottom: 8px;
+}
+
+.viz-profile-summary-left {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+}
+
+.viz-profile-stat-left {
+    text-align: center;
+}
+
+.viz-profile-value-left {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gm-primary);
+}
+
+.viz-profile-value-left.viz-quality-good {
+    color: #27ae60;
+}
+
+.viz-profile-value-left.viz-quality-warning {
+    color: #f39c12;
+}
+
+.viz-profile-label-left {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+}
+
+/* Column Types in Left Panel */
+.viz-column-types-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.viz-column-type-item-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--gm-card-bg);
+    border-radius: 4px;
+    border-left: 3px solid var(--gm-primary);
+    font-size: 0.72rem;
+    color: var(--gm-text);
+}
+
+.viz-column-type-item-left i {
+    font-size: 0.65rem;
+}
+
+/* Missing Values in Left Panel */
+.viz-missing-values-left {
+    background: var(--gm-card-bg);
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.viz-missing-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #e74c3c;
+    margin-bottom: 8px;
+}
+
+.viz-missing-list-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.viz-missing-item-left {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.viz-missing-item-left .count {
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+.viz-quality-good {
+    color: #27ae60 !important;
+}
+
+/* Middle Panel - Dashboard */
+.viz-middle-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viz-canvas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.viz-canvas-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gm-accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-canvas-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Dashboard Grid - Fixed Layout to Prevent Overlap */
+.viz-dashboard-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    overflow-y: auto;
+    padding: 10px;
+    align-content: start;
+}
+
+/* When there's only one chart, show full width */
+.viz-dashboard-grid .viz-chart-widget:only-child {
+    grid-column: 1 / -1;
+}
+
+/* Feedback Modal */
+.viz-feedback-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10002;
+}
+
+.viz-feedback-content {
+    width: 450px;
+    max-width: 90vw;
+    background: var(--gm-card-bg);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--gm-card-border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.viz-feedback-header {
+    padding: 20px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.viz-feedback-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.viz-feedback-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.viz-feedback-close:hover {
+    opacity: 1;
+}
+
+.viz-feedback-body {
+    padding: 25px;
+}
+
+.viz-feedback-rating {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.viz-feedback-rating label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.viz-rating-stars i {
+    font-size: 1.8rem;
+    color: var(--gm-card-border);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-rating-stars i:hover,
+.viz-rating-stars i.active {
+    color: #ffc107;
+    transform: scale(1.1);
+}
+
+.viz-feedback-type {
+    margin-bottom: 15px;
+}
+
+.viz-feedback-type label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-feedback-type select {
+    width: 100%;
+    padding: 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+}
+
+.viz-feedback-message {
+    margin-bottom: 20px;
+}
+
+.viz-feedback-message label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-feedback-message textarea {
+    width: 100%;
+    height: 100px;
+    padding: 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    resize: none;
+}
+
+.viz-feedback-submit {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.viz-feedback-submit:hover {
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .viz-main {
+        grid-template-columns: 280px 1fr 280px;
+    }
+}
+
+@media (max-width: 900px) {
+    .viz-main {
+        grid-template-columns: 1fr;
+    }
+
+    .viz-left-pane,
+    .viz-right-pane {
+        max-height: 40vh;
+    }
+
+    .viz-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =====================================================
+   SPSS SONUÇ STİLLERİ (Sprint 2)
+   ===================================================== */
+
+.viz-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin-top: 10px;
+}
+
+.viz-stats-table th,
+.viz-stats-table td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stats-table th {
+    background: rgba(74, 144, 217, 0.1);
+    font-weight: 600;
+    color: var(--gm-primary);
+}
+
+.viz-stats-table tr:hover {
+    background: rgba(74, 144, 217, 0.05);
+}
+
+.viz-interpretation {
+    padding: 10px;
+    background: rgba(39, 174, 96, 0.1);
+    border-left: 3px solid #27ae60;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.viz-p-value.viz-significant {
+    color: #e74c3c !important;
+    font-weight: 700;
+}
+
+.viz-p-value.viz-normal {
+    color: #27ae60 !important;
+}
+
+.viz-significant {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.viz-normal {
+    color: #27ae60;
+}
+
+.viz-group-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.viz-group-item {
+    padding: 4px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.viz-correlation-hint {
+    padding: 8px;
+    background: rgba(154, 48, 80, 0.1);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--gm-accent);
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* What-If Simulator Styles */
+.viz-whatif-percent {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.viz-whatif-percent.viz-positive {
+    color: #27ae60;
+}
+
+.viz-whatif-percent.viz-negative {
+    color: #e74c3c;
+}
+
+/* Trend Insight Styles */
+.viz-trend-insight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+.viz-trend-up {
+    background: rgba(39, 174, 96, 0.15);
+    color: #27ae60;
+}
+
+.viz-trend-down {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.viz-trend-stable {
+    background: rgba(74, 144, 217, 0.15);
+    color: var(--gm-primary);
+}
+
+/* Anomaly Styles */
+.viz-anomaly-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.viz-anomaly-item.high {
+    background: rgba(231, 76, 60, 0.1);
+    border-left: 3px solid #e74c3c;
+}
+
+.viz-anomaly-item.low {
+    background: rgba(52, 152, 219, 0.1);
+    border-left: 3px solid #3498db;
+}
+
+.viz-zscore {
+    color: var(--gm-text-muted);
+    font-family: monospace;
+}
+
+.viz-no-anomaly {
+    text-align: center;
+    padding: 15px;
+    color: #27ae60;
+}
+
+.viz-no-anomaly i {
+    margin-right: 8px;
+}
+
+/* =====================================================
+   FİLTRELEME VE SIRALAMA PANELİ (Sprint 4)
+   ===================================================== */
+
+.viz-filter-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    min-width: 400px;
+    max-width: 500px;
+}
+
+.viz-filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--gm-card-border);
+    background: rgba(74, 144, 217, 0.1);
+    border-radius: 12px 12px 0 0;
+}
+
+.viz-filter-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gm-text);
+}
+
+.viz-filter-header h4 i {
+    margin-right: 8px;
+    color: var(--gm-primary);
+}
+
+.viz-filter-close {
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--gm-text-muted);
+    transition: color 0.2s;
+}
+
+.viz-filter-close:hover {
+    color: #e74c3c;
+}
+
+.viz-filter-body {
+    padding: 20px;
+}
+
+.viz-filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.viz-filter-row select,
+.viz-filter-row input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+}
+
+.viz-filter-row button {
+    padding: 8px 15px;
+    background: var(--gm-primary);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.viz-filter-row button:hover {
+    background: var(--gm-primary-hover);
+}
+
+.viz-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    min-height: 30px;
+}
+
+.viz-filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(74, 144, 217, 0.2);
+    border: 1px solid var(--gm-primary);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--gm-text);
+}
+
+.viz-filter-tag i {
+    cursor: pointer;
+    color: #e74c3c;
+}
+
+.viz-filter-tag i:hover {
+    color: #c0392b;
+}
+
+.viz-filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.viz-filter-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.viz-filter-actions button:first-child {
+    background: var(--gm-primary);
+    color: #fff;
+}
+
+.viz-filter-actions button:first-child:hover {
+    background: var(--gm-primary-hover);
+}
+
+.viz-filter-actions button:last-child {
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+}
+
+.viz-filter-actions button:last-child:hover {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+}
+
+/* Export Menü */
+.viz-export-menu {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.viz-export-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--gm-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+}
+
+.viz-export-item:hover {
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.viz-export-item i {
+    width: 20px;
+    text-align: center;
+    color: var(--gm-primary);
+}
+
+/* =====================================================
+   FULLSCREEN, DRAGGING VE QR MODAL (Sprint 5)
+   ===================================================== */
+
+.viz-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    background: var(--gm-bg) !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    box-sizing: border-box;
+}
+
+.viz-dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--gm-primary) !important;
+}
+
+.viz-chart-widget[draggable="true"] {
+    cursor: grab;
+}
+
+.viz-chart-widget[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.viz-qr-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+}
+
+.viz-qr-content {
+    background: var(--gm-card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 350px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.viz-qr-content h4 {
+    margin: 0 0 15px;
+    color: var(--gm-text);
+}
+
+.viz-qr-content h4 i {
+    margin-right: 10px;
+    color: var(--gm-primary);
+}
+
+.viz-qr-content img {
+    border-radius: 8px;
+    border: 2px solid var(--gm-card-border);
+}
+
+/* Dashboard Grid Şablonları */
+.viz-dashboard-grid.template-single {
+    grid-template-columns: 1fr;
+}
+
+.viz-dashboard-grid.template-two-column {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.viz-dashboard-grid.template-three-column {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* Widget Boyut Göstergesi */
+.viz-widget-size-indicator {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 0.65rem;
+    color: var(--gm-text-muted);
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+/* Resize Handle */
+.viz-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--gm-primary) 50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.viz-chart-widget:hover .viz-resize-handle {
+    opacity: 0.5;
+}
+
+.viz-chart-widget:hover .viz-resize-handle:hover {
+    opacity: 1;
+}
+
+/* Renk Paleti Önizleme */
+.viz-palette-preview {
+    display: flex;
+    gap: 3px;
+    margin-top: 5px;
+}
+
+.viz-palette-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+
+/* Tooltip Format Seçici */
+.viz-tooltip-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.viz-tooltip-option {
+    padding: 5px 12px;
+    border: 1px solid var(--gm-card-border);
+    border-radius: 15px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-tooltip-option:hover,
+.viz-tooltip-option.active {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+    color: #fff;
+}
+
+/* Dashboard Şablon Butonları */
+.viz-template-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.viz-template-btn {
+    padding: 8px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viz-template-btn:hover {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+    color: #fff;
+}
+
+.viz-template-btn i {
+    font-size: 0.8rem;
+}
+
+/* =====================================================
+   UYARI VE PROGRESS STİLLERİ (Sprint 6)
+   ===================================================== */
+
+.viz-warnings-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10001;
+    max-width: 350px;
+}
+
+.viz-warning-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-left-width: 4px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.viz-warning-item i {
+    font-size: 1.1rem;
+}
+
+.viz-warning-item span {
+    font-size: 0.85rem;
+    color: var(--gm-text);
+}
+
+/* Progress Overlay */
+.viz-progress-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100001;
+}
+
+.viz-progress-content {
+    background: var(--gm-card-bg);
+    padding: 30px 50px;
+    border-radius: 12px;
+    text-align: center;
+    min-width: 250px;
+}
+
+.viz-progress-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--gm-card-border);
+    border-top-color: var(--gm-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.viz-progress-message {
+    font-size: 1rem;
+    color: var(--gm-text);
+    margin-bottom: 15px;
+}
+
+.viz-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--gm-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.viz-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gm-primary), var(--gm-accent));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.viz-progress-percent {
+    font-size: 0.9rem;
+    color: var(--gm-primary);
+    margin-top: 10px;
+    font-weight: 600;
+}
+
+/* Data Preview Table */
+.viz-data-preview {
+    max-height: 300px;
+    overflow: auto;
+    border-radius: 8px;
+    border: 1px solid var(--gm-card-border);
+}
+
+.viz-data-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.viz-data-preview th,
+.viz-data-preview td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--gm-card-border);
+    white-space: nowrap;
+}
+
+.viz-data-preview th {
+    background: rgba(74, 144, 217, 0.1);
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+}
+
+.viz-data-preview tr:hover {
+    background: rgba(74, 144, 217, 0.05);
+}
+
+/* Version History */
+.viz-version-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.viz-version-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--gm-card-border);
+    transition: background 0.2s;
+}
+
+.viz-version-item:hover {
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.viz-version-label {
+    font-weight: 600;
+    color: var(--gm-text);
+}
+
+.viz-version-timestamp {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-version-restore {
+    padding: 4px 10px;
+    background: var(--gm-primary);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.viz-version-restore:hover {
+    background: var(--gm-primary-hover);
+}
+
+/* =====================================================
+   İSTATİSTİK VE VERİ YÖNETİMİ BUTONLARI (Sprint 8)
+   ===================================================== */
+
+.viz-stat-buttons,
+.viz-data-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 0;
+}
+
+.viz-stat-btn,
+.viz-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    background: rgba(74, 144, 217, 0.1);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.viz-stat-btn:hover,
+.viz-action-btn:hover {
+    background: rgba(74, 144, 217, 0.25);
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+}
+
+.viz-stat-btn i,
+.viz-action-btn i {
+    font-size: 0.7rem;
+}
+
+/* Dosya Preview Modal */
+.viz-file-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100002;
+}
+
+.viz-file-preview-content {
+    background: var(--gm-card-bg);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-file-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-file-preview-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.viz-file-preview-close {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.viz-file-preview-options {
+    display: flex;
+    gap: 15px;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.viz-file-preview-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.viz-file-preview-options select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+    font-size: 0.85rem;
+}
+
+.viz-file-preview-table {
+    flex: 1;
+    overflow: auto;
+    padding: 15px;
+}
+
+.viz-file-preview-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.viz-file-preview-table th,
+.viz-file-preview-table td {
+    padding: 8px 12px;
+    border: 1px solid var(--gm-card-border);
+    text-align: left;
+}
+
+.viz-file-preview-table th {
+    background: rgba(74, 144, 217, 0.15);
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+}
+
+.viz-file-preview-table tr.header-row {
+    background: rgba(46, 204, 113, 0.2);
+}
+
+.viz-file-preview-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+.viz-file-preview-footer button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-file-preview-cancel {
+    background: transparent;
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text);
+}
+
+.viz-file-preview-load {
+    background: var(--gm-primary);
+    border: none;
+    color: #fff;
+}
+
+.viz-file-preview-load:hover {
+    background: var(--gm-primary-hover);
+}
+
+/* Sol Panel Düzeltmeleri */
+.viz-left-pane {
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+}
+
+.viz-left-pane::-webkit-scrollbar {
+    width: 6px;
+}
+
+.viz-left-pane::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.viz-left-pane::-webkit-scrollbar-thumb {
+    background: var(--gm-card-border);
+    border-radius: 3px;
+}
+
+/* Sütun Listesi Tipler İle */
+.viz-column-item-full {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(74, 144, 217, 0.05);
+    border-radius: 6px;
+    margin-bottom: 4px;
+    cursor: move;
+    transition: all 0.2s;
+}
+
+.viz-column-item-full:hover {
+    background: rgba(74, 144, 217, 0.15);
+}
+
+.viz-column-name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--gm-text);
+}
+
+.viz-column-type-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.viz-column-type-badge.numeric {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+}
+
+.viz-column-type-badge.text {
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+}
+
+.viz-column-type-badge.date {
+    background: rgba(155, 89, 182, 0.2);
+    color: #9b59b6;
+}
+
+.viz-column-type-badge.boolean {
+    background: rgba(241, 196, 15, 0.2);
+    color: #f1c40f;
+}
+
+/* =====================================================
+   SPRINT 10: SÜRÜKLE-BIRAK İSTATİSTİK & VERİ YÖNETİMİ STİLLERİ
+   ===================================================== */
+
+/* Sürükle ipucu */
+.viz-drag-hint {
+    font-size: 0.65rem;
+    color: var(--gm-text-muted);
+    margin-left: auto;
+    opacity: 0.7;
+}
+
+/* Sürüklenebilir stat butonları */
+.viz-stat-draggable {
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.viz-stat-draggable:active {
+    cursor: grabbing;
+}
+
+.viz-stat-draggable.viz-dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+/* Dashboard drop active */
+.viz-drop-active {
+    background: rgba(46, 204, 113, 0.1) !important;
+    border: 2px dashed #27ae60 !important;
+    animation: pulse-drop 1s infinite;
+}
+
+@keyframes pulse-drop {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Stat Widget */
+.viz-stat-widget {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.viz-stat-widget .viz-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(74, 144, 217, 0.1);
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-widget .viz-widget-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.viz-stat-widget .viz-widget-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.viz-stat-widget .viz-widget-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--gm-bg);
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.viz-stat-widget .viz-widget-btn:hover {
+    background: var(--gm-primary);
+    color: white;
+}
+
+.viz-stat-widget .viz-widget-close:hover {
+    background: #e74c3c;
+}
+
+.viz-stat-widget .viz-widget-body {
+    padding: 12px;
+    min-height: 100px;
+}
+
+/* Stat result compact */
+.viz-stat-result-compact {
+    font-size: 0.8rem;
+}
+
+.viz-stat-summary {
+    text-align: center;
+    padding: 10px;
+}
+
+.viz-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.viz-stat-detail {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.viz-mini-table th,
+.viz-mini-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--gm-card-border);
+    text-align: left;
+}
+
+.viz-mini-table th {
+    font-weight: 600;
+    color: var(--gm-text-muted);
+    width: 40%;
+}
+
+.viz-json-result {
+    font-size: 0.65rem;
+    background: var(--gm-bg);
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+    max-height: 150px;
+}
+
+.viz-error {
+    color: #e74c3c;
+    text-align: center;
+    padding: 10px;
+}
+
+.viz-loading {
+    text-align: center;
+    color: var(--gm-text-muted);
+    padding: 20px;
+}
+
+/* Modal Form Styles */
+.viz-modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+}
+
+.viz-modal-form label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-text);
+}
+
+.viz-modal-form input,
+.viz-modal-form select {
+    padding: 10px 12px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.9rem;
+}
+
+.viz-modal-form input:focus,
+.viz-modal-form select:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+}
+
+.viz-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.viz-checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.viz-checkbox-list label:hover {
+    background: rgba(74, 144, 217, 0.1);
+}
+
+.viz-btn-primary {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+    margin-top: 10px;
+}
+
+.viz-btn-primary:hover {
+    transform: translateY(-2px);
+}
+
+/* Stat Result Modal */
+.viz-stat-result-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.viz-stat-result-content {
+    background: var(--gm-card-bg);
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-result-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viz-stat-result-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+}
+
+.viz-stat-result-body {
+    padding: 20px;
+}
+
+/* Harita Grafik Butonları */
+.viz-chart-map {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(52, 152, 219, 0.1));
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.viz-chart-map:hover {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.2), rgba(52, 152, 219, 0.2));
+    border-color: #27ae60;
+}
+
+/* Veri Yönetimi Buton Grid */
+.viz-data-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.viz-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-action-btn:hover {
+    background: rgba(74, 144, 217, 0.1);
+    border-color: var(--gm-primary);
+}
+
+.viz-action-btn i {
+    font-size: 0.8rem;
+    color: var(--gm-primary);
+}
+
+/* İstatistik Buton Grid */
+.viz-stat-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.viz-stat-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-stat-btn:hover {
+    background: rgba(154, 48, 80, 0.1);
+    border-color: var(--gm-accent);
+}
+
+.viz-stat-btn i {
+    font-size: 0.8rem;
+    color: var(--gm-accent);
+}
+
+/* Responsive for small screens */
+@media (max-width: 600px) {
+
+    .viz-stat-buttons,
+    .viz-data-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =====================================================
+   SPRINT 13: YENİ ÖZELLİK STİLLERİ
+   ===================================================== */
+
+/* 5.19 - Watermark Stilleri */
+.viz-watermark {
+    position: absolute;
+    pointer-events: none;
+    z-index: 5;
+    font-family: var(--gm-font);
+    color: var(--gm-text);
+    user-select: none;
+}
+
+.viz-watermark-center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+}
+
+.viz-watermark-bottom-right {
+    bottom: 20px;
+    right: 20px;
+}
+
+.viz-watermark-bottom-left {
+    bottom: 20px;
+    left: 20px;
+}
+
+.viz-watermark-top-right {
+    top: 20px;
+    right: 20px;
+}
+
+.viz-watermark-top-left {
+    top: 20px;
+    left: 20px;
+}
+
+.viz-watermark img {
+    max-width: 150px;
+    max-height: 80px;
+    object-fit: contain;
+}
+
+/* 8.8 - Video Yardım Stilleri */
+.viz-video-help {
+    display: flex;
+    gap: 15px;
+    min-height: 300px;
+}
+
+.viz-video-player {
+    flex: 2;
+    background: var(--gm-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-video-placeholder {
+    text-align: center;
+    padding: 40px;
+    color: var(--gm-text-muted);
+}
+
+.viz-video-placeholder i {
+    font-size: 4rem;
+    color: var(--gm-primary);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.viz-video-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.viz-video-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--gm-bg);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viz-video-item:hover {
+    background: rgba(74, 144, 217, 0.15);
+    transform: translateX(3px);
+}
+
+.viz-video-item i {
+    font-size: 1.2rem;
+    color: var(--gm-primary);
+    width: 30px;
+    text-align: center;
+}
+
+.viz-video-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.viz-video-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gm-text);
+}
+
+.viz-video-duration {
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+/* Stat Table stilleri */
+.viz-stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+.viz-stat-table th,
+.viz-stat-table td {
+    padding: 8px 12px;
+    border: 1px solid var(--gm-card-border);
+    text-align: left;
+}
+
+.viz-stat-table th {
+    background: rgba(74, 144, 217, 0.1);
+    font-weight: 600;
+    color: var(--gm-primary);
+}
+
+.viz-stat-table tbody tr:hover {
+    background: rgba(74, 144, 217, 0.05);
+}
+
+.viz-p-sig {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+/* Secondary Button */
+.viz-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 6px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.viz-btn-secondary:hover {
+    background: rgba(74, 144, 217, 0.1);
+    border-color: var(--gm-primary);
+}
+
+.viz-btn-secondary i {
+    color: var(--gm-primary);
+}
+
+/* Stat Result Summary */
+.viz-stat-result-summary {
+    background: rgba(74, 144, 217, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.viz-stat-result-summary p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+}
+
+.viz-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.viz-stat-row:last-child {
+    border-bottom: none;
+}
+
+/* Modal Form içindeki hr */
+.viz-modal-form hr {
+    border: none;
+    border-top: 1px solid var(--gm-divider);
+}
+
+.viz-modal-form h4 {
+    margin: 0 0 10px 0;
+    color: var(--gm-primary);
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Responsive video help */
+@media (max-width: 768px) {
+    .viz-video-help {
+        flex-direction: column;
+    }
+
+    .viz-video-player {
+        min-height: 200px;
+    }
+
+    .viz-video-list {
+        max-height: 200px;
+    }
+}
+
+/* =====================================================
+   OPRADOX VISUAL STUDIO - UX İYİLEŞTİRMELER
+   ===================================================== */
+
+/* Google Fonts - Modern Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* Premium Font Override */
+body {
+    font-family: 'Inter', 'Outfit', var(--gm-font);
+}
+
+/* Sağ Panel Scroll Fix */
+.viz-right-pane {
+    overflow-y: auto !important;
+    height: 100%;
+    max-height: calc(100vh - var(--header-h) - 40px);
+}
+
+/* Widget Resize Özelliği */
+.viz-chart-widget,
+.gm-widget {
+    resize: both !important;
+    overflow: auto;
+    min-width: 250px;
+    min-height: 200px;
+}
+
+/* Resize Handle */
+.viz-chart-widget::after,
+.gm-widget::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 15px;
+    height: 15px;
+    cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--gm-primary) 50%);
+    opacity: 0.3;
+    border-radius: 0 0 8px 0;
+}
+
+.viz-chart-widget:hover::after,
+.gm-widget:hover::after {
+    opacity: 0.6;
+}
+
+/* =====================================================
+   GLASSMORPHISM EFEKTLER
+   ===================================================== */
+
+.gm-card.glassmorphism,
+.viz-card-glass {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    background: rgba(22, 33, 62, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.day-mode .gm-card.glassmorphism,
+body.day-mode .viz-card-glass {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* =====================================================
+   NEON GLOW BUTONLAR
+   ===================================================== */
+
+.gm-gradient-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.gm-gradient-btn:hover {
+    transform: translateY(-3px) !important;
+    box-shadow:
+        0 4px 15px rgba(74, 144, 217, 0.4),
+        0 0 30px rgba(74, 144, 217, 0.2),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+.gm-gradient-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(74, 144, 217, 0.3);
+}
+
+/* Neon Primary Button */
+.viz-btn-neon {
+    background: linear-gradient(135deg, var(--gm-primary), #6366f1);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.viz-btn-neon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.viz-btn-neon:hover::before {
+    left: 100%;
+}
+
+.viz-btn-neon:hover {
+    box-shadow:
+        0 0 20px rgba(74, 144, 217, 0.6),
+        0 0 40px rgba(74, 144, 217, 0.3);
+    transform: translateY(-2px);
+}
+
+/* =====================================================
+   PDF ÖNİZLEME MODAL STİLLERİ
+   ===================================================== */
+
+.viz-pdf-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.viz-pdf-preview-content {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 16px;
+    width: 85%;
+    max-width: 950px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.viz-pdf-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    color: white;
+}
+
+.viz-pdf-preview-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.viz-pdf-close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-pdf-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.viz-pdf-preview-body {
+    padding: 20px;
+    background: var(--gm-bg);
+}
+
+.viz-pdf-preview-body iframe {
+    background: white;
+    border-radius: 8px;
+}
+
+.viz-pdf-preview-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--gm-card-border);
+    background: var(--gm-card-bg);
+}
+
+/* =====================================================
+   AURORA ARKA PLAN ANİMASYONU (Opsiyonel)
+   ===================================================== */
+
+.aurora-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background:
+        radial-gradient(ellipse at 10% 20%, rgba(74, 144, 217, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 80%, rgba(154, 48, 80, 0.10) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%);
+    animation: aurora 15s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+
+@keyframes aurora {
+    0% {
+        background-position: 0% 50%;
+        opacity: 0.8;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        background-position: 100% 50%;
+        opacity: 0.8;
+    }
+}
+
+/* =====================================================
+   İSTATİSTİK TEST SONUÇ STİLLERİ
+   ===================================================== */
+
+.viz-stat-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-stat-modal {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.viz-stat-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    color: white;
+}
+
+.viz-stat-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 120px);
+}
+
+/* P-Value güzelleştirmesi */
+.viz-p-highlight {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.viz-p-highlight.significant {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.viz-p-highlight.not-significant {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+/* =====================================================
+   DATASET SEÇİCİ STİLLERİ
+   ===================================================== */
+
+#vizDatasetSelectorWrapper {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(74, 144, 217, 0.1);
+    border: 1px solid var(--gm-primary);
+    border-radius: 8px;
+}
+
+#vizDatasetSelector {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+}
+
+/* =====================================================
+   GLASSMORPHISM & MODERN UI (Audit Report - Section 7)
+   ===================================================== */
+
+/* Glassmorphism Cards */
+.gm-card,
+.viz-stat-modal,
+.viz-chart-widget {
+    background: rgba(22, 33, 62, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(74, 144, 217, 0.2);
+}
+
+body.day-mode .gm-card,
+body.day-mode .viz-stat-modal,
+body.day-mode .viz-chart-widget {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(74, 144, 217, 0.15);
+}
+
+/* Neon Glow Buttons */
+.gm-gradient-btn,
+.viz-chart-btn,
+button[onclick*="addChart"] {
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.gm-gradient-btn:hover,
+.viz-chart-btn:hover {
+    box-shadow:
+        0 0 10px rgba(74, 144, 217, 0.5),
+        0 0 20px rgba(74, 144, 217, 0.3),
+        0 0 30px rgba(74, 144, 217, 0.2);
+    transform: translateY(-2px);
+}
+
+.gm-gradient-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.gm-gradient-btn:hover::before {
+    left: 100%;
+}
+
+/* Widget Resize Handles */
+.viz-chart-widget,
+.gm-widget {
+    resize: both;
+    overflow: hidden;
+    min-width: 250px;
+    min-height: 200px;
+}
+
+.viz-chart-widget::-webkit-resizer,
+.gm-widget::-webkit-resizer {
+    background: linear-gradient(135deg, transparent 50%, var(--gm-primary) 50%);
+    border-radius: 0 0 8px 0;
+}
+
+/* Right Panel Scroll Enhancement */
+.viz-right-pane {
+    overflow-y: auto !important;
+    max-height: calc(100vh - var(--header-h) - 20px) !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gm-primary) transparent;
+}
+
+.viz-right-pane::-webkit-scrollbar {
+    width: 8px;
+}
+
+.viz-right-pane::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.viz-right-pane::-webkit-scrollbar-thumb {
+    background: var(--gm-primary);
+    border-radius: 4px;
+}
+
+.viz-right-pane::-webkit-scrollbar-thumb:hover {
+    background: var(--gm-accent);
+}
+
+/* Left Panel Scroll Enhancement */
+.viz-left-pane {
+    overflow-y: auto !important;
+    max-height: calc(100vh - var(--header-h) - 20px) !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gm-primary) transparent;
+}
+
+.viz-left-pane::-webkit-scrollbar {
+    width: 6px;
+}
+
+.viz-left-pane::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 217, 0.5);
+    border-radius: 3px;
+}
+
+/* Aurora Background Animation */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    background:
+        radial-gradient(ellipse at 20% 20%, rgba(74, 144, 217, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(154, 48, 80, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(74, 144, 217, 0.05) 0%, transparent 70%);
+    animation: aurora 15s ease-in-out infinite alternate;
+}
+
+@keyframes aurora {
+    0% {
+        opacity: 0.6;
+        filter: hue-rotate(0deg);
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 0.6;
+        filter: hue-rotate(30deg);
+    }
+}
+
+body.day-mode::before {
+    background:
+        radial-gradient(ellipse at 20% 20%, rgba(74, 144, 217, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(154, 48, 80, 0.05) 0%, transparent 50%);
+}
+
+/* PDF Preview Modal */
+.viz-pdf-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.3s ease;
+}
+
+.viz-pdf-preview-modal iframe {
+    flex: 1;
+    border: none;
+    background: white;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Statistical Results Enhancement */
+.viz-stat-result-summary {
+    background: rgba(74, 144, 217, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.viz-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gm-divider);
+}
+
+.viz-stat-row:last-child {
+    border-bottom: none;
+}
+
+/* Fix for body initial state */
+body {
+    transition: background 0.3s ease, color 0.3s ease;
 }

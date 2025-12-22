@@ -30,3 +30,13 @@ websockets==15.0.1
 aiofiles
 xlsxwriter
 tabulate
+# İstatistik kütüphaneleri
+scipy
+scikit-learn
+statsmodels
+lifelines
+# Veri kaynakları
+gspread
+sqlalchemy
+google-auth
+google-auth-oauthlib

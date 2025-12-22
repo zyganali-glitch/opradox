@@ -19,6 +19,12 @@ from .excel_utils import read_table_from_upload
 from .auth import router as auth_router
 from .stats_service import router as viz_router
 
+# Yeni API modülleri (Faz 6 - Opsiyonel Özellikler)
+from .google_sheets_api import router as google_sheets_router
+from .sql_api import router as sql_router
+from .websocket_api import router as websocket_router
+from .scheduled_reports_api import router as scheduled_router
+
 # -------------------------------------------------------
 # Opradox 2.0 – Main Application
 # -------------------------------------------------------
@@ -54,6 +60,11 @@ app.include_router(ui_router)          # /ui/*
 app.include_router(feedback_router)    # /feedback + /admin/feedback
 app.include_router(viz_router)         # /viz/* (Visual Studio)
 
+# Yeni router'lar (Faz 6)
+app.include_router(google_sheets_router)  # /viz/google/* (Google Sheets)
+app.include_router(sql_router)            # /viz/sql/* (SQL Query)
+app.include_router(websocket_router)      # /viz/ws/* (WebSocket Collaboration)
+app.include_router(scheduled_router)      # /viz/schedule/* (Zamanlanmış Raporlar)
 
 
 
