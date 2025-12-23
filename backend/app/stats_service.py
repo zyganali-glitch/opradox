@@ -334,16 +334,21 @@ from scipy import stats as scipy_stats
 @router.post("/ttest")
 async def run_ttest(
     file: UploadFile = File(...),
-    column1: str = Form(...),
-    column2: str = Form(None),
-    test_type: str = Form("one-sample"),  # one-sample, independent, paired
-    mu: float = Form(0),  # One-sample için popülasyon ortalaması
+    value_column: str = Form(...),              # Y - sayısal değer sütunu
+    group_column: str = Form(None),             # X - kategorik grup sütunu (independent için)
+    group1: str = Form(None),                   # İlk grup değeri (seçilen)
+    group2: str = Form(None),                   # İkinci grup değeri (seçilen)
+    column2: str = Form(None),                  # Paired test için ikinci sütun
+    test_type: str = Form("independent"),       # independent, paired, one-sample
+    mu: float = Form(0),                        # One-sample için popülasyon ortalaması
     sheet_name: str = Form(None),
     header_row: int = Form(0)
 ):
     """
-    T-test uygular: tek örneklem, bağımsız örneklem veya eşleştirilmiş örneklem.
+    T-test uygular: bağımsız örneklem, eşleştirilmiş örneklem veya tek örneklem.
+    Independent: group1 ve group2 seçilen grupları kullanır
     """
+
     try:
         content = await file.read()
         filename = file.filename.lower()
@@ -355,50 +360,114 @@ async def run_ttest(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        data1 = pd.to_numeric(df[column1], errors='coerce').dropna().tolist()
-        
         if test_type == "one-sample":
+            data1 = pd.to_numeric(df[value_column], errors='coerce').dropna().tolist()
             t_stat, p_value = scipy_stats.ttest_1samp(data1, mu)
             result = {
-                "test": "Tek Örneklem t-Test",
+                "test": {"tr": "Tek Örneklem t-Test", "en": "One-Sample t-Test"},
                 "t_statistic": round(float(t_stat), 4),
                 "p_value": round(float(p_value), 4),
                 "n": len(data1),
                 "mean": round(sum(data1) / len(data1), 4),
                 "population_mean": mu,
                 "significant": p_value < 0.05,
-                "interpretation": "İstatistiksel olarak anlamlı fark var" if p_value < 0.05 else "Anlamlı fark yok"
+                "interpretation": {
+                    "tr": "İstatistiksel olarak anlamlı fark var" if p_value < 0.05 else "Anlamlı fark yok",
+                    "en": "Statistically significant difference" if p_value < 0.05 else "No significant difference"
+                }
             }
+            
         elif test_type == "independent":
-            data2 = pd.to_numeric(df[column2], errors='coerce').dropna().tolist()
+            # group_column'a göre value_column'u grupla
+            if not group_column:
+                raise HTTPException(status_code=400, detail="Independent t-test için group_column gerekli")
+            
+            # Kullanıcı seçtiği grupları kullan
+            if group1 and group2:
+                selected_groups = [group1, group2]
+                warning = None
+            else:
+                # Fallback: otomatik olarak ilk 2 grubu al
+                all_groups = df[group_column].dropna().unique()
+                if len(all_groups) < 2:
+                    raise HTTPException(status_code=400, detail=f"Independent t-test için en az 2 grup gerekli. Mevcut: {len(all_groups)} grup")
+                
+                selected_groups = list(all_groups[:2])
+                warning = {
+                    "tr": f"Gruplar otomatik seçildi: '{selected_groups[0]}' ve '{selected_groups[1]}'",
+                    "en": f"Groups auto-selected: '{selected_groups[0]}' and '{selected_groups[1]}'"
+                } if len(all_groups) > 2 else None
+
+            
+            # Grupları ayır - frontend string gönderir, DataFrame integer/float olabilir
+            # Her iki tarafı da string'e çevirerek karşılaştır
+            group_col_str = df[group_column].astype(str)
+            data1 = pd.to_numeric(df[group_col_str == str(selected_groups[0])][value_column], errors='coerce').dropna().tolist()
+            data2 = pd.to_numeric(df[group_col_str == str(selected_groups[1])][value_column], errors='coerce').dropna().tolist()
+            
+            if len(data1) < 2 or len(data2) < 2:
+                raise HTTPException(status_code=400, detail=f"Her grupta en az 2 veri olmalı. '{selected_groups[0]}': {len(data1)}, '{selected_groups[1]}': {len(data2)}")
+
+            
             t_stat, p_value = scipy_stats.ttest_ind(data1, data2)
+            
+            mean1 = sum(data1) / len(data1)
+            mean2 = sum(data2) / len(data2)
+            
             result = {
-                "test": "Bağımsız Örneklem t-Test",
+                "test": {"tr": "Bağımsız Örneklem t-Test", "en": "Independent Samples t-Test"},
                 "t_statistic": round(float(t_stat), 4),
                 "p_value": round(float(p_value), 4),
-                "n1": len(data1),
-                "n2": len(data2),
-                "mean1": round(sum(data1) / len(data1), 4),
-                "mean2": round(sum(data2) / len(data2), 4),
-                "significant": p_value < 0.05,
-                "interpretation": "Gruplar arasında anlamlı fark var" if p_value < 0.05 else "Gruplar arasında fark yok"
+                "group_column": group_column,
+                "value_column": value_column,
+                "groups": [
+                    {"name": str(selected_groups[0]), "n": len(data1), "mean": round(mean1, 4)},
+                    {"name": str(selected_groups[1]), "n": len(data2), "mean": round(mean2, 4)}
+                ],
+                "significant": bool(p_value < 0.05),
+
+                "interpretation": {
+                    "tr": f"'{selected_groups[0]}' ve '{selected_groups[1]}' grupları arasında anlamlı fark {'var' if p_value < 0.05 else 'yok'}",
+                    "en": f"{'Significant' if p_value < 0.05 else 'No significant'} difference between '{selected_groups[0]}' and '{selected_groups[1]}'"
+                }
             }
+            
+            if warning:
+                result["warning"] = warning
+
+            
         else:  # paired
-            data2 = pd.to_numeric(df[column2], errors='coerce').dropna().tolist()
+            if not column2:
+                raise HTTPException(status_code=400, detail="Paired t-test için column2 gerekli")
+            
+            data1 = pd.to_numeric(df[value_column], errors='coerce').dropna()
+            data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
+            
             min_len = min(len(data1), len(data2))
             t_stat, p_value = scipy_stats.ttest_rel(data1[:min_len], data2[:min_len])
+            
             result = {
-                "test": "Eşleştirilmiş Örneklem t-Test",
+                "test": {"tr": "Eşleştirilmiş Örneklem t-Test", "en": "Paired Samples t-Test"},
                 "t_statistic": round(float(t_stat), 4),
                 "p_value": round(float(p_value), 4),
                 "n": min_len,
+                "column1": value_column,
+                "column2": column2,
+                "mean1": round(float(data1[:min_len].mean()), 4),
+                "mean2": round(float(data2[:min_len].mean()), 4),
                 "significant": p_value < 0.05,
-                "interpretation": "Ölçümler arasında anlamlı fark var" if p_value < 0.05 else "Fark yok"
+                "interpretation": {
+                    "tr": "Ölçümler arasında anlamlı fark var" if p_value < 0.05 else "Anlamlı fark yok",
+                    "en": "Significant difference between measurements" if p_value < 0.05 else "No significant difference"
+                }
             }
         
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
 @router.post("/anova")
@@ -423,12 +492,13 @@ async def run_anova(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        # Grupları oluştur
+        # Grupları oluştur - string conversion eklendi
         groups = []
-        group_names = df[group_column].unique()
+        group_col_str = df[group_column].astype(str)
+        group_names = group_col_str.unique()
         
         for group in group_names:
-            group_data = pd.to_numeric(df[df[group_column] == group][value_column], errors='coerce').dropna().tolist()
+            group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
         
@@ -682,13 +752,16 @@ async def calculate_correlation_matrix(
 @router.post("/mann-whitney")
 async def run_mann_whitney(
     file: UploadFile = File(...),
-    column1: str = Form(...),
-    column2: str = Form(...),
+    value_column: str = Form(...),              # Y - sayısal değer sütunu
+    group_column: str = Form(...),              # X - kategorik grup sütunu
+    group1: str = Form(None),                   # İlk grup değeri (seçilen)
+    group2: str = Form(None),                   # İkinci grup değeri (seçilen)
     sheet_name: str = Form(None),
     header_row: int = Form(0)
 ):
     """
     Mann-Whitney U testi - Bağımsız örneklem non-parametrik test.
+    group1 ve group2 seçilen grupları kullanır.
     """
     try:
         content = await file.read()
@@ -701,24 +774,62 @@ async def run_mann_whitney(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        data1 = pd.to_numeric(df[column1], errors='coerce').dropna().tolist()
-        data2 = pd.to_numeric(df[column2], errors='coerce').dropna().tolist()
+        # Kullanıcı seçtiği grupları kullan
+        if group1 and group2:
+            selected_groups = [group1, group2]
+            warning = None
+        else:
+            all_groups = df[group_column].dropna().unique()
+            if len(all_groups) < 2:
+                raise HTTPException(status_code=400, detail=f"Mann-Whitney testi için en az 2 grup gerekli. Mevcut: {len(all_groups)} grup")
+            
+            selected_groups = list(all_groups[:2])
+            warning = {
+                "tr": f"Gruplar otomatik seçildi: '{selected_groups[0]}' ve '{selected_groups[1]}'",
+                "en": f"Groups auto-selected: '{selected_groups[0]}' and '{selected_groups[1]}'"
+            } if len(all_groups) > 2 else None
+        
+        # Grupları ayır - frontend string gönderir, DataFrame integer/float olabilir
+        group_col_str = df[group_column].astype(str)
+        data1 = pd.to_numeric(df[group_col_str == str(selected_groups[0])][value_column], errors='coerce').dropna().tolist()
+        data2 = pd.to_numeric(df[group_col_str == str(selected_groups[1])][value_column], errors='coerce').dropna().tolist()
+        
+        if len(data1) < 2 or len(data2) < 2:
+            raise HTTPException(status_code=400, detail=f"Her grupta en az 2 veri olmalı. '{selected_groups[0]}': {len(data1)}, '{selected_groups[1]}': {len(data2)}")
+
+
         
         u_stat, p_value = scipy_stats.mannwhitneyu(data1, data2, alternative='two-sided')
         
-        return {
-            "test": "Mann-Whitney U Testi",
+        result = {
+            "test": {"tr": "Mann-Whitney U Testi", "en": "Mann-Whitney U Test"},
             "u_statistic": round(float(u_stat), 4),
             "p_value": round(float(p_value), 4),
-            "n1": len(data1),
-            "n2": len(data2),
-            "median1": round(float(pd.Series(data1).median()), 4),
-            "median2": round(float(pd.Series(data2).median()), 4),
-            "significant": p_value < 0.05,
-            "interpretation": "Gruplar arasında anlamlı fark var" if p_value < 0.05 else "Gruplar arasında fark yok"
+            "group_column": group_column,
+            "value_column": value_column,
+            "groups": [
+                {"name": str(selected_groups[0]), "n": len(data1), "median": round(float(pd.Series(data1).median()), 4)},
+                {"name": str(selected_groups[1]), "n": len(data2), "median": round(float(pd.Series(data2).median()), 4)}
+            ],
+            "significant": bool(p_value < 0.05),
+
+            "interpretation": {
+                "tr": f"'{selected_groups[0]}' ve '{selected_groups[1]}' grupları arasında anlamlı fark {'var' if p_value < 0.05 else 'yok'}",
+                "en": f"{'Significant' if p_value < 0.05 else 'No significant'} difference between '{selected_groups[0]}' and '{selected_groups[1]}'"
+            }
         }
+
+        
+        if warning:
+            result["warning"] = warning
+        
+        return result
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
 @router.post("/wilcoxon")
@@ -783,11 +894,13 @@ async def run_kruskal_wallis(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
+        # Grupları oluştur - string conversion eklendi
         groups = []
-        group_names = df[group_column].unique()
+        group_col_str = df[group_column].astype(str)
+        group_names = group_col_str.unique()
         
         for group in group_names:
-            group_data = pd.to_numeric(df[df[group_column] == group][value_column], errors='coerce').dropna().tolist()
+            group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
         
@@ -830,11 +943,13 @@ async def run_levene_test(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
+        # Grupları oluştur - string conversion eklendi
         groups = []
-        group_names = df[group_column].unique()
+        group_col_str = df[group_column].astype(str)
+        group_names = group_col_str.unique()
         
         for group in group_names:
-            group_data = pd.to_numeric(df[df[group_column] == group][value_column], errors='coerce').dropna().tolist()
+            group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
         
@@ -858,11 +973,13 @@ async def run_levene_test(
 @router.post("/effect-size")
 async def calculate_effect_size(
     file: UploadFile = File(...),
-    column1: str = Form(...),
+    column1: str = Form(None),  # Eski yöntem için opsiyonel
     column2: str = Form(None),
     effect_type: str = Form("cohens_d"),  # cohens_d, eta_squared, r_squared
     group_column: str = Form(None),
     value_column: str = Form(None),
+    group1: str = Form(None),  # Yeni: grup seçimi
+    group2: str = Form(None),
     sheet_name: str = Form(None),
     header_row: int = Form(0)
 ):
@@ -881,12 +998,26 @@ async def calculate_effect_size(
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
         if effect_type == "cohens_d":
-            data1 = pd.to_numeric(df[column1], errors='coerce').dropna()
-            data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
+            # Yeni yöntem: group_column + group1/group2 kullanarak t-Test gibi çalış
+            if group_column and value_column and group1 and group2:
+                # String conversion eklendi
+                group_col_str = df[group_column].astype(str)
+                data1 = pd.to_numeric(df[group_col_str == str(group1)][value_column], errors='coerce').dropna()
+                data2 = pd.to_numeric(df[group_col_str == str(group2)][value_column], errors='coerce').dropna()
+                
+                if len(data1) < 2 or len(data2) < 2:
+                    raise HTTPException(status_code=400, detail=f"Her grupta en az 2 veri olmalı. '{group1}': {len(data1)}, '{group2}': {len(data2)}")
+            # Eski yöntem: column1 ve column2 kullan
+            elif column1 and column2:
+                data1 = pd.to_numeric(df[column1], errors='coerce').dropna()
+                data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
+            else:
+                raise HTTPException(status_code=400, detail="group_column/value_column/group1/group2 veya column1/column2 gerekli")
             
             mean1, mean2 = data1.mean(), data2.mean()
             n1, n2 = len(data1), len(data2)
             var1, var2 = data1.var(), data2.var()
+
             
             pooled_std = ((((n1 - 1) * var1) + ((n2 - 1) * var2)) / (n1 + n2 - 2)) ** 0.5
             cohens_d = (mean1 - mean2) / pooled_std
@@ -904,11 +1035,14 @@ async def calculate_effect_size(
             if not group_column or not value_column:
                 raise HTTPException(status_code=400, detail="group_column ve value_column gerekli")
             
+            # String conversion eklendi
             groups = []
-            for group in df[group_column].unique():
-                group_data = pd.to_numeric(df[df[group_column] == group][value_column], errors='coerce').dropna().tolist()
+            group_col_str = df[group_column].astype(str)
+            for group in group_col_str.unique():
+                group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
                 if group_data:
                     groups.append(group_data)
+
             
             all_data = [v for g in groups for v in g]
             grand_mean = sum(all_data) / len(all_data)

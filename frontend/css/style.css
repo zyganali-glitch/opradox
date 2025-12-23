@@ -10192,3 +10192,124 @@ body.day-mode .viz-stat-params {
 body.day-mode .viz-param-group select {
     background: #fff;
 }
+
+/* =====================================================
+   YENİ UI TİPLERİ İÇİN STİLLER (Phase 2)
+   ===================================================== */
+
+/* Multi-select checkbox grid (TYPE_B: Correlation, PCA, etc.) */
+.viz-multi-select {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.viz-checkbox-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 100px;
+    overflow-y: auto;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    border: 1px solid var(--gm-card-border);
+}
+
+.viz-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.viz-checkbox-item:hover {
+    border-color: var(--gm-primary);
+    background: rgba(var(--gm-primary-rgb), 0.1);
+}
+
+.viz-checkbox-item input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+}
+
+.viz-checkbox-item input[type="checkbox"]:checked+span {
+    color: var(--gm-primary);
+    font-weight: 600;
+}
+
+/* Stat notes (TYPE_C, TYPE_G info messages) */
+.viz-stat-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin-top: 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border-left: 3px solid #6366f1;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+}
+
+.viz-stat-note i {
+    color: #6366f1;
+}
+
+/* Number input styling (TYPE_B: K-Means k param, TYPE_E: Power analysis) */
+.viz-param-group input[type="number"] {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    background: var(--gm-card-bg);
+    color: var(--gm-text);
+    width: 60px;
+    text-align: center;
+}
+
+.viz-param-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--gm-primary);
+    box-shadow: 0 0 0 2px rgba(var(--gm-primary-rgb), 0.2);
+}
+
+/* Extra params section (TYPE_E: Power analysis) */
+.viz-extra-params {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+/* Group selectors row styling enhancement */
+.viz-group-selectors-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* Day mode styles */
+body.day-mode .viz-checkbox-grid {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.day-mode .viz-checkbox-item {
+    background: #fff;
+}
+
+body.day-mode .viz-param-group input[type="number"] {
+    background: #fff;
+}
+
+body.day-mode .viz-stat-note {
+    background: rgba(99, 102, 241, 0.08);
+}

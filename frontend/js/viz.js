@@ -701,15 +701,10 @@ function setupDragAndDrop() {
             dropZone.classList.remove('drag-over');
         });
 
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                loadFile(files[0]);
-            }
-        });
+        // NOT: drop eventi initFilePreviewIntegration()'da ayarlanıyor (satır 9500)
+        // Burada addEventListener ile tekrar eklemek duplicate çağrıya neden oluyordu
     }
+
 
     // Chart type drag
     document.querySelectorAll('.viz-chart-type').forEach(el => {
@@ -2500,10 +2495,15 @@ function clearDashboard() {
 
 function updateEmptyState() {
     const empty = document.getElementById('vizEmptyCanvas');
-    if (empty) {
-        empty.style.display = VIZ_STATE.charts.length === 0 ? 'flex' : 'none';
+    const dashboard = document.getElementById('vizDashboardGrid');
+    if (empty && dashboard) {
+        // Tüm widget'ları say (.viz-chart-widget tüm tipler için kullanılıyor)
+        const widgetCount = dashboard.querySelectorAll('.viz-chart-widget').length;
+        empty.style.display = widgetCount === 0 ? 'flex' : 'none';
     }
 }
+
+
 
 // -----------------------------------------------------
 // SAVE & EXPORT
@@ -8516,7 +8516,7 @@ function initStatDragDropSystem() {
         // Stat widget mi kontrol et
         const statType = e.dataTransfer.getData('stat-type');
         if (statType) {
-            await addStatWidgetToDashboard(statType);
+            await createStatWidget(statType);
             return;
         }
 
@@ -8543,49 +8543,15 @@ function initStatDragDropSystem() {
     });
 }
 
-// İstatistik widget'ı dashboard'a ekle
+// İstatistik widget'ı dashboard'a ekle - ESKİ FONKSİYON, yenisine yönlendir
 async function addStatWidgetToDashboard(statType) {
-    if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) {
-        showToast('Önce veri yükleyin', 'warning');
-        return;
-    }
-
-    // Boş dashboard mesajını gizle
-    const emptyCanvas = document.getElementById('vizEmptyCanvas');
-    if (emptyCanvas) emptyCanvas.style.display = 'none';
-
-    const widgetId = 'stat-' + Date.now();
-    const grid = document.getElementById('vizDashboardGrid');
-
-    // Widget kartı oluştur
-    const widget = document.createElement('div');
-    widget.className = 'viz-stat-widget viz-chart-widget';
-    widget.id = widgetId;
-    widget.innerHTML = `
-        <div class="viz-widget-header">
-            <span class="viz-widget-title"><i class="fas fa-chart-bar"></i> ${statType.toUpperCase()} Analizi</span>
-            <div class="viz-widget-controls">
-                <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}', '${statType}')" title="Yenile">
-                    <i class="fas fa-sync"></i>
-                </button>
-                <button class="viz-widget-btn" onclick="embedStatInChart('${widgetId}')" title="Grafiğe Göm">
-                    <i class="fas fa-image"></i>
-                </button>
-                <button class="viz-widget-btn viz-widget-close" onclick="removeWidget('${widgetId}')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div class="viz-widget-body viz-stat-content" id="${widgetId}-content">
-            <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hesaplanıyor...</div>
-        </div>
-    `;
-
-    grid.appendChild(widget);
-
-    // Analizi çalıştır
-    await runStatWidgetAnalysis(widgetId, statType);
+    console.log('⚠️ addStatWidgetToDashboard çağrıldı, createStatWidget\'e yönlendiriliyor...');
+    // Yeni fonksiyona yönlendir
+    return await createStatWidget(statType);
 }
+
+
+
 
 // Stat widget analizini çalıştır
 async function runStatWidgetAnalysis(widgetId, statType) {
@@ -9536,15 +9502,11 @@ function initFilePreviewIntegration() {
         };
     }
 
-    if (fileInput) {
-        fileInput.onchange = async (e) => {
-            const files = e.target.files;
-            if (files && files[0]) {
-                await loadFileWithPreview(files[0]);
-            }
-        };
-    }
+
+    // NOT: Burada fileInput.onchange yoktur - handleFileSelect zaten Line 645'te tanımlı
+    // İki listener aynı anda aktif olunca her şey iki kere çağrılıyordu
 }
+
 
 // =====================================================
 // VERİ PROFİLİ DÜZELTMESİ
@@ -12959,6 +12921,272 @@ function getStatTitle(statType) {
 }
 
 /**
+ * UI tipine göre parametre seçicileri oluşturur
+ * @param {string} widgetId - Widget ID
+ * @param {string} statType - Stat tipi
+ * @param {object} analysisInfo - getAnalysisRequirements çıktısı
+ * @param {object} dataset - Dataset objesi
+ * @returns {string} HTML string
+ */
+function generateStatUIByType(widgetId, statType, analysisInfo, dataset) {
+    const columns = dataset.columns || [];
+    const columnsInfo = dataset.columnsInfo || [];
+
+    // Sütun tipine göre filtreleme
+    const numericCols = columnsInfo.filter(c => c.type === 'numeric').map(c => c.name);
+    const categoricalCols = columnsInfo.filter(c => c.type === 'categorical' || c.type === 'string').map(c => c.name);
+    const dateCols = columnsInfo.filter(c => c.type === 'date').map(c => c.name);
+
+    // Fallback: columnsInfo yoksa tüm sütunları kullan
+    const allCols = columns.length > 0 ? columns : (numericCols.length > 0 ? numericCols : ['Col1', 'Col2']);
+
+    // Dropdown oluşturma yardımcısı
+    const makeOptions = (cols, selected) => cols.map(c =>
+        `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
+    ).join('');
+
+    // Checkbox listesi oluşturma yardımcısı
+    const makeCheckboxes = (cols, idPrefix, defaultChecked = []) => cols.map((c, i) =>
+        `<label class="viz-checkbox-item">
+            <input type="checkbox" id="${idPrefix}_${i}" name="${idPrefix}" value="${c}" 
+                   ${defaultChecked.includes(c) ? 'checked' : ''} 
+                   onchange="refreshStatWidget('${widgetId}')">
+            <span>${c}</span>
+        </label>`
+    ).join('');
+
+    let html = `<div class="viz-stat-info">${analysisInfo.description}</div>`;
+
+    switch (analysisInfo.uiType) {
+
+        // TYPE_A: 2 Grup Seçimi (t-Test, Mann-Whitney, Effect-Size)
+        case 'TYPE_A':
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>X (Grup/Kategori):</label>
+                        <select id="${widgetId}_xCol" onchange="onStatXColumnChange('${widgetId}', '${statType}')">
+                            ${makeOptions(categoricalCols.length > 0 ? categoricalCols : allCols)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>Y (Değer/Sayısal):</label>
+                        <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(numericCols.length > 0 ? numericCols : allCols)}
+                        </select>
+                    </div>
+                </div>
+                <div class="viz-group-selector" id="${widgetId}_groupSelector">
+                    <div class="viz-group-selector-title">
+                        <i class="fas fa-users"></i> Karşılaştırılacak Gruplar:
+                    </div>
+                    <div class="viz-group-selectors-row">
+                        <div class="viz-param-group">
+                            <label>Grup 1:</label>
+                            <select id="${widgetId}_group1" onchange="refreshStatWidget('${widgetId}')">
+                                <option value="">-- Grup seçin --</option>
+                            </select>
+                        </div>
+                        <div class="viz-param-group">
+                            <label>Grup 2:</label>
+                            <select id="${widgetId}_group2" onchange="refreshStatWidget('${widgetId}')">
+                                <option value="">-- Grup seçin --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>`;
+            break;
+
+        // TYPE_B: Çoklu Sayısal Sütun (Correlation, PCA, Cronbach, K-Means, Friedman)
+        case 'TYPE_B':
+            const minCols = analysisInfo.minColumns || 2;
+            const maxCols = analysisInfo.maxColumns || 10;
+            const defaultSelected = numericCols.slice(0, Math.min(3, numericCols.length));
+
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group viz-multi-select">
+                        <label>Sütunlar (en az ${minCols}, en fazla ${maxCols}):</label>
+                        <div class="viz-checkbox-grid" id="${widgetId}_columns">
+                            ${makeCheckboxes(numericCols.length > 0 ? numericCols : allCols, `${widgetId}_col`, defaultSelected)}
+                        </div>
+                    </div>
+                    ${analysisInfo.extraParams?.includes('k') ? `
+                    <div class="viz-param-group">
+                        <label>K (Küme Sayısı):</label>
+                        <input type="number" id="${widgetId}_k" value="${analysisInfo.defaultK || 3}" 
+                               min="2" max="10" onchange="refreshStatWidget('${widgetId}')">
+                    </div>` : ''}
+                </div>`;
+            break;
+
+        // TYPE_C: 2 Sütun Eşleştirme (Wilcoxon Paired)
+        case 'TYPE_C':
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>Ölçüm 1 (Öncesi/İlk):</label>
+                        <select id="${widgetId}_col1" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(numericCols.length > 0 ? numericCols : allCols, numericCols[0])}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>Ölçüm 2 (Sonrası/İkinci):</label>
+                        <select id="${widgetId}_col2" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(numericCols.length > 0 ? numericCols : allCols, numericCols[1] || numericCols[0])}
+                        </select>
+                    </div>
+                </div>
+                <div class="viz-stat-note">
+                    <i class="fas fa-info-circle"></i> Her iki ölçüm de aynı bireylere ait olmalıdır.
+                </div>`;
+            break;
+
+        // TYPE_D: Binary Hedef + Predictorlar (Logistic, Discriminant)
+        case 'TYPE_D':
+            const targetCols = analysisInfo.targetType === 'binary' ? categoricalCols : categoricalCols;
+            const predictorCols = numericCols;
+            const defaultPredictors = predictorCols.slice(0, 2);
+
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>Hedef (${analysisInfo.targetType === 'binary' ? '0/1' : 'Grup'}):</label>
+                        <select id="${widgetId}_target" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(targetCols.length > 0 ? targetCols : allCols)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group viz-multi-select">
+                        <label>Bağımsız Değişkenler:</label>
+                        <div class="viz-checkbox-grid" id="${widgetId}_predictors">
+                            ${makeCheckboxes(predictorCols.length > 0 ? predictorCols : allCols, `${widgetId}_pred`, defaultPredictors)}
+                        </div>
+                    </div>
+                </div>`;
+            break;
+
+        // TYPE_E: Tek Sütun (Normality, Frequency, Descriptive, APA, Power)
+        case 'TYPE_E':
+            const useX = analysisInfo.needsX;
+            const colsToUse = useX ?
+                (analysisInfo.columnTypes?.includes('categorical') ? categoricalCols : allCols) :
+                (numericCols.length > 0 ? numericCols : allCols);
+
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>Sütun:</label>
+                        <select id="${widgetId}_${useX ? 'xCol' : 'yCol'}" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(colsToUse)}
+                        </select>
+                    </div>
+                    ${analysisInfo.extraParams?.length > 0 ? `
+                    <div class="viz-extra-params">
+                        ${analysisInfo.extraParams.includes('effectSize') ? `
+                        <div class="viz-param-group">
+                            <label>Etki Büyüklüğü (d):</label>
+                            <input type="number" id="${widgetId}_effectSize" value="0.5" step="0.1" min="0.1" max="2" 
+                                   onchange="refreshStatWidget('${widgetId}')">
+                        </div>` : ''}
+                        ${analysisInfo.extraParams.includes('alpha') ? `
+                        <div class="viz-param-group">
+                            <label>Alpha (α):</label>
+                            <input type="number" id="${widgetId}_alpha" value="0.05" step="0.01" min="0.01" max="0.1" 
+                                   onchange="refreshStatWidget('${widgetId}')">
+                        </div>` : ''}
+                    </div>` : ''}
+                </div>`;
+            break;
+
+        // TYPE_F: Tarih + Değer (Time Series, Survival)
+        case 'TYPE_F':
+            const timeColOptions = dateCols.length > 0 ? dateCols : allCols;
+            const valueColOptions = numericCols.length > 0 ? numericCols : allCols;
+
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>${statType === 'survival' ? 'Süre Sütunu:' : 'Tarih/Zaman:'}</label>
+                        <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(timeColOptions)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>${statType === 'survival' ? 'Olay (0/1):' : 'Değer:'}</label>
+                        <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(valueColOptions)}
+                        </select>
+                    </div>
+                </div>`;
+            break;
+
+        // TYPE_G: Grup + Değer - Tüm gruplar (ANOVA, Kruskal-Wallis, Levene)
+        case 'TYPE_G':
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>X (Grup Sütunu):</label>
+                        <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(categoricalCols.length > 0 ? categoricalCols : allCols)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>Y (Değer Sütunu):</label>
+                        <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(numericCols.length > 0 ? numericCols : allCols)}
+                        </select>
+                    </div>
+                </div>
+                <div class="viz-stat-note">
+                    <i class="fas fa-check-circle"></i> Tüm gruplar otomatik olarak karşılaştırılacak.
+                </div>`;
+            break;
+
+        // TYPE_H: İki Sütun (Chi-Square, Regression)
+        case 'TYPE_H':
+            const xColType = analysisInfo.xColumnType === 'categorical' ? categoricalCols : numericCols;
+            const yColType = analysisInfo.yColumnType === 'categorical' ? categoricalCols : numericCols;
+
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>X (${analysisInfo.xColumnType === 'categorical' ? 'Kategorik' : 'Sayısal'}):</label>
+                        <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(xColType.length > 0 ? xColType : allCols)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>Y (${analysisInfo.yColumnType === 'categorical' ? 'Kategorik' : 'Sayısal'}):</label>
+                        <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(yColType.length > 0 ? yColType : allCols)}
+                        </select>
+                    </div>
+                </div>`;
+            break;
+
+        // Default fallback
+        default:
+            html += `
+                <div class="viz-stat-selectors">
+                    <div class="viz-param-group">
+                        <label>X:</label>
+                        <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(allCols)}
+                        </select>
+                    </div>
+                    <div class="viz-param-group">
+                        <label>Y:</label>
+                        <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
+                            ${makeOptions(allCols)}
+                        </select>
+                    </div>
+                </div>`;
+    }
+
+    return html;
+}
+
+/**
  * Dashboard'a istatistik widget'ı ekler
  */
 async function createStatWidget(statType) {
@@ -13011,6 +13239,10 @@ async function createStatWidget(statType) {
     widget.id = widgetId;
     widget.dataset.statType = statType;
     widget.dataset.datasetId = datasetId;
+    widget.dataset.uiType = analysisInfo.uiType || 'TYPE_G';
+
+    // UI tipine göre dinamik parametre formu oluştur
+    const paramsHTML = generateStatUIByType(widgetId, statType, analysisInfo, dataset);
 
     widget.innerHTML = `
         <div class="viz-widget-header">
@@ -13028,29 +13260,16 @@ async function createStatWidget(statType) {
             </div>
         </div>
         <div class="viz-stat-params" id="${widgetId}_params">
-            <div class="viz-stat-info">${analysisInfo.description}</div>
-            <div class="viz-stat-selectors">
-                ${analysisInfo.needsX ? `
-                <div class="viz-param-group">
-                    <label>X (Grup/Kategori):</label>
-                    <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
-                        ${columnOptions}
-                    </select>
-                </div>` : ''}
-                ${analysisInfo.needsY ? `
-                <div class="viz-param-group">
-                    <label>Y (Değer/Sayısal):</label>
-                    <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
-                        ${columnOptions}
-                    </select>
-                </div>` : ''}
-            </div>
+            ${paramsHTML}
         </div>
         <div class="viz-widget-body viz-stat-body" id="${widgetId}_body">
             <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hesaplanıyor...</div>
         </div>
         <div class="viz-widget-resize-handle" onmousedown="startWidgetResize(event, '${widgetId}')"></div>
     `;
+
+
+
 
     dashboard.appendChild(widget);
     updateEmptyState();
@@ -13061,40 +13280,411 @@ async function createStatWidget(statType) {
     if (xColSelect) xColSelect.value = defaultX;
     if (yColSelect) yColSelect.value = defaultY;
 
-    // İstatistik hesapla ve göster
-    await runStatForWidget(widgetId, statType, datasetId);
+    // Grup seçimi gereken istatistikler için grup seçicileri doldur
+    if (analysisInfo.needsGroupSelection) {
+        populateGroupSelectors(widgetId);
+        // İlk oluşturmada sadece mesaj göster, analiz yapma
+        const bodyEl = document.getElementById(`${widgetId}_body`);
+        if (bodyEl) {
+            bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> Karşılaştırılacak iki grup seçin ve Yenile butonuna basın.</div>';
+        }
+    } else {
+        // Grup seçimi gerekmeyen istatistikler için hemen hesapla
+        await runStatForWidget(widgetId, statType, datasetId, defaultX, defaultY);
+    }
 }
 
+
+
 /**
- * Analiz türüne göre gerekli parametreleri döndürür
+ * Analiz türüne göre gerekli parametreleri ve UI tipini döndürür
+ * 
+ * UI TİPLERİ:
+ * - TYPE_A: 2 Grup Seçimi (t-Test, Mann-Whitney, Effect-Size)
+ * - TYPE_B: Çoklu Sayısal Sütun (Correlation, PCA, Cronbach, K-Means)
+ * - TYPE_C: 2 Sütun Eşleştirme (Wilcoxon Paired)
+ * - TYPE_D: Binary Hedef + Predictorlar (Logistic Regression)
+ * - TYPE_E: Tek Sütun (Normality, Frequency, Descriptive)
+ * - TYPE_F: Tarih + Değer (Time Series)
+ * - TYPE_G: Grup + Değer - Tüm gruplar (ANOVA, Kruskal-Wallis, Levene)
+ * - TYPE_H: İki Kategorik Sütun (Chi-Square)
  */
 function getAnalysisRequirements(statType) {
     const requirements = {
-        'descriptive': { needsX: false, needsY: true, description: 'Seçili sütunun ortalama, medyan, standart sapma gibi istatistiklerini hesaplar.' },
-        'ttest': { needsX: false, needsY: true, description: 'İki grup ortalamasını karşılaştırır. Y: sayısal değer sütunu gerekli.' },
-        'anova': { needsX: true, needsY: true, description: 'X: grup sütunu (kategorik), Y: değer sütunu (sayısal).' },
-        'chi-square': { needsX: true, needsY: true, description: 'X ve Y: iki kategorik sütun gerekli.' },
-        'correlation': { needsX: false, needsY: true, description: 'Y sütununun diğer sütunlarla korelasyonunu hesaplar.' },
-        'normality': { needsX: false, needsY: true, description: 'Y sütununun normal dağılıma uygunluğunu test eder.' },
-        'mann-whitney': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (non-parametrik).' },
-        'wilcoxon': { needsX: false, needsY: true, description: 'Eşleştirilmiş örnekler için Y sütunu gerekli.' },
-        'kruskal': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (non-parametrik ANOVA).' },
-        'levene': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (varyans homojenliği).' },
-        'effect-size': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: değer sütunu (Cohen d hesaplar).' },
-        'frequency': { needsX: true, needsY: false, description: 'X sütunundaki kategorilerin frekansını hesaplar.' },
-        'pca': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için PCA analizi.' },
-        'kmeans': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için kümeleme.' },
-        'cronbach': { needsX: false, needsY: true, description: 'Y ve diğer sayısal sütunlar için güvenilirlik.' },
-        'logistic': { needsX: true, needsY: true, description: 'X: bağımlı değişken, Y: bağımsız değişken.' },
-        'timeseries': { needsX: true, needsY: true, description: 'X: tarih/zaman sütunu, Y: değer sütunu.' },
-        'apa': { needsX: false, needsY: true, description: 'APA formatında rapor oluşturur.' },
-        'friedman': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: tekrarlı ölçümler.' },
-        'power': { needsX: false, needsY: true, description: 'İstatistiksel güç analizi.' },
-        'regression-coef': { needsX: true, needsY: true, description: 'X: bağımsız değişken, Y: bağımlı değişken.' },
-        'discriminant': { needsX: true, needsY: true, description: 'X: grup sütunu, Y: ayırt edici değişkenler.' },
-        'survival': { needsX: true, needsY: true, description: 'X: zaman sütunu, Y: olay sütunu.' }
+        // TYPE_E: Tek Sütun (veya çoklu seçim isteğe bağlı)
+        'descriptive': {
+            uiType: 'TYPE_E',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 1,
+            maxColumns: 10,
+            columnTypes: ['numeric'],
+            description: 'Seçili sütun(lar)ın ortalama, medyan, standart sapma gibi istatistiklerini hesaplar.',
+            descriptionEn: 'Calculates mean, median, standard deviation for selected column(s).'
+        },
+
+        // TYPE_A: 2 Grup Seçimi
+        'ttest': {
+            uiType: 'TYPE_A',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: true,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            groupCount: 2,
+            description: 'X: kategorik grup sütunu, Y: sayısal değer. İki grup seçip ortalamalarını karşılaştırır.',
+            descriptionEn: 'X: categorical group, Y: numeric value. Compares means of two selected groups.'
+        },
+
+        // TYPE_G: Grup + Değer (Tüm gruplar)
+        'anova': {
+            uiType: 'TYPE_G',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            autoUseAllGroups: true,
+            description: 'X: grup sütunu (kategorik), Y: değer sütunu (sayısal). Tüm grupları otomatik karşılaştırır.',
+            descriptionEn: 'X: group column (categorical), Y: value column (numeric). Compares all groups automatically.'
+        },
+
+        // TYPE_H: İki Kategorik Sütun
+        'chi-square': {
+            uiType: 'TYPE_H',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'categorical',
+            yColumnType: 'categorical',
+            description: 'X ve Y: iki kategorik sütun. Çapraz tablo oluşturur ve bağımsızlık testi uygular.',
+            descriptionEn: 'X and Y: two categorical columns. Creates crosstab and applies independence test.'
+        },
+
+        // TYPE_B: Çoklu Sayısal Sütun
+        'correlation': {
+            uiType: 'TYPE_B',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 2,
+            maxColumns: 10,
+            columnTypes: ['numeric'],
+            description: 'Seçili sayısal sütunlar arasındaki korelasyon matrisini hesaplar.',
+            descriptionEn: 'Calculates correlation matrix between selected numeric columns.'
+        },
+
+        // TYPE_E: Tek Sütun
+        'normality': {
+            uiType: 'TYPE_E',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 1,
+            maxColumns: 1,
+            columnTypes: ['numeric'],
+            description: 'Seçili sütunun normal dağılıma uygunluğunu test eder (Shapiro-Wilk).',
+            descriptionEn: 'Tests if selected column follows normal distribution (Shapiro-Wilk).'
+        },
+
+        // TYPE_A: 2 Grup Seçimi
+        'mann-whitney': {
+            uiType: 'TYPE_A',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: true,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            groupCount: 2,
+            description: 'X: kategorik grup sütunu, Y: sayısal. İki grup seçip medyanlarını karşılaştırır (non-parametrik).',
+            descriptionEn: 'X: categorical group, Y: numeric. Compares medians of two groups (non-parametric).'
+        },
+
+        // TYPE_C: 2 Sütun Eşleştirme (Paired)
+        'wilcoxon': {
+            uiType: 'TYPE_C',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 2,
+            maxColumns: 2,
+            columnTypes: ['numeric'],
+            paired: true,
+            description: 'İki sayısal sütun seçin. Eşleştirilmiş örnekler için işaretli-sıra testi uygular.',
+            descriptionEn: 'Select two numeric columns. Applies signed-rank test for paired samples.'
+        },
+
+        // TYPE_G: Grup + Değer (Tüm gruplar)
+        'kruskal': {
+            uiType: 'TYPE_G',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            autoUseAllGroups: true,
+            description: 'X: grup sütunu, Y: değer sütunu. Non-parametrik ANOVA - tüm grupları karşılaştırır.',
+            descriptionEn: 'X: group column, Y: value column. Non-parametric ANOVA - compares all groups.'
+        },
+
+        // TYPE_G: Grup + Değer (Tüm gruplar)
+        'levene': {
+            uiType: 'TYPE_G',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            autoUseAllGroups: true,
+            description: 'X: grup sütunu, Y: değer sütunu. Tüm grupların varyans homojenliğini test eder.',
+            descriptionEn: 'X: group column, Y: value column. Tests variance homogeneity across all groups.'
+        },
+
+        // TYPE_A: 2 Grup Seçimi
+        'effect-size': {
+            uiType: 'TYPE_A',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: true,
+            xColumnType: 'categorical',
+            yColumnType: 'numeric',
+            groupCount: 2,
+            description: 'X: kategorik grup sütunu, Y: sayısal. İki grup seçip Cohen\'s d etki büyüklüğü hesaplar.',
+            descriptionEn: 'X: categorical group, Y: numeric. Calculates Cohen\'s d effect size for two groups.'
+        },
+
+        // TYPE_E: Tek Sütun
+        'frequency': {
+            uiType: 'TYPE_E',
+            needsX: true,
+            needsY: false,
+            needsGroupSelection: false,
+            minColumns: 1,
+            maxColumns: 1,
+            columnTypes: ['categorical'],
+            description: 'X sütunundaki tüm kategorilerin frekansını ve yüzdesini hesaplar.',
+            descriptionEn: 'Calculates frequency and percentage of all categories in X column.'
+        },
+
+        // TYPE_B: Çoklu Sayısal Sütun
+        'pca': {
+            uiType: 'TYPE_B',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 3,
+            maxColumns: 20,
+            columnTypes: ['numeric'],
+            description: 'Seçili sayısal sütunlar için temel bileşenler analizi (PCA) uygular.',
+            descriptionEn: 'Applies Principal Component Analysis (PCA) to selected numeric columns.'
+        },
+
+        // TYPE_B: Çoklu Sayısal Sütun + K parametresi
+        'kmeans': {
+            uiType: 'TYPE_B',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 2,
+            maxColumns: 10,
+            columnTypes: ['numeric'],
+            extraParams: ['k'],
+            defaultK: 3,
+            description: 'Seçili sayısal sütunlar için K-Means kümeleme uygular. K: küme sayısı.',
+            descriptionEn: 'Applies K-Means clustering to selected numeric columns. K: number of clusters.'
+        },
+
+        // TYPE_B: Çoklu Sayısal Sütun (Ölçek güvenilirliği)
+        'cronbach': {
+            uiType: 'TYPE_B',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 2,
+            maxColumns: 50,
+            columnTypes: ['numeric'],
+            description: 'Seçili sayısal sütunlar için Cronbach Alpha güvenilirlik katsayısı hesaplar.',
+            descriptionEn: 'Calculates Cronbach Alpha reliability coefficient for selected numeric columns.'
+        },
+
+        // TYPE_D: Binary Hedef + Predictorlar
+        'logistic': {
+            uiType: 'TYPE_D',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            targetType: 'binary',
+            predictorTypes: ['numeric', 'categorical'],
+            minPredictors: 1,
+            maxPredictors: 10,
+            description: 'X: bağımlı değişken (0/1 veya binary). Y ve diğerleri: bağımsız değişkenler.',
+            descriptionEn: 'X: dependent variable (0/1 or binary). Y and others: independent variables.'
+        },
+
+        // TYPE_F: Tarih + Değer
+        'timeseries': {
+            uiType: 'TYPE_F',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'date',
+            yColumnType: 'numeric',
+            description: 'X: tarih/zaman sütunu, Y: değer sütunu. Trend ve mevsimsellik analizi.',
+            descriptionEn: 'X: date/time column, Y: value column. Trend and seasonality analysis.'
+        },
+
+        // TYPE_E: Tek Sütun (veya tüm veri)
+        'apa': {
+            uiType: 'TYPE_E',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 0,
+            maxColumns: 0,
+            useFullData: true,
+            description: 'Tüm veri için APA formatında istatistiksel rapor oluşturur.',
+            descriptionEn: 'Creates APA format statistical report for all data.'
+        },
+
+        // TYPE_B: Çoklu Sayısal (Tekrarlı ölçümler)
+        'friedman': {
+            uiType: 'TYPE_B',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 3,
+            maxColumns: 10,
+            columnTypes: ['numeric'],
+            repeatedMeasures: true,
+            description: 'Seçili sütunlar tekrarlı ölçümlerdir. Non-parametrik tekrarlı ölçümler ANOVA.',
+            descriptionEn: 'Selected columns are repeated measures. Non-parametric repeated measures ANOVA.'
+        },
+
+        // TYPE_E: Tek Sütun + Parametreler
+        'power': {
+            uiType: 'TYPE_E',
+            needsX: false,
+            needsY: true,
+            needsGroupSelection: false,
+            minColumns: 1,
+            maxColumns: 1,
+            columnTypes: ['numeric'],
+            extraParams: ['effectSize', 'alpha', 'sampleSize'],
+            description: 'İstatistiksel güç analizi. Örneklem büyüklüğü tahminleri.',
+            descriptionEn: 'Statistical power analysis. Sample size estimations.'
+        },
+
+        // TYPE_H: İki Sütun (Regresyon)
+        'regression-coef': {
+            uiType: 'TYPE_H',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'numeric',
+            yColumnType: 'numeric',
+            description: 'X: bağımsız değişken, Y: bağımlı değişken. Regresyon katsayıları hesaplar.',
+            descriptionEn: 'X: independent variable, Y: dependent variable. Calculates regression coefficients.'
+        },
+
+        // TYPE_D: Grup + Multi-predictor
+        'discriminant': {
+            uiType: 'TYPE_D',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            targetType: 'categorical',
+            predictorTypes: ['numeric'],
+            minPredictors: 2,
+            maxPredictors: 10,
+            description: 'X: grup sütunu (kategorik). Y ve diğerleri: ayırt edici değişkenler (sayısal).',
+            descriptionEn: 'X: group column (categorical). Y and others: discriminant variables (numeric).'
+        },
+
+        // TYPE_F: Zaman + Event
+        'survival': {
+            uiType: 'TYPE_F',
+            needsX: true,
+            needsY: true,
+            needsGroupSelection: false,
+            xColumnType: 'numeric',  // Süre
+            yColumnType: 'binary',   // Event (0/1)
+            description: 'X: süre sütunu (gün, ay vb.), Y: olay sütunu (0/1). Sağkalım analizi.',
+            descriptionEn: 'X: time column (days, months etc.), Y: event column (0/1). Survival analysis.'
+        }
     };
-    return requirements[statType] || { needsX: true, needsY: true, description: 'Analiz için X ve Y sütunları seçin.' };
+
+    return requirements[statType] || {
+        uiType: 'TYPE_G',
+        needsX: true,
+        needsY: true,
+        needsGroupSelection: false,
+        description: 'Analiz için X ve Y sütunları seçin.',
+        descriptionEn: 'Select X and Y columns for analysis.'
+    };
+}
+
+
+
+/**
+ * X sütunu değiştiğinde grup seçicileri doldurur
+ */
+function onStatXColumnChange(widgetId, statType) {
+    const analysisInfo = getAnalysisRequirements(statType);
+
+    if (analysisInfo.needsGroupSelection) {
+        populateGroupSelectors(widgetId);
+    }
+
+    // Ardından widget'ı yenile
+    refreshStatWidget(widgetId);
+}
+
+/**
+ * X sütunundaki benzersiz değerleri grup seçicilere doldurur
+ */
+function populateGroupSelectors(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    const datasetId = widget.dataset.datasetId;
+    const dataset = VIZ_STATE.getDatasetById(datasetId);
+    if (!dataset) return;
+
+    const xColSelect = document.getElementById(`${widgetId}_xCol`);
+    const group1Select = document.getElementById(`${widgetId}_group1`);
+    const group2Select = document.getElementById(`${widgetId}_group2`);
+
+    if (!xColSelect || !group1Select || !group2Select) return;
+
+    const xCol = xColSelect.value;
+    if (!xCol) return;
+
+    // X sütunundaki benzersiz değerleri al
+    let uniqueValues = [...new Set(dataset.data.map(row => row[xCol]))].filter(v => v !== null && v !== undefined && v !== '');
+
+    // Sırala: sayısalsa küçükten büyüğe, kategorikse A-Z
+    const isNumeric = uniqueValues.length > 0 && uniqueValues.every(v => !isNaN(parseFloat(v)));
+    if (isNumeric) {
+        uniqueValues.sort((a, b) => parseFloat(a) - parseFloat(b));
+    } else {
+        uniqueValues.sort((a, b) => String(a).localeCompare(String(b), 'tr', { sensitivity: 'base' }));
+    }
+
+    console.log(`📊 Grup seçici: X=${xCol}, ${uniqueValues.length} benzersiz değer (sıralı):`, uniqueValues.slice(0, 10));
+
+    // Dropdown'ları doldur
+    const options = uniqueValues.map(val => `<option value="${val}">${val}</option>`).join('');
+
+
+    group1Select.innerHTML = '<option value="">-- Grup 1 Seçin --</option>' + options;
+    group2Select.innerHTML = '<option value="">-- Grup 2 Seçin --</option>' + options;
+
+    // İlk iki değeri varsayılan olarak seç
+    if (uniqueValues.length >= 2) {
+        group1Select.value = uniqueValues[0];
+        group2Select.value = uniqueValues[1];
+    }
 }
 
 /**
@@ -13227,42 +13817,38 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
         groupColumn = dataset.columns.find(c => !numericColumns.includes(c)) || dataset.columns[0];
     }
 
-    // Endpoint mapping
+    // Endpoint mapping - tüm stat tipleri için (backend router prefix: /viz)
     const endpoints = {
-        'descriptive': '/viz/stats/descriptive',
-        'ttest': '/viz/stats/ttest',
-        'anova': '/viz/stats/anova',
-        'chi-square': '/viz/stats/chi-square',
-        'correlation': '/viz/stats/correlation-matrix',
-        'normality': '/viz/stats/normality',
-        'mann-whitney': '/viz/stats/mann-whitney',
-        'wilcoxon': '/viz/stats/wilcoxon',
-        'kruskal': '/viz/stats/kruskal-wallis',
-        'levene': '/viz/stats/levene',
-        'effect-size': '/viz/stats/effect-size',
-        'frequency': '/viz/stats/frequency'
+        'descriptive': '/viz/descriptive',
+        'ttest': '/viz/ttest',
+        'anova': '/viz/anova',
+        'chi-square': '/viz/chi-square',
+        'correlation': '/viz/correlation-matrix',
+        'normality': '/viz/normality',
+        'mann-whitney': '/viz/mann-whitney',
+        'wilcoxon': '/viz/wilcoxon',
+        'kruskal': '/viz/kruskal-wallis',
+        'levene': '/viz/levene',
+        'effect-size': '/viz/effect-size',
+        'frequency': '/viz/frequency',
+        'regression-coef': '/viz/regression',
+        'logistic': '/viz/regression'
     };
+
 
     const endpoint = endpoints[statType];
 
-    // Client-side hesaplama yapılabilecek basit analizler
-    if (statType === 'descriptive') {
-        const results = calculateDescriptiveStatsLocal(dataset.data, numericColumns);
+    // Backend API çağrısı
+    if (!dataset.file) {
+        bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> Dosya referansı bulunamadı. Client-side analiz yapılıyor...</div>';
+        const results = calculateLocalStat(statType, dataset.data, numericColumns, groupColumn);
         renderStatResults(widgetId, statType, results);
         return;
     }
 
     if (!endpoint) {
         // Backend endpoint yok, client-side hesapla
-        const results = calculateLocalStat(statType, dataset.data, numericColumns);
-        renderStatResults(widgetId, statType, results);
-        return;
-    }
-
-    // Backend API çağrısı
-    if (!dataset.file) {
-        bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> Dosya referansı bulunamadı. Client-side analiz yapılıyor...</div>';
-        const results = calculateLocalStat(statType, dataset.data, numericColumns);
+        const results = calculateLocalStat(statType, dataset.data, numericColumns, groupColumn);
         renderStatResults(widgetId, statType, results);
         return;
     }
@@ -13270,18 +13856,138 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
     try {
         const formData = new FormData();
         formData.append('file', dataset.file);
-        formData.append('columns', JSON.stringify(numericColumns));
 
-        // Test türüne göre ek parametreler
-        if (statType === 'ttest' && numericColumns.length >= 2) {
-            formData.append('column1', numericColumns[0]);
-            formData.append('column2', numericColumns[1]);
-            formData.append('test_type', 'independent');
-        } else if (statType === 'normality' && numericColumns.length >= 1) {
-            formData.append('column', numericColumns[0]);
-        } else if ((statType === 'anova' || statType === 'kruskal') && numericColumns.length >= 1) {
-            formData.append('value_column', numericColumns[0]);
-            formData.append('group_column', groupColumn || dataset.columns[0]);
+        console.log(`📊 API çağrısı: ${endpoint}, X(group)=${groupColumn}, Y(value)=${yCol}`);
+
+        // Her test türü için doğru parametreleri ekle
+        switch (statType) {
+            case 'descriptive':
+                formData.append('columns', JSON.stringify([yCol]));
+                break;
+
+            case 'ttest':
+                // Independent t-Test: value_column = Y (sayısal), group_column = X (kategorik)
+                // Kullanıcı seçtiği grupları gönder
+                const ttestGroup1 = document.getElementById(`${widgetId}_group1`)?.value;
+                const ttestGroup2 = document.getElementById(`${widgetId}_group2`)?.value;
+
+                if (!ttestGroup1 || !ttestGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-info-circle"></i> Karşılaştırılacak iki grup seçin.</div>';
+                    return;
+                }
+                if (ttestGroup1 === ttestGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-triangle"></i> Farklı iki grup seçin.</div>';
+                    return;
+                }
+
+                formData.append('value_column', yCol);
+                formData.append('group_column', groupColumn);
+                formData.append('group1', ttestGroup1);
+                formData.append('group2', ttestGroup2);
+                formData.append('test_type', 'independent');
+                break;
+
+
+            case 'anova':
+            case 'kruskal':
+            case 'levene':
+                // value_column = Y (sayısal), group_column = X (kategorik)
+                formData.append('value_column', yCol);
+                formData.append('group_column', groupColumn);
+                break;
+
+            case 'chi-square':
+                formData.append('column1', groupColumn);
+                formData.append('column2', yCol);
+                break;
+
+            case 'correlation':
+                // TYPE_B: checkbox'lardan seçilen sütunları al
+                let selectedCols = [];
+                const checkboxes = document.querySelectorAll(`[name="${widgetId}_col"]:checked`);
+                checkboxes.forEach(cb => selectedCols.push(cb.value));
+
+                // Fallback: hiç seçili yoksa sayısal sütunlardan al
+                if (selectedCols.length < 2) {
+                    selectedCols = dataset.columnsInfo
+                        ?.filter(c => c.type === 'numeric')
+                        .map(c => c.name).slice(0, 5) || [yCol];
+                }
+                formData.append('columns', JSON.stringify(selectedCols));
+                formData.append('method', 'pearson');
+                break;
+
+            case 'normality':
+                formData.append('column', yCol);
+                formData.append('test_type', 'shapiro');
+                break;
+
+            case 'mann-whitney':
+                // Mann-Whitney: value_column = Y (sayısal), group_column = X (kategorik)
+                const mwGroup1 = document.getElementById(`${widgetId}_group1`)?.value;
+                const mwGroup2 = document.getElementById(`${widgetId}_group2`)?.value;
+
+                if (!mwGroup1 || !mwGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-info-circle"></i> Karşılaştırılacak iki grup seçin.</div>';
+                    return;
+                }
+                if (mwGroup1 === mwGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-triangle"></i> Farklı iki grup seçin.</div>';
+                    return;
+                }
+
+                formData.append('value_column', yCol);
+                formData.append('group_column', groupColumn);
+                formData.append('group1', mwGroup1);
+                formData.append('group2', mwGroup2);
+                break;
+
+
+            case 'wilcoxon':
+                // TYPE_C: iki eşleştirilmiş sütun (col1, col2 ID'lerinden)
+                const wilcoxCol1 = document.getElementById(`${widgetId}_col1`)?.value;
+                const wilcoxCol2 = document.getElementById(`${widgetId}_col2`)?.value;
+                formData.append('column1', wilcoxCol1 || yCol);
+                formData.append('column2', wilcoxCol2 || (wilcoxCol1 || groupColumn));
+                break;
+
+            case 'effect-size':
+                // TYPE_A: İki grup seçimi (t-Test gibi)
+                const esGroup1 = document.getElementById(`${widgetId}_group1`)?.value;
+                const esGroup2 = document.getElementById(`${widgetId}_group2`)?.value;
+
+                if (!esGroup1 || !esGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-info-circle"></i> Karşılaştırılacak iki grup seçin.</div>';
+                    return;
+                }
+                if (esGroup1 === esGroup2) {
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-triangle"></i> Farklı iki grup seçin.</div>';
+                    return;
+                }
+
+                formData.append('value_column', yCol);
+                formData.append('group_column', groupColumn);
+                formData.append('group1', esGroup1);
+                formData.append('group2', esGroup2);
+                formData.append('effect_type', 'cohens_d');
+                break;
+
+            case 'frequency':
+                formData.append('column', groupColumn || yCol);
+                break;
+
+            case 'regression-coef':
+            case 'logistic':
+                formData.append('target_column', yCol);
+                formData.append('predictor_columns', JSON.stringify([groupColumn]));
+                formData.append('regression_type', statType === 'logistic' ? 'logistic' : 'linear');
+                break;
+
+            default:
+                formData.append('columns', JSON.stringify([yCol]));
+                if (groupColumn) {
+                    formData.append('group_column', groupColumn);
+                }
         }
 
         const response = await fetch(endpoint, {
@@ -13290,20 +13996,23 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const results = await response.json();
+        console.log('📊 API sonucu:', results);
         renderStatResults(widgetId, statType, results);
 
     } catch (error) {
         console.error('Stat API hatası:', error);
-        // Fallback: Client-side hesaplama
         console.log('Client-side hesaplamaya geçiliyor...');
-        const results = calculateLocalStat(statType, dataset.data, numericColumns);
+        const results = calculateLocalStat(statType, dataset.data, numericColumns, groupColumn);
         renderStatResults(widgetId, statType, results);
     }
 }
+
 
 /**
  * Client-side betimsel istatistik hesaplama
@@ -13336,10 +14045,11 @@ function calculateDescriptiveStatsLocal(data, columns) {
 /**
  * Client-side genel istatistik hesaplama (fallback)
  */
-function calculateLocalStat(statType, data, columns) {
+function calculateLocalStat(statType, data, columns, groupColumn = null) {
     if (!data || data.length === 0 || columns.length === 0) {
         return { error: 'Yetersiz veri' };
     }
+
 
     // İlk sayısal sütunun değerlerini al
     const values = data
@@ -13403,26 +14113,80 @@ function calculateKurtosis(values, mean, stdev) {
 
 /**
  * Widget'ta istatistik sonuçlarını gösterir
+ * TR/EN bilingual responses destekler
  */
 function renderStatResults(widgetId, statType, results) {
     const bodyEl = document.getElementById(`${widgetId}_body`);
     if (!bodyEl) return;
 
-    if (results.error) {
-        bodyEl.innerHTML = `<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> ${results.error}</div>`;
+    // Hata kontrolü
+    if (results.error || results.detail) {
+        bodyEl.innerHTML = `<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> ${results.error || results.detail}</div>`;
         return;
     }
 
+    const lang = VIZ_STATE.lang || 'tr';
+
+    // Yardımcı: TR/EN değerini al
+    const getLocalized = (val) => {
+        if (typeof val === 'object' && val !== null && (val.tr || val.en)) {
+            return val[lang] || val.tr || val.en;
+        }
+        return val;
+    };
+
     let html = '';
 
-    if (statType === 'descriptive' && results.columns) {
-        // Betimsel istatistik tablosu
+    // Grup bazlı testler için özel gösterim (t-Test, ANOVA, Mann-Whitney vb.)
+    if (results.groups && Array.isArray(results.groups)) {
+        const testName = getLocalized(results.test) || statType;
+        const interpretation = getLocalized(results.interpretation) || '';
+        const isSignificant = results.significant;
+
+        html = `
+            <div class="viz-stat-result ${isSignificant ? 'viz-stat-success' : 'viz-stat-neutral'}">
+                <div class="viz-stat-header">
+                    <strong>${testName}</strong>
+                </div>
+                <div class="viz-stat-groups">
+                    ${results.groups.map(g => `
+                        <div class="viz-stat-group-card">
+                            <div class="viz-stat-group-name">${g.name}</div>
+                            <div class="viz-stat-group-stats">
+                                <span>n: ${g.n}</span>
+                                ${g.mean !== undefined ? `<span>Ort: ${formatNumber(g.mean)}</span>` : ''}
+                                ${g.median !== undefined ? `<span>Med: ${formatNumber(g.median)}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="viz-stat-metrics">
+                    ${results.t_statistic !== undefined ? `<div class="viz-stat-metric"><span>t</span><strong>${formatNumber(results.t_statistic)}</strong></div>` : ''}
+                    ${results.f_statistic !== undefined ? `<div class="viz-stat-metric"><span>F</span><strong>${formatNumber(results.f_statistic)}</strong></div>` : ''}
+                    ${results.u_statistic !== undefined ? `<div class="viz-stat-metric"><span>U</span><strong>${formatNumber(results.u_statistic)}</strong></div>` : ''}
+                    ${results.h_statistic !== undefined ? `<div class="viz-stat-metric"><span>H</span><strong>${formatNumber(results.h_statistic)}</strong></div>` : ''}
+                    ${results.chi2_statistic !== undefined ? `<div class="viz-stat-metric"><span>χ²</span><strong>${formatNumber(results.chi2_statistic)}</strong></div>` : ''}
+                    <div class="viz-stat-metric ${isSignificant ? 'significant' : ''}">
+                        <span>p</span>
+                        <strong>${formatNumber(results.p_value)}</strong>
+                    </div>
+                </div>
+                <div class="viz-stat-interpretation ${isSignificant ? 'significant' : ''}">
+                    <i class="fas ${isSignificant ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    ${interpretation}
+                </div>
+            </div>
+        `;
+    }
+    // Betimsel istatistik tablosu
+    else if (statType === 'descriptive' && (results.columns || results.descriptive)) {
+        const cols = results.columns || results.descriptive || {};
         html = `<div class="viz-stat-table-wrapper"><table class="viz-stat-table">
             <thead>
                 <tr>
-                    <th>Sütun</th>
-                    <th>Ort.</th>
-                    <th>Medyan</th>
+                    <th>${lang === 'tr' ? 'Sütun' : 'Column'}</th>
+                    <th>${lang === 'tr' ? 'Ort.' : 'Mean'}</th>
+                    <th>${lang === 'tr' ? 'Medyan' : 'Median'}</th>
                     <th>Std</th>
                     <th>Min</th>
                     <th>Max</th>
@@ -13431,60 +14195,102 @@ function renderStatResults(widgetId, statType, results) {
             </thead>
             <tbody>`;
 
-        for (const [col, stats] of Object.entries(results.columns)) {
+        for (const [col, stats] of Object.entries(cols)) {
             html += `<tr>
                 <td><strong>${col}</strong></td>
                 <td>${formatNumber(stats.mean)}</td>
                 <td>${formatNumber(stats.median)}</td>
-                <td>${formatNumber(stats.stdev)}</td>
+                <td>${formatNumber(stats.stdev || stats.std)}</td>
                 <td>${formatNumber(stats.min)}</td>
                 <td>${formatNumber(stats.max)}</td>
-                <td>${stats.count}</td>
+                <td>${stats.count || stats.n}</td>
             </tr>`;
         }
-
         html += '</tbody></table></div>';
+    }
+    // Normallik testi sonucu
+    else if (statType === 'normality') {
+        const isNormal = results.is_normal || results.isNormal || results.p_value > 0.05;
+        const interpretation = getLocalized(results.interpretation) ||
+            (isNormal ? (lang === 'tr' ? 'Veri normal dağılım gösteriyor' : 'Data is normally distributed')
+                : (lang === 'tr' ? 'Veri normal dağılmıyor' : 'Data is not normally distributed'));
 
-    } else if (statType === 'normality') {
-        // Normallik testi sonucu
-        const isNormal = results.isNormal || results.p_value > 0.05;
         html = `
             <div class="viz-stat-result ${isNormal ? 'viz-stat-success' : 'viz-stat-warning'}">
                 <div class="viz-stat-icon">
                     <i class="fas ${isNormal ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
                 </div>
                 <div class="viz-stat-content">
-                    <h4>${results.column || 'Sütun'}</h4>
-                    <p>${results.interpretation || (isNormal ? 'Normal dağılım varsayımı sağlanıyor' : 'Normal dağılım varsayımı sağlanmıyor')}</p>
-                    ${results.p_value !== undefined ? `<p class="viz-stat-detail">p-değeri: ${results.p_value.toFixed(4)}</p>` : ''}
-                    ${results.skewness !== undefined ? `<p class="viz-stat-detail">Çarpıklık: ${results.skewness.toFixed(3)}</p>` : ''}
-                    ${results.kurtosis !== undefined ? `<p class="viz-stat-detail">Basıklık: ${results.kurtosis.toFixed(3)}</p>` : ''}
+                    <h4>${results.column || results.test?.tr || 'Normallik Testi'}</h4>
+                    <p>${interpretation}</p>
+                    ${results.p_value !== undefined ? `<p class="viz-stat-detail">p-${lang === 'tr' ? 'değeri' : 'value'}: ${formatNumber(results.p_value)}</p>` : ''}
+                    ${results.statistic !== undefined ? `<p class="viz-stat-detail">${lang === 'tr' ? 'Test istatistiği' : 'Test statistic'}: ${formatNumber(results.statistic)}</p>` : ''}
                 </div>
             </div>
         `;
+    }
+    // Genel sonuç gösterimi
+    else {
+        const testName = getLocalized(results.test) || statType;
+        const interpretation = getLocalized(results.interpretation);
 
-    } else {
-        // Genel sonuç gösterimi
         html = '<div class="viz-stat-results">';
 
-        for (const [key, value] of Object.entries(results)) {
-            if (key === 'type' || key === 'columns') continue;
+        // Test adı
+        if (testName) {
+            html += `<div class="viz-stat-header"><strong>${testName}</strong></div>`;
+        }
 
+        for (const [key, value] of Object.entries(results)) {
+            // Bazı anahtarları atla
+            if (['type', 'columns', 'test', 'interpretation', 'groups'].includes(key)) continue;
+
+            // TR/EN objeleri için
             if (typeof value === 'object' && value !== null) {
-                html += `<div class="viz-stat-group"><h5>${key}</h5>`;
-                for (const [k2, v2] of Object.entries(value)) {
-                    html += `<div class="viz-stat-row"><span>${k2}:</span> <strong>${formatStatValue(v2)}</strong></div>`;
+                if (value.tr || value.en) {
+                    // Lokalize edilmiş değer
+                    html += `<div class="viz-stat-row"><span>${key}:</span> <strong>${getLocalized(value)}</strong></div>`;
+                } else if (Array.isArray(value)) {
+                    // Array
+                    html += `<div class="viz-stat-group"><h5>${key}</h5>`;
+                    value.forEach((item, i) => {
+                        if (typeof item === 'object') {
+                            html += `<div class="viz-stat-subgroup">`;
+                            for (const [k, v] of Object.entries(item)) {
+                                html += `<span>${k}: ${formatStatValue(v)}</span> `;
+                            }
+                            html += `</div>`;
+                        } else {
+                            html += `<span>${formatStatValue(item)}</span> `;
+                        }
+                    });
+                    html += '</div>';
+                } else {
+                    // Nested object
+                    html += `<div class="viz-stat-group"><h5>${key}</h5>`;
+                    for (const [k2, v2] of Object.entries(value)) {
+                        html += `<div class="viz-stat-row"><span>${k2}:</span> <strong>${formatStatValue(v2)}</strong></div>`;
+                    }
+                    html += '</div>';
                 }
-                html += '</div>';
             } else {
                 html += `<div class="viz-stat-row"><span>${key}:</span> <strong>${formatStatValue(value)}</strong></div>`;
             }
+        }
+
+        // Interpretation en sona
+        if (interpretation) {
+            html += `<div class="viz-stat-interpretation ${results.significant ? 'significant' : ''}">
+                <i class="fas ${results.significant ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                ${interpretation}
+            </div>`;
         }
 
         html += '</div>';
     }
 
     bodyEl.innerHTML = html;
+
 }
 
 /**
