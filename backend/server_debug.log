@@ -928,3 +928,12 @@ Header Row: 0
 Params Raw: {"":"katip","config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}"}...
 Calling runner for custom-report-builder-pro...
 Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-23 17:41:16.594456
+Scenario ID: average-condition
+Filename: test.xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"condition_column": "Department", "condition_value": "IT", "target_column": "Salary", "return_mode": "summary"}...
+Excel Read Error: 'dict' object has no attribute 'empty'

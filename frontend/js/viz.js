@@ -5512,6 +5512,9 @@ function fillMissingData(column, method = 'mean') {
 
     showToast(`${filledCount} eksik değer "${fillValue.toFixed ? fillValue.toFixed(2) : fillValue}" ile dolduruldu`, 'success');
     VIZ_STATE.charts.forEach(c => renderChart(c));
+
+    // audit_log için sayıyı döndür
+    return filledCount;
 }
 
 // Outlier temizleme
@@ -9167,6 +9170,263 @@ window.applyCalculatedColumn = applyCalculatedColumn;
 window.applyURLLoad = applyURLLoad;
 window.runLogisticFromModal = runLogisticFromModal;
 window.runTimeSeriesFromModal = runTimeSeriesFromModal;
+
+// =====================================================
+// EKSİK KRİTİK FONKSİYONLAR
+// =====================================================
+
+/**
+ * Sütun tipini dönüştürür
+ * @param {string} column - Sütun adı
+ * @param {string} targetType - Hedef tip: 'number', 'string', 'date'
+ */
+function convertColumnType(column, targetType) {
+    if (!VIZ_STATE.data || !column) return;
+
+    let convertedCount = 0;
+    let failedCount = 0;
+
+    VIZ_STATE.data.forEach(row => {
+        const originalValue = row[column];
+
+        try {
+            switch (targetType) {
+                case 'number':
+                    // String'i sayıya çevir (Türkçe formatı da destekle)
+                    if (originalValue === '' || originalValue === null || originalValue === undefined) {
+                        row[column] = NaN; // Eksik değer
+                    } else {
+                        let numStr = String(originalValue)
+                            .replace(/\s/g, '')      // Boşlukları kaldır
+                            .replace(/\./g, '')      // Nokta binlik ayracını kaldır
+                            .replace(',', '.');      // Virgülü ondalık ayracı yap
+                        const num = parseFloat(numStr);
+                        if (!isNaN(num)) {
+                            row[column] = num;
+                            convertedCount++;
+                        } else {
+                            row[column] = NaN;
+                            failedCount++;
+                        }
+                    }
+                    break;
+
+                case 'string':
+                    row[column] = originalValue !== null && originalValue !== undefined
+                        ? String(originalValue)
+                        : '';
+                    convertedCount++;
+                    break;
+
+                case 'date':
+                    if (originalValue === '' || originalValue === null || originalValue === undefined) {
+                        row[column] = null;
+                    } else {
+                        // Excel tarih numarası kontrolü
+                        const numVal = parseFloat(originalValue);
+                        if (!isNaN(numVal) && numVal > 25569 && numVal < 100000) {
+                            // Excel tarih numarası (1900 bazlı)
+                            const date = new Date((numVal - 25569) * 86400 * 1000);
+                            row[column] = date.toISOString().split('T')[0];
+                            convertedCount++;
+                        } else {
+                            // String tarih parse etmeyi dene
+                            const parsed = new Date(originalValue);
+                            if (!isNaN(parsed.getTime())) {
+                                row[column] = parsed.toISOString().split('T')[0];
+                                convertedCount++;
+                            } else {
+                                failedCount++;
+                            }
+                        }
+                    }
+                    break;
+            }
+        } catch (e) {
+            failedCount++;
+        }
+    });
+
+    // columnsInfo güncelle
+    updateColumnTypeInfo(column, targetType);
+
+    console.log(`✅ convertColumnType: ${column} → ${targetType} (${convertedCount} converted, ${failedCount} failed)`);
+    return { converted: convertedCount, failed: failedCount };
+}
+
+/**
+ * Tek sütunun tip bilgisini günceller
+ */
+function updateColumnTypeInfo(column, newType) {
+    const dataset = VIZ_STATE.getActiveDataset();
+    if (!dataset || !dataset.columnsInfo) return;
+
+    const colInfo = dataset.columnsInfo.find(c => c.name === column);
+    if (colInfo) {
+        colInfo.type = newType;
+        colInfo.detectedType = newType;
+    } else {
+        dataset.columnsInfo.push({
+            name: column,
+            type: newType,
+            detectedType: newType,
+            missingCount: 0
+        });
+    }
+}
+
+/**
+ * Tüm sütunların tiplerini otomatik algılar
+ */
+function detectColumnTypes() {
+    const dataset = VIZ_STATE.getActiveDataset();
+    if (!dataset || !dataset.data || dataset.data.length === 0) return;
+
+    const columns = dataset.columns || Object.keys(dataset.data[0] || {});
+    const sampleSize = Math.min(100, dataset.data.length);
+
+    dataset.columnsInfo = columns.map(col => {
+        let numericCount = 0;
+        let dateCount = 0;
+        let textCount = 0;
+        let missingCount = 0;
+        let totalChecked = 0;
+
+        for (let i = 0; i < sampleSize; i++) {
+            const val = dataset.data[i][col];
+
+            // Eksik değer kontrolü
+            if (val === '' || val === null || val === undefined) {
+                missingCount++;
+                continue;
+            }
+
+            totalChecked++;
+            const strVal = String(val).trim();
+
+            // Sayı kontrolü (Türkçe format dahil)
+            const numStr = strVal.replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+            const num = parseFloat(numStr);
+            if (!isNaN(num) && isFinite(num)) {
+                // Excel tarih numarası olabilir mi?
+                if (num > 25569 && num < 60000 && Number.isInteger(parseFloat(strVal.replace(',', '.')))) {
+                    dateCount++;
+                } else {
+                    numericCount++;
+                }
+                continue;
+            }
+
+            // Tarih kontrolü (çeşitli formatlar)
+            const datePatterns = [
+                /^\d{4}-\d{2}-\d{2}$/, // 2024-01-15
+                /^\d{2}[\/.-]\d{2}[\/.-]\d{4}$/, // 15/01/2024, 15.01.2024
+                /^\d{4}[\/.-]\d{2}[\/.-]\d{2}$/, // 2024/01/15
+                /^\d{1,2}\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)/i,
+                /^\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i
+            ];
+
+            if (datePatterns.some(p => p.test(strVal))) {
+                dateCount++;
+                continue;
+            }
+
+            const parsed = new Date(strVal);
+            if (!isNaN(parsed.getTime()) && strVal.length > 6) {
+                dateCount++;
+                continue;
+            }
+
+            textCount++;
+        }
+
+        // Tip belirleme (çoğunluk kuralı)
+        let detectedType = 'text';
+        if (totalChecked > 0) {
+            const numericRatio = numericCount / totalChecked;
+            const dateRatio = dateCount / totalChecked;
+
+            if (numericRatio > 0.7) {
+                detectedType = 'numeric';
+            } else if (dateRatio > 0.5) {
+                detectedType = 'date';
+            }
+        }
+
+        return {
+            name: col,
+            type: detectedType,
+            detectedType: detectedType,
+            numericCount,
+            dateCount,
+            textCount,
+            missingCount,
+            sampleSize: totalChecked + missingCount
+        };
+    });
+
+    console.log('📊 Column types detected:', dataset.columnsInfo.map(c => `${c.name}: ${c.type}`).join(', '));
+}
+
+/**
+ * Sütun listesini tip bilgisiyle birlikte render eder
+ */
+function renderColumnsListWithTypes() {
+    const listEl = document.getElementById('vizColumnsList');
+    if (!listEl) return;
+
+    const dataset = VIZ_STATE.getActiveDataset();
+    if (!dataset || !dataset.columns || dataset.columns.length === 0) {
+        listEl.innerHTML = '<div class="viz-no-data"><i class="fas fa-info-circle"></i> Veri yükleyin</div>';
+        return;
+    }
+
+    // Tip algılama (yoksa çalıştır)
+    if (!dataset.columnsInfo || dataset.columnsInfo.length === 0) {
+        detectColumnTypes();
+    }
+
+    const getTypeIcon = (type) => {
+        switch (type) {
+            case 'numeric': return '<i class="fas fa-hashtag" title="Sayısal"></i>';
+            case 'date': return '<i class="fas fa-calendar" title="Tarih"></i>';
+            case 'text':
+            default: return '<i class="fas fa-font" title="Metin"></i>';
+        }
+    };
+
+    const getTypeClass = (type) => {
+        switch (type) {
+            case 'numeric': return 'viz-col-numeric';
+            case 'date': return 'viz-col-date';
+            default: return 'viz-col-text';
+        }
+    };
+
+    listEl.innerHTML = dataset.columns.map(col => {
+        const info = dataset.columnsInfo?.find(c => c.name === col) || { type: 'text', missingCount: 0 };
+        const missingBadge = info.missingCount > 0
+            ? `<span class="viz-col-missing" title="${info.missingCount} eksik değer">${info.missingCount}</span>`
+            : '';
+
+        return `
+            <div class="viz-column-item ${getTypeClass(info.type)}" 
+                 draggable="true" 
+                 data-column="${col}"
+                 ondragstart="handleColumnDrag(event, '${col}')">
+                ${getTypeIcon(info.type)}
+                <span class="viz-col-name" title="${col}">${col}</span>
+                ${missingBadge}
+            </div>
+        `;
+    }).join('');
+}
+
+// Global exports for new functions
+window.convertColumnType = convertColumnType;
+window.detectColumnTypes = detectColumnTypes;
+window.renderColumnsListWithTypes = renderColumnsListWithTypes;
+window.updateColumnTypeInfo = updateColumnTypeInfo;
 
 // =====================================================
 // SPRINT 11: GEOJSONHARİTA, WORD CLOUD, DOSYA ÖNİZLEME
@@ -13293,9 +13553,19 @@ async function createStatWidget(statType) {
                 <button class="viz-mode-toggle" onclick="toggleStatMode('${widgetId}')" title="APA/Dashboard Modu">
                     <i class="fas fa-file-alt"></i> APA
                 </button>
-                <button class="viz-copy-btn" onclick="copyStatAsHTML('${widgetId}')" title="Word'e Kopyala">
-                    <i class="fas fa-copy"></i>
+                <button class="viz-formula-btn" onclick="toggleFormula('${widgetId}')" title="Formül Göster">
+                    <i class="fas fa-function">fx</i>
                 </button>
+                <div class="viz-copy-dropdown">
+                    <button class="viz-copy-btn" title="Kopyala">
+                        <i class="fas fa-copy"></i> <i class="fas fa-caret-down" style="font-size:0.6rem"></i>
+                    </button>
+                    <div class="viz-copy-menu">
+                        <button onclick="copyStatAsHTML('${widgetId}')"><i class="fas fa-table"></i> Word Tablosu</button>
+                        <button onclick="copyStatAsImage('${widgetId}')"><i class="fas fa-image"></i> Resim Olarak</button>
+                        <button onclick="copyStatAsText('${widgetId}')"><i class="fas fa-align-left"></i> Düz Metin</button>
+                    </div>
+                </div>
                 <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}')" title="Yenile">
                     <i class="fas fa-sync-alt"></i>
                 </button>
@@ -14608,7 +14878,80 @@ function toggleStatMode(widgetId) {
             '<i class="fas fa-file-alt"></i> APA';
     }
 
+    // APA modunda floating exit butonu ekle/kaldır
+    let exitBtn = widget.querySelector('.viz-apa-exit-btn');
+    if (isAPA) {
+        if (!exitBtn) {
+            exitBtn = document.createElement('button');
+            exitBtn.className = 'viz-apa-exit-btn';
+            exitBtn.innerHTML = '<i class="fas fa-times"></i> Dashboard\'a Dön';
+            exitBtn.onclick = () => toggleStatMode(widgetId);
+            widget.insertBefore(exitBtn, widget.firstChild);
+        }
+    } else {
+        if (exitBtn) exitBtn.remove();
+    }
+
     showToast(isAPA ? 'APA Rapor Modu aktif' : 'Dashboard Modu aktif', 'info');
+}
+
+/**
+ * Formül panelini göster/gizle
+ */
+function toggleFormula(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    let formulaPanel = widget.querySelector('.viz-formula-panel');
+    if (formulaPanel) {
+        formulaPanel.remove();
+        return;
+    }
+
+    const statType = widget.dataset.statType;
+    const formula = getFormulaForTest(statType);
+
+    formulaPanel = document.createElement('div');
+    formulaPanel.className = 'viz-formula-panel';
+    formulaPanel.innerHTML = `
+        <div class="viz-formula-header">
+            <span>📐 Formül: ${getStatTitle(statType)}</span>
+            <button onclick="this.closest('.viz-formula-panel').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="viz-formula-content">${formula}</div>
+    `;
+
+    const body = widget.querySelector('.viz-widget-body, .viz-stat-body');
+    if (body) {
+        body.parentNode.insertBefore(formulaPanel, body);
+    }
+
+    // MathJax varsa render et
+    if (window.MathJax) {
+        MathJax.typesetPromise([formulaPanel]).catch(console.error);
+    }
+}
+
+/**
+ * Test türüne göre formül döndürür
+ */
+function getFormulaForTest(statType) {
+    const formulas = {
+        'ttest': '\\( t = \\frac{\\bar{X}_1 - \\bar{X}_2}{\\sqrt{\\frac{s_1^2}{n_1} + \\frac{s_2^2}{n_2}}} \\)',
+        'anova': '\\( F = \\frac{MS_{between}}{MS_{within}} = \\frac{\\sum n_i(\\bar{X}_i - \\bar{X})^2 / (k-1)}{\\sum\\sum(X_{ij} - \\bar{X}_i)^2 / (N-k)} \\)',
+        'chi-square': '\\( \\chi^2 = \\sum \\frac{(O_i - E_i)^2}{E_i} \\)',
+        'correlation': '\\( r = \\frac{\\sum(X_i - \\bar{X})(Y_i - \\bar{Y})}{\\sqrt{\\sum(X_i - \\bar{X})^2 \\sum(Y_i - \\bar{Y})^2}} \\)',
+        'mann-whitney': '\\( U = n_1 n_2 + \\frac{n_1(n_1+1)}{2} - R_1 \\)',
+        'wilcoxon': '\\( W = \\sum_{i=1}^{n} [sgn(x_{2,i} - x_{1,i}) \\cdot R_i] \\)',
+        'effect-size': '\\( d = \\frac{\\bar{X}_1 - \\bar{X}_2}{s_{pooled}} \\text{ where } s_{pooled} = \\sqrt{\\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1+n_2-2}} \\)',
+        'normality': '\\( W = \\frac{(\\sum_{i=1}^{n} a_i x_{(i)})^2}{\\sum_{i=1}^{n}(x_i - \\bar{x})^2} \\) (Shapiro-Wilk)',
+        'kruskal': '\\( H = \\frac{12}{N(N+1)} \\sum_{i=1}^{k} \\frac{R_i^2}{n_i} - 3(N+1) \\)',
+        'levene': '\\( W = \\frac{(N-k)}{(k-1)} \\cdot \\frac{\\sum_{i=1}^{k} n_i (\\bar{Z}_{i\\cdot} - \\bar{Z}_{\\cdot\\cdot})^2}{\\sum_{i=1}^{k} \\sum_{j=1}^{n_i} (Z_{ij} - \\bar{Z}_{i\\cdot})^2} \\)',
+        'descriptive': '\\( \\bar{X} = \\frac{\\sum X_i}{n}, \\quad s = \\sqrt{\\frac{\\sum(X_i - \\bar{X})^2}{n-1}} \\)',
+        'pca': '\\( \\text{Cov}(X) = \\frac{1}{n-1} X^T X, \\quad \\text{eigenvalue decomposition} \\)',
+        'cronbach': '\\( \\alpha = \\frac{k}{k-1} \\left(1 - \\frac{\\sum s_i^2}{s_t^2}\\right) \\)'
+    };
+    return formulas[statType] || '<em>Bu test için formül henüz eklenmedi.</em>';
 }
 
 /**
@@ -14623,63 +14966,152 @@ async function copyStatAsHTML(widgetId) {
     if (!bodyEl) return;
 
     try {
-        // 1. Geçici APA versiyonu oluştur
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = bodyEl.innerHTML;
-        tempDiv.style.cssText = `
-            background: white !important; 
-            color: black !important;
-            font-family: 'Times New Roman', Times, serif !important;
-            font-size: 12pt !important; 
-            padding: 15px;
-            line-height: 1.5;
+        // 1. APA stilli HTML oluştur
+        const title = widget.querySelector('.viz-widget-title')?.textContent || 'Sonuç';
+        const auditNote = widget.querySelector('.viz-stat-audit-footer')?.textContent?.replace(/[^\w\sçğıöşüÇĞİÖŞÜ.,():→-]/gi, '').trim() || '';
+
+        let htmlContent = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; }
+                    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+                    th, td { border: none; border-bottom: 1px solid #000; padding: 6px 10px; text-align: left; }
+                    thead tr { border-bottom: 2px solid #000; }
+                    .note { font-size: 10pt; font-style: italic; color: #666; margin-top: 15px; }
+                </style>
+            </head>
+            <body>
+                <h4>${title}</h4>
+                ${bodyEl.innerHTML}
+                ${auditNote ? `<p class="note">${auditNote}</p>` : ''}
+            </body>
+            </html>
         `;
 
-        // 2. Tabloları APA formatına çevir
-        tempDiv.querySelectorAll('table').forEach(table => {
-            table.style.cssText = 'border-collapse: collapse; width: 100%; margin: 10px 0;';
-            table.querySelectorAll('th, td').forEach(cell => {
-                cell.style.cssText = 'border: none; border-bottom: 1px solid black; padding: 6px 10px; text-align: left;';
-            });
-            table.querySelectorAll('thead tr').forEach(row => {
-                row.style.borderBottom = '2px solid black';
-            });
-        });
+        // İkonları kaldır
+        htmlContent = htmlContent.replace(/<i class="fas[^>]*><\/i>/g, '');
+        htmlContent = htmlContent.replace(/<i class="fa[^>]*>[^<]*<\/i>/g, '');
 
-        // 3. Gereksiz stilleri ve ikonları temizle
-        tempDiv.querySelectorAll('.fas, .fab, .far').forEach(icon => {
-            icon.style.display = 'none';
-        });
+        // ClipboardItem API kullan (modern)
+        if (navigator.clipboard && ClipboardItem) {
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const plainText = bodyEl.innerText;
+            const textBlob = new Blob([plainText], { type: 'text/plain' });
 
-        // 4. Audit footer ekle
-        const footerEl = widget.querySelector('.viz-stat-audit-footer');
-        if (footerEl) {
-            const note = document.createElement('p');
-            note.style.cssText = 'font-size: 10pt; font-style: italic; margin-top: 15px; color: #666;';
-            note.textContent = footerEl.textContent.replace(/[^\w\sçğıöşüÇĞİÖŞÜ.,():→]/gi, '').trim();
-            tempDiv.appendChild(note);
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': blob,
+                    'text/plain': textBlob
+                })
+            ]);
+            showToast('✅ Word tablosu olarak kopyalandı!', 'success');
+        } else {
+            // Fallback: execCommand
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = bodyEl.innerHTML;
+            tempDiv.style.cssText = 'position:fixed;left:-9999px;background:#fff;color:#000;font-family:Times New Roman;';
+            document.body.appendChild(tempDiv);
+
+            const range = document.createRange();
+            range.selectNodeContents(tempDiv);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            document.execCommand('copy');
+            selection.removeAllRanges();
+            document.body.removeChild(tempDiv);
+
+            showToast('📋 Kopyalandı (Ctrl+V ile yapıştırın)', 'success');
         }
-
-        document.body.appendChild(tempDiv);
-
-        // 5. Selection API ile kopyala
-        const range = document.createRange();
-        range.selectNodeContents(tempDiv);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        // Kopyala
-        document.execCommand('copy');
-
-        selection.removeAllRanges();
-        document.body.removeChild(tempDiv);
-
-        showToast('📋 APA formatında kopyalandı (Word\'e yapıştırabilirsiniz)', 'success');
     } catch (error) {
         console.error('Kopyalama hatası:', error);
         showToast('Kopyalama hatası: ' + error.message, 'error');
     }
+}
+
+/**
+ * Widget'ı resim olarak kopyalar
+ */
+async function copyStatAsImage(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    try {
+        // html2canvas yükle (yoksa CDN'den)
+        if (!window.html2canvas) {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        }
+
+        // Geçici olarak APA moduna al
+        const wasAPA = widget.classList.contains('apa-mode');
+        if (!wasAPA) widget.classList.add('apa-mode');
+
+        // Canvas oluştur
+        const canvas = await html2canvas(widget, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true
+        });
+
+        // Orijinal moda geri dön
+        if (!wasAPA) widget.classList.remove('apa-mode');
+
+        // Canvas'ı blob'a çevir ve panoya kopyala
+        canvas.toBlob(async (blob) => {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                showToast('🖼️ Resim olarak kopyalandı!', 'success');
+            } catch (err) {
+                // Fallback: İndir
+                const link = document.createElement('a');
+                link.download = `stat_${widgetId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast('📥 Resim indirildi (panoya kopyalanamadı)', 'info');
+            }
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Resim kopyalama hatası:', error);
+        showToast('Resim oluşturma hatası: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Widget'ı düz metin olarak kopyalar
+ */
+async function copyStatAsText(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    const bodyEl = widget.querySelector('.viz-widget-body, .viz-stat-body');
+    if (!bodyEl) return;
+
+    try {
+        const title = widget.querySelector('.viz-widget-title')?.textContent || '';
+        const text = title + '\n' + '='.repeat(40) + '\n' + bodyEl.innerText;
+
+        await navigator.clipboard.writeText(text);
+        showToast('📋 Metin olarak kopyalandı!', 'success');
+    } catch (error) {
+        showToast('Kopyalama hatası: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Script yükleyici
+ */
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
 }
 
 /**
@@ -14798,6 +15230,497 @@ function addAuditFooterToChart(chartId, config) {
             border-color: var(--primary, #4a90d9);
             color: var(--primary, #4a90d9);
         }
+
+        /* Copy Dropdown Menu */
+        .viz-copy-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .viz-copy-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--bg-card, #2a2a3e);
+            border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            min-width: 140px;
+            overflow: hidden;
+        }
+
+        .viz-copy-dropdown:hover .viz-copy-menu,
+        .viz-copy-dropdown:focus-within .viz-copy-menu {
+            display: block;
+        }
+
+        .viz-copy-menu button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary, #fff);
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s;
+        }
+
+        .viz-copy-menu button:hover {
+            background: var(--primary, #4a90d9);
+        }
+
+        .viz-copy-menu button i {
+            width: 16px;
+            text-align: center;
+        }
+
+        /* Formula Button */
+        .viz-formula-btn {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            background: transparent;
+            border: 1px solid var(--border-color, rgba(255,255,255,0.2));
+            color: var(--text-muted, #888);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: bold;
+        }
+
+        .viz-formula-btn:hover {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        /* Formula Panel */
+        .viz-formula-panel {
+            background: var(--bg-subtle, rgba(0,0,0,0.2));
+            border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+            border-radius: 6px;
+            margin: 8px;
+            overflow: hidden;
+        }
+
+        .viz-formula-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(231,76,60,0.1);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-primary, #fff);
+        }
+
+        .viz-formula-header button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+
+        .viz-formula-content {
+            padding: 12px;
+            font-size: 0.9rem;
+            color: var(--text-primary, #fff);
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        /* APA Exit Button */
+        .viz-apa-exit-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+        .viz-apa-exit-btn:hover {
+            background: #4a90d9;
+        }
+
+        /* Horizontal Stats Layout */
+        .viz-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.05));
+        }
+
+        .viz-stat-row span {
+            color: var(--text-muted, #888);
+            font-size: 0.85rem;
+            min-width: 120px;
+        }
+
+        .viz-stat-row strong {
+            color: var(--text-primary, #fff);
+            font-size: 0.9rem;
+        }
+
+        .viz-stat-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .viz-stat-metric {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-subtle, rgba(0,0,0,0.2));
+            border-radius: 6px;
+        }
+
+        .viz-stat-metric span {
+            font-weight: bold;
+            color: var(--text-muted, #888);
+            font-size: 0.8rem;
+        }
+
+        .viz-stat-metric strong {
+            color: var(--text-primary, #fff);
+            font-size: 0.9rem;
+        }
+
+        .viz-stat-metric.significant {
+            background: rgba(46, 204, 113, 0.2);
+            border: 1px solid rgba(46, 204, 113, 0.4);
+        }
+
+        .viz-stat-metric.significant span,
+        .viz-stat-metric.significant strong {
+            color: #2ecc71;
+        }
+
+        /* Group Cards Horizontal */
+        .viz-stat-groups {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px 0;
+        }
+
+        .viz-stat-group-card {
+            flex: 1;
+            min-width: 120px;
+            max-width: 200px;
+            padding: 10px;
+            background: var(--bg-subtle, rgba(0,0,0,0.2));
+            border-radius: 8px;
+            border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        }
+
+        .viz-stat-group-name {
+            font-weight: bold;
+            color: var(--text-primary, #fff);
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+
+        .viz-stat-group-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted, #888);
+        }
+
+        .viz-stat-group-stats span {
+            background: rgba(255,255,255,0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* APA Mode Overrides for horizontal layout */
+        .viz-stat-widget.apa-mode .viz-stat-row {
+            border-bottom: none;
+            padding: 2px 0;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-row span,
+        .viz-stat-widget.apa-mode .viz-stat-row strong {
+            color: #000;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-metrics {
+            gap: 20px;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-metric {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-metric span,
+        .viz-stat-widget.apa-mode .viz-stat-metric strong {
+            color: #000;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-group-card {
+            background: transparent;
+            border: 1px solid #000;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-group-name,
+        .viz-stat-widget.apa-mode .viz-stat-group-stats,
+        .viz-stat-widget.apa-mode .viz-stat-group-stats span {
+            color: #000;
+            background: transparent;
+        }
+
+        /* ========================================= */
+        /* LIGHT MODE STYLING FOR ALL COMPONENTS    */
+        /* ========================================= */
+        
+        body:not(.dark-mode) .viz-mode-toggle,
+        body:not(.dark-mode) .viz-formula-btn {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        body:not(.dark-mode) .viz-mode-toggle:hover {
+            background: #e9ecef;
+            border-color: #4a90d9;
+            color: #4a90d9;
+        }
+
+        body:not(.dark-mode) .viz-formula-btn:hover {
+            background: #fff5f5;
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        body:not(.dark-mode) .viz-copy-btn {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        body:not(.dark-mode) .viz-copy-btn:hover {
+            background: #4a90d9;
+            color: #fff;
+        }
+
+        body:not(.dark-mode) .viz-copy-menu {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        body:not(.dark-mode) .viz-copy-menu button {
+            color: #495057;
+        }
+
+        body:not(.dark-mode) .viz-copy-menu button:hover {
+            background: #4a90d9;
+            color: #fff;
+        }
+
+        /* Formula Panel Light Mode */
+        body:not(.dark-mode) .viz-formula-panel {
+            background: #fff;
+            border: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-formula-header {
+            background: linear-gradient(135deg, rgba(74,144,217,0.1) 0%, rgba(154,48,80,0.1) 100%);
+            color: #495057;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-formula-header button {
+            color: #6c757d;
+        }
+
+        body:not(.dark-mode) .viz-formula-header button:hover {
+            color: #e74c3c;
+        }
+
+        body:not(.dark-mode) .viz-formula-content {
+            color: #212529;
+            background: #f8f9fa;
+        }
+
+        /* Stat Params Light Mode */
+        body:not(.dark-mode) .viz-stat-params {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-stat-params label {
+            color: #6c757d;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        body:not(.dark-mode) .viz-stat-params select {
+            background: #fff;
+            border: 1px solid #ced4da;
+            color: #495057;
+        }
+
+        /* Group Selection Heading - Modern & Smaller */
+        .viz-stat-params .viz-group-selection-header,
+        .viz-stat-params h4,
+        .viz-stat-params .group-label {
+            font-size: 0.75rem !important;
+            font-weight: 600;
+            color: var(--text-muted, #6c757d);
+            margin: 8px 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        body:not(.dark-mode) .viz-stat-params .viz-group-selection-header,
+        body:not(.dark-mode) .viz-stat-params h4 {
+            color: #6c757d;
+        }
+
+        .viz-stat-params .viz-group-selection-header i {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        /* Audit Footer Light Mode */
+        body:not(.dark-mode) .viz-stat-audit-footer,
+        body:not(.dark-mode) .viz-chart-audit-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+
+        /* Stats Metrics Light Mode */
+        body:not(.dark-mode) .viz-stat-metric {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-stat-metric span {
+            color: #6c757d;
+        }
+
+        body:not(.dark-mode) .viz-stat-metric strong {
+            color: #212529;
+        }
+
+        body:not(.dark-mode) .viz-stat-metric.significant {
+            background: rgba(46, 204, 113, 0.1);
+            border-color: rgba(46, 204, 113, 0.3);
+        }
+
+        /* Group Cards Light Mode */
+        body:not(.dark-mode) .viz-stat-group-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-stat-group-name {
+            color: #212529;
+        }
+
+        body:not(.dark-mode) .viz-stat-group-stats {
+            color: #6c757d;
+        }
+
+        body:not(.dark-mode) .viz-stat-group-stats span {
+            background: #f1f3f4;
+        }
+
+        /* Results Section Light Mode */
+        body:not(.dark-mode) .viz-stat-result {
+            background: #fff;
+        }
+
+        body:not(.dark-mode) .viz-stat-row {
+            border-bottom-color: #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-stat-row span {
+            color: #6c757d;
+        }
+
+        body:not(.dark-mode) .viz-stat-row strong {
+            color: #212529;
+        }
+
+        /* ========================================= */
+        /* GROUP SELECTOR TITLE - MODERN & COMPACT  */
+        /* ========================================= */
+        
+        .viz-group-selector-title {
+            font-size: 0.75rem !important;
+            font-weight: 600;
+            color: var(--text-muted, #888);
+            margin: 10px 0 6px 0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--bg-subtle, rgba(255,255,255,0.03));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .viz-group-selector-title i {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            color: var(--primary, #4a90d9);
+        }
+
+        body:not(.dark-mode) .viz-group-selector-title {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #e9ecef;
+        }
+
+        body:not(.dark-mode) .viz-group-selector-title i {
+            color: #4a90d9;
+        }
+
+        /* Group Selectors Row */
+        .viz-group-selectors-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .viz-group-selectors-row .viz-param-group {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .viz-group-selectors-row label {
+            font-size: 0.7rem !important;
+            color: var(--text-muted, #888);
+        }
+
+        body:not(.dark-mode) .viz-group-selectors-row label {
+            color: #6c757d;
+        }
     `;
     document.head.appendChild(style);
 })();
@@ -14807,4 +15730,8 @@ window.generateAuditNote = generateAuditNote;
 window.addAuditFooterToWidget = addAuditFooterToWidget;
 window.addAuditFooterToChart = addAuditFooterToChart;
 window.toggleStatMode = toggleStatMode;
+window.toggleFormula = toggleFormula;
 window.copyStatAsHTML = copyStatAsHTML;
+window.copyStatAsImage = copyStatAsImage;
+window.copyStatAsText = copyStatAsText;
+
