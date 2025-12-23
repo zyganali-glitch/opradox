@@ -3044,14 +3044,26 @@ function runTTest(data, nameEl, pEl, bodyEl) {
     }
 
     pEl.textContent = `p = ${pValue.toFixed(4)}`;
-    pEl.className = pValue < 0.05 ? 'viz-p-value viz-significant' : 'viz-p-value';
+    pEl.className = pValue < 0.5 ? 'viz-p-value viz-significant' : 'viz-p-value';
+
+    // Ekstra istatistikler
+    const df = data.length - 1;
+    let ciLower = mean, ciUpper = mean;
+    if (typeof jStat !== 'undefined') {
+        const tCrit = Math.abs(jStat.studentt.inv(0.025, df));
+        ciLower = mean - tCrit * se;
+        ciUpper = mean + tCrit * se;
+    }
+    const interpretation = pValue < 0.05 ? '✅ İstatistiksel olarak anlamlı fark var' : '❌ Anlamlı fark yok';
 
     bodyEl.innerHTML = `
         <div>n = ${data.length}</div>
         <div>Ortalama = ${mean.toFixed(2)}</div>
         <div>Std Sapma = ${std.toFixed(2)}</div>
         <div>t = ${t.toFixed(3)}</div>
-        <div class="${pValue < 0.05 ? 'viz-significant' : ''}">${pValue < 0.05 ? '✅ İstatistiksel olarak anlamlı' : '❌ Anlamlı değil'}</div>
+        <div>df = ${df}</div>
+        <div>Güven Aralığı (95%) = [${ciLower.toFixed(2)}, ${ciUpper.toFixed(2)}]</div>
+        <div class="${pValue < 0.05 ? 'viz-significant' : ''}">${interpretation}</div>
     `;
 }
 
@@ -13814,21 +13826,32 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
     }
 
     // Endpoint mapping - tüm stat tipleri için (backend router prefix: /viz)
+    // Backend Port: 8100 (Hardcoded fix)
+    const API_BASE = 'http://localhost:8100';
+
     const endpoints = {
-        'descriptive': '/viz/descriptive',
-        'ttest': '/viz/ttest',
-        'anova': '/viz/anova',
-        'chi-square': '/viz/chi-square',
-        'correlation': '/viz/correlation-matrix',
-        'normality': '/viz/normality',
-        'mann-whitney': '/viz/mann-whitney',
-        'wilcoxon': '/viz/wilcoxon',
-        'kruskal': '/viz/kruskal-wallis',
-        'levene': '/viz/levene',
-        'effect-size': '/viz/effect-size',
-        'frequency': '/viz/frequency',
-        'regression-coef': '/viz/regression',
-        'logistic': '/viz/regression'
+        'descriptive': `${API_BASE}/viz/descriptive`,
+        'ttest': `${API_BASE}/viz/ttest`,
+        'anova': `${API_BASE}/viz/anova`,
+        'chi-square': `${API_BASE}/viz/chi-square`,
+        'correlation': `${API_BASE}/viz/correlation-matrix`,
+        'normality': `${API_BASE}/viz/normality`,
+        'mann-whitney': `${API_BASE}/viz/mann-whitney`,
+        'wilcoxon': `${API_BASE}/viz/wilcoxon`,
+        'kruskal': `${API_BASE}/viz/kruskal-wallis`,
+        'levene': `${API_BASE}/viz/levene`,
+        'effect-size': `${API_BASE}/viz/effect-size`,
+        'frequency': `${API_BASE}/viz/frequency`,
+        'regression-coef': `${API_BASE}/viz/regression`,
+        'logistic': `${API_BASE}/viz/regression`,
+        // Eksik endpointler eklendi
+        'pca': `${API_BASE}/viz/pca`,
+        'kmeans': `${API_BASE}/viz/kmeans`,
+        'cronbach': `${API_BASE}/viz/cronbach`,
+        'friedman': `${API_BASE}/viz/friedman`,
+        'lda': `${API_BASE}/viz/lda`,
+        'survival': `${API_BASE}/viz/survival`,
+        'smart-insights': `${API_BASE}/viz/smart-insights`
     };
 
 
@@ -13836,8 +13859,9 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
 
     // Backend API çağrısı
     if (!dataset.file) {
-        bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> Dosya referansı bulunamadı. Client-side analiz yapılıyor...</div>';
-        const results = calculateLocalStat(statType, dataset.data, numericColumns, groupColumn);
+        // Dosya referansı yoksa backend'e istek atılamaz
+        console.warn('Dataset file referansı eksik.');
+        const results = { error: "Dosya referansı bulunamadı. Lütfen sol panelden veriyi tekrar yükleyin (veya Excel'den tekrar gönderin)." };
         renderStatResults(widgetId, statType, results);
         return;
     }
@@ -13979,6 +14003,56 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
                 formData.append('regression_type', statType === 'logistic' ? 'logistic' : 'linear');
                 break;
 
+            case 'pca':
+            case 'kmeans':
+            case 'cronbach':
+            case 'friedman':
+                // Çoklu sütun seçimi (checkbox'lardan)
+                let multiSelectCols = [];
+                const multiCheckboxes = document.querySelectorAll(`[name="${widgetId}_col"]:checked`);
+                multiCheckboxes.forEach(cb => multiSelectCols.push(cb.value));
+
+                // Fallback: seçili yoksa tüm sayısal sütunlar veya en azından yCol ve groupColumn
+                if (multiSelectCols.length === 0) {
+                    // Basit fallback: yCol ve groupColumn varsa ekle
+                    if (yCol) multiSelectCols.push(yCol);
+                    if (groupColumn && groupColumn !== yCol) multiSelectCols.push(groupColumn);
+                }
+
+                if (multiSelectCols.length < 2 && statType !== 'pca') { // PCA tek kolonla da çalışabilir (teknik olarak) ama anlamsız
+                    bodyEl.innerHTML = '<div class="viz-stat-error"><i class="fas fa-info-circle"></i> En az 2 değişken seçiniz.</div>';
+                    return;
+                }
+
+                formData.append('columns', JSON.stringify(multiSelectCols));
+                if (statType === 'pca') formData.append('n_components', 2);
+                if (statType === 'kmeans') formData.append('n_clusters', 3);
+                break;
+
+            case 'lda':
+                // LDA: X (predictors) ve y (target/class)
+                let ldaPredictors = [];
+                const ldaCheckboxes = document.querySelectorAll(`[name="${widgetId}_col"]:checked`);
+                ldaCheckboxes.forEach(cb => ldaPredictors.push(cb.value));
+
+                if (ldaPredictors.length === 0) {
+                    // Fallback
+                    if (groupColumn) ldaPredictors.push(groupColumn);
+                }
+
+                formData.append('columns', JSON.stringify(ldaPredictors));
+                formData.append('target', yCol); // Y sütunu sınıf (class) olsun
+                break;
+
+            case 'survival':
+                // Survival: Duration, Event, Group
+                formData.append('duration_column', yCol); // Genelde sayısal
+                formData.append('event_column', groupColumn); // 0/1 veya True/False
+                // Opsiyonel grup
+                const survGroup = document.getElementById(`${widgetId}_group_col`)?.value;
+                if (survGroup) formData.append('group_column', survGroup);
+                break;
+
             default:
                 formData.append('columns', JSON.stringify([yCol]));
                 if (groupColumn) {
@@ -13994,7 +14068,18 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
         if (!response.ok) {
             const errorText = await response.text();
             console.error('API error response:', errorText);
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errJson = JSON.parse(errorText);
+                if (errJson.detail) {
+                    errorMessage = errJson.detail;
+                }
+            } catch (e) {
+                // JSON değilse raw text göster
+                if (errorText.length < 200) errorMessage += ` (${errorText})`;
+            }
+            throw new Error(errorMessage);
         }
 
         const results = await response.json();
@@ -14003,9 +14088,16 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
 
     } catch (error) {
         console.error('Stat API hatası:', error);
-        console.log('Client-side hesaplamaya geçiliyor...');
-        const results = calculateLocalStat(statType, dataset.data, numericColumns, groupColumn);
-        renderStatResults(widgetId, statType, results);
+
+        // Hata durumunda fallback YAPMA, hatayı göster
+        const bodyEl = document.getElementById(`${widgetId}_body`);
+        if (bodyEl) {
+            bodyEl.innerHTML = `<div class="viz-stat-error">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Analiz Hatası:</strong><br>
+                ${error.message}<br>
+                <small style="opacity:0.7; display:block; margin-top:5px">Parametrelerinizi kontrol edip tekrar deneyin.</small>
+            </div>`;
+        }
     }
 }
 
@@ -14158,6 +14250,7 @@ function renderStatResults(widgetId, statType, results) {
                 </div>
                 <div class="viz-stat-metrics">
                     ${results.t_statistic !== undefined ? `<div class="viz-stat-metric"><span>t</span><strong>${formatNumber(results.t_statistic)}</strong></div>` : ''}
+                    ${results.degrees_of_freedom !== undefined ? `<div class="viz-stat-metric"><span>df</span><strong>${results.degrees_of_freedom}</strong></div>` : ''}
                     ${results.f_statistic !== undefined ? `<div class="viz-stat-metric"><span>F</span><strong>${formatNumber(results.f_statistic)}</strong></div>` : ''}
                     ${results.u_statistic !== undefined ? `<div class="viz-stat-metric"><span>U</span><strong>${formatNumber(results.u_statistic)}</strong></div>` : ''}
                     ${results.h_statistic !== undefined ? `<div class="viz-stat-metric"><span>H</span><strong>${formatNumber(results.h_statistic)}</strong></div>` : ''}
@@ -14167,6 +14260,11 @@ function renderStatResults(widgetId, statType, results) {
                         <strong>${formatNumber(results.p_value)}</strong>
                     </div>
                 </div>
+                ${results.confidence_interval ? `
+                <div class="viz-stat-ci">
+                    <span class="viz-stat-label">%95 Güven Aralığı:</span>
+                    <strong>[${formatNumber(results.confidence_interval[0])}, ${formatNumber(results.confidence_interval[1])}]</strong>
+                </div>` : ''}
                 <div class="viz-stat-interpretation ${isSignificant ? 'significant' : ''}">
                     <i class="fas ${isSignificant ? 'fa-check-circle' : 'fa-info-circle'}"></i>
                     ${interpretation}

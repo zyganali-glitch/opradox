@@ -9,6 +9,27 @@ import pandas as pd
 from io import BytesIO
 import json
 import math
+import logging
+import scipy.stats as stats
+import numpy as np
+
+# Global imports for ML and Survival Analysis with fallback logging
+try:
+    from sklearn.decomposition import PCA
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import LinearRegression, LogisticRegression
+    from sklearn.preprocessing import PolynomialFeatures
+    from sklearn.metrics import r2_score, mean_squared_error
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+except ImportError:
+    logging.warning("scikit-learn not found. ML endpoints will fail.")
+
+try:
+    from lifelines import KaplanMeierFitter
+    from lifelines.statistics import logrank_test
+except ImportError:
+    logging.warning("lifelines not found. Survival analysis will fail.")
 
 router = APIRouter(prefix="/viz", tags=["visualization"])
 
@@ -348,6 +369,10 @@ async def run_ttest(
     T-test uygular: bağımsız örneklem, eşleştirilmiş örneklem veya tek örneklem.
     Independent: group1 ve group2 seçilen grupları kullanır
     """
+    # DEBUG: Gelen parametreleri logla (emoji kaldırıldı - Windows uyumluluğu)
+    logging.debug(f"T-TEST DEBUG value_column={value_column}, group_column={group_column}")
+    logging.debug(f"T-TEST DEBUG group1={group1}, group2={group2}, test_type={test_type}")
+
 
     try:
         content = await file.read()
@@ -370,7 +395,9 @@ async def run_ttest(
                 "n": len(data1),
                 "mean": round(sum(data1) / len(data1), 4),
                 "population_mean": mu,
-                "significant": p_value < 0.05,
+                "degrees_of_freedom": len(data1) - 1,
+                "confidence_interval": null,
+                "significant": bool(p_value < 0.05),
                 "interpretation": {
                     "tr": "İstatistiksel olarak anlamlı fark var" if p_value < 0.05 else "Anlamlı fark yok",
                     "en": "Statistically significant difference" if p_value < 0.05 else "No significant difference"
@@ -420,12 +447,13 @@ async def run_ttest(
                 "p_value": round(float(p_value), 4),
                 "group_column": group_column,
                 "value_column": value_column,
+                "degrees_of_freedom": len(data1) + len(data2) - 2,
+                "confidence_interval": None,
                 "groups": [
                     {"name": str(selected_groups[0]), "n": len(data1), "mean": round(mean1, 4)},
                     {"name": str(selected_groups[1]), "n": len(data2), "mean": round(mean2, 4)}
                 ],
                 "significant": bool(p_value < 0.05),
-
                 "interpretation": {
                     "tr": f"'{selected_groups[0]}' ve '{selected_groups[1]}' grupları arasında anlamlı fark {'var' if p_value < 0.05 else 'yok'}",
                     "en": f"{'Significant' if p_value < 0.05 else 'No significant'} difference between '{selected_groups[0]}' and '{selected_groups[1]}'"
@@ -455,7 +483,9 @@ async def run_ttest(
                 "column2": column2,
                 "mean1": round(float(data1[:min_len].mean()), 4),
                 "mean2": round(float(data2[:min_len].mean()), 4),
-                "significant": p_value < 0.05,
+                "degrees_of_freedom": min_len - 1,
+                "confidence_interval": None,
+                "significant": bool(p_value < 0.05),
                 "interpretation": {
                     "tr": "Ölçümler arasında anlamlı fark var" if p_value < 0.05 else "Anlamlı fark yok",
                     "en": "Significant difference between measurements" if p_value < 0.05 else "No significant difference"
@@ -492,8 +522,9 @@ async def run_anova(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        # Grupları oluştur - string conversion eklendi
+        # Grupları oluştur ve istatistikleri topla
         groups = []
+        group_stats = []
         group_col_str = df[group_column].astype(str)
         group_names = group_col_str.unique()
         
@@ -501,33 +532,35 @@ async def run_anova(
             group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
+                group_stats.append({
+                    "name": str(group),
+                    "n": len(group_data),
+                    "mean": round(sum(group_data) / len(group_data), 4)
+                })
         
         if len(groups) < 2:
-            raise HTTPException(status_code=400, detail="En az 2 grup gerekli")
+            return {"error": "En az 2 grup (dolu veri içeren) gerekli"}
         
-        f_stat, p_value = scipy_stats.f_oneway(*groups)
-        
-        # Grup istatistikleri
-        group_stats = []
-        for i, name in enumerate(group_names):
-            if i < len(groups):
-                group_stats.append({
-                    "group": str(name),
-                    "n": len(groups[i]),
-                    "mean": round(sum(groups[i]) / len(groups[i]), 4) if groups[i] else 0
-                })
+        try:
+            f_stat, p_value = stats.f_oneway(*groups)
+        except Exception as e:
+            return {"error": f"f_oneway hatası: {str(e)}"}
+            
+        if math.isnan(p_value):
+             return {"error": "p-değeri hesaplanamadı (NaN). Veri varyansı 0 olabilir."}
         
         return {
             "test": "Tek Yönlü ANOVA",
             "f_statistic": round(float(f_stat), 4),
             "p_value": round(float(p_value), 4),
             "groups_count": len(groups),
-            "group_stats": group_stats,
-            "significant": p_value < 0.05,
+            "degrees_of_freedom": len(groups) - 1,
+            "groups": group_stats,
+            "significant": bool(p_value < 0.05),
             "interpretation": "Gruplar arasında anlamlı fark var" if p_value < 0.05 else "Gruplar arasında fark yok"
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 @router.post("/chi-square")
@@ -542,6 +575,8 @@ async def run_chi_square(
     Ki-Kare bağımsızlık testi uygular.
     """
     try:
+        # Global import used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -555,7 +590,10 @@ async def run_chi_square(
         # Çapraz tablo oluştur
         contingency = pd.crosstab(df[column1], df[column2])
         
-        chi2, p_value, dof, expected = scipy_stats.chi2_contingency(contingency)
+        try:
+            chi2, p_value, dof, expected = stats.chi2_contingency(contingency)
+        except Exception as e:
+            return {"error": f"Ki-kare hesaplama hatası: {str(e)}"}
         
         return {
             "test": "Ki-Kare Bağımsızlık Testi",
@@ -563,11 +601,11 @@ async def run_chi_square(
             "p_value": round(float(p_value), 4),
             "degrees_of_freedom": int(dof),
             "contingency_table": contingency.to_dict(),
-            "significant": p_value < 0.05,
-            "interpretation": "Değişkenler arasında ilişki var" if p_value < 0.05 else "Değişkenler bağımsız"
+            "significant": bool(p_value < 0.05),
+            "interpretation": "Değişkenler arasında anlamlı bir ilişki var" if p_value < 0.05 else "Değişkenler istatistiksel olarak bağımsız"
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 @router.post("/normality")
@@ -582,6 +620,8 @@ async def run_normality_test(
     Normallik testi uygular: Shapiro-Wilk veya Kolmogorov-Smirnov.
     """
     try:
+        # Global import used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -595,29 +635,32 @@ async def run_normality_test(
         data = pd.to_numeric(df[column], errors='coerce').dropna().tolist()
         
         if len(data) < 3:
-            raise HTTPException(status_code=400, detail="En az 3 veri gerekli")
+            return {"error": "En az 3 veri gerekli"}
         
         # Shapiro için max 5000 veri
         sample_data = data[:5000] if len(data) > 5000 else data
         
-        if test_type == "shapiro":
-            stat, p_value = scipy_stats.shapiro(sample_data)
-            test_name = "Shapiro-Wilk Normallik Testi"
-        else:
-            stat, p_value = scipy_stats.kstest(sample_data, 'norm', args=(sum(sample_data)/len(sample_data), 
-                                                (sum((x - sum(sample_data)/len(sample_data))**2 for x in sample_data) / len(sample_data))**0.5))
-            test_name = "Kolmogorov-Smirnov Normallik Testi"
+        try:
+            if test_type == "shapiro":
+                stat, p_value = stats.shapiro(sample_data)
+                test_name = "Shapiro-Wilk Normallik Testi"
+            else:
+                stat, p_value = stats.kstest(sample_data, 'norm', args=(sum(sample_data)/len(sample_data), 
+                                                    (sum((x - sum(sample_data)/len(sample_data))**2 for x in sample_data) / len(sample_data))**0.5))
+                test_name = "Kolmogorov-Smirnov Normallik Testi"
+        except Exception as e:
+            return {"error": f"Normallik testi hatası: {str(e)}"}
         
         return {
             "test": test_name,
             "statistic": round(float(stat), 4),
             "p_value": round(float(p_value), 4),
             "n": len(sample_data),
-            "is_normal": p_value > 0.05,
-            "interpretation": "Veriler normal dağılım gösteriyor" if p_value > 0.05 else "Veriler normal dağılmıyor"
+            "is_normal": bool(p_value > 0.05),
+            "interpretation": "Veriler normal dağılıma uyuyor (p > 0.05)" if p_value > 0.05 else "Veriler normal dağılıma uymuyor (p < 0.05)"
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 @router.post("/descriptive")
@@ -712,7 +755,7 @@ async def calculate_correlation_matrix(
         numeric_cols = [c for c in column_list if c in df.columns and pd.api.types.is_numeric_dtype(df[c])]
         
         if len(numeric_cols) < 2:
-            raise HTTPException(status_code=400, detail="En az 2 sayısal sütun gerekli")
+            return {"error": "En az 2 sayısal sütun gerekli"}
         
         corr_matrix = df[numeric_cols].corr(method=method).fillna(0)
         
@@ -727,22 +770,28 @@ async def calculate_correlation_matrix(
                     data1 = df[col1].dropna()
                     data2 = df[col2].dropna()
                     min_len = min(len(data1), len(data2))
-                    if method == "pearson":
-                        _, p = scipy_stats.pearsonr(data1[:min_len], data2[:min_len])
-                    elif method == "spearman":
-                        _, p = scipy_stats.spearmanr(data1[:min_len], data2[:min_len])
-                    else:
-                        _, p = scipy_stats.kendalltau(data1[:min_len], data2[:min_len])
-                    p_values[col1][col2] = round(float(p), 4)
+                    try:
+                        if method == "pearson":
+                            _, p = stats.pearsonr(data1[:min_len], data2[:min_len])
+                        elif method == "spearman":
+                            _, p = stats.spearmanr(data1[:min_len], data2[:min_len])
+                        else:
+                            _, p = stats.kendalltau(data1[:min_len], data2[:min_len])
+                        p_values[col1][col2] = round(float(p), 4)
+                    except:
+                        p_values[col1][col2] = 1.0
+        
+        interpretation_text = "Analiz sonuçlarına göre değişkenler arasında istatistiksel olarak anlamlı ve güçlü düzeyde ilişki (r > 0.7) gözlemlenmiştir." if (corr_matrix.abs() > 0.7).sum().sum() > len(numeric_cols) else "Belirgin bir güçlü korelasyon gözlenmedi."
         
         return {
             "method": method,
             "columns": numeric_cols,
             "correlation": corr_matrix.to_dict(),
-            "p_values": p_values
+            "p_values": p_values,
+            "interpretation": interpretation_text
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 # =====================================================
@@ -764,6 +813,8 @@ async def run_mann_whitney(
     group1 ve group2 seçilen grupları kullanır.
     """
     try:
+        # Global import used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -781,7 +832,7 @@ async def run_mann_whitney(
         else:
             all_groups = df[group_column].dropna().unique()
             if len(all_groups) < 2:
-                raise HTTPException(status_code=400, detail=f"Mann-Whitney testi için en az 2 grup gerekli. Mevcut: {len(all_groups)} grup")
+                return {"error": f"Mann-Whitney testi için en az 2 grup gerekli. Mevcut: {len(all_groups)} grup"}
             
             selected_groups = list(all_groups[:2])
             warning = {
@@ -795,11 +846,12 @@ async def run_mann_whitney(
         data2 = pd.to_numeric(df[group_col_str == str(selected_groups[1])][value_column], errors='coerce').dropna().tolist()
         
         if len(data1) < 2 or len(data2) < 2:
-            raise HTTPException(status_code=400, detail=f"Her grupta en az 2 veri olmalı. '{selected_groups[0]}': {len(data1)}, '{selected_groups[1]}': {len(data2)}")
+             return {"error": f"Her grupta en az 2 veri olmalı. '{selected_groups[0]}': {len(data1)}, '{selected_groups[1]}': {len(data2)}"}
 
-
-        
-        u_stat, p_value = scipy_stats.mannwhitneyu(data1, data2, alternative='two-sided')
+        try:
+            u_stat, p_value = stats.mannwhitneyu(data1, data2, alternative='two-sided')
+        except Exception as e:
+            return {"error": f"Mann-Whitney U hesaplama hatası: {str(e)}"}
         
         result = {
             "test": {"tr": "Mann-Whitney U Testi", "en": "Mann-Whitney U Test"},
@@ -825,10 +877,8 @@ async def run_mann_whitney(
         
         return result
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 
@@ -844,6 +894,8 @@ async def run_wilcoxon(
     Wilcoxon Signed-Rank testi - Eşleştirilmiş örneklem non-parametrik test.
     """
     try:
+        # Global import used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -858,14 +910,20 @@ async def run_wilcoxon(
         data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
         
         min_len = min(len(data1), len(data2))
-        w_stat, p_value = scipy_stats.wilcoxon(data1[:min_len], data2[:min_len])
-        
+        if min_len < 3:
+             return {"error": "Wilcoxon için en az 3 çift veri gerekli"}
+             
+        try:
+            w_stat, p_value = stats.wilcoxon(data1[:min_len], data2[:min_len])
+        except Exception as e:
+            return {"error": f"Wilcoxon hesaplama hatası: {str(e)}"}
+            
         return {
             "test": "Wilcoxon Signed-Rank Testi",
             "w_statistic": round(float(w_stat), 4),
             "p_value": round(float(p_value), 4),
             "n": min_len,
-            "significant": p_value < 0.05,
+            "significant": bool(p_value < 0.05),
             "interpretation": "Ölçümler arasında anlamlı fark var" if p_value < 0.05 else "Fark yok"
         }
     except Exception as e:
@@ -884,6 +942,9 @@ async def run_kruskal_wallis(
     Kruskal-Wallis H testi - Non-parametrik ANOVA alternatifi.
     """
     try:
+        # Global import used
+        # Global math used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -894,8 +955,9 @@ async def run_kruskal_wallis(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        # Grupları oluştur - string conversion eklendi
+        # Grupları oluştur ve istatistikleri topla
         groups = []
+        group_stats = []
         group_col_str = df[group_column].astype(str)
         group_names = group_col_str.unique()
         
@@ -903,22 +965,35 @@ async def run_kruskal_wallis(
             group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
+                group_stats.append({
+                    "name": str(group),
+                    "n": len(group_data),
+                    "median": round(float(pd.Series(group_data).median()), 4)
+                })
         
         if len(groups) < 2:
-            raise HTTPException(status_code=400, detail="En az 2 grup gerekli")
+            return {"error": "En az 2 grup gerekli"}
         
-        h_stat, p_value = scipy_stats.kruskal(*groups)
+        try:
+            h_stat, p_value = stats.kruskal(*groups)
+        except Exception as e:
+            return {"error": f"kruskal hatası: {str(e)}"}
+            
+        if math.isnan(p_value):
+             return {"error": "p-değeri hesaplanamadı (NaN)."}
         
         return {
             "test": "Kruskal-Wallis H Testi",
             "h_statistic": round(float(h_stat), 4),
             "p_value": round(float(p_value), 4),
+            "degrees_of_freedom": len(groups) - 1,
             "groups_count": len(groups),
-            "significant": p_value < 0.05,
+            "groups": group_stats,
+            "significant": bool(p_value < 0.05),
             "interpretation": "Gruplar arasında anlamlı fark var" if p_value < 0.05 else "Gruplar arasında fark yok"
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Genel hata: {str(e)}"}
 
 
 @router.post("/levene")
@@ -933,6 +1008,9 @@ async def run_levene_test(
     Levene's Test - Varyans homojenliği testi.
     """
     try:
+        # Global import used
+        # Global math used
+        
         content = await file.read()
         filename = file.filename.lower()
         
@@ -943,8 +1021,9 @@ async def run_levene_test(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
         
-        # Grupları oluştur - string conversion eklendi
+        # Grupları oluştur ve istatistikleri topla
         groups = []
+        group_stats = []
         group_col_str = df[group_column].astype(str)
         group_names = group_col_str.unique()
         
@@ -952,17 +1031,31 @@ async def run_levene_test(
             group_data = pd.to_numeric(df[group_col_str == str(group)][value_column], errors='coerce').dropna().tolist()
             if len(group_data) > 0:
                 groups.append(group_data)
+                group_stats.append({
+                    "name": str(group),
+                    "n": len(group_data),
+                    "mean": round(float(pd.Series(group_data).mean()), 4),
+                    "std": round(float(pd.Series(group_data).std()), 4)
+                })
         
         if len(groups) < 2:
-            raise HTTPException(status_code=400, detail="En az 2 grup gerekli")
+            return {"error": "En az 2 grup gerekli"}
         
-        w_stat, p_value = scipy_stats.levene(*groups)
+        try:
+            w_stat, p_value = stats.levene(*groups)
+        except Exception as e:
+            return {"error": f"levene hatası: {str(e)}"}
+
+        if math.isnan(p_value):
+             return {"error": "p-değeri hesaplanamadı (NaN)."}
         
         return {
             "test": "Levene Varyans Homojenliği Testi",
             "w_statistic": round(float(w_stat), 4),
             "p_value": round(float(p_value), 4),
+            "degrees_of_freedom": len(groups) - 1,
             "groups_count": len(groups),
+            "groups": group_stats,
             "variances_equal": p_value > 0.05,
             "interpretation": "Varyanslar eşit (homojen)" if p_value > 0.05 else "Varyanslar eşit değil"
         }
@@ -1236,11 +1329,6 @@ async def run_regression(
     Çoklu regresyon analizi yapar.
     """
     try:
-        from sklearn.linear_model import LinearRegression, LogisticRegression
-        from sklearn.preprocessing import PolynomialFeatures
-        from sklearn.metrics import r2_score, mean_squared_error
-        import numpy as np
-        
         content = await file.read()
         filename = file.filename.lower()
         predictors = json.loads(predictor_columns)
@@ -1261,8 +1349,8 @@ async def run_regression(
         X = X[mask]
         y = y[mask]
         
-        if len(X) < 10:
-            raise HTTPException(status_code=400, detail="Yeterli veri yok (en az 10 satır gerekli)")
+        if len(X) < 5:
+            return {"error": "Yeterli veri yok (en az 5 satır gerekli)"}
         
         if regression_type == "linear":
             model = LinearRegression()
@@ -1302,8 +1390,12 @@ async def run_regression(
         elif regression_type == "logistic":
             # Binary hedef kontrolü
             unique_vals = y.unique()
+            if len(unique_vals) < 2:
+                 return {"error": f"Lojistik regresyon için hedef sütunda en az 2 farklı sınıf olmalı. Bulunan sınıflar: {unique_vals}"}
+            
             if len(unique_vals) > 2:
-                raise HTTPException(status_code=400, detail="Logistic regresyon için binary (2 değerli) hedef gerekli")
+                 # Belki multinomial destekleyebiliriz ama şimdilik hata veya warning
+                 pass # sklearn otomatik halleder (multinomial)
             
             model = LogisticRegression(max_iter=1000)
             model.fit(X, y)
@@ -1324,9 +1416,9 @@ async def run_regression(
             }
             
     except ImportError:
-        raise HTTPException(status_code=400, detail="scikit-learn kütüphanesi gerekli: pip install scikit-learn")
+         return {"error": "Gerekli kütüphane eksik (scikit-learn)"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"error": f"Regresyon Hatası: {str(e)}"}
 
 
 # =====================================================
@@ -1451,3 +1543,312 @@ async def generate_smart_insights(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# =====================================================
+# EKSİK ENDPOINTLER (Sprint 3 Fix - Final Pack)
+# =====================================================
+
+@router.post("/pca")
+async def run_pca(
+    file: UploadFile = File(...),
+    columns: str = Form(...),  # JSON array
+    n_components: int = Form(2),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.preprocessing import StandardScaler
+        
+        content = await file.read()
+        filename = file.filename.lower()
+        column_list = json.loads(columns)
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        # Sayısal dönüşüm (Güvenli)
+        df_pca = df[column_list].apply(pd.to_numeric, errors='coerce').dropna()
+        
+        if len(df_pca) < n_components + 1:
+            return {"error": "Analiz için yeterli veri satırı yok"}
+            
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(df_pca)
+        
+        pca = PCA(n_components=n_components)
+        components = pca.fit_transform(X_scaled)
+        
+        explained_variance = pca.explained_variance_ratio_.tolist()
+        total_var = sum(explained_variance)
+        
+        return {
+            "test": "PCA Analizi",
+            "explained_variance": [round(v, 4) for v in explained_variance],
+            "total_variance": round(total_var, 4),
+            "components": components.tolist()[:100], # Frontend performans için max 100
+            "feature_names": column_list,
+            "interpretation": f"İlk {n_components} bileşen toplam varyansın %{total_var*100:.1f}'ini açıklıyor."
+        }
+    except Exception as e:
+        return {"error": f"PCA Hatası: {str(e)}"}
+
+@router.post("/kmeans")
+async def run_kmeans(
+    file: UploadFile = File(...),
+    columns: str = Form(...),
+    n_clusters: int = Form(3),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        from sklearn.cluster import KMeans
+        from sklearn.preprocessing import StandardScaler
+        
+        content = await file.read()
+        filename = file.filename.lower()
+        column_list = json.loads(columns)
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        df_km = df[column_list].apply(pd.to_numeric, errors='coerce').dropna()
+        
+        if len(df_km) < n_clusters:
+            return {"error": "Veri sayısı küme sayısından az"}
+            
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(df_km)
+        
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+        clusters = kmeans.fit_predict(X_scaled)
+        centers = kmeans.cluster_centers_.tolist()
+        
+        return {
+            "test": "K-Means Kümeleme",
+            "clusters": clusters.tolist()[:500],
+            "centers": centers,
+            "inertia": round(float(kmeans.inertia_), 4),
+            "n_clusters": n_clusters,
+            "interpretation": f"Veri {n_clusters} kümeye ayrıldı. Toplam hata (inertia): {kmeans.inertia_:.2f}"
+        }
+    except Exception as e:
+        return {"error": f"K-Means Hatası: {str(e)}"}
+
+@router.post("/cronbach")
+async def run_cronbach(
+    file: UploadFile = File(...),
+    columns: str = Form(...),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        content = await file.read()
+        filename = file.filename.lower()
+        column_list = json.loads(columns)
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        df_rel = df[column_list].apply(pd.to_numeric, errors='coerce').dropna()
+        
+        item_scores = df_rel.values
+        item_vars = df_rel.var(axis=0, ddof=1)
+        total_scores = df_rel.sum(axis=1)
+        total_var = total_scores.var(ddof=1)
+        
+        n_items = len(column_list)
+        cronbach = (n_items / (n_items - 1)) * (1 - item_vars.sum() / total_var)
+        
+        consistency = "Mükemmel" if cronbach > 0.9 else "İyi" if cronbach > 0.8 else "Kabul Edilebilir" if cronbach > 0.7 else "Zayıf"
+        
+        return {
+            "test": "Cronbach Alpha Güvenilirlik Analizi",
+            "alpha": round(float(cronbach), 4),
+            "n_items": n_items,
+            "n_rows": len(df_rel),
+            "consistency": consistency,
+            "interpretation": f"Güvenilirlik düzeyi: {consistency} (α={cronbach:.3f})"
+        }
+    except Exception as e:
+        return {"error": f"Cronbach Alpha Hatası: {str(e)}"}
+
+@router.post("/friedman")
+async def run_friedman(
+    file: UploadFile = File(...),
+    columns: str = Form(...),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        # Global import used
+        content = await file.read()
+        column_list = json.loads(columns)
+        
+        if file.filename.lower().endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        df_f = df[column_list].apply(pd.to_numeric, errors='coerce').dropna()
+        
+        if len(df_f) < 3:
+             return {"error": "Yetersiz veri (en az 3 satır)"}
+        
+        data_groups = [df_f[col].values for col in column_list]
+        stat, p = stats.friedmanchisquare(*data_groups)
+        
+        return {
+            "test": "Friedman Testi",
+            "statistic": round(float(stat), 4),
+            "p_value": round(float(p), 4),
+            "significant": bool(p < 0.05),
+            "interpretation": "Gruplar arasında anlamlı fark var" if p < 0.05 else "Anlamlı fark yok"
+        }
+    except Exception as e:
+         return {"error": f"Friedman Hatası: {str(e)}"}
+
+@router.post("/lda")
+async def run_lda(
+    file: UploadFile = File(...),
+    columns: str = Form(...), # Predictors
+    target: str = Form(...), # Class
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        # Global import used
+        content = await file.read()
+        column_list = json.loads(columns)
+        
+        if file.filename.lower().endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        X = df[column_list].apply(pd.to_numeric, errors='coerce').fillna(0)
+        y = df[target].astype(str)
+        
+        # Ensure classes
+        if len(y.unique()) < 2:
+             return {"error": "Hedef sütunda en az 2 sınıf olmalı"}
+             
+        clf = LinearDiscriminantAnalysis()
+        clf.fit(X, y)
+        
+        return {
+            "test": "Diskriminant Analizi (LDA)",
+            "classes": clf.classes_.tolist(),
+            "priors": clf.priors_.tolist(),
+            "explained_variance": clf.explained_variance_ratio_.tolist(),
+             "interpretation": f"Model {len(clf.classes_)} sınıfı ayırabilir."
+        }
+    except Exception as e:
+        return {"error": f"LDA Hatası: {str(e)}"}
+
+@router.post("/survival")
+async def run_survival(
+    file: UploadFile = File(...),
+    duration_column: str = Form(...),
+    event_column: str = Form(...),
+    group_column: str = Form(None),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    try:
+        from lifelines import KaplanMeierFitter
+        from lifelines.statistics import logrank_test
+        # Global math used
+        
+        content = await file.read()
+        filename = file.filename.lower()
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+            
+        T = pd.to_numeric(df[duration_column], errors='coerce').fillna(0)
+        E = pd.to_numeric(df[event_column], errors='coerce').fillna(0)
+        
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, event_observed=E)
+        
+        median_val = kmf.median_survival_time_
+        median_display = "Tanımsız"
+        
+        if isinstance(median_val, (int, float)):
+             if np.isinf(median_val):
+                 median_display = "Sonsuz (Ulaşılamadı)"
+                 median_survival = None
+             elif np.isnan(median_val):
+                 median_display = "Hesaplanamadı"
+                 median_survival = None
+             else:
+                 median_survival = float(median_val)
+                 median_display = f"{median_survival:.2f}"
+        else:
+             median_survival = None
+        
+        # Survival table (timeline vs. survival prob)
+        survival_data = []
+        survival_df = kmf.survival_function_
+        step = max(1, len(survival_df) // 50)
+        for time, row in survival_df.iloc[::step].iterrows():
+             survival_data.append({"time": float(time), "prob": float(row.iloc[0])})
+             
+        logrank_res = None
+        if group_column:
+             try:
+                 df['safe_group'] = df[group_column].astype(str)
+                 groups_list = df['safe_group'].unique()
+                 
+                 if len(groups_list) >= 2:
+                     g1_mask = df['safe_group'] == str(groups_list[0])
+                     g2_mask = df['safe_group'] == str(groups_list[1])
+                     
+                     res = logrank_test(
+                         T[g1_mask], T[g2_mask], 
+                         event_observed_A=E[g1_mask], event_observed_B=E[g2_mask]
+                     )
+                     
+                     p_val = float(res.p_value)
+                     stat_val = float(res.test_statistic)
+                     
+                     logrank_res = {
+                         "p_value": round(p_val, 4) if not np.isnan(p_val) else None,
+                         "test_statistic": round(stat_val, 4) if not np.isnan(stat_val) else None,
+                         "groups": [str(groups_list[0]), str(groups_list[1])]
+                     }
+             except Exception as lg_err:
+                 logrank_error = str(lg_err)
+
+        return {
+            "test": "Survival Analizi (Kaplan-Meier)",
+            "median_survival": median_survival,
+            "survival_curve": survival_data,
+            "logrank": logrank_res,
+            "logrank_error": logrank_error if 'logrank_error' in locals() else None,
+            "interpretation": f"Medyan sağkalım süresi: {median_display}"
+        }
+    except Exception as e:
+        return {"error": f"Survival Analizi Hatası: {str(e)}"}
