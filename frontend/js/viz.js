@@ -8,7 +8,7 @@
 // -----------------------------------------------------
 const VIZ_STATE = {
     // Multi-dataset yapısı
-    datasets: {},           // { "dataset_1": { file, data, columns, columnsInfo, sheets } }
+    datasets: {},           // { "dataset_1": { file, data, columns, columnsInfo, sheets, audit_log } }
     activeDatasetId: null,  // Aktif veri seti ID'si
     datasetCounter: 0,      // Dataset ID sayacı
 
@@ -56,7 +56,11 @@ const VIZ_STATE = {
     },
     addDataset(file, data, columns, columnsInfo, sheets = []) {
         const id = `dataset_${++this.datasetCounter}`;
-        this.datasets[id] = { id, file, data, columns, columnsInfo, sheets, name: file?.name || id };
+        this.datasets[id] = {
+            id, file, data, columns, columnsInfo, sheets,
+            name: file?.name || id,
+            audit_log: {} // { "column_name": { method, original_missing, filled, timestamp } }
+        };
         this.activeDatasetId = id;
         console.log(`📁 Yeni dataset eklendi: ${id} (${file?.name})`);
         return id;
@@ -8813,7 +8817,29 @@ function applyFillMissing() {
     const customVal = document.getElementById('fillMissingValue').value;
 
     saveState();
+
+    // Eksik değer sayısını al (doldurma öncesi)
+    const originalMissingCount = VIZ_STATE.data.filter(row => {
+        const val = row[col];
+        return val === '' || val === null || val === undefined || (typeof val === 'number' && isNaN(val));
+    }).length;
+
     const count = fillMissingData(col, method, customVal || null);
+
+    // Audit log kaydı ekle
+    const activeDataset = VIZ_STATE.getActiveDataset();
+    if (activeDataset) {
+        activeDataset.audit_log[col] = {
+            method: method,
+            method_label: { mean: 'Ortalama', median: 'Medyan', mode: 'Mod', zero: '0', custom: 'Özel Değer' }[method] || method,
+            original_missing: originalMissingCount,
+            filled: count,
+            custom_value: method === 'custom' ? customVal : null,
+            timestamp: Date.now()
+        };
+        console.log(`📝 Audit log güncellendi: ${col} → ${method} (${count} değer)`);
+    }
+
     showToast(`${count} eksik değer dolduruldu`, 'success');
     document.querySelector('.viz-stat-result-modal').style.display = 'none';
 }
@@ -13264,6 +13290,12 @@ async function createStatWidget(statType) {
         <div class="viz-widget-header">
             <span class="viz-widget-title">${getStatTitle(statType)}</span>
             <div class="viz-widget-actions">
+                <button class="viz-mode-toggle" onclick="toggleStatMode('${widgetId}')" title="APA/Dashboard Modu">
+                    <i class="fas fa-file-alt"></i> APA
+                </button>
+                <button class="viz-copy-btn" onclick="copyStatAsHTML('${widgetId}')" title="Word'e Kopyala">
+                    <i class="fas fa-copy"></i>
+                </button>
                 <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}')" title="Yenile">
                     <i class="fas fa-sync-alt"></i>
                 </button>
@@ -14119,6 +14151,10 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
         console.log('📊 API sonucu:', results);
         renderStatResults(widgetId, statType, results);
 
+        // Audit footer ekle - kullanılan sütunları belirle
+        const usedCols = [groupColumn, yCol].filter(Boolean);
+        addAuditFooterToWidget(widgetId, usedCols);
+
     } catch (error) {
         console.error('Stat API hatası:', error);
 
@@ -14492,3 +14528,283 @@ window.getStatTitle = getStatTitle;
 window.refreshStatWidget = refreshStatWidget;
 window.embedStatToChart = embedStatToChart;
 window.getAnalysisRequirements = getAnalysisRequirements;
+
+// =====================================================
+// AUDIT TRAIL & SMART CARD SYSTEM
+// =====================================================
+
+/**
+ * Bağlamsal audit notu üretir - sadece kullanılan sütunlar için
+ * @param {Array} usedColumns - Analizde kullanılan sütun isimleri
+ * @param {string} datasetId - Dataset ID (opsiyonel, yoksa aktif dataset)
+ * @returns {string} HTML formatında audit notu
+ */
+function generateAuditNote(usedColumns, datasetId = null) {
+    const dataset = datasetId ? VIZ_STATE.getDatasetById(datasetId) : VIZ_STATE.getActiveDataset();
+    if (!dataset || !dataset.audit_log) {
+        return '<i class="fas fa-exclamation-triangle"></i> ⚠️ Bu değişkenlere eksik veri işlemi uygulanmamıştır.';
+    }
+
+    const notes = [];
+    const processedCols = [];
+    const unprocessedCols = [];
+
+    usedColumns.forEach(col => {
+        if (dataset.audit_log[col]) {
+            const info = dataset.audit_log[col];
+            processedCols.push(col);
+            notes.push(`'${col}' (${info.original_missing} eksik → ${info.method_label})`);
+        } else {
+            unprocessedCols.push(col);
+        }
+    });
+
+    if (notes.length > 0) {
+        let html = `<i class="fas fa-info-circle"></i> Ön işleme: ${notes.join(', ')}.`;
+        if (unprocessedCols.length > 0) {
+            html += ` <span style="opacity:0.7">(${unprocessedCols.join(', ')} orijinal haliyle kullanıldı)</span>`;
+        }
+        return html;
+    } else {
+        return '<i class="fas fa-exclamation-triangle"></i> ⚠️ Bu değişkenlere eksik veri işlemi uygulanmamıştır. Ham veri kullanılmaktadır.';
+    }
+}
+
+/**
+ * Stat widget'a audit footer ekler
+ * @param {string} widgetId - Widget ID
+ * @param {Array} usedColumns - Kullanılan sütunlar
+ */
+function addAuditFooterToWidget(widgetId, usedColumns) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    // Mevcut footer varsa güncelle, yoksa ekle
+    let footer = widget.querySelector('.viz-stat-audit-footer');
+    if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'viz-stat-audit-footer';
+        widget.querySelector('.viz-widget-body, .viz-stat-body')?.after(footer);
+    }
+
+    footer.innerHTML = generateAuditNote(usedColumns);
+}
+
+/**
+ * Stat widget'ı APA moduna çevirir
+ * @param {string} widgetId - Widget ID
+ */
+function toggleStatMode(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    const isAPA = widget.classList.toggle('apa-mode');
+
+    // Toggle butonunu güncelle
+    const toggleBtn = widget.querySelector('.viz-mode-toggle');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = isAPA ?
+            '<i class="fas fa-desktop"></i> Dashboard' :
+            '<i class="fas fa-file-alt"></i> APA';
+    }
+
+    showToast(isAPA ? 'APA Rapor Modu aktif' : 'Dashboard Modu aktif', 'info');
+}
+
+/**
+ * Stat widget içeriğini APA formatında HTML olarak kopyalar
+ * @param {string} widgetId - Widget ID
+ */
+async function copyStatAsHTML(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return;
+
+    const bodyEl = widget.querySelector('.viz-widget-body, .viz-stat-body');
+    if (!bodyEl) return;
+
+    try {
+        // 1. Geçici APA versiyonu oluştur
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = bodyEl.innerHTML;
+        tempDiv.style.cssText = `
+            background: white !important; 
+            color: black !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important; 
+            padding: 15px;
+            line-height: 1.5;
+        `;
+
+        // 2. Tabloları APA formatına çevir
+        tempDiv.querySelectorAll('table').forEach(table => {
+            table.style.cssText = 'border-collapse: collapse; width: 100%; margin: 10px 0;';
+            table.querySelectorAll('th, td').forEach(cell => {
+                cell.style.cssText = 'border: none; border-bottom: 1px solid black; padding: 6px 10px; text-align: left;';
+            });
+            table.querySelectorAll('thead tr').forEach(row => {
+                row.style.borderBottom = '2px solid black';
+            });
+        });
+
+        // 3. Gereksiz stilleri ve ikonları temizle
+        tempDiv.querySelectorAll('.fas, .fab, .far').forEach(icon => {
+            icon.style.display = 'none';
+        });
+
+        // 4. Audit footer ekle
+        const footerEl = widget.querySelector('.viz-stat-audit-footer');
+        if (footerEl) {
+            const note = document.createElement('p');
+            note.style.cssText = 'font-size: 10pt; font-style: italic; margin-top: 15px; color: #666;';
+            note.textContent = footerEl.textContent.replace(/[^\w\sçğıöşüÇĞİÖŞÜ.,():→]/gi, '').trim();
+            tempDiv.appendChild(note);
+        }
+
+        document.body.appendChild(tempDiv);
+
+        // 5. Selection API ile kopyala
+        const range = document.createRange();
+        range.selectNodeContents(tempDiv);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        // Kopyala
+        document.execCommand('copy');
+
+        selection.removeAllRanges();
+        document.body.removeChild(tempDiv);
+
+        showToast('📋 APA formatında kopyalandı (Word\'e yapıştırabilirsiniz)', 'success');
+    } catch (error) {
+        console.error('Kopyalama hatası:', error);
+        showToast('Kopyalama hatası: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Grafik widget'a audit footer ekler
+ * @param {string} chartId - Chart ID
+ * @param {object} config - Chart config (x, y eksen bilgileri)
+ */
+function addAuditFooterToChart(chartId, config) {
+    const widget = document.querySelector(`[data-chart-id="${chartId}"]`);
+    if (!widget) return;
+
+    const usedColumns = [config.xAxis, config.yAxis].filter(Boolean);
+
+    let footer = widget.querySelector('.viz-chart-audit-footer');
+    if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'viz-chart-audit-footer viz-stat-audit-footer';
+        widget.appendChild(footer);
+    }
+
+    footer.innerHTML = generateAuditNote(usedColumns);
+}
+
+// Audit CSS stillerini dinamik olarak ekle
+(function addAuditStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Audit Footer Stilleri */
+        .viz-stat-audit-footer,
+        .viz-chart-audit-footer {
+            font-size: 0.75rem;
+            color: var(--text-muted, #888);
+            padding: 8px 12px;
+            border-top: 1px solid var(--border-color, rgba(255,255,255,0.1));
+            background: var(--bg-subtle, rgba(0,0,0,0.1));
+            border-radius: 0 0 8px 8px;
+            margin-top: auto;
+        }
+
+        .viz-stat-audit-footer i,
+        .viz-chart-audit-footer i {
+            margin-right: 6px;
+            opacity: 0.8;
+        }
+
+        /* APA Mode Stilleri */
+        .viz-stat-widget.apa-mode,
+        .viz-chart-widget.apa-mode {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: 1px solid #000 !important;
+        }
+
+        .viz-stat-widget.apa-mode .viz-widget-header,
+        .viz-stat-widget.apa-mode .viz-stat-params {
+            display: none !important;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-table th,
+        .viz-stat-widget.apa-mode .viz-stat-table td {
+            border: none;
+            border-bottom: 1px solid #000;
+            padding: 4px 8px;
+            text-align: left;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-table thead tr {
+            border-bottom: 2px solid #000;
+        }
+
+        .viz-stat-widget.apa-mode .viz-stat-audit-footer {
+            background: transparent;
+            border-top: 1px solid #000;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Smart Copy Button Stilleri */
+        .viz-copy-btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            background: var(--bg-card, #2a2a3e);
+            border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+            color: var(--text-primary, #fff);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .viz-copy-btn:hover {
+            background: var(--primary, #4a90d9);
+        }
+
+        /* Mode Toggle Button */
+        .viz-mode-toggle {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            background: transparent;
+            border: 1px solid var(--border-color, rgba(255,255,255,0.2));
+            color: var(--text-muted, #888);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .viz-mode-toggle:hover {
+            border-color: var(--primary, #4a90d9);
+            color: var(--primary, #4a90d9);
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// Global exports for Audit Trail System
+window.generateAuditNote = generateAuditNote;
+window.addAuditFooterToWidget = addAuditFooterToWidget;
+window.addAuditFooterToChart = addAuditFooterToChart;
+window.toggleStatMode = toggleStatMode;
+window.copyStatAsHTML = copyStatAsHTML;
