@@ -637,8 +637,8 @@ async def run_normality_test(
         if len(data) < 3:
             return {"error": "En az 3 veri gerekli"}
         
-        # Shapiro için max 5000 veri
-        sample_data = data[:5000] if len(data) > 5000 else data
+        # Limit kaldırıldı (kullanıcı isteği)
+        sample_data = data
         
         try:
             if test_type == "shapiro":
@@ -1056,7 +1056,7 @@ async def run_levene_test(
             "degrees_of_freedom": len(groups) - 1,
             "groups_count": len(groups),
             "groups": group_stats,
-            "variances_equal": p_value > 0.05,
+            "variances_equal": bool(p_value > 0.05),
             "interpretation": "Varyanslar eşit (homojen)" if p_value > 0.05 else "Varyanslar eşit değil"
         }
     except Exception as e:
@@ -1748,7 +1748,7 @@ async def run_lda(
         
         # Ensure classes
         if len(y.unique()) < 2:
-             return {"error": "Hedef sütunda en az 2 sınıf olmalı"}
+             return {"error": f"LDA için hedef sütunda en az 2 farklı sınıf olmalı. Bulunan sınıflar: {y.unique()}."}
              
         clf = LinearDiscriminantAnalysis()
         clf.fit(X, y)
@@ -1852,3 +1852,292 @@ async def run_survival(
         }
     except Exception as e:
         return {"error": f"Survival Analizi Hatası: {str(e)}"}
+
+# --- Tam Implementasyonlar ---
+@router.post("/time-series")
+async def run_time_series(
+    file: UploadFile = File(...),
+    date_column: str = Form(...),
+    value_column: str = Form(...),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    """
+    Zaman Serisi Analizi - Trend, mevsimsellik ve istatistikler.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename.lower()
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+        
+        # Tarih sütununu parse et
+        try:
+            df['_date'] = pd.to_datetime(df[date_column], errors='coerce')
+        except:
+            return {"error": f"Tarih sütunu '{date_column}' geçerli tarih formatına çevrilemiyor."}
+        
+        # Değer sütununu sayısala çevir
+        df['_value'] = pd.to_numeric(df[value_column], errors='coerce')
+        
+        # Geçersiz değerleri temizle
+        df_clean = df.dropna(subset=['_date', '_value']).sort_values('_date')
+        
+        if len(df_clean) < 5:
+            return {"error": "Zaman serisi analizi için en az 5 geçerli veri noktası gerekli."}
+        
+        values = df_clean['_value'].values
+        n = len(values)
+        
+        # Temel istatistikler
+        mean_val = float(np.mean(values))
+        std_val = float(np.std(values))
+        
+        # Trend analizi (basit lineer regresyon)
+        x = np.arange(n)
+        slope, intercept = np.polyfit(x, values, 1)
+        trend_direction = "Yukarı" if slope > 0.01 * std_val else ("Aşağı" if slope < -0.01 * std_val else "Stabil")
+        
+        # Hareketli ortalama
+        window_size = min(7, n // 3) if n >= 9 else 3
+        rolling_mean = pd.Series(values).rolling(window=window_size, min_periods=1).mean().tolist()
+        
+        # Mevsimsellik tespiti (basit otokorelasyon)
+        if n >= 14:
+            autocorr_7 = float(pd.Series(values).autocorr(lag=7)) if n > 7 else 0
+            seasonality = "Haftalık döngü tespit edildi" if abs(autocorr_7) > 0.3 else "Belirgin mevsimsellik yok"
+        else:
+            autocorr_7 = None
+            seasonality = "Mevsimsellik için yetersiz veri"
+        
+        # Volatilite
+        volatility = float(std_val / mean_val * 100) if mean_val != 0 else 0
+        
+        return {
+            "test": "Zaman Serisi Analizi",
+            "n": n,
+            "date_range": {
+                "start": str(df_clean['_date'].min()),
+                "end": str(df_clean['_date'].max())
+            },
+            "statistics": {
+                "mean": round(mean_val, 4),
+                "std": round(std_val, 4),
+                "min": round(float(values.min()), 4),
+                "max": round(float(values.max()), 4)
+            },
+            "trend": {
+                "direction": trend_direction,
+                "slope": round(float(slope), 6),
+                "slope_percent": round(float(slope / mean_val * 100), 2) if mean_val != 0 else 0
+            },
+            "seasonality": seasonality,
+            "volatility_percent": round(volatility, 2),
+            "rolling_mean": [round(v, 4) for v in rolling_mean[-20:]],  # Son 20 değer
+            "interpretation": f"Trend: {trend_direction}. {seasonality}. Volatilite: %{round(volatility, 1)}"
+        }
+    except Exception as e:
+        return {"error": f"Zaman Serisi Hatası: {str(e)}"}
+
+
+@router.post("/apa-report")
+async def run_apa_report(
+    file: UploadFile = File(...),
+    columns: str = Form(None),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    """
+    APA Formatında İstatistik Raporu.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename.lower()
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+        
+        # Sayısal sütunları bul
+        if columns:
+            try:
+                col_list = json.loads(columns)
+            except:
+                col_list = [columns]
+        else:
+            col_list = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        if len(col_list) == 0:
+            return {"error": "Rapor için en az bir sayısal sütun gerekli."}
+        
+        # APA formatında istatistikler
+        apa_sections = []
+        descriptive_table = []
+        
+        for col in col_list:
+            if col not in df.columns:
+                continue
+            
+            data = pd.to_numeric(df[col], errors='coerce').dropna()
+            if len(data) == 0:
+                continue
+            
+            n = len(data)
+            mean = float(data.mean())
+            std = float(data.std())
+            se = std / np.sqrt(n)  # Standard error
+            median = float(data.median())
+            
+            # APA format: M = X.XX, SD = X.XX, n = X
+            apa_text = f"{col}: M = {mean:.2f}, SD = {std:.2f}, n = {n}"
+            apa_sections.append(apa_text)
+            
+            descriptive_table.append({
+                "variable": col,
+                "n": n,
+                "mean": round(mean, 2),
+                "sd": round(std, 2),
+                "se": round(se, 2),
+                "median": round(median, 2),
+                "min": round(float(data.min()), 2),
+                "max": round(float(data.max()), 2)
+            })
+        
+        # Korelasyon matrisi (2+ değişken varsa)
+        correlation_text = ""
+        if len(col_list) >= 2:
+            numeric_df = df[col_list].apply(pd.to_numeric, errors='coerce').dropna()
+            if len(numeric_df) > 2:
+                corr_matrix = numeric_df.corr()
+                # En güçlü korelasyonu bul
+                max_corr = 0
+                max_pair = ("", "")
+                for i, c1 in enumerate(col_list):
+                    for j, c2 in enumerate(col_list):
+                        if i < j and c1 in corr_matrix.columns and c2 in corr_matrix.columns:
+                            r = abs(corr_matrix.loc[c1, c2])
+                            if r > max_corr:
+                                max_corr = r
+                                max_pair = (c1, c2)
+                                corr_sign = "+" if corr_matrix.loc[c1, c2] > 0 else "-"
+                
+                if max_corr > 0.3:
+                    correlation_text = f"En güçlü korelasyon: {max_pair[0]} ve {max_pair[1]} (r = {corr_sign}{max_corr:.2f})"
+        
+        # APA paragrafı oluştur
+        full_report = "Betimsel İstatistikler\\n\\n"
+        full_report += "\\n".join(apa_sections)
+        if correlation_text:
+            full_report += f"\\n\\n{correlation_text}"
+        
+        return {
+            "test": "APA İstatistik Raporu",
+            "n_variables": len(descriptive_table),
+            "total_observations": len(df),
+            "apa_summary": apa_sections,
+            "descriptive_table": descriptive_table,
+            "correlation_note": correlation_text if correlation_text else None,
+            "interpretation": f"{len(descriptive_table)} değişken için APA formatında betimsel istatistikler hazırlandı."
+        }
+    except Exception as e:
+        return {"error": f"APA Raporu Hatası: {str(e)}"}
+
+
+@router.post("/power-analysis")
+async def run_power_analysis(
+    file: UploadFile = File(...),
+    column: str = Form(None),
+    effect_size: float = Form(0.5),
+    alpha: float = Form(0.05),
+    power: float = Form(0.8),
+    sheet_name: str = Form(None),
+    header_row: int = Form(0)
+):
+    """
+    İstatistiksel Güç Analizi - Örneklem büyüklüğü hesaplama.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename.lower()
+        
+        if filename.endswith(".csv"):
+            df = pd.read_csv(BytesIO(content), header=header_row)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row)
+        
+        # Mevcut örneklem büyüklüğü
+        current_n = len(df)
+        
+        # Eğer sütun belirtilmişse, o sütundan etki büyüklüğü hesapla
+        calculated_d = None
+        if column and column in df.columns:
+            data = pd.to_numeric(df[column], errors='coerce').dropna()
+            if len(data) > 1:
+                # Cohen's d (örneklem ortalaması ile 0 karşılaştırması)
+                mean = float(data.mean())
+                std = float(data.std())
+                if std > 0:
+                    calculated_d = abs(mean / std)
+        
+        # Kullanılacak etki büyüklüğü
+        d = calculated_d if calculated_d else effect_size
+        
+        # Kritik z değerleri
+        z_alpha = stats.norm.ppf(1 - alpha / 2)  # İki kuyruklu
+        z_beta = stats.norm.ppf(power)
+        
+        # Gerekli örneklem büyüklüğü (iki grup t-test için)
+        required_n_per_group = int(np.ceil(2 * ((z_alpha + z_beta) / d) ** 2))
+        total_required = required_n_per_group * 2
+        
+        # Mevcut örneklemle ulaşılan güç
+        if current_n > 0 and d > 0:
+            achieved_z = d * np.sqrt(current_n / 2) - z_alpha
+            achieved_power = float(stats.norm.cdf(achieved_z))
+        else:
+            achieved_power = 0
+        
+        # Etki büyüklüğü yorumu
+        if d < 0.2:
+            effect_interpretation = "Çok küçük etki"
+        elif d < 0.5:
+            effect_interpretation = "Küçük etki"
+        elif d < 0.8:
+            effect_interpretation = "Orta etki"
+        else:
+            effect_interpretation = "Büyük etki"
+        
+        # Yeterlilik durumu
+        is_adequate = current_n >= total_required
+        
+        return {
+            "test": "İstatistiksel Güç Analizi",
+            "parameters": {
+                "effect_size_d": round(d, 3),
+                "alpha": alpha,
+                "target_power": power
+            },
+            "sample_size": {
+                "current": current_n,
+                "required_per_group": required_n_per_group,
+                "total_required": total_required,
+                "is_adequate": is_adequate
+            },
+            "achieved_power": round(achieved_power, 3),
+            "effect_interpretation": effect_interpretation,
+            "calculated_from_data": calculated_d is not None,
+            "interpretation": f"Mevcut örneklem ({current_n}) ile ulaşılan güç: {achieved_power:.1%}. " +
+                            (f"Yeterli örneklem." if is_adequate else f"Hedef güç için en az {total_required} gözlem gerekli.")
+        }
+    except Exception as e:
+        return {"error": f"Güç Analizi Hatası: {str(e)}"}

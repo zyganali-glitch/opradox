@@ -13076,9 +13076,17 @@ function generateStatUIByType(widgetId, statType, analysisInfo, dataset) {
         // TYPE_E: Tek Sütun (Normality, Frequency, Descriptive, APA, Power)
         case 'TYPE_E':
             const useX = analysisInfo.needsX;
-            const colsToUse = useX ?
-                (analysisInfo.columnTypes?.includes('categorical') ? categoricalCols : allCols) :
-                (numericCols.length > 0 ? numericCols : allCols);
+            // columnTypes hem categorical hem numeric içeriyorsa allCols kullan
+            let colsToUse;
+            if (analysisInfo.columnTypes?.includes('categorical') && analysisInfo.columnTypes?.includes('numeric')) {
+                colsToUse = allCols; // Her iki tip de izinli - tüm sütunları göster
+            } else if (useX) {
+                colsToUse = analysisInfo.columnTypes?.includes('categorical') ?
+                    (categoricalCols.length > 0 ? categoricalCols : allCols) :
+                    allCols;
+            } else {
+                colsToUse = numericCols.length > 0 ? numericCols : allCols;
+            }
 
             html += `
                 <div class="viz-stat-selectors">
@@ -13470,7 +13478,7 @@ function getAnalysisRequirements(statType) {
             needsGroupSelection: false,
             minColumns: 1,
             maxColumns: 1,
-            columnTypes: ['categorical'],
+            columnTypes: ['categorical', 'numeric'],
             description: 'X sütunundaki tüm kategorilerin frekansını ve yüzdesini hesaplar.',
             descriptionEn: 'Calculates frequency and percentage of all categories in X column.'
         },
@@ -13850,8 +13858,12 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
         'cronbach': `${API_BASE}/viz/cronbach`,
         'friedman': `${API_BASE}/viz/friedman`,
         'lda': `${API_BASE}/viz/lda`,
+        'discriminant': `${API_BASE}/viz/lda`, // Alias
         'survival': `${API_BASE}/viz/survival`,
-        'smart-insights': `${API_BASE}/viz/smart-insights`
+        'smart-insights': `${API_BASE}/viz/smart-insights`,
+        'apa': `${API_BASE}/viz/apa-report`,
+        'power': `${API_BASE}/viz/power-analysis`,
+        'timeseries': `${API_BASE}/viz/time-series`
     };
 
 
@@ -14053,6 +14065,27 @@ async function runStatForWidget(widgetId, statType, datasetId, xCol = null, yCol
                 if (survGroup) formData.append('group_column', survGroup);
                 break;
 
+            case 'timeseries':
+                // Zaman Serisi: X=tarih, Y=değer
+                formData.append('date_column', groupColumn);
+                formData.append('value_column', yCol);
+                break;
+
+            case 'apa':
+                // APA Raporu: tüm sayısal sütunlar veya seçili sütun
+                if (yCol) formData.append('columns', JSON.stringify([yCol]));
+                break;
+
+            case 'power':
+                // Güç Analizi: sütun + parametreler
+                if (yCol) formData.append('column', yCol);
+                const effectSize = document.getElementById(`${widgetId}_effectSize`)?.value || 0.5;
+                const alpha = document.getElementById(`${widgetId}_alpha`)?.value || 0.05;
+                formData.append('effect_size', effectSize);
+                formData.append('alpha', alpha);
+                formData.append('power', 0.8);
+                break;
+
             default:
                 formData.append('columns', JSON.stringify([yCol]));
                 if (groupColumn) {
@@ -14209,7 +14242,12 @@ function renderStatResults(widgetId, statType, results) {
 
     // Hata kontrolü
     if (results.error || results.detail) {
-        bodyEl.innerHTML = `<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> ${results.error || results.detail}</div>`;
+        let errorMsg = results.error || results.detail;
+        // Eğer hata bir objeyse string'e çevir
+        if (typeof errorMsg === 'object') {
+            errorMsg = errorMsg.message || errorMsg.msg || JSON.stringify(errorMsg);
+        }
+        bodyEl.innerHTML = `<div class="viz-stat-error"><i class="fas fa-exclamation-circle"></i> ${errorMsg}</div>`;
         return;
     }
 
