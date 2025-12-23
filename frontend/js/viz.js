@@ -713,13 +713,9 @@ function setupDragAndDrop() {
         });
     });
 
-    // İstatistik butonları için drag (data-stat-type attribute'u olanlar)
-    document.querySelectorAll('.viz-stat-btn[data-stat-type]').forEach(el => {
-        el.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('statType', el.dataset.statType);
-            console.log('📊 Stat drag başladı:', el.dataset.statType);
-        });
-    });
+    // NOT: İstatistik butonları için drag initStatDragDropSystem'de (satır 8531) handle ediliyor
+    // Burada tekrar eklemek duplicate event'e neden oluyordu
+
 
     // Dashboard drop - hem chart hem stat tiplerini destekle
     const dashboard = document.getElementById('vizDashboardGrid');
@@ -738,17 +734,17 @@ function setupDragAndDrop() {
             dashboard.classList.remove('drag-over');
 
             const chartType = e.dataTransfer.getData('chartType');
-            const statType = e.dataTransfer.getData('statType');
+            // NOT: statType burada işlenmiyor - initStatDragDropSystem (satır 8512) zaten stat widget'ları handle ediyor
+            // İkinci kez handle etmek duplicate widget oluşturuyordu
 
             if (chartType) {
                 addChart(chartType);
-            } else if (statType) {
-                console.log('📊 Stat widget oluşturuluyor:', statType);
-                createStatWidget(statType);
             }
+            // statType kontrolü KALDIRILDI - duplicate önleme
         });
     }
 }
+
 
 // -----------------------------------------------------
 // FILE HANDLING
