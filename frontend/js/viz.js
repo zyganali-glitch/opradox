@@ -127,6 +127,12 @@ const VIZ_TEXTS = {
         file_loaded: 'Dosya yüklendi',
         error: 'Hata',
         chart_added: 'Grafik eklendi',
+        // Çoklu Y Ekseni ve Dual Axis
+        y_axes: 'Y Eksenleri (Değerler)',
+        multi_select_hint: 'Ctrl+Click ile çoklu seçim',
+        use_right_axis: 'İkinci seriyi sağ eksende göster',
+        right_axis_column: 'Sağ Eksen Sütunu',
+        scatter_x_hint: 'Scatter için çoklu X seçimi aktif (Ctrl+Click)',
         // Faz 1 yeni metinler
         export_png: 'PNG olarak indir',
         export_pdf: 'PDF olarak indir',
@@ -514,7 +520,13 @@ const VIZ_TEXTS = {
         select_dataset: 'Dataset',
         theme_changed: 'Theme changed',
         pdf_generating: 'Generating PDF...',
-        pdf_ready: 'PDF ready'
+        pdf_ready: 'PDF ready',
+        // Multi-series Y axis and Dual Axis
+        y_axes: 'Y Axes (Values)',
+        multi_select_hint: 'Ctrl+Click for multiple selection',
+        use_right_axis: 'Show second series on right axis',
+        right_axis_column: 'Right Axis Column',
+        scatter_x_hint: 'Multi-X selection enabled for Scatter (Ctrl+Click)'
     }
 };
 
@@ -1053,14 +1065,41 @@ function renderColumnsList() {
         return;
     }
 
-    container.innerHTML = VIZ_STATE.columns.map((col, i) => {
-        const info = VIZ_STATE.columnsInfo[i] || {};
-        const typeIcon = info.type === 'numeric' ? 'fa-hashtag' :
-            info.type === 'date' ? 'fa-calendar' : 'fa-font';
+    // Helper function to detect column type
+    const detectColType = (col) => {
+        const dataset = VIZ_STATE.getActiveDataset();
+        if (!dataset || !dataset.data) return 'text';
+
+        const sampleValues = dataset.data.slice(0, 10).map(r => r[col]).filter(v => v != null && v !== '');
+        let numericCount = 0, dateCount = 0;
+
+        sampleValues.forEach(v => {
+            if (!isNaN(parseFloat(v)) && isFinite(v)) numericCount++;
+            else if (!isNaN(Date.parse(v))) dateCount++;
+        });
+
+        if (sampleValues.length === 0) return 'empty';
+        if (numericCount / sampleValues.length > 0.7) return 'numeric';
+        if (dateCount / sampleValues.length > 0.7) return 'date';
+        return 'text';
+    };
+
+    const typeStyles = {
+        'numeric': { icon: 'fa-hashtag', color: '#3b82f6', label: 'Sayı' },
+        'date': { icon: 'fa-calendar', color: '#8b5cf6', label: 'Tarih' },
+        'text': { icon: 'fa-font', color: '#10b981', label: 'Metin' },
+        'empty': { icon: 'fa-minus', color: '#6b7280', label: 'Boş' }
+    };
+
+    container.innerHTML = VIZ_STATE.columns.map((col) => {
+        const type = detectColType(col);
+        const style = typeStyles[type] || typeStyles['text'];
         return `
-            <div class="viz-column-chip" draggable="true" data-column="${col}" title="${info.type || 'text'}">
-                <i class="fas ${typeIcon}"></i>
-                <span>${col}</span>
+            <div class="viz-column-chip" draggable="true" data-column="${col}" data-type="${type}" 
+                 style="border-left: 3px solid ${style.color};" title="${col} (${style.label})">
+                <i class="fas ${style.icon}" style="color: ${style.color};"></i>
+                <span class="viz-col-name">${col}</span>
+                <span class="viz-col-type" style="font-size:0.6rem; color:var(--gm-text-muted); margin-left:auto;">${style.label}</span>
             </div>
         `;
     }).join('');
@@ -1076,12 +1115,26 @@ function renderColumnsList() {
 function updateDropdowns() {
     const xSelect = document.getElementById('chartXAxis');
     const ySelect = document.getElementById('chartYAxis');
+    const y2Select = document.getElementById('chartY2Axis');
 
     const optionsHtml = '<option value="">Seçin...</option>' +
         VIZ_STATE.columns.map(col => `<option value="${col}">${col}</option>`).join('');
 
     if (xSelect) xSelect.innerHTML = optionsHtml;
     if (ySelect) ySelect.innerHTML = optionsHtml;
+    if (y2Select) {
+        y2Select.innerHTML = '<option value="">Otomatik (seçilen 2. sütun)</option>' +
+            VIZ_STATE.columns.map(col => `<option value="${col}">${col}</option>`).join('');
+    }
+
+    // Dual axis toggle listener
+    const useDualAxis = document.getElementById('useDualAxis');
+    const y2AxisWrapper = document.getElementById('y2AxisWrapper');
+    if (useDualAxis && y2AxisWrapper) {
+        useDualAxis.onchange = function () {
+            y2AxisWrapper.style.display = this.checked ? 'block' : 'none';
+        };
+    }
 }
 
 // -----------------------------------------------------
@@ -1180,6 +1233,9 @@ function addChart(type = 'bar') {
         title: `Grafik ${VIZ_STATE.chartCounter}`,
         xAxis: VIZ_STATE.columns[0] || '',
         yAxis: VIZ_STATE.columns[1] || VIZ_STATE.columns[0] || '',
+        yAxes: [VIZ_STATE.columns[1] || VIZ_STATE.columns[0] || ''], // Multi-series Y desteği
+        y2Axis: null,           // Dual axis için ikinci Y
+        useDualAxis: false,     // Dual axis toggle
         aggregation: 'sum',
         color: '#4a90d9',
         dataLimit: 20,  // Varsayılan veri limiti (0 = sınırsız)
@@ -1441,10 +1497,18 @@ function renderChart(config) {
         : VIZ_STATE.getActiveDataset();
     const chartData = dataset?.data || VIZ_STATE.data || [];
 
-    // Veri aggregation
+    // Veri aggregation - Çoklu Y Ekseni Desteği
     let xData, yData;
+    let multiSeriesData = []; // Çoklu seri için veri yapısı
+    const yColumns = config.yAxes || [config.yAxis]; // Geriye uyumlu
 
-    if (chartData && chartData.length > 0 && config.xAxis && config.yAxis) {
+    // Renk paleti (çoklu seri için)
+    const colorPalette = [
+        config.color || '#4a90d9', '#00d97e', '#f6c23e', '#e74a3b', '#36b9cc',
+        '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+    ];
+
+    if (chartData && chartData.length > 0 && config.xAxis && yColumns.length > 0) {
         // Cross-filter uygula
         let filteredData = chartData;
         if (VIZ_STATE.crossFilterEnabled && VIZ_STATE.crossFilterValue) {
@@ -1453,18 +1517,38 @@ function renderChart(config) {
             );
         }
 
-        const aggregated = aggregateData(filteredData, config.xAxis, config.yAxis, config.aggregation, config.dataLimit || 20);
-        xData = aggregated.categories;
-        yData = aggregated.values;
+        // Her Y sütunu için ayrı aggregation yap
+        yColumns.forEach((yCol, idx) => {
+            if (!yCol) return;
+            const aggregated = aggregateData(filteredData, config.xAxis, yCol, config.aggregation, config.dataLimit || 20);
 
-        // What-If Simulator - çarpan SADECE SEÇİLİ GRAFİĞE uygula
-        if (VIZ_STATE.whatIfMultiplier && VIZ_STATE.whatIfMultiplier !== 1 && config.id === VIZ_STATE.selectedChart) {
-            yData = yData.map(v => v * VIZ_STATE.whatIfMultiplier);
-        }
+            // İlk seriden X verisini al (tüm seriler aynı X'i kullanır)
+            if (idx === 0) {
+                xData = aggregated.categories;
+            }
+
+            let values = aggregated.values;
+
+            // What-If Simulator - çarpan SADECE SEÇİLİ GRAFİĞE uygula
+            if (VIZ_STATE.whatIfMultiplier && VIZ_STATE.whatIfMultiplier !== 1 && config.id === VIZ_STATE.selectedChart) {
+                values = values.map(v => v * VIZ_STATE.whatIfMultiplier);
+            }
+
+            multiSeriesData.push({
+                name: yCol,
+                values: values,
+                color: colorPalette[idx % colorPalette.length],
+                yAxisIndex: config.useDualAxis && idx > 0 ? 1 : 0
+            });
+        });
+
+        // Geriye uyumluluk için ilk serinin değerlerini yData'ya ata
+        yData = multiSeriesData[0]?.values || [];
     } else {
         // Demo veri
         xData = ['A', 'B', 'C', 'D', 'E'];
         yData = [120, 200, 150, 80, 70];
+        multiSeriesData = [{ name: 'Demo', values: yData, color: config.color, yAxisIndex: 0 }];
     }
 
 
@@ -1472,9 +1556,22 @@ function renderChart(config) {
 
     switch (config.type) {
         case 'bar':
+            // Çoklu seri için series array oluştur
+            const barSeries = multiSeriesData.map((s, idx) => ({
+                name: s.name,
+                type: 'bar',
+                data: s.values,
+                yAxisIndex: s.yAxisIndex,
+                itemStyle: { color: s.color }
+            }));
+
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                legend: multiSeriesData.length > 1 ? {
+                    top: 30,
+                    data: multiSeriesData.map(s => s.name)
+                } : undefined,
                 xAxis: {
                     type: 'category',
                     data: xData,
@@ -1491,21 +1588,38 @@ function renderChart(config) {
                         }
                     }
                 },
-                yAxis: {
+                yAxis: config.useDualAxis && multiSeriesData.length > 1 ? [
+                    { type: 'value', name: multiSeriesData[0]?.name || 'Sol Eksen', position: 'left', nameLocation: 'middle', nameGap: 50 },
+                    { type: 'value', name: multiSeriesData[1]?.name || 'Sağ Eksen', position: 'right', nameLocation: 'middle', nameGap: 50 }
+                ] : {
                     type: 'value',
                     name: config.yAxis || '',
                     nameLocation: 'middle',
                     nameGap: 50
                 },
-                grid: { bottom: 120, left: 80, right: 20 },
-                series: [{ data: yData, type: 'bar', itemStyle: { color: config.color } }]
+                grid: { bottom: 120, left: 80, right: config.useDualAxis ? 80 : 20, top: multiSeriesData.length > 1 ? 60 : 40 },
+                series: barSeries
             };
             break;
 
         case 'line':
+            // Çoklu seri için series array oluştur
+            const lineSeries = multiSeriesData.map((s, idx) => ({
+                name: s.name,
+                type: 'line',
+                data: s.values,
+                yAxisIndex: s.yAxisIndex,
+                smooth: true,
+                itemStyle: { color: s.color }
+            }));
+
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'axis' },
+                legend: multiSeriesData.length > 1 ? {
+                    top: 30,
+                    data: multiSeriesData.map(s => s.name)
+                } : undefined,
                 xAxis: {
                     type: 'category',
                     data: xData,
@@ -1521,14 +1635,17 @@ function renderChart(config) {
                         }
                     }
                 },
-                yAxis: {
+                yAxis: config.useDualAxis && multiSeriesData.length > 1 ? [
+                    { type: 'value', name: multiSeriesData[0]?.name || 'Sol Eksen', position: 'left', nameLocation: 'middle', nameGap: 50 },
+                    { type: 'value', name: multiSeriesData[1]?.name || 'Sağ Eksen', position: 'right', nameLocation: 'middle', nameGap: 50 }
+                ] : {
                     type: 'value',
                     name: config.yAxis || '',
                     nameLocation: 'middle',
                     nameGap: 50
                 },
-                grid: { bottom: 100, left: 80 },
-                series: [{ data: yData, type: 'line', smooth: true, itemStyle: { color: config.color } }]
+                grid: { bottom: 100, left: 80, right: config.useDualAxis ? 80 : 20, top: multiSeriesData.length > 1 ? 60 : 40 },
+                series: lineSeries
             };
             break;
 
@@ -1578,16 +1695,127 @@ function renderChart(config) {
             break;
 
         case 'scatter':
-            option = {
-                title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
-                tooltip: { trigger: 'item', formatter: (p) => `${xData[p.dataIndex]}: ${p.value[1]}` },
-                xAxis: { type: 'value', name: config.xAxis },
-                yAxis: { type: 'value', name: config.yAxis },
-                series: [{
+            // Scatter Multi-X: Her X sütunu için ayrı seri oluştur
+            // X eksenleri de çoklu seçilebilir (config.xAxes dizisi)
+            const xColumns = config.xAxes || [config.xAxis];
+            const scatterSeries = [];
+            let useCategoryAxis = false; // Kategorik X ekseni mi?
+            let categoryLabels = []; // Kategorik X için etiketler
+
+            // Chartdata'dan gerçek [x, y] koordinat çiftleri oluştur
+            xColumns.forEach((xCol, idx) => {
+                if (!xCol) return;
+
+                // Her X sütunu için Y sütunuyla eşleşen koordinat çiftleri oluştur
+                const yCol = config.yAxis || (config.yAxes && config.yAxes[0]);
+                if (!yCol) return;
+
+                // X sütununun tipini kontrol et (sayısal mı kategorik mi?)
+                const sampleXValues = chartData.slice(0, 10).map(row => row[xCol]);
+                const numericCount = sampleXValues.filter(v => !isNaN(parseFloat(v))).length;
+                const isXNumeric = numericCount > sampleXValues.length * 0.5; // %50'den fazla sayısal mı?
+
+                let scatterData;
+
+                if (isXNumeric) {
+                    // Sayısal X: Gerçek [x, y] koordinatları
+                    scatterData = chartData.map(row => {
+                        const xVal = parseFloat(row[xCol]);
+                        const yVal = parseFloat(row[yCol]);
+                        return [xVal, yVal];
+                    }).filter(d => !isNaN(d[0]) && !isNaN(d[1]));
+                } else {
+                    // Kategorik X: Index bazlı koordinat, etiket olarak kategori değeri
+                    useCategoryAxis = true;
+                    const uniqueCategories = [...new Set(chartData.map(row => String(row[xCol] || '(Boş)')))];
+                    if (idx === 0) categoryLabels = uniqueCategories;
+
+                    scatterData = chartData.map((row, rowIdx) => {
+                        const xCategory = String(row[xCol] || '(Boş)');
+                        const xIdx = uniqueCategories.indexOf(xCategory);
+                        const yVal = parseFloat(row[yCol]);
+                        return {
+                            value: [xIdx, yVal],
+                            name: xCategory
+                        };
+                    }).filter(d => !isNaN(d.value[1]));
+                }
+
+                if (scatterData.length > 0) {
+                    scatterSeries.push({
+                        name: `${xCol} vs ${yCol}`,
+                        type: 'scatter',
+                        data: scatterData,
+                        symbolSize: 10,
+                        itemStyle: { color: colorPalette[idx % colorPalette.length] }
+                    });
+                }
+            });
+
+            // Eğer hiç seri oluşturulamadıysa demo veri kullan
+            if (scatterSeries.length === 0 || scatterSeries.every(s => s.data.length === 0)) {
+                console.warn('⚠️ Scatter: Geçerli veri bulunamadı, demo veri kullanılıyor');
+                scatterSeries.length = 0; // Temizle
+                scatterSeries.push({
+                    name: 'Demo (Veri Yok)',
                     type: 'scatter',
                     data: yData.map((v, i) => [i, v]),
+                    symbolSize: 10,
                     itemStyle: { color: config.color }
-                }]
+                });
+            }
+
+            option = {
+                title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: (p) => {
+                        const xLabel = useCategoryAxis && p.data?.name ? p.data.name : (p.value[0]?.toFixed ? p.value[0].toFixed(2) : p.value[0]);
+                        const yLabel = p.value[1]?.toFixed ? p.value[1].toFixed(2) : p.value[1];
+                        return `${p.seriesName}<br/>X: ${xLabel}<br/>Y: ${yLabel}`;
+                    }
+                },
+                legend: scatterSeries.length > 1 ? {
+                    top: 30,
+                    data: scatterSeries.map(s => s.name)
+                } : undefined,
+                xAxis: useCategoryAxis ? {
+                    type: 'category',
+                    data: categoryLabels,
+                    name: xColumns.length === 1 ? xColumns[0] : 'Kategori',
+                    nameLocation: 'middle',
+                    nameGap: 30,
+                    axisLabel: {
+                        rotate: 45,
+                        interval: 0,
+                        fontSize: 9,
+                        formatter: (v) => String(v).length > 10 ? String(v).slice(0, 8) + '..' : v
+                    }
+                } : {
+                    type: 'value',
+                    name: xColumns.length === 1 ? xColumns[0] : 'X',
+                    nameLocation: 'middle',
+                    nameGap: 30
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || 'Y',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: {
+                    bottom: useCategoryAxis ? 80 : 60,
+                    left: 80,
+                    right: 40,
+                    top: scatterSeries.length > 1 ? 60 : 40
+                },
+                // DataZoom: Mouse ile zoom yapabilme
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: 0 },
+                    { type: 'inside', yAxisIndex: 0 },
+                    { type: 'slider', xAxisIndex: 0, bottom: 5, height: 20 }
+                ],
+                series: scatterSeries
             };
             break;
 
@@ -2403,11 +2631,71 @@ function showSettings(chartId) {
 
     // Form doldur
     document.getElementById('chartTitle').value = config.title;
-    document.getElementById('chartXAxis').value = config.xAxis;
-    document.getElementById('chartYAxis').value = config.yAxis;
+
+    // Scatter için X ekseni multi-select aktif et
+    const xAxisSelect = document.getElementById('chartXAxis');
+    const scatterXHint = document.getElementById('scatterXHint');
+    const isScatter = config.type === 'scatter';
+
+    if (xAxisSelect) {
+        if (isScatter) {
+            // Scatter için multi-select aktif
+            xAxisSelect.multiple = true;
+            xAxisSelect.size = 3;
+            if (scatterXHint) scatterXHint.style.display = 'block';
+
+            // Önce tüm seçimleri temizle
+            Array.from(xAxisSelect.options).forEach(opt => opt.selected = false);
+
+            // xAxes dizisindeki değerleri seç (geriye uyumlu)
+            const xAxes = config.xAxes || [config.xAxis];
+            xAxes.forEach(xCol => {
+                const opt = Array.from(xAxisSelect.options).find(o => o.value === xCol);
+                if (opt) opt.selected = true;
+            });
+        } else {
+            // Diğer tipler için tekli seçim
+            xAxisSelect.multiple = false;
+            xAxisSelect.size = 1;
+            if (scatterXHint) scatterXHint.style.display = 'none';
+            xAxisSelect.value = config.xAxis;
+        }
+    }
+
+    // Çoklu Y ekseni seçimi
+    const yAxisSelect = document.getElementById('chartYAxis');
+    if (yAxisSelect) {
+        // Önce tüm seçimleri temizle
+        Array.from(yAxisSelect.options).forEach(opt => opt.selected = false);
+
+        // yAxes dizisindeki değerleri seç (geriye uyumlu)
+        const yAxes = config.yAxes || [config.yAxis];
+        yAxes.forEach(yCol => {
+            const opt = Array.from(yAxisSelect.options).find(o => o.value === yCol);
+            if (opt) opt.selected = true;
+        });
+    }
+
+    // Dual axis toggle ve Y2 seçici
+    const useDualAxisCheck = document.getElementById('useDualAxis');
+    const y2AxisWrapper = document.getElementById('y2AxisWrapper');
+    const y2AxisSelect = document.getElementById('chartY2Axis');
+
+    if (useDualAxisCheck) {
+        useDualAxisCheck.checked = config.useDualAxis || false;
+    }
+    if (y2AxisWrapper) {
+        y2AxisWrapper.style.display = config.useDualAxis ? 'block' : 'none';
+    }
+    if (y2AxisSelect && config.y2Axis) {
+        y2AxisSelect.value = config.y2Axis;
+    }
+
     document.getElementById('chartAggregation').value = config.aggregation;
     document.getElementById('chartColor').value = config.color;
-    document.querySelector('.viz-color-preview').style.background = config.color;
+
+    const colorPreview = document.querySelector('.viz-color-preview');
+    if (colorPreview) colorPreview.style.background = config.color;
 
     // Veri limiti - yeni alan
     const dataLimitInput = document.getElementById('chartDataLimit');
@@ -2432,8 +2720,37 @@ function applyChartSettings() {
 
     // Ayarları güncelle
     config.title = document.getElementById('chartTitle').value;
-    config.xAxis = document.getElementById('chartXAxis').value;
-    config.yAxis = document.getElementById('chartYAxis').value;
+
+    // Scatter için çoklu X ekseni seçimi oku
+    const xAxisSelect = document.getElementById('chartXAxis');
+    if (xAxisSelect) {
+        if (config.type === 'scatter' && xAxisSelect.multiple) {
+            // Scatter'da çoklu X seçimi
+            const selectedXAxes = Array.from(xAxisSelect.selectedOptions).map(opt => opt.value).filter(v => v);
+            config.xAxes = selectedXAxes.length > 0 ? selectedXAxes : [config.xAxis];
+            config.xAxis = config.xAxes[0]; // Geriye uyumluluk için ilk değeri de sakla
+        } else {
+            // Tekli X seçimi
+            config.xAxis = xAxisSelect.value;
+            config.xAxes = [config.xAxis];
+        }
+    }
+
+    // Çoklu Y ekseni seçimini oku
+    const yAxisSelect = document.getElementById('chartYAxis');
+    if (yAxisSelect) {
+        const selectedYAxes = Array.from(yAxisSelect.selectedOptions).map(opt => opt.value).filter(v => v);
+        config.yAxes = selectedYAxes.length > 0 ? selectedYAxes : [config.yAxis];
+        config.yAxis = config.yAxes[0]; // Geriye uyumluluk için ilk değeri de sakla
+    }
+
+    // Dual axis ayarları
+    const useDualAxisCheck = document.getElementById('useDualAxis');
+    const y2AxisSelect = document.getElementById('chartY2Axis');
+
+    config.useDualAxis = useDualAxisCheck?.checked || false;
+    config.y2Axis = y2AxisSelect?.value || null;
+
     config.aggregation = document.getElementById('chartAggregation').value;
     config.color = document.getElementById('chartColor').value;
 
@@ -2514,7 +2831,13 @@ function showSaveMenu() {
 }
 
 function showExportMenu() {
-    // Export dropdown menü göster
+    // Use enhanced modal from viz_export_addon.js if available
+    if (typeof showExportModal === 'function') {
+        showExportModal();
+        return;
+    }
+
+    // Fallback: Export dropdown menü göster
     const menu = document.createElement('div');
     menu.className = 'viz-export-menu';
     menu.innerHTML = `
@@ -2744,13 +3067,30 @@ function getStatisticalOverlays(values, stats) {
     const showStdBand = document.getElementById('showStdBand')?.checked;
     const showTrend = document.getElementById('showTrendLine')?.checked;
 
+    // Label pozisyonlarını dinamik hesapla (üst üste binmeyi önle)
+    let labelOffset = 0;
+    const getNextOffset = () => {
+        const offset = labelOffset;
+        labelOffset += 25; // Her label 25px aralıkla
+        return offset;
+    };
+
     // Ortalama Çizgisi
     if (showMean) {
         overlays.markLines.push({
             yAxis: stats.mean,
             name: VIZ_TEXTS[VIZ_STATE.lang].stat_mean,
             lineStyle: { color: '#00d97e', type: 'solid', width: 2 },
-            label: { formatter: `μ = ${formatNumber(stats.mean)}`, position: 'end' }
+            label: {
+                formatter: `μ = ${formatNumber(stats.mean)}`,
+                position: 'insideEndTop',
+                distance: 5,
+                backgroundColor: 'rgba(0, 217, 126, 0.9)',
+                color: '#fff',
+                padding: [2, 5],
+                borderRadius: 3,
+                fontSize: 10
+            }
         });
     }
 
@@ -2760,7 +3100,16 @@ function getStatisticalOverlays(values, stats) {
             yAxis: stats.median,
             name: VIZ_TEXTS[VIZ_STATE.lang].stat_median,
             lineStyle: { color: '#ffc107', type: 'dashed', width: 2 },
-            label: { formatter: `Med = ${formatNumber(stats.median)}`, position: 'end' }
+            label: {
+                formatter: `Med = ${formatNumber(stats.median)}`,
+                position: 'insideEndBottom',
+                distance: 5,
+                backgroundColor: 'rgba(255, 193, 7, 0.9)',
+                color: '#000',
+                padding: [2, 5],
+                borderRadius: 3,
+                fontSize: 10
+            }
         });
     }
 
@@ -2778,8 +3127,8 @@ function getStatisticalOverlays(values, stats) {
 
         // Üst ve alt sınır çizgileri
         overlays.markLines.push(
-            { yAxis: upper, lineStyle: { color: '#4a90d9', type: 'dotted', width: 1 }, label: { show: false } },
-            { yAxis: lower, lineStyle: { color: '#4a90d9', type: 'dotted', width: 1 }, label: { show: false } }
+            { yAxis: upper, lineStyle: { color: '#4a90d9', type: 'dotted', width: 1 }, label: { formatter: '+1σ', position: 'start', fontSize: 9 } },
+            { yAxis: lower, lineStyle: { color: '#4a90d9', type: 'dotted', width: 1 }, label: { formatter: '-1σ', position: 'start', fontSize: 9 } }
         );
     }
 
@@ -8655,34 +9004,86 @@ function embedStatInChart(widgetId) {
         return;
     }
 
+    const widget = document.getElementById(widgetId);
     const content = document.getElementById(`${widgetId}-content`);
-    if (!content) return;
+    if (!content || !widget) return;
 
-    // Grafik'e mark annotation ekle
-    const chartInstance = VIZ_STATE.echartsInstances[VIZ_STATE.selectedChart];
-    if (chartInstance) {
-        const option = chartInstance.getOption();
+    const chartWidget = document.getElementById(VIZ_STATE.selectedChart);
+    const chartContainer = chartWidget?.querySelector('.viz-chart-container');
 
-        // Stat bilgisini graphic olarak ekle
-        if (!option.graphic) option.graphic = [];
-
-        option.graphic.push({
-            type: 'text',
-            left: 'center',
-            top: 30,
-            style: {
-                text: content.innerText.substring(0, 100),
-                fontSize: 11,
-                fill: '#666',
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                padding: 8,
-                borderRadius: 4
-            }
-        });
-
-        chartInstance.setOption(option);
-        showToast('İstatistik grafiğe eklendi', 'success');
+    if (!chartContainer) {
+        showToast('Grafik container bulunamadı', 'error');
+        return;
     }
+
+    // Widget'ı grafiğin içine taşı veya dashboard'a draggable olarak bırak
+    const embedDiv = document.createElement('div');
+    embedDiv.className = 'viz-stat-overlay-embedded';
+    embedDiv.id = `${widgetId}-embedded`;
+    embedDiv.style.cssText = `
+        position: absolute;
+        top: 40px;
+        right: 10px;
+        min-width: 120px;
+        max-width: 200px;
+        min-height: 50px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(4px);
+        border: 1px dashed var(--gm-primary);
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 0.7rem;
+        z-index: 1000;
+        cursor: move;
+        resize: both;
+        overflow: auto;
+        color: var(--gm-text);
+    `;
+
+    // Widget içeriğini kopyala
+    embedDiv.innerHTML = `
+        <div class="viz-embed-header" style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-weight:bold; font-size:0.65rem;">${widget.querySelector('.viz-stat-header span')?.textContent || 'İstatistik'}</span>
+            <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; cursor:pointer; font-size:0.6rem; opacity:0.7;">✕</button>
+        </div>
+        <div class="viz-embed-content" style="font-size:0.65rem;">${content.innerHTML}</div>
+    `;
+
+    // Drag functionality
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+
+    embedDiv.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = embedDiv.offsetLeft;
+        startTop = embedDiv.offsetTop;
+        embedDiv.style.opacity = '0.8';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        embedDiv.style.left = (startLeft + dx) + 'px';
+        embedDiv.style.top = (startTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        embedDiv.style.opacity = '1';
+    });
+
+    // Grafiğin container'ına ekle
+    chartContainer.style.position = 'relative';
+    chartContainer.appendChild(embedDiv);
+
+    // Orijinal widget'ı kaldır
+    widget.remove();
+
+    showToast('İstatistik grafiğe gömüldü (sürükleyebilir ve boyutlandırabilirsiniz)', 'success');
 }
 
 // Widget kaldır
@@ -10920,23 +11321,29 @@ function showWatermarkModal() {
             <select id="wmType">
                 <option value="text">Metin</option>
                 <option value="image">Resim</option>
+                <option value="none">Yok (Kaldır)</option>
             </select>
             
             <div id="wmTextOptions">
                 <label>Metin:</label>
-                <input type="text" id="wmText" value="Opradox" placeholder="Watermark metni">
-                <label>Font Boyutu:</label>
-                <input type="range" id="wmFontSize" min="12" max="72" value="24">
+                <input type="text" id="wmText" value="" placeholder="Watermark metni (boş bırakırsanız kaldırılır)">
+                <label>Font Boyutu: <span id="wmFontSizeVal">24</span>px</label>
+                <input type="range" id="wmFontSize" min="12" max="120" value="24" oninput="document.getElementById('wmFontSizeVal').textContent=this.value">
             </div>
             
             <div id="wmImageOptions" style="display:none;">
                 <label>Resim URL veya Yükle:</label>
                 <input type="text" id="wmImageUrl" placeholder="https://...">
                 <input type="file" id="wmImageFile" accept="image/*">
+                <label>Resim Boyutu: <span id="wmImageSizeVal">150</span>px</label>
+                <input type="range" id="wmImageSize" min="50" max="500" value="150" oninput="document.getElementById('wmImageSizeVal').textContent=this.value">
             </div>
             
-            <label>Şeffaflık:</label>
-            <input type="range" id="wmOpacity" min="0.05" max="0.5" step="0.05" value="0.15">
+            <label>Şeffaflık: <span id="wmOpacityVal">15</span>%</label>
+            <input type="range" id="wmOpacity" min="5" max="80" step="5" value="15" oninput="document.getElementById('wmOpacityVal').textContent=this.value">
+            
+            <label>Açı (Rotation): <span id="wmRotationVal">0</span>°</label>
+            <input type="range" id="wmRotation" min="-90" max="90" step="5" value="0" oninput="document.getElementById('wmRotationVal').textContent=this.value">
             
             <label>Konum:</label>
             <select id="wmPosition">
@@ -10945,10 +11352,13 @@ function showWatermarkModal() {
                 <option value="bottom-left">Sol Alt</option>
                 <option value="top-right">Sağ Üst</option>
                 <option value="top-left">Sol Üst</option>
+                <option value="tile">Döşeme (Tüm Alan)</option>
             </select>
             
-            <button class="viz-btn-primary" onclick="applyWatermark()">Uygula</button>
-            <button class="viz-btn-secondary" onclick="removeWatermark()">Kaldır</button>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="viz-btn-primary" onclick="applyWatermark(); closeStatResultModal();">Uygula</button>
+                <button class="viz-btn-secondary" onclick="removeWatermark(); closeStatResultModal();">Kaldır</button>
+            </div>
         </div>
     `;
 
@@ -10958,13 +11368,26 @@ function showWatermarkModal() {
     document.getElementById('wmType')?.addEventListener('change', (e) => {
         document.getElementById('wmTextOptions').style.display = e.target.value === 'text' ? 'block' : 'none';
         document.getElementById('wmImageOptions').style.display = e.target.value === 'image' ? 'block' : 'none';
+        if (e.target.value === 'none') {
+            removeWatermark();
+        }
     });
 }
 
 function applyWatermark() {
-    const type = document.getElementById('wmType').value;
-    const opacity = parseFloat(document.getElementById('wmOpacity').value);
-    const position = document.getElementById('wmPosition').value;
+    const type = document.getElementById('wmType')?.value;
+
+    // "Yok" seçildiyse veya metin boşsa kaldır
+    if (type === 'none') {
+        removeWatermark();
+        showToast('Watermark kaldırıldı', 'info');
+        return;
+    }
+
+    const opacityPercent = parseFloat(document.getElementById('wmOpacity')?.value || 15);
+    const opacity = opacityPercent / 100;
+    const position = document.getElementById('wmPosition')?.value || 'center';
+    const rotation = parseInt(document.getElementById('wmRotation')?.value || 0);
 
     // Mevcut watermark'ı kaldır
     removeWatermark();
@@ -10976,26 +11399,55 @@ function applyWatermark() {
     wmElement.id = 'vizWatermark';
     wmElement.className = 'viz-watermark viz-watermark-' + position;
     wmElement.style.opacity = opacity;
+    wmElement.style.transform = `rotate(${rotation}deg)`;
+    wmElement.style.pointerEvents = 'none';
+    wmElement.style.userSelect = 'none';
 
     if (type === 'text') {
-        const text = document.getElementById('wmText').value || 'Opradox';
-        const fontSize = document.getElementById('wmFontSize').value + 'px';
+        const text = document.getElementById('wmText')?.value?.trim();
+        if (!text) {
+            showToast('Watermark metni giriniz veya "Kaldır" butonunu kullanın', 'warning');
+            return;
+        }
+        const fontSize = document.getElementById('wmFontSize')?.value || 24;
         wmElement.innerHTML = text;
-        wmElement.style.fontSize = fontSize;
-    } else {
-        const url = document.getElementById('wmImageUrl').value;
+        wmElement.style.fontSize = fontSize + 'px';
+        wmElement.style.fontWeight = 'bold';
+        wmElement.style.color = 'var(--gm-text-muted)';
+        wmElement.style.textShadow = '1px 1px 2px rgba(0,0,0,0.3)';
+    } else if (type === 'image') {
+        const url = document.getElementById('wmImageUrl')?.value;
         const fileInput = document.getElementById('wmImageFile');
+        const imageSize = document.getElementById('wmImageSize')?.value || 150;
 
-        if (fileInput.files[0]) {
+        const setImageSize = (img) => {
+            img.style.width = imageSize + 'px';
+            img.style.height = 'auto';
+            img.style.maxWidth = '100%';
+        };
+
+        if (fileInput?.files[0]) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                wmElement.innerHTML = `<img src="${e.target.result}" alt="Watermark">`;
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.alt = 'Watermark';
+                setImageSize(img);
+                wmElement.appendChild(img);
                 dashboard.appendChild(wmElement);
+                showToast('Watermark eklendi', 'success');
             };
             reader.readAsDataURL(fileInput.files[0]);
             return;
         } else if (url) {
-            wmElement.innerHTML = `<img src="${url}" alt="Watermark">`;
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Watermark';
+            setImageSize(img);
+            wmElement.appendChild(img);
+        } else {
+            showToast('Resim URL veya dosya seçiniz', 'warning');
+            return;
         }
     }
 
@@ -11053,8 +11505,10 @@ function showReportCustomizationModal() {
             
             <hr style="margin: 15px 0; border-color: var(--gm-divider);">
             
-            <button class="viz-btn-primary" onclick="saveReportSettings()">Ayarları Kaydet</button>
-            <button class="viz-btn-secondary" onclick="previewReport()">Önizle & İndir</button>
+            <div style="display:flex; gap:10px;">
+                <button class="viz-btn-primary" onclick="saveReportSettings(); closeStatResultModal();">Ayarları Kaydet</button>
+                <button class="viz-btn-secondary" onclick="previewReport(); closeStatResultModal();">Önizle & İndir</button>
+            </div>
         </div>
     `;
 
@@ -15735,3 +16189,162 @@ window.copyStatAsHTML = copyStatAsHTML;
 window.copyStatAsImage = copyStatAsImage;
 window.copyStatAsText = copyStatAsText;
 
+// ============================================================
+// VISUAL STUDIO - DOSYA ÖNİZLEME (Excel Studio'dan birebir kopya)
+// ============================================================
+
+// Seçili başlık satırı (Excel Studio'daki SELECTED_HEADER_ROW gibi)
+window.VIZ_SELECTED_HEADER_ROW = 0;
+
+/**
+ * Dosya önizleme modalını göster - Excel Studio showFilePreviewModal'ın birebir kopyası
+ */
+window.showHeaderPreview = function () {
+    const T = VIZ_TEXTS[VIZ_STATE.lang] || VIZ_TEXTS.tr;
+    const rawRows = window.VIZ_RAW_PREVIEW_ROWS || [];
+    const currentHeaderRow = window.VIZ_SELECTED_HEADER_ROW || 0;
+    const lang = VIZ_STATE.lang || 'tr';
+
+    console.log('🔍 showHeaderPreview called:', { rawRowsLength: rawRows.length, currentHeaderRow });
+
+    // Modal oluştur veya mevcut olanı kullan
+    let modal = document.getElementById("vizFilePreviewModal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "vizFilePreviewModal";
+        modal.className = "gm-modal";
+        modal.innerHTML = `
+            <div class="gm-modal-content" style="max-width: 90vw; max-height: 85vh; overflow: auto;">
+                <div class="gm-modal-header">
+                    <h3 id="vizPreviewModalTitle"><i class="fas fa-table"></i> ${lang === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row'}</h3>
+                    <button class="gm-modal-close" onclick="closeVizPreviewModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="gm-modal-body" id="vizPreviewContent" style="overflow-x: auto;"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+    }
+
+    // Başlığı güncelle
+    const titleEl = modal.querySelector("h3");
+    if (titleEl) {
+        titleEl.innerHTML = `<i class="fas fa-table"></i> ${lang === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row'}`;
+    }
+
+    // İçeriği yerleştir
+    let content = modal.querySelector("#vizPreviewContent") || modal.querySelector(".gm-modal-body");
+
+    if (!content) {
+        console.error('Modal body not found');
+        return;
+    }
+
+    if (rawRows && rawRows.length > 0) {
+        // Hint mesajı
+        const hintText = lang === 'tr'
+            ? '📌 Seçilen satır <strong>başlık</strong> olarak kullanılacak. Üstündeki satırlar atlanacak.'
+            : '📌 Selected row will be used as <strong>header</strong>. Rows above will be skipped.';
+
+        let html = `<div class="gm-header-row-hint">${hintText}</div>`;
+        html += `<div class="gm-header-row-selector">`;
+
+        rawRows.forEach((row, idx) => {
+            const isSelected = idx === currentHeaderRow;
+            const rowClass = isSelected ? 'gm-header-row-option selected' : 'gm-header-row-option';
+
+            // Hücreleri göster (max 8 hücre, kısalt)
+            let cellsHtml = row.cells.slice(0, 8).map(cell => {
+                const displayVal = cell.length > 20 ? cell.substring(0, 17) + '...' : (cell || '-');
+                return `<span class="gm-header-cell">${displayVal}</span>`;
+            }).join('');
+
+            if (row.cells.length > 8) {
+                cellsHtml += `<span class="gm-header-cell-more">+${row.cells.length - 8}</span>`;
+            }
+
+            html += `
+                <label class="${rowClass}" data-row-index="${idx}">
+                    <input type="radio" name="vizHeaderRowRadio" value="${idx}" ${isSelected ? 'checked' : ''} 
+                           onchange="window.vizSelectHeaderRow(${idx})">
+                    <span class="gm-header-row-num">${lang === 'tr' ? 'Satır' : 'Row'} ${idx + 1}</span>
+                    <div class="gm-header-cells">${cellsHtml}</div>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        content.innerHTML = html;
+    } else {
+        content.innerHTML = `<p style="color: var(--gm-text-muted);">${T?.no_preview || 'Önizleme için önce dosya yükleyin.'}</p>`;
+    }
+
+    modal.style.display = "flex";
+};
+
+/**
+ * Başlık satırı seçildiğinde çağrılır - Excel Studio selectHeaderRow'un birebir kopyası
+ */
+window.vizSelectHeaderRow = async function (rowIndex) {
+    window.VIZ_SELECTED_HEADER_ROW = rowIndex;
+    const lang = VIZ_STATE.lang || 'tr';
+
+    // UI'daki seçimi güncelle
+    const modal = document.getElementById("vizFilePreviewModal");
+    if (modal) {
+        modal.querySelectorAll('.gm-header-row-option').forEach(label => {
+            const idx = parseInt(label.dataset.rowIndex);
+            if (idx === rowIndex) {
+                label.classList.add('selected');
+            } else {
+                label.classList.remove('selected');
+            }
+        });
+    }
+
+    // vizHeaderRow dropdown'ı güncelle
+    const headerSelect = document.getElementById('vizHeaderRow');
+    if (headerSelect) {
+        headerSelect.value = rowIndex;
+    }
+
+    // Dosyayı yeni header_row ile yeniden yükle - inspectFile mantığı
+    const currentFile = window.VIZ_CURRENT_FILE || VIZ_STATE.getActiveDataset()?.file;
+    if (currentFile && typeof loadVizDataWithOptions === 'function') {
+        console.log(`🔄 Refreshing data with header_row=${rowIndex}...`);
+        await loadVizDataWithOptions(currentFile);
+        console.log(`✅ Data refreshed with new header row`);
+    }
+
+    // Modal'ı kapat
+    closeVizPreviewModal();
+
+    // Toast göster
+    showToast(lang === 'tr'
+        ? `${rowIndex + 1}. satır başlık olarak seçildi`
+        : `Row ${rowIndex + 1} selected as header`, 'success');
+
+    console.log(`✓ Header row selected: Row ${rowIndex}`);
+};
+
+/**
+ * Önizleme modalını kapat
+ */
+function closeVizPreviewModal() {
+    const modal = document.getElementById("vizFilePreviewModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+// Global exports
+window.closeVizPreviewModal = closeVizPreviewModal;
+
+// Eski fonksiyon adı için geriye uyumluluk
+window.applyVizHeaderFromPreview = window.vizSelectHeaderRow;
+
+console.log("👁️ Visual Studio File Preview system loaded (Excel Studio clone)");

@@ -1,0 +1,361 @@
+﻿/* =====================================================
+   MADDE 19-22: VERİ PROFİLİ LAYOUT DÜZELTMELERİ
+   ===================================================== */
+
+/* Sağ Panel - Veri Profili - Tek sütun, dikey scroll */
+.viz-column-types {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 4px !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    margin-bottom: 12px;
+}
+
+/* Sol Panel - Veri Profili - Tek sütun, dikey scroll */
+.viz-column-types-left {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Sütun ismi uzunsa sığdırma */
+.viz-column-type-item,
+.viz-column-type-item-left {
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* =====================================================
+   WATERMARK KONUMLAMA STİLLERİ
+   ===================================================== */
+
+.viz-watermark {
+    position: absolute !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    z-index: 100 !important;
+    font-weight: bold !important;
+    color: var(--gm-text-muted) !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.viz-watermark-center {
+    top: 50% !important;
+    left: 50% !important;
+    transform-origin: center center;
+    /* Transform is set via JS including rotation */
+    margin-top: -50px;
+    /* Approximate center */
+    margin-left: -100px;
+}
+
+.viz-watermark-bottom-right {
+    bottom: 20px !important;
+    right: 20px !important;
+}
+
+.viz-watermark-bottom-left {
+    bottom: 20px !important;
+    left: 20px !important;
+}
+
+.viz-watermark-top-right {
+    top: 20px !important;
+    right: 20px !important;
+}
+
+.viz-watermark-top-left {
+    top: 20px !important;
+    left: 20px !important;
+}
+
+.viz-watermark-tile {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-around !important;
+    align-content: space-around !important;
+    padding: 40px !important;
+    gap: 60px !important;
+}
+
+.viz-watermark img {
+    max-width: 300px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* =====================================================
+   STAT WIDGET TRANSPARan ARKA PLAN (Madde 1)
+   ===================================================== */
+
+.viz-stat-widget.embedded-in-chart {
+    background: transparent !important;
+    border: 1px dashed var(--gm-primary) !important;
+    resize: both !important;
+    overflow: auto !important;
+    min-width: 120px !important;
+    min-height: 60px !important;
+}
+
+.viz-stat-widget.embedded-in-chart .viz-stat-header {
+    background: rgba(74, 144, 217, 0.1) !important;
+    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+}
+
+/* Dashboard dışındaki widget normal arka plan */
+.viz-stat-widget:not(.embedded-in-chart) {
+    background: var(--gm-card-bg);
+}
+
+/* =====================================================
+   MADDE 16: ISTATISTIK OZETI EKSEN BILGISI
+   ===================================================== */
+
+.viz-stat-axis-info {
+    background: rgba(74, 144, 217, 0.1) !important;
+    padding: 8px !important;
+    border-radius: 6px !important;
+    margin-bottom: 10px !important;
+    font-size: 0.8rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+}
+
+/* =====================================================
+   MADDE 22: SOL PANEL SUTUN TIPI GOSTERIMI
+   ===================================================== */
+
+.viz-col-name-chip {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.viz-col-type-chip {
+    font-size: 0.65rem !important;
+    color: var(--gm-text-muted) !important;
+    margin-left: auto !important;
+    text-transform: uppercase;
+}
+
+/* =====================================================
+   MADDE 23: BASLIK SATIRI ONIZLEME
+   ===================================================== */
+
+.viz-header-row-option {
+    cursor: pointer !important;
+    transition: background 0.2s !important;
+}
+
+.viz-header-row-option:hover {
+    background: rgba(74, 144, 217, 0.15) !important;
+}
+
+.viz-header-row-option input[type="radio"] {
+    margin-right: 5px;
+}
+
+/* =====================================================
+   MINI BUTTON STILI
+   ===================================================== */
+
+.viz-btn-mini {
+    background: var(--gm-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-btn-mini:hover {
+    background: var(--gm-primary-hover);
+    transform: scale(1.05);
+}
+
+/* =====================================================
+   EMBEDDED STAT WIDGET STILI (Madde 1)
+   ===================================================== */
+
+.viz-stat-overlay-embedded {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(4px);
+    border: 1px dashed var(--gm-primary) !important;
+    border-radius: 6px !important;
+    resize: both !important;
+    overflow: auto !important;
+    transition: opacity 0.2s;
+}
+
+.viz-stat-overlay-embedded:hover {
+    border-color: var(--gm-accent) !important;
+    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+}
+
+.dark-mode .viz-stat-overlay-embedded {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* =====================================================
+   ÇOKLU Y EKSENİ VE DUAL AXIS STİLLERİ
+   ===================================================== */
+
+/* Multi-select Y axis */
+#chartYAxis[multiple] {
+    height: auto !important;
+    min-height: 80px !important;
+    max-height: 120px !important;
+    overflow-y: auto !important;
+}
+
+#chartYAxis[multiple] option {
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin: 1px 0;
+    transition: background 0.2s;
+}
+
+#chartYAxis[multiple] option:checked {
+    background: var(--gm-primary) !important;
+    color: white !important;
+}
+
+.viz-hint {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--gm-text-muted);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Dual Axis Toggle */
+.viz-dual-axis-group {
+    background: var(--gm-bg-tertiary);
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 3px solid var(--gm-primary);
+}
+
+.viz-dual-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.viz-dual-toggle .viz-checkbox span {
+    font-size: 0.85rem;
+}
+
+/* =====================================================
+   SELECTOR ROW - SAYFA SEÇ VE BAŞLIK SATIRI YAN YANA
+   ===================================================== */
+
+.viz-selectors-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.viz-selector-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-selector-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+    color: #8a8f98;
+}
+
+/* Light mode label */
+body:not(.dark-mode) .viz-selector-label {
+    color: #6b7280;
+}
+
+.viz-selector-dropdown {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 5px;
+    border: 1px solid #2d3138;
+    background: #1a1d23;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.viz-selector-dropdown:hover {
+    border-color: #4a90d9;
+}
+
+.viz-selector-dropdown:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
+}
+
+/* Light mode dropdown */
+body:not(.dark-mode) .viz-selector-dropdown {
+    background: #ffffff;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+body:not(.dark-mode) .viz-selector-dropdown:hover {
+    border-color: #4a90d9;
+}
+
+/* Dosyayı Önizle Butonu */
+.viz-preview-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    width: 100%;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+}
+
+.viz-preview-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+}
+
+.viz-preview-btn:active {
+    transform: translateY(0);
+}
+
+/* Light mode preview button - same gradient, looks good in both */
