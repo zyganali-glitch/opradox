@@ -1,0 +1,37 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "Opradox Frontend",
+  "main": "sw.js",
+  "scripts": {
+    "build:viz": "esbuild js/viz/index.js --bundle --outfile=js/viz.bundle.js --format=iife --global-name=VizModule",
+    "build:viz:watch": "esbuild js/viz/index.js --bundle --outfile=js/viz.bundle.js --format=iife --global-name=VizModule --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "moduleFileExtensions": [
+      "js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "js/viz/**/*.js",
+      "!js/viz/index.js"
+    ],
+    "verbose": true
+  },
+  "keywords": [],
+  "author": "Opradox Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "esbuild": "^0.27.2",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.2.0"
+  }
+}

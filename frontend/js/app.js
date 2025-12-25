@@ -1011,9 +1011,12 @@ function showFileInfo(data, fileNumber = 1, skipDropdownRebuild = false) {
     }
 
     // YENİ: Ham satırları cache'le (başlık satırı seçimi için)
-    if (data.raw_preview_rows) {
-        if (fileNumber === 1) FILE_RAW_PREVIEW_ROWS = data.raw_preview_rows;
-        else FILE2_RAW_PREVIEW_ROWS = data.raw_preview_rows;
+    if (data.raw_rows) {
+        console.log('✅ raw_rows data received:', { fileNumber, rows: data.raw_rows.length, sample: data.raw_rows[0] });
+        if (fileNumber === 1) FILE_RAW_PREVIEW_ROWS = data.raw_rows;
+        else FILE2_RAW_PREVIEW_ROWS = data.raw_rows;
+    } else {
+        console.warn('⚠️ raw_rows not found in data:', Object.keys(data));
     }
 
     // YENİ: Sheet dropdown (çok sayfalı Excel için)
@@ -1141,6 +1144,8 @@ window.showFilePreviewModal = function (fileNumber = 1) {
     const currentHeaderRow = fileNumber === 1 ? SELECTED_HEADER_ROW : SELECTED_HEADER_ROW_2;
     const titlePrefix = fileNumber === 2 ? (CURRENT_LANG === 'tr' ? '(İkinci Dosya) ' : '(Second File) ') : '';
 
+    console.log('🔍 showFilePreviewModal called:', { fileNumber, rawRowsLength: rawRows?.length || 0, rawRows: rawRows?.slice(0, 2) });
+
     // Modal oluştur veya mevcut olanı kullan
     let modal = document.getElementById("filePreviewModal");
     if (!modal) {
@@ -1165,14 +1170,24 @@ window.showFilePreviewModal = function (fileNumber = 1) {
     }
 
     // Başlığı güncelle
-    const titleEl = document.getElementById("previewModalTitle");
+    const titleEl = modal.querySelector("h3");
     const headerSelectTitle = CURRENT_LANG === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row';
     if (titleEl) {
         titleEl.innerHTML = `<i class="fas fa-table"></i> ${titlePrefix}${headerSelectTitle}`;
     }
 
-    // İçeriği yerleştir
-    const content = document.getElementById("filePreviewContent");
+    // İçeriği yerleştir - HTML'deki ID'yi kullan (previewModalBody veya filePreviewContent)
+    let content = modal.querySelector("#previewModalBody") || modal.querySelector("#filePreviewContent");
+
+    if (!content) {
+        // Fallback: gm-modal-body class ile ara
+        content = modal.querySelector(".gm-modal-body");
+    }
+
+    if (!content) {
+        console.error('Modal body not found in modal');
+        return;
+    }
 
     if (rawRows && rawRows.length > 0) {
         // Hint mesajı
@@ -1215,6 +1230,14 @@ window.showFilePreviewModal = function (fileNumber = 1) {
     }
 
     modal.style.display = "flex";
+};
+
+// Önizleme modalını kapat
+window.closePreviewModal = function () {
+    const modal = document.getElementById("filePreviewModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
 };
 
 // YENİ: Başlık satırı seçildiğinde çağrılır

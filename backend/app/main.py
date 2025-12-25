@@ -544,6 +544,22 @@ async def serve_js_no_cache(filename: str):
         )
     raise HTTPException(status_code=404, detail="JS file not found")
 
+# HELP dosyaları için endpoint (video tutorials)
+@app.get("/help/{filename:path}")
+async def serve_help_files(filename: str):
+    from fastapi.responses import FileResponse
+    help_path = FRONTEND_DIR / "help" / filename
+    if help_path.exists():
+        media_type = "image/webp" if filename.endswith(".webp") else "application/octet-stream"
+        return FileResponse(
+            help_path, 
+            media_type=media_type,
+            headers={
+                "Cache-Control": "public, max-age=86400"  # 1 day cache for videos
+            }
+        )
+    raise HTTPException(status_code=404, detail="Help file not found")
+
 # Admin paneli veya diğer statik dosyalar için root mount
 # DİKKAT: Root mount diğer rotaları ezebilir, bu yüzden özel statik klasörleri yukarıda tanımladık.
 # Config dosyaları için endpoint (global_options.json)
