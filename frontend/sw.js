@@ -1,110 +1,64 @@
-// Opradox Visual Studio Service Worker
-const CACHE_NAME = 'opradox-viz-v1';
-const urlsToCache = [
-    '/viz.html',
-    '/css/style.css',
-    '/js/viz.js',
-    'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js',
-    'https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js',
-    'https://cdn.jsdelivr.net/npm/simple-statistics@7.8.0/dist/simple-statistics.min.js',
-    'https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js',
-    'https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-    'https://html2canvas.hertzen.com/dist/html2canvas.min.js',
-    'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js'
+// =====================================================
+// OPRADOX VISUAL STUDIO - Service Worker v3 (Conductor Plan)
+// =====================================================
+
+const CACHE_NAME = 'opradox-viz-v3-final';
+const ASSETS_TO_CACHE = [
+    // Ana Sayfalar
+    './',
+    './index.html',
+    
+    // Stiller (Varsa CSS klasöründekiler)
+    './css/style.css', 
+    // Not: Eğer başka CSS dosyan varsa buraya ekle
+
+    // BİZİM YENİ MODÜLLER (Conductor Planına Uygun)
+    './js/modules/core.js',
+    './js/modules/ui.js',
+    './js/modules/data.js',
+    './js/modules/preview.js', // O son eklediğimiz kritik dosya
+    './js/modules/charts.js',
+    './js/modules/stats.js',
+    './js/modules/advanced.js',
+    
+    // Kaynak Dosya (Geliştirme için gerekebilir, opsiyonel)
+    // './viz_SOURCE.js' 
 ];
 
-// Install event - cache resources
-self.addEventListener('install', event => {
-    console.log('⚡ Service Worker installing...');
+// 1. KURULUM (Dosyaları Önbelleğe Al)
+self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('📦 Caching resources...');
-                return cache.addAll(urlsToCache);
-            })
-            .catch(err => {
-                console.warn('Cache failed:', err);
+            .then((cache) => {
+                console.log('[SW] Dosyalar önbelleğe alınıyor...');
+                return cache.addAll(ASSETS_TO_CACHE);
             })
     );
-    self.skipWaiting();
 });
 
-// Activate event - cleanup old caches
-self.addEventListener('activate', event => {
-    console.log('✅ Service Worker activated');
+// 2. AKTİF OLMA (Eski Cache'leri Temizle)
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('🗑️ Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        console.log('[SW] Eski önbellek temizlendi:', cache);
+                        return caches.delete(cache);
                     }
                 })
             );
         })
     );
-    return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', event => {
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') return;
-
-    // Skip API requests
-    if (event.request.url.includes('/viz/') || event.request.url.includes('/api/')) {
-        return;
-    }
-
+// 3. FETCH (İnternet yoksa Cache'den ver)
+self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                // Return cached response if found
-                if (response) {
-                    return response;
-                }
-
-                // Otherwise fetch from network
-                return fetch(event.request).then(networkResponse => {
-                    // Cache successful responses
-                    if (networkResponse && networkResponse.status === 200) {
-                        const responseClone = networkResponse.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
-                    return networkResponse;
-                });
-            })
-            .catch(() => {
-                // Return offline page for navigation requests
-                if (event.request.mode === 'navigate') {
-                    return caches.match('/viz.html');
-                }
+            .then((response) => {
+                // Cache'de varsa onu ver, yoksa internetten çek
+                return response || fetch(event.request);
             })
     );
 });
-
-// Background sync for offline data
-self.addEventListener('sync', event => {
-    if (event.tag === 'sync-dashboard') {
-        console.log('🔄 Syncing dashboard data...');
-    }
-});
-
-// Push notifications (for future use)
-self.addEventListener('push', event => {
-    const data = event.data?.json() || { title: 'Opradox', body: 'Yeni bildirim' };
-
-    event.waitUntil(
-        self.registration.showNotification(data.title, {
-            body: data.body,
-            icon: '/img/logo.png',
-            badge: '/img/badge.png'
-        })
-    );
-});
-
-console.log('🚀 Opradox Visual Studio Service Worker loaded');

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -77,12 +77,50 @@
     <!-- LZString for URL Compression -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
+    <!-- SheetJS for Excel file parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <script defer src="js/fileDocker.js"></script>
-    <!-- Main JS - Reverted from bundle due to modularization issues -->
-    <script defer src="js/viz.js"></script>
-    <!-- Export addon with enhanced functionality -->
+
+    <!-- =============================================== -->
+    <!-- MODULAR VIZ.JS ARCHITECTURE (NEW ES6 MODULES)  -->
+    <!-- =============================================== -->
+    <script type="module">
+        // 1. Core and UI (Load first)
+        import './js/modules/core.js';
+        import './js/modules/ui.js';
+        import './js/modules/preview.js';
+
+        // 2. Data Management
+        import './js/modules/data.js';
+
+        // 3. Visualization and Analysis Engines
+        import './js/modules/charts.js';
+        import './js/modules/stats.js';
+        import './js/modules/advanced.js';
+
+        // 4. Initialize System
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Opradox Modular System Initializing...');
+
+            // Window binding check
+            if (typeof window.initVizStudio === 'function') {
+                window.initVizStudio();
+            } else {
+                console.error('🚨 CRITICAL ERROR: initVizStudio not found on window! Is core.js loaded?');
+                // Fallback: Manual initialization attempt
+                import('./js/modules/core.js').then(module => {
+                    if (module.initVizStudio) module.initVizStudio();
+                });
+            }
+        });
+    </script>
+
+    <!-- Legacy file handlers kept for compatibility -->
+    <script defer src="js/viz_file_handler.js"></script>
     <script defer src="js/viz_export_addon.js"></script>
 </head>
+
 
 <body class="dark-mode">
     <div class="viz-studio-root">
@@ -1094,6 +1132,30 @@
                         <button type="submit" class="gm-gradient-btn" style="width:100%"
                             data-i18n="send_btn">Gönder</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILE PREVIEW MODAL (Header Row Selection) -->
+        <div id="vizFilePreviewModal" class="gm-modal">
+            <div class="gm-modal-content"
+                style="flex-direction: column; width: 80%; max-width: 900px; max-height: 85vh;">
+                <div class="gm-modal-header">
+                    <h3><i class="fas fa-table"></i> <span data-i18n="preview_file">Dosya Önizleme</span></h3>
+                    <span class="gm-close-modal" onclick="closeVizPreviewModal()">&times;</span>
+                </div>
+                <div
+                    style="padding: 10px 15px; border-bottom: 1px solid var(--gm-card-border); font-size: 0.85rem; color: var(--gm-text-muted);">
+                    <i class="fas fa-info-circle"></i> Başlık satırını seçmek için satıra tıklayın.
+                </div>
+                <div style="flex: 1; overflow: auto; padding: 10px;">
+                    <table id="vizPreviewTable" style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                    </table>
+                </div>
+                <div style="padding: 10px 15px; border-top: 1px solid var(--gm-card-border); text-align: right;">
+                    <button class="gm-pill-btn" onclick="closeVizPreviewModal()">
+                        <i class="fas fa-times"></i> <span data-i18n="close">Kapat</span>
+                    </button>
                 </div>
             </div>
         </div>

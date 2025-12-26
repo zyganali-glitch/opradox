@@ -937,3 +937,40 @@ Sheet: None
 Header Row: 0
 Params Raw: {"condition_column": "Department", "condition_value": "IT", "target_column": "Salary", "return_mode": "summary"}...
 Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-24 22:47:40.867463
+Scenario ID: summarize-by-month-and-category
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","category_column":"Üniversite Türü","value_column":"En Küçük Puan","aggfunc":"sum"}...
+Calling runner for summarize-by-month-and-category...
+Runner Exception: 400: 'date_column' parametresi eksik veya bo�
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 178, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\summarize_by_month_and_category.py", line 11, in run
+    raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya bo�")
+fastapi.exceptions.HTTPException: 400: 'date_column' parametresi eksik veya bo�
+
+
+============================================================
+REQUEST RECEIVED AT 2025-12-24 22:49:03.179363
+Scenario ID: report-multi-metric-summary
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","group_column":"Üniversite Türü","value_column":"En Küçük Puan","value_columns":"Üniversite Adı, Kontenjan"}...
+Calling runner for report-multi-metric-summary...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-24 22:51:13.557556
+Scenario ID: pivot-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","rows":"Üniversite Adı, Program Adı","columns":"Fakülte/Yüksekokul Adı","values":"Kontenjan","aggfunc":"sum","show_totals":"Kontenjan","show_percentage":"Kontenjan, Yerleşen"}...
+Calling runner for pivot-builder-pro...

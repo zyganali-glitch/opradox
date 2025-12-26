@@ -156,6 +156,15 @@ def calculate_stats(data: List[float]) -> Dict[str, float]:
 # API ENDPOINTS
 # -------------------------------------------------------
 
+@router.get("/ping")
+async def health_check():
+    """Sunucu sağlık kontrolü - deployment verification için"""
+    return {
+        "status": "ok",
+        "service": "Opradox Visual Studio Stats Engine",
+        "version": "2.0.0-modular"
+    }
+
 @router.post("/sheets")
 async def get_sheet_names(file: UploadFile = File(...)):
     """
@@ -182,9 +191,9 @@ async def get_sheet_names(file: UploadFile = File(...)):
 @router.post("/data")
 async def get_viz_data(
     file: UploadFile = File(...),
-    sheet_name: str = Query(None),
-    header_row: int = Query(0),
-    limit: int = Query(None, description="Max satır sayısı (None = sınırsız)")
+    sheet_name: str = Form(None),
+    header_row: int = Form(0),
+    limit: int = Form(None, description="Max satır sayısı (None = sınırsız)")
 ):
     """
     Görselleştirme için tam veri seti döner.
@@ -194,6 +203,23 @@ async def get_viz_data(
         content = await file.read()
         filename = file.filename.lower()
         
+        # Ham satırları oku (header row seçici için - header=None ile tüm satırları data olarak al)
+        raw_preview_rows = []
+        try:
+            if filename.endswith(".csv"):
+                raw_df = pd.read_csv(BytesIO(content), header=None, nrows=15)
+            else:
+                xls = pd.ExcelFile(BytesIO(content))
+                active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+                raw_df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=None, nrows=15)
+            
+            # Her satırı liste olarak ekle
+            for idx, row in raw_df.iterrows():
+                raw_preview_rows.append([str(cell) if pd.notna(cell) else "" for cell in row])
+        except Exception as e:
+            logging.warning(f"Raw preview rows okunamadı: {e}")
+        
+        # Gerçek veriyi oku (seçilen header_row ile)
         if filename.endswith(".csv"):
             df = pd.read_csv(BytesIO(content), header=header_row, nrows=limit)
         else:
@@ -201,17 +227,38 @@ async def get_viz_data(
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row, nrows=limit)
         
-        # NaN değerleri None'a çevir (JSON uyumlu)
-        df = df.fillna("")
-        
-        # Column info
+        # Column info - fillna'dan ÖNCE tip tespiti yap
         columns_info = []
         for col in df.columns:
             col_type = "text"
+            
+            # 1. Pandas dtype kontrolü
             if pd.api.types.is_numeric_dtype(df[col]):
                 col_type = "numeric"
             elif pd.api.types.is_datetime64_any_dtype(df[col]):
                 col_type = "date"
+            else:
+                # 2. İçerik analizi - string olarak kaydedilmiş numeric/date kontrolü
+                non_null = df[col].dropna()
+                if len(non_null) > 0:
+                    # Sayısal kontrol
+                    try:
+                        numeric_vals = pd.to_numeric(non_null, errors='coerce')
+                        valid_ratio = numeric_vals.notna().sum() / len(non_null)
+                        if valid_ratio >= 0.8:  # %80'den fazlası sayısal
+                            col_type = "numeric"
+                    except:
+                        pass
+                    
+                    # Tarih kontrol (sadece text ise)
+                    if col_type == "text":
+                        try:
+                            date_vals = pd.to_datetime(non_null, errors='coerce', infer_datetime_format=True)
+                            valid_ratio = date_vals.notna().sum() / len(non_null)
+                            if valid_ratio >= 0.8:  # %80'den fazlası tarih
+                                col_type = "date"
+                        except:
+                            pass
             
             columns_info.append({
                 "name": str(col),
@@ -219,12 +266,16 @@ async def get_viz_data(
                 "sample": str(df[col].iloc[0]) if len(df) > 0 else ""
             })
         
+        # NaN değerleri boş string'e çevir (JSON uyumlu) - TİP TESPİTİNDEN SONRA
+        df = df.fillna("")
+        
         return {
             "columns": [str(c) for c in df.columns],
             "columns_info": columns_info,
             "data": df.to_dict(orient="records"),
             "row_count": len(df),
-            "truncated": limit is not None and len(df) >= limit
+            "truncated": limit is not None and len(df) >= limit,
+            "raw_preview_rows": raw_preview_rows  # Önizleme için ham satırlar
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

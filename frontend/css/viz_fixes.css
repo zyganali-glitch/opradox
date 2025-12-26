@@ -146,6 +146,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.85rem;
+    color: var(--gm-text);
 }
 
 .viz-col-type-chip {
@@ -153,6 +155,53 @@
     color: var(--gm-text-muted) !important;
     margin-left: auto !important;
     text-transform: uppercase;
+    padding: 2px 6px;
+    background: rgba(74, 144, 217, 0.1);
+    border-radius: 4px;
+}
+
+/* updateColumnsListWithTypes tarafından oluşturulan chip stili */
+.viz-column-chip {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+    background: var(--gm-bg, #1a1d23) !important;
+    border: 1px solid var(--gm-card-border, #2d3138) !important;
+    border-radius: 6px !important;
+    margin-bottom: 4px !important;
+    cursor: grab !important;
+    transition: all 0.2s !important;
+    font-size: 0.85rem !important;
+}
+
+.viz-column-chip:hover {
+    background: rgba(74, 144, 217, 0.1) !important;
+    border-color: var(--gm-primary, #4a90d9) !important;
+}
+
+.viz-column-chip i {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* Light mode */
+body:not(.dark-mode) .viz-column-chip {
+    background: #f8f9fa !important;
+    border-color: #e9ecef !important;
+}
+
+body:not(.dark-mode) .viz-column-chip:hover {
+    background: rgba(74, 144, 217, 0.08) !important;
+}
+
+body:not(.dark-mode) .viz-col-name-chip {
+    color: #374151;
+}
+
+body:not(.dark-mode) .viz-col-type-chip {
+    background: rgba(74, 144, 217, 0.08);
+    color: #6b7280 !important;
 }
 
 /* =====================================================
@@ -271,9 +320,12 @@
    SELECTOR ROW - SAYFA SEÇ VE BAŞLIK SATIRI YAN YANA
    ===================================================== */
 
+/* =====================================================
+   SELECTOR ROW - SAYFA SEÇ VE BAŞLIK SATIRI YAN YANA
+   ===================================================== */
+
 .viz-selectors-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 10px;
     margin-bottom: 10px;
 }
@@ -281,6 +333,7 @@
 .viz-selector-item {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .viz-selector-label {
@@ -299,24 +352,22 @@ body:not(.dark-mode) .viz-selector-label {
 
 .viz-selector-dropdown {
     width: 100%;
-    padding: 7px 10px;
-    border-radius: 5px;
-    border: 1px solid #2d3138;
-    background: #1a1d23;
-    color: #e0e0e0;
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid #374151;
+    background: #1f2937;
+    color: #e5e7eb;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
 }
 
 .viz-selector-dropdown:hover {
-    border-color: #4a90d9;
+    border-color: #4b5563;
 }
 
 .viz-selector-dropdown:focus {
     outline: none;
     border-color: #4a90d9;
-    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
 }
 
 /* Light mode dropdown */
@@ -326,36 +377,96 @@ body:not(.dark-mode) .viz-selector-dropdown {
     color: #374151;
 }
 
-body:not(.dark-mode) .viz-selector-dropdown:hover {
-    border-color: #4a90d9;
-}
-
-/* Dosyayı Önizle Butonu */
+/* Dosyayı Önizle Butonu - Primary Blue (Legacy Style) */
 .viz-preview-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 14px;
-    background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
-    border: none;
-    border-radius: 6px;
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--gm-primary);
+    /* Mavi */
+    border: 1px solid var(--gm-primary);
+    border-radius: 4px;
     color: white;
     cursor: pointer;
     font-size: 0.85rem;
+    text-align: center;
+    transition: all 0.2s;
     font-weight: 500;
-    width: 100%;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
 }
 
 .viz-preview-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+    background: #357abd;
+    /* Darker blue manually or use filter */
+    border-color: #357abd;
+    box-shadow: 0 2px 4px rgba(74, 144, 217, 0.3);
 }
 
-.viz-preview-btn:active {
-    transform: translateY(0);
+.viz-preview-btn i {
+    margin-right: 6px;
 }
 
-/* Light mode preview button - same gradient, looks good in both */
+/* Light mode preview button - keep blue but maybe adjust shade if needed */
+body:not(.dark-mode) .viz-preview-btn {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+    color: white;
+}
+
+body:not(.dark-mode) .viz-preview-btn:hover {
+    background: #357abd;
+}
+
+/* Fix File Options Layout - Stack Vertically to prevent shifting */
+.viz-file-options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 8px;
+}
+
+/* Ensure selectors row takes full width */
+.viz-selectors-row {
+    display: flex !important;
+    gap: 8px !important;
+    width: 100% !important;
+}
+
+.viz-selector-item {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+/* File info container - stable layout */
+.viz-file-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    background: var(--gm-card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--gm-card-border);
+}
+
+/* File name row - horizontal */
+.viz-file-name {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.viz-file-name span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Preview button full width */
+.viz-preview-btn {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+}

@@ -1,52 +1,21 @@
 {
     "name": "Opradox Visual Studio",
-    "short_name": "Opradox",
-    "description": "Profesyonel veri görselleştirme ve istatistik analiz platformu",
+    "short_name": "Opradox Viz",
+    "description": "Advanced Data Visualization & Analytics Platform",
     "start_url": "/viz.html",
     "display": "standalone",
     "background_color": "#1a1a2e",
-    "theme_color": "#4a90d9",
+    "theme_color": "#6366f1",
     "orientation": "any",
-    "lang": "tr",
     "icons": [
         {
-            "src": "img/icon-72.png",
-            "sizes": "72x72",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-96.png",
-            "sizes": "96x96",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-128.png",
-            "sizes": "128x128",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-144.png",
-            "sizes": "144x144",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-152.png",
-            "sizes": "152x152",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-192.png",
+            "src": "img/app-icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any maskable"
         },
         {
-            "src": "img/icon-384.png",
-            "sizes": "384x384",
-            "type": "image/png"
-        },
-        {
-            "src": "img/icon-512.png",
+            "src": "img/app-icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
@@ -54,43 +23,9 @@
     ],
     "categories": [
         "productivity",
-        "business",
-        "utilities"
+        "utilities",
+        "business"
     ],
-    "screenshots": [
-        {
-            "src": "img/screenshot-dashboard.png",
-            "sizes": "1280x720",
-            "type": "image/png",
-            "label": "Dashboard görünümü"
-        }
-    ],
-    "shortcuts": [
-        {
-            "name": "Yeni Dashboard",
-            "short_name": "Yeni",
-            "description": "Yeni dashboard oluştur",
-            "url": "/viz.html?new=1",
-            "icons": [
-                {
-                    "src": "img/icon-96.png",
-                    "sizes": "96x96"
-                }
-            ]
-        },
-        {
-            "name": "Excel Studio",
-            "short_name": "Excel",
-            "description": "Excel işlemleri",
-            "url": "/excel.html",
-            "icons": [
-                {
-                    "src": "img/icon-96.png",
-                    "sizes": "96x96"
-                }
-            ]
-        }
-    ],
-    "related_applications": [],
-    "prefer_related_applications": false
+    "lang": "tr",
+    "dir": "ltr"
 }
