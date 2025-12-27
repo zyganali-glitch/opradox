@@ -149,91 +149,194 @@ export function loadGeoJsonFromFile(file) {
 
 /**
  * Render Choropleth Map (colored region map)
+ * Full Production Implementation:
+ * - quantile/jenks/threshold classification
+ * - unmatched region reporting
+ * - cross-filter integration
+ * - roam/zoom/pan
  */
 export async function renderChoroplethMap(config = {}) {
-    const container = config.container || document.getElementById(`chart-${config.id}`);
-    if (!container) {
-        console.error('Map container not found');
+    const chartDom = document.getElementById(`${config.id}_chart`) ||
+        config.container ||
+        document.getElementById(`chart-${config.id}`);
+    if (!chartDom) {
+        console.error('Choropleth: Container not found');
+        showToast('Harita konteyneri bulunamadı', 'error');
         return null;
     }
 
     const mapName = config.mapName || 'turkey';
-    const data = config.data || [];
-    const valueColumn = config.valueColumn || config.yColumn;
-    const regionColumn = config.regionColumn || config.xColumn;
+    const dataset = config.datasetId ? VIZ_STATE.getDatasetById(config.datasetId) : VIZ_STATE.getActiveDataset();
+    const chartData = dataset?.data || VIZ_STATE.data || config.data || [];
+    const valueColumn = config.yAxis || config.valueColumn || config.yColumn;
+    const regionColumn = config.xAxis || config.regionColumn || config.xColumn;
 
     // Load GeoJSON if needed
     if (mapName === 'turkey' && !geoJsonCache['turkey']) {
-        await loadTurkeyGeoJson();
+        try {
+            await loadTurkeyGeoJson();
+        } catch (e) {
+            showToast('GeoJSON yüklenemedi: ' + e.message, 'error');
+            return null;
+        }
     }
 
-    // Prepare data for map
-    const mapData = prepareMapData(data, regionColumn, valueColumn);
+    // Prepare data for map with unmatched tracking
+    const regionValueMap = {};
+    const unmatchedRegions = [];
 
-    // Calculate min/max for visual map
+    if (chartData.length > 0 && regionColumn && valueColumn) {
+        chartData.forEach(row => {
+            const region = String(row[regionColumn] || '').trim();
+            const value = parseFloat(row[valueColumn]);
+            if (region && !isNaN(value)) {
+                regionValueMap[region] = (regionValueMap[region] || 0) + value;
+            }
+        });
+    }
+
+    // Get registered map features for matching
+    const registeredMap = geoJsonCache[mapName] || geoJsonCache['turkey'];
+    const geoFeatures = registeredMap?.features || [];
+    const geoRegionNames = new Set(geoFeatures.map(f => f.properties?.name || f.properties?.NAME || ''));
+
+    // Build mapData and track unmatched
+    const mapData = [];
+    Object.entries(regionValueMap).forEach(([region, value]) => {
+        mapData.push({ name: region, value: value });
+        if (!geoRegionNames.has(region)) {
+            unmatchedRegions.push(region);
+        }
+    });
+
+    // Report unmatched regions
+    if (unmatchedRegions.length > 0) {
+        console.warn('⚠️ Choropleth: Eşleşmeyen bölgeler:', unmatchedRegions.slice(0, 10).join(', '));
+        if (unmatchedRegions.length <= 5) {
+            showToast(`Eşleşmeyen bölge: ${unmatchedRegions.join(', ')}`, 'warning');
+        } else {
+            showToast(`${unmatchedRegions.length} bölge eşleşmedi. Konsola bakın.`, 'warning');
+        }
+    }
+
+    // Calculate values for classification
     const values = mapData.map(d => d.value).filter(v => !isNaN(v));
-    const minValue = Math.min(...values, 0);
-    const maxValue = Math.max(...values, 100);
+    if (values.length === 0) {
+        showToast('Choropleth: Sayısal veri bulunamadı', 'warning');
+        return null;
+    }
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    // Classification method: quantile, jenks, or threshold
+    const classMethod = config.classification || 'quantile';
+    const numClasses = config.classes || 5;
+    let pieces = [];
+
+    if (classMethod === 'quantile') {
+        // Quantile classification
+        const sortedValues = [...values].sort((a, b) => a - b);
+        for (let i = 0; i < numClasses; i++) {
+            const lowIdx = Math.floor((i / numClasses) * sortedValues.length);
+            const highIdx = Math.floor(((i + 1) / numClasses) * sortedValues.length) - 1;
+            const low = sortedValues[lowIdx];
+            const high = sortedValues[highIdx] || sortedValues[sortedValues.length - 1];
+            pieces.push({ min: low, max: high, label: `${low.toFixed(0)} - ${high.toFixed(0)}` });
+        }
+    } else if (classMethod === 'threshold') {
+        // Equal interval classification
+        const step = (maxValue - minValue) / numClasses || 1;
+        for (let i = 0; i < numClasses; i++) {
+            const low = minValue + i * step;
+            const high = minValue + (i + 1) * step;
+            pieces.push({ min: low, max: high, label: `${low.toFixed(0)} - ${high.toFixed(0)}` });
+        }
+    }
 
     // Create ECharts instance
     let chart = VIZ_STATE.echartsInstances[config.id];
-    if (!chart) {
-        chart = echarts.init(container);
-        VIZ_STATE.echartsInstances[config.id] = chart;
-    }
+    if (chart) chart.dispose();
+    const theme = document.body.classList.contains('day-mode') ? 'light' : 'dark';
+    chart = echarts.init(chartDom, theme);
+    VIZ_STATE.echartsInstances[config.id] = chart;
+
+    const colorRange = config.colorRange || ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'];
 
     const option = {
         title: {
             text: config.title || 'Bölge Haritası',
             left: 'center',
-            textStyle: { color: '#fff', fontSize: 16 }
+            textStyle: { fontSize: 14 }
         },
         tooltip: {
             trigger: 'item',
             formatter: (params) => {
-                return `${params.name}<br/>Değer: ${params.value || 'Veri yok'}`;
+                if (params.value === undefined || isNaN(params.value)) {
+                    return `<b>${params.name}</b><br/>Veri yok`;
+                }
+                return `<b>${params.name}</b><br/>${valueColumn || 'Değer'}: ${params.value.toLocaleString()}`;
             }
         },
         visualMap: {
+            type: classMethod === 'quantile' || classMethod === 'threshold' ? 'piecewise' : 'continuous',
             min: minValue,
             max: maxValue,
-            left: 'left',
-            top: 'bottom',
+            left: 10,
+            bottom: 20,
             text: ['Yüksek', 'Düşük'],
             calculable: true,
-            inRange: {
-                color: config.colorRange || ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695']
-            },
-            textStyle: { color: '#fff' }
+            pieces: pieces.length > 0 ? pieces : undefined,
+            inRange: { color: colorRange },
+            textStyle: { fontSize: 10 }
         },
         series: [{
-            name: config.seriesName || 'Değer',
+            name: valueColumn || 'Değer',
             type: 'map',
             map: mapName,
             roam: true,
             zoom: config.zoom || 1.2,
             center: config.center || undefined,
+            scaleLimit: { min: 0.5, max: 10 },
             emphasis: {
-                label: { show: true, color: '#fff' },
-                itemStyle: { areaColor: '#f39c12' }
+                label: { show: true, fontWeight: 'bold' },
+                itemStyle: { areaColor: '#f6c23e' }
+            },
+            select: {
+                label: { show: true },
+                itemStyle: { areaColor: '#27ae60' }
             },
             data: mapData,
             label: {
-                show: config.showLabels !== false,
-                color: '#333',
-                fontSize: 10
+                show: config.showLabels !== false && mapData.length <= 30,
+                fontSize: 9,
+                formatter: (params) => params.name.length > 8 ? params.name.slice(0, 6) + '..' : params.name
             },
             itemStyle: {
-                borderColor: '#999',
-                borderWidth: 0.5
+                borderColor: '#666',
+                borderWidth: 0.5,
+                areaColor: '#eee'
             }
         }]
     };
 
     chart.setOption(option);
 
-    // Handle resize
-    window.addEventListener('resize', () => chart.resize());
+    // Cross-filter integration
+    chart.off('click');
+    chart.on('click', (params) => {
+        if (VIZ_STATE.crossFilterEnabled && params.name) {
+            VIZ_STATE.crossFilterValue = params.name;
+            if (typeof VIZ_STATE.applyCrossFilter === 'function') {
+                VIZ_STATE.applyCrossFilter();
+            }
+            showToast(`Filtre: ${params.name}`, 'info');
+        }
+    });
+
+    // Resize handler
+    const resizeHandler = () => chart.resize();
+    window.addEventListener('resize', resizeHandler);
 
     return chart;
 }
@@ -1836,11 +1939,21 @@ function injectReportStyles() {
 
 // -----------------------------------------------------
 // CROSS-FILTER SYSTEM
+// CONSOLIDATED: Uses VIZ_STATE as single source of truth
 // -----------------------------------------------------
-let crossFilterState = {
-    enabled: false,
-    filters: {},
-    linkedCharts: []
+// Ensure VIZ_STATE has cross-filter properties (initialized in core.js)
+if (typeof VIZ_STATE.crossFilterEnabled === 'undefined') VIZ_STATE.crossFilterEnabled = false;
+if (typeof VIZ_STATE.crossFilterFilters === 'undefined') VIZ_STATE.crossFilterFilters = {};
+if (typeof VIZ_STATE.crossFilterLinkedCharts === 'undefined') VIZ_STATE.crossFilterLinkedCharts = [];
+
+// Proxy object for backward compatibility - reads/writes to VIZ_STATE
+const crossFilterState = {
+    get enabled() { return VIZ_STATE.crossFilterEnabled; },
+    set enabled(v) { VIZ_STATE.crossFilterEnabled = v; },
+    get filters() { return VIZ_STATE.crossFilterFilters; },
+    set filters(v) { VIZ_STATE.crossFilterFilters = v; },
+    get linkedCharts() { return VIZ_STATE.crossFilterLinkedCharts; },
+    set linkedCharts(v) { VIZ_STATE.crossFilterLinkedCharts = v; }
 };
 
 /**

@@ -1972,5 +1972,120 @@ window.applySplitColumn = applySplitColumnModal;
 window.applyMergeColumns = applyMergeColumnsModal;
 window.applyTypeConvert = applyTypeConvertModal;
 
+// =====================================================
+// LOAD MULTIPLE FILES - Dosya Ekle Button
+// Merges additional files into existing VIZ_STATE.data
+// =====================================================
+function loadMultipleFiles() {
+    const fileInput = document.getElementById('vizFileInput');
+    if (!fileInput) {
+        if (typeof showToast === 'function') showToast('Dosya input bulunamadı', 'error');
+        return;
+    }
+
+    // Store original onchange handler
+    const originalOnChange = fileInput.onchange;
+
+    // Set merge mode
+    fileInput.onchange = async function (e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        if (typeof showToast === 'function') {
+            showToast(`${files.length} dosya yükleniyor...`, 'info');
+        }
+
+        for (const file of files) {
+            try {
+                const reader = new FileReader();
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                await new Promise((resolve, reject) => {
+                    reader.onload = async function (evt) {
+                        try {
+                            let newData = [];
+
+                            if (ext === 'csv') {
+                                // CSV parse
+                                const text = evt.target.result;
+                                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                                if (lines.length > 0) {
+                                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                                    for (let i = 1; i < lines.length; i++) {
+                                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                                        const row = {};
+                                        headers.forEach((h, idx) => {
+                                            row[h] = values[idx] || '';
+                                        });
+                                        newData.push(row);
+                                    }
+                                }
+                            } else if (ext === 'xlsx' || ext === 'xls') {
+                                // Excel parse (requires XLSX library)
+                                if (typeof XLSX !== 'undefined') {
+                                    const workbook = XLSX.read(evt.target.result, { type: 'array' });
+                                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                                    newData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+                                }
+                            }
+
+                            // Merge into VIZ_STATE.data
+                            if (newData.length > 0) {
+                                if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) {
+                                    VIZ_STATE.data = newData;
+                                } else {
+                                    // Merge rows (append)
+                                    VIZ_STATE.data = [...VIZ_STATE.data, ...newData];
+                                }
+
+                                // Update columns
+                                if (newData.length > 0) {
+                                    const newCols = Object.keys(newData[0]);
+                                    const existingCols = VIZ_STATE.columns || [];
+                                    VIZ_STATE.columns = [...new Set([...existingCols, ...newCols])];
+                                }
+
+                                if (typeof showToast === 'function') {
+                                    showToast(`${file.name}: ${newData.length} satır eklendi`, 'success');
+                                }
+                            }
+                            resolve();
+                        } catch (err) {
+                            console.error('Parse error:', err);
+                            reject(err);
+                        }
+                    };
+                    reader.onerror = reject;
+
+                    if (ext === 'csv') {
+                        reader.readAsText(file);
+                    } else {
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            } catch (err) {
+                console.error(`Error loading ${file.name}:`, err);
+                if (typeof showToast === 'function') {
+                    showToast(`${file.name} yüklenemedi`, 'error');
+                }
+            }
+        }
+
+        // Refresh UI
+        if (typeof updateColumnsList === 'function') updateColumnsList();
+        if (typeof runDataProfile === 'function') runDataProfile();
+        if (typeof rerenderAllCharts === 'function') rerenderAllCharts();
+
+        // Reset input
+        fileInput.value = '';
+        fileInput.onchange = originalOnChange;
+    };
+
+    // Trigger file dialog
+    fileInput.click();
+}
+
+window.loadMultipleFiles = loadMultipleFiles;
+
 console.log('✅ data.js module loaded (with filter, sort, clean, all show modals)');
 

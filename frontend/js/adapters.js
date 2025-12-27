@@ -1035,6 +1035,20 @@
         if (!window.VIZ_STATE) return;
         if (!window.VIZ_STATE.filters) window.VIZ_STATE.filters = [];
 
+        // Normalize operator to standard format (data.js uses: eq/ne/gt/gte/lt/lte/contains/etc)
+        if (filter && filter.operator) {
+            const opNormMap = {
+                'equals': 'eq', 'equal': 'eq', '==': 'eq', '=': 'eq',
+                'not_equals': 'ne', 'not_equal': 'ne', '!=': 'ne', '<>': 'ne',
+                'greater': 'gt', 'greater_than': 'gt', '>': 'gt',
+                'greater_equal': 'gte', 'greater_or_equal': 'gte', '>=': 'gte',
+                'less': 'lt', 'less_than': 'lt', '<': 'lt',
+                'less_equal': 'lte', 'less_or_equal': 'lte', '<=': 'lte',
+                'like': 'contains', 'includes': 'contains'
+            };
+            filter.operator = opNormMap[filter.operator] || filter.operator;
+        }
+
         // Aynı kolon için mevcut filtreyi güncelle veya yeni ekle
         const existingIdx = window.VIZ_STATE.filters.findIndex(f => f.column === filter.column);
         if (existingIdx >= 0) {
@@ -1047,7 +1061,9 @@
         const crossFilterEnabled = document.getElementById('crossFilterEnabled')?.checked || window.VIZ_STATE.crossFilterEnabled;
         if (crossFilterEnabled) {
             window.VIZ_STATE.crossFilterEnabled = true;
-            window.VIZ_STATE.crossFilterValue = filter.value;
+            window.VIZ_STATE.crossFilterValue = (filter && typeof filter.value !== 'undefined')
+                ? String(filter.value)
+                : null;
 
             if (typeof window.rerenderAllCharts === 'function') {
                 window.rerenderAllCharts();
@@ -1090,14 +1106,50 @@
         `).join('');
     };
 
-    // removeFilter
-    window.removeFilter = function (index) {
-        if (window.VIZ_STATE?.filters) {
+    // removeFilter - DISPATCHER: handles both DOM filter row removal (string ID) and active filter array removal (number index)
+    // This resolves the collision between data.js (DOM) and adapters.js (array)
+    const _removeFilterRow = window.removeFilter; // Preserve data.js DOM-based function if loaded
+
+    window.removeFilter = function (arg) {
+        // If arg is a string starting with 'filter_', it's a DOM element ID (from data.js showFilterPanel)
+        if (typeof arg === 'string' && arg.startsWith('filter_')) {
+            const row = document.getElementById(arg);
+            if (row) {
+                row.remove();
+                return;
+            }
+        }
+
+        // If arg is a number or numeric string, it's an array index (from adapters.js renderActiveFilters)
+        const index = parseInt(arg);
+        if (!isNaN(index) && window.VIZ_STATE?.filters) {
             window.VIZ_STATE.filters.splice(index, 1);
-            window.renderActiveFilters();
+            if (typeof window.renderActiveFilters === 'function') {
+                window.renderActiveFilters();
+            }
             if (typeof window.rerenderAllCharts === 'function') {
                 window.rerenderAllCharts();
             }
+            return;
+        }
+
+        // Fallback: try preserved DOM function
+        if (typeof _removeFilterRow === 'function') {
+            _removeFilterRow(arg);
+        }
+    };
+
+    // Expose individual functions for direct access
+    window.removeFilterRow = function (filterId) {
+        const row = document.getElementById(filterId);
+        if (row) row.remove();
+    };
+
+    window.removeActiveFilterByIndex = function (index) {
+        if (window.VIZ_STATE?.filters) {
+            window.VIZ_STATE.filters.splice(index, 1);
+            window.renderActiveFilters?.();
+            window.rerenderAllCharts?.();
         }
     };
 
@@ -2120,6 +2172,25 @@
             window.startScheduledReportsChecker();
         });
     }
+
+    // GÖREV-2: selftest=1 URL parametresi ile selftest yükleme
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('selftest') === '1') {
+            const s = document.createElement('script');
+            s.type = 'module';
+            s.src = 'js/selftest.js';
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.type = 'module';
+                s2.src = 'selftest.js';
+                document.head.appendChild(s2);
+                console.log('[SELFTEST] fallback loader injected (selftest=1)');
+            };
+            document.head.appendChild(s);
+            console.log('[SELFTEST] loader injected (selftest=1)');
+        }
+    } catch (e) { /* no-op */ }
 
     console.log('✅ adapters.js loaded - Compatibility layer active (FINAL_AUDIT_FIX Complete)');
 })();

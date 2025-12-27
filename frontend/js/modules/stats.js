@@ -3021,52 +3021,10 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
     };
 }
 
-// Normal CDF approximation
-function normalCDF(x) {
-    const a1 = 0.254829592;
-    const a2 = -0.284496736;
-    const a3 = 1.421413741;
-    const a4 = -1.453152027;
-    const a5 = 1.061405429;
-    const p = 0.3275911;
+// normalCDF already defined at L1396 - removed duplicate
 
-    const sign = x < 0 ? -1 : 1;
-    x = Math.abs(x) / Math.sqrt(2);
-
-    const t = 1.0 / (1.0 + p * x);
-    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-
-    return 0.5 * (1.0 + sign * y);
-}
-
-// Approximate F-test p-value
-function approximateFTestPValue(f, df1, df2) {
-    // Beta distribution approximation
-    const x = df2 / (df2 + df1 * f);
-    return 1 - incompleteBeta(df2 / 2, df1 / 2, x);
-}
-
-function incompleteBeta(a, b, x) {
-    // Simplified approximation
-    if (x <= 0) return 0;
-    if (x >= 1) return 1;
-    return Math.pow(x, a) * Math.pow(1 - x, b) / (a * beta(a, b));
-}
-
-function beta(a, b) {
-    return Math.exp(logGamma(a) + logGamma(b) - logGamma(a + b));
-}
-
-function logGamma(x) {
-    const c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
-        -1.231739572450155, 0.001208650973866179, -0.000005395239384953];
-    let y = x;
-    let tmp = x + 5.5;
-    tmp -= (x + 0.5) * Math.log(tmp);
-    let ser = 1.000000000190015;
-    for (let j = 0; j < 6; j++) ser += c[j] / ++y;
-    return -tmp + Math.log(2.5066282746310005 * ser / x);
-}
+// NOTE: The following helper functions (approximateFTestPValue, incompleteBeta, beta, logGamma)
+// are already defined earlier in this file. Removed duplicates to prevent SyntaxError.
 
 /**
  * Logistic regression (placeholder)

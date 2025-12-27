@@ -237,7 +237,7 @@ export function setupKeyboardShortcuts() {
 // -----------------------------------------------------
 export function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(() => console.log('✅ Service Worker registered')).catch(err => console.warn('SW registration failed:', err));
+        navigator.serviceWorker.register('/js/sw.js').then(() => console.log('✅ Service Worker registered')).catch(err => console.warn('SW registration failed:', err));
     }
 }
 

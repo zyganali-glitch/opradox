@@ -438,14 +438,19 @@ body:not(.dark-mode) .viz-preview-btn:hover {
 }
 
 /* File info container - stable layout */
+/* NOTE: Do NOT set display here - inline style controls visibility */
 .viz-file-info {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    padding: 10px !important;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
     background: var(--gm-card-bg);
     border-radius: 8px;
     border: 1px solid var(--gm-card-border);
+}
+
+/* When visible via JS, use flexbox layout */
+.viz-file-info[style*="block"] {
+    display: flex !important;
 }
 
 /* File name row - horizontal */

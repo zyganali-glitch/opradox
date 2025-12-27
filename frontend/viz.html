@@ -116,15 +116,12 @@
         });
     </script>
 
-    <!-- Legacy file handlers kept for compatibility -->
-    <script defer src="js/viz_file_handler.js"></script>
-    <script defer src="js/viz_export_addon.js"></script>
+    <!-- Legacy file handlers REMOVED - files don't exist (404) -->
 
     <!-- FAZ 1A: Compatibility Layer for Missing Window Bindings -->
     <script defer src="js/adapters.js"></script>
 
-    <!-- FINAL_AUDIT_FIX: Self-Test Module -->
-    <script defer src="js/selftest.js"></script>
+    <!-- SELFTEST: Only loaded via adapters.js when ?selftest=1 is in URL -->
 </head>
 
 
@@ -198,7 +195,7 @@
                     <div class="viz-file-info" id="vizFileInfo" style="display:none;">
                         <div class="viz-file-name">
                             <i class="fas fa-file-excel"></i>
-                            <span id="vizFileName">dosya.xlsx</span>
+                            <span id="vizFileName"></span>
                             <button class="viz-file-remove" id="vizFileRemove"><i class="fas fa-times"></i></button>
                         </div>
 
