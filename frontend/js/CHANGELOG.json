@@ -1,8 +1,33 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "date": "2025-12-27",
-  "title": "Modular System Parse/Syntax Repair - Phase 1B/1C/2/3/4 Complete",
+  "title": "Modular System - Stats UI Engine Restoration Complete",
   "phases": {
+    "phase_stats_ui": {
+      "name": "Stats UI Engine Restoration",
+      "status": "COMPLETE",
+      "changes": [
+        {
+          "file": "stats.js",
+          "type": "REPLACE",
+          "description": "Replaced simplified createStatWidget with robust viz_SOURCE.js implementation (L1773-1904)",
+          "lines": "1773-2100"
+        },
+        {
+          "file": "stats.js",
+          "type": "ADD",
+          "description": "Restored generateStatUIByType, getAnalysisRequirements (TYPE_A-H), populateGroupSelectors",
+          "lines": "1773-2100"
+        },
+        {
+          "file": "stats.js",
+          "type": "ADD",
+          "description": "Implemented runStatForWidget with bridge to internal math functions (Independent T-Test, ANOVA, etc.)",
+          "lines": "1773-2100"
+        }
+      ],
+      "result": "Restored 8 UI Types (TYPE_A...TYPE_H) and full parameter forms for 23 statistical tests."
+    },
     "phase_4": {
       "name": "Bugfix: CrossFilter Value Type & Selftest Loader",
       "status": "COMPLETE",
@@ -89,6 +114,13 @@
   },
   "files_modified": [
     {
+      "path": "frontend/js/modules/stats.js",
+      "changes": [
+        "Restored complete UI Engine (createStatWidget, generateStatUIByType)",
+        "Added bridges to internal math functions"
+      ]
+    },
+    {
       "path": "frontend/js/adapters.js",
       "changes": [
         "removeFilter dispatcher (lines 1093-1138)",
@@ -116,8 +148,7 @@
     }
   },
   "next_steps": [
-    "Run live test in browser",
-    "Check console for SELFTEST output",
-    "Verify all onclick handlers work correctly"
+    "Verify dynamic stats forms in UI",
+    "Test calculation bridge for t-tests and ANOVA"
   ]
 }
