@@ -411,6 +411,34 @@ function downloadFile(dataUrl, filename) {
     document.body.removeChild(link);
 }
 
+function exportChartAsSVG(chartId) {
+    const targetId = chartId || VIZ_STATE.selectedChart;
+    if (!targetId) {
+        if (typeof showToast === 'function') showToast('Önce bir grafik seçin', 'warning');
+        return;
+    }
+
+    const chart = VIZ_STATE.echartsInstances[targetId];
+    if (!chart) {
+        if (typeof showToast === 'function') showToast('Grafik bulunamadı', 'error');
+        return;
+    }
+
+    try {
+        const svgUrl = chart.getDataURL({
+            type: 'svg',
+            pixelRatio: 2,
+            backgroundColor: document.body.classList.contains('day-mode') ? '#fff' : '#1a1a2e'
+        });
+
+        downloadFile(svgUrl, `chart_${targetId}.svg`);
+        if (typeof showToast === 'function') showToast('SVG indirildi', 'success');
+    } catch (error) {
+        console.error('SVG export hatası:', error);
+        if (typeof showToast === 'function') showToast('SVG oluşturulamadı', 'error');
+    }
+}
+
 
 // -----------------------------------------------------
 // RENDER CHART (SKELETON)
@@ -2210,4 +2238,7 @@ window.renderWaterfallChart = renderWaterfallChart;
 window.showWatermarkModal = showWatermarkModal;
 window.applyWatermark = applyWatermark;
 window.renderErrorBar = renderErrorBar;
+window.downloadFile = downloadFile;
+window.rerenderAllCharts = rerenderAllCharts;
+window.exportChartAsSVG = exportChartAsSVG;
 
