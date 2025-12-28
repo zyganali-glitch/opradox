@@ -475,3 +475,208 @@ body:not(.dark-mode) .viz-preview-btn:hover {
     justify-content: center !important;
     gap: 6px !important;
 }
+
+/* =====================================================
+   FAZ-2: LIGHT MODE CHART BUTTON FIXES
+   Sol panelde chart butonları day-mode'da okunur olacak
+   ===================================================== */
+
+/* Chart type buttons - dark mode base (existing) */
+.viz-chart-btn,
+.viz-chart-type-btn,
+button[data-chart-type],
+.viz-stat-btn {
+    background: rgba(74, 144, 217, 0.1);
+    border: 1px solid rgba(74, 144, 217, 0.3);
+    color: #e5e7eb;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.viz-chart-btn:hover,
+.viz-chart-type-btn:hover,
+button[data-chart-type]:hover,
+.viz-stat-btn:hover {
+    background: rgba(74, 144, 217, 0.2);
+    border-color: rgba(74, 144, 217, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Light mode (day-mode) overrides */
+body.day-mode .viz-chart-btn,
+body.day-mode .viz-chart-type-btn,
+body.day-mode button[data-chart-type],
+body.day-mode .viz-stat-btn,
+body:not(.dark-mode) .viz-chart-btn,
+body:not(.dark-mode) .viz-chart-type-btn,
+body:not(.dark-mode) button[data-chart-type],
+body:not(.dark-mode) .viz-stat-btn {
+    background: #f3f4f6 !important;
+    border: 1px solid #d1d5db !important;
+    color: #374151 !important;
+}
+
+body.day-mode .viz-chart-btn:hover,
+body.day-mode .viz-chart-type-btn:hover,
+body.day-mode button[data-chart-type]:hover,
+body.day-mode .viz-stat-btn:hover,
+body:not(.dark-mode) .viz-chart-btn:hover,
+body:not(.dark-mode) .viz-chart-type-btn:hover,
+body:not(.dark-mode) button[data-chart-type]:hover,
+body:not(.dark-mode) .viz-stat-btn:hover {
+    background: #e0e7ff !important;
+    border-color: #4a90d9 !important;
+    color: #1e40af !important;
+}
+
+/* Icons in light mode */
+body.day-mode .viz-chart-btn i,
+body.day-mode .viz-stat-btn i,
+body:not(.dark-mode) .viz-chart-btn i,
+body:not(.dark-mode) .viz-stat-btn i {
+    color: #4a90d9;
+}
+
+/* Export dropdown light mode */
+body.day-mode .viz-export-dropdown,
+body:not(.dark-mode) .viz-export-dropdown {
+    background: #ffffff !important;
+    border-color: #d1d5db !important;
+}
+
+body.day-mode .viz-export-menu-item,
+body:not(.dark-mode) .viz-export-menu-item {
+    color: #374151 !important;
+}
+
+body.day-mode .viz-export-menu-item:hover,
+body:not(.dark-mode) .viz-export-menu-item:hover {
+    background: rgba(74, 144, 217, 0.1) !important;
+}
+
+/* Stat result tables light mode */
+body.day-mode .stat-table,
+body:not(.dark-mode) .stat-table {
+    color: #374151;
+}
+
+body.day-mode .stat-table td,
+body.day-mode .stat-table th,
+body:not(.dark-mode) .stat-table td,
+body:not(.dark-mode) .stat-table th {
+    border-color: #e5e7eb;
+}
+
+/* Formula panel light mode */
+body.day-mode .stat-formula-panel,
+body:not(.dark-mode) .stat-formula-panel {
+    background: rgba(74, 144, 217, 0.05) !important;
+}
+
+body.day-mode .stat-formula-panel pre,
+body:not(.dark-mode) .stat-formula-panel pre {
+    color: #374151 !important;
+}
+
+/* =====================================================
+   P1.3: STAT DIAGNOSTICS PANEL STYLES
+   ===================================================== */
+
+.stat-diagnostics,
+.viz-stat-diagnostics {
+    background: rgba(74, 144, 217, 0.08);
+    border: 1px solid rgba(74, 144, 217, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 0.8rem;
+}
+
+.stat-diagnostics .diag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.stat-diagnostics .diag-item {
+    color: #a0aec0;
+}
+
+.stat-diagnostics .diag-item b {
+    color: #4a90d9;
+}
+
+.stat-diagnostics .diag-summary {
+    color: #718096;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-diagnostics .diag-summary i {
+    color: #4a90d9;
+}
+
+/* Light mode diagnostics */
+body.day-mode .stat-diagnostics,
+body:not(.dark-mode) .stat-diagnostics {
+    background: rgba(74, 144, 217, 0.05);
+    border-color: rgba(74, 144, 217, 0.15);
+}
+
+body.day-mode .stat-diagnostics .diag-item,
+body:not(.dark-mode) .stat-diagnostics .diag-item {
+    color: #4b5563;
+}
+
+body.day-mode .stat-diagnostics .diag-summary,
+body:not(.dark-mode) .stat-diagnostics .diag-summary {
+    color: #6b7280;
+}
+
+/* =====================================================
+   P1.4: MISSING DATA ACADEMIC NOTE STYLES
+   ===================================================== */
+
+.stat-missing-note {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid #f59e0b;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #92400e;
+    border-radius: 0 4px 4px 0;
+}
+
+.stat-missing-note i {
+    color: #f59e0b;
+    margin-right: 6px;
+}
+
+/* Dark mode missing note */
+.dark-mode .stat-missing-note,
+body:not(.day-mode) .stat-missing-note {
+    background: rgba(245, 158, 11, 0.08);
+    color: #fbbf24;
+}
+
+/* =====================================================
+   P1.6: COPY AS TABLE BUTTON HIGHLIGHT
+   ===================================================== */
+
+.viz-widget-btn[title="Tablo Kopyala"] {
+    color: #10b981;
+}
+
+.viz-widget-btn[title="Tablo Kopyala"]:hover {
+    background: rgba(16, 185, 129, 0.2);
+}

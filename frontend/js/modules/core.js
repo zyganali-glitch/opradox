@@ -77,7 +77,67 @@ export { VIZ_TEXTS };
 export function initVizStudio() {
     console.log('🎨 Visual Studio başlatıldı (Production v1.0)');
     injectCoreStyles();
+
+    // CRITICAL: Initialize all event listeners for buttons to work
+    setupEventListeners();
+    setupDragAndDrop();
+    setupKeyboardShortcuts();
+
+    // Load saved preferences
+    loadSavedTheme();
+    loadSavedLang();
+
+    // CRITICAL: Initialize stat buttons (click + drag-drop)
+    // Wait for DOM to be fully ready
+    setTimeout(() => {
+        setupStatButtonListeners();
+        if (typeof window.initStatDragDropSystem === 'function') {
+            window.initStatDragDropSystem();
+            console.log('📊 Stat drag-drop system initialized');
+        }
+    }, 100);
+
     if (typeof updateEmptyState === 'function') updateEmptyState();
+    console.log('✅ Tüm event listener\'lar yüklendi');
+}
+
+/**
+ * Setup click listeners for stat buttons in left panel
+ */
+function setupStatButtonListeners() {
+    const statButtons = document.querySelectorAll('.viz-stat-btn, .viz-stat-draggable, [data-stat-type]');
+
+    if (statButtons.length === 0) {
+        console.warn('No stat buttons found');
+        return;
+    }
+
+    console.log(`📊 Setting up ${statButtons.length} stat button listeners`);
+
+    statButtons.forEach(btn => {
+        const statType = btn.dataset.statType || btn.dataset.type || btn.getAttribute('data-stat-type');
+        if (!statType) return;
+
+        // Add click listener (don't duplicate if already has onclick)
+        if (!btn.onclick) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                console.log(`📊 Stat button clicked: ${statType}`);
+
+                // Call createStatWidget if available
+                if (typeof window.createStatWidget === 'function') {
+                    window.createStatWidget(statType);
+                } else {
+                    console.error('createStatWidget function not found');
+                    if (typeof showToast === 'function') {
+                        showToast(`Stat modülü yüklenemedi: ${statType}`, 'error');
+                    }
+                }
+            });
+        }
+    });
 }
 
 // -----------------------------------------------------

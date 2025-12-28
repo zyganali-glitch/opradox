@@ -2,6 +2,7 @@
 // DATA.JS - Opradox Visual Studio Data Module
 // File handling, export, transform, aggregate, JOIN, SQL, Google Sheets
 // =====================================================
+console.log('[BUILD_ID]', '20241228-2051', 'data.js');
 
 import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 
@@ -1104,7 +1105,10 @@ export function applyFillMissing() {
     if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) return;
 
     const columnsToFill = column === '__all__' ? VIZ_STATE.columns : [column];
-    let filledCount = 0;
+    let totalFilledCount = 0;
+
+    // ✅ Track per-column fill info for accurate logging
+    const fillResults = [];
 
     columnsToFill.forEach(col => {
         const values = VIZ_STATE.data.map(row => row[col]).filter(v => v !== null && v !== '' && v !== undefined);
@@ -1135,6 +1139,8 @@ export function applyFillMissing() {
                 break;
         }
 
+        // ✅ Count per-column missing BEFORE filling
+        let colFilledCount = 0;
         VIZ_STATE.data.forEach((row, i) => {
             if (row[col] === null || row[col] === '' || row[col] === undefined) {
                 if (method === 'forward') {
@@ -1144,13 +1150,51 @@ export function applyFillMissing() {
                 } else {
                     row[col] = fillValue;
                 }
-                filledCount++;
+                colFilledCount++;
             }
         });
+
+        totalFilledCount += colFilledCount;
+
+        // ✅ Store per-column result
+        if (colFilledCount > 0) {
+            fillResults.push({
+                col: col,
+                count: colFilledCount,
+                fillValue: typeof fillValue === 'number' ? fillValue.toFixed(2) : fillValue
+            });
+        }
     });
 
     document.getElementById('fillMissingModal')?.remove();
-    if (typeof showToast === 'function') showToast(`${filledCount} eksik değer dolduruldu`, 'success');
+    if (typeof showToast === 'function') showToast(`${totalFilledCount} eksik değer dolduruldu`, 'success');
+
+    // ✅ LOG DATA ACTION FOR STAT WIDGETS TO REFERENCE
+    if (!VIZ_STATE.dataActions) VIZ_STATE.dataActions = [];
+    const methodNames = {
+        'mean': { tr: 'ortalama', en: 'mean' },
+        'median': { tr: 'medyan', en: 'median' },
+        'mode': { tr: 'mod', en: 'mode' },
+        'zero': { tr: '0 değeri', en: 'zero' },
+        'custom': { tr: 'özel değer', en: 'custom value' },
+        'forward': { tr: 'önceki değer (forward fill)', en: 'forward fill' },
+        'backward': { tr: 'sonraki değer (backward fill)', en: 'backward fill' }
+    };
+
+    // ✅ Create action for each column with CORRECT per-column count
+    fillResults.forEach(result => {
+        const action = {
+            type: 'imputation',
+            column: result.col,
+            method: method,
+            methodName: methodNames[method] || { tr: method, en: method },
+            count: result.count,
+            value: result.fillValue,
+            timestamp: new Date().toISOString()
+        };
+        VIZ_STATE.dataActions.push(action);
+    });
+
     updateDataProfile();
 }
 
@@ -1960,6 +2004,69 @@ export async function exportWithAnnotations() {
 }
 
 // =====================================================
+// FAZ-3: CENTRAL REFRESH PIPELINE
+// Call after every data mutation (filter/sort/fill/outlier/etc.)
+// =====================================================
+
+/**
+ * Central refresh function - updates all UI after data mutation
+ * This ensures preview, columns, profile, charts, and stats all reflect new data
+ */
+export function refreshAllAfterDataMutation() {
+    console.log('🔄 Refreshing all UI after data mutation...');
+
+    // 1. Update data profile (row/col counts, quality)
+    if (typeof updateDataProfile === 'function') {
+        updateDataProfile();
+    }
+
+    // 2. Update column list in left panel
+    if (typeof renderColumnsList === 'function') {
+        renderColumnsList();
+    }
+
+    // 3. Update dropdowns (X/Y axis selectors)
+    if (typeof updateDropdowns === 'function') {
+        updateDropdowns();
+    }
+
+    // 4. Detect column types if available
+    if (typeof window.detectColumnTypes === 'function') {
+        window.detectColumnTypes();
+    }
+
+    // 5. Update preview grid if visible
+    if (typeof window.updatePreviewGrid === 'function') {
+        window.updatePreviewGrid();
+    }
+
+    // 6. Re-render all charts with new data
+    if (typeof window.rerenderAllCharts === 'function') {
+        window.rerenderAllCharts();
+    }
+
+    // 7. Refresh all stat widgets
+    if (VIZ_STATE.statWidgets && VIZ_STATE.statWidgets.length > 0) {
+        VIZ_STATE.statWidgets.forEach(widgetId => {
+            if (typeof window.refreshStatWidget === 'function') {
+                window.refreshStatWidget(widgetId);
+            }
+        });
+    }
+
+    // 8. Update dataset in multi-dataset list
+    if (VIZ_STATE.activeDatasetId && VIZ_STATE.datasets) {
+        const ds = VIZ_STATE.datasets[VIZ_STATE.activeDatasetId];
+        if (ds) {
+            ds.data = VIZ_STATE.data;
+            ds.columns = VIZ_STATE.columns;
+        }
+    }
+
+    console.log('✅ All UI refreshed');
+}
+
+// =====================================================
 // WINDOW BINDINGS (HTML onclick için)
 // =====================================================
 window.handleFileSelect = handleFileSelect;
@@ -2030,6 +2137,7 @@ window.showURLLoadModal = showURLLoadModal;
 window.applyURLLoadModal = applyURLLoadModal;
 window.runDataProfile = runDataProfile;
 window.showDataProfileModal = showDataProfileModal;
+window.refreshAllAfterDataMutation = refreshAllAfterDataMutation;
 
 // PDF Preview Functions
 window.closePDFPreviewModal = closePDFPreviewModal;

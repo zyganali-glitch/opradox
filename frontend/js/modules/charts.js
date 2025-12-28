@@ -2,6 +2,7 @@
 // CHARTS.JS - Opradox Visual Studio Chart Management
 // Chart creation, widget management, resizing, export
 // =====================================================
+console.log('[BUILD_ID]', '20241228-2051', 'charts.js');
 
 import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 import { showToast, showSettings, hideSettings, updateEmptyState, createModal } from './ui.js';
@@ -3416,39 +3417,85 @@ export function renderWaterfallChart(config = {}) {
 export function showWatermarkModal() {
     const modalHtml = `
         <div class="viz-modal-overlay" id="watermarkModal">
-            <div class="viz-modal" style="width:400px;">
+            <div class="viz-modal" style="width:450px;max-height:90vh;overflow-y:auto;">
                 <div class="viz-modal-header">
-                    <h3>Filigran Ekle</h3>
+                    <h3><i class="fas fa-tint"></i> Filigran Ayarları</h3>
                     <button class="viz-modal-close" onclick="document.getElementById('watermarkModal').remove()">×</button>
                 </div>
                 <div class="viz-modal-body">
+                    <!-- Type Selector -->
                     <div class="viz-form-group">
-                        <label>Filigran Metni</label>
-                        <input type="text" id="watermarkText" value="TASLAK" placeholder="Filigran metni...">
+                        <label>Filigran Tipi</label>
+                        <select id="watermarkType" onchange="toggleWatermarkTypeFields()">
+                            <option value="text">Metin</option>
+                            <option value="image">Görsel</option>
+                            <option value="none">Yok (Kaldır)</option>
+                        </select>
                     </div>
-                    <div class="viz-form-group">
-                        <label>Yazı Boyutu</label>
-                        <input type="range" id="watermarkFontSize" min="20" max="100" value="48">
-                        <span id="watermarkFontSizeValue">48px</span>
+
+                    <!-- Text Options -->
+                    <div id="watermarkTextOptions">
+                        <div class="viz-form-group">
+                            <label>Filigran Metni</label>
+                            <input type="text" id="watermarkText" value="TASLAK" placeholder="Filigran metni...">
+                        </div>
+                        <div class="viz-form-group">
+                            <label>Yazı Boyutu</label>
+                            <input type="range" id="watermarkFontSize" min="20" max="100" value="48">
+                            <span id="watermarkFontSizeValue">48px</span>
+                        </div>
+                        <div class="viz-form-group">
+                            <label>Renk</label>
+                            <input type="color" id="watermarkColor" value="#888888">
+                        </div>
                     </div>
-                    <div class="viz-form-group">
-                        <label>Opaklık</label>
-                        <input type="range" id="watermarkOpacity" min="5" max="50" value="15">
-                        <span id="watermarkOpacityValue">15%</span>
+
+                    <!-- Image Options -->
+                    <div id="watermarkImageOptions" style="display:none;">
+                        <div class="viz-form-group">
+                            <label>Görsel URL</label>
+                            <input type="text" id="watermarkImageUrl" placeholder="https://...">
+                        </div>
+                        <div class="viz-form-group">
+                            <label>veya Dosya Yükle</label>
+                            <input type="file" id="watermarkImageUpload" accept="image/*" onchange="handleWatermarkImageUpload(event)">
+                        </div>
+                        <div class="viz-form-group">
+                            <label>Görsel Boyutu</label>
+                            <input type="range" id="watermarkImageSize" min="50" max="400" value="150">
+                            <span id="watermarkImageSizeValue">150px</span>
+                        </div>
                     </div>
-                    <div class="viz-form-group">
-                        <label>Renk</label>
-                        <input type="color" id="watermarkColor" value="#888888">
-                    </div>
-                    <div class="viz-form-group">
-                        <label>Açı (Derece)</label>
-                        <input type="range" id="watermarkAngle" min="-90" max="90" value="-30">
-                        <span id="watermarkAngleValue">-30°</span>
+
+                    <!-- Common Options -->
+                    <div id="watermarkCommonOptions">
+                        <div class="viz-form-group">
+                            <label>Opaklık</label>
+                            <input type="range" id="watermarkOpacity" min="5" max="80" value="20">
+                            <span id="watermarkOpacityValue">20%</span>
+                        </div>
+                        <div class="viz-form-group">
+                            <label>Açı (Derece)</label>
+                            <input type="range" id="watermarkAngle" min="-90" max="90" value="-30">
+                            <span id="watermarkAngleValue">-30°</span>
+                        </div>
+                        <div class="viz-form-group">
+                            <label>Konum</label>
+                            <select id="watermarkPosition">
+                                <option value="center">Orta</option>
+                                <option value="top-left">Sol Üst</option>
+                                <option value="top-right">Sağ Üst</option>
+                                <option value="bottom-left">Sol Alt</option>
+                                <option value="bottom-right">Sağ Alt</option>
+                                <option value="tile">Döşeme (Tile)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="viz-modal-footer">
+                    <button class="viz-btn viz-btn-danger" onclick="removeWatermark()"><i class="fas fa-trash"></i> Kaldır</button>
                     <button class="viz-btn viz-btn-secondary" onclick="document.getElementById('watermarkModal').remove()">İptal</button>
-                    <button class="viz-btn viz-btn-primary" onclick="applyWatermark()">Uygula</button>
+                    <button class="viz-btn viz-btn-primary" onclick="applyWatermark()"><i class="fas fa-check"></i> Uygula</button>
                 </div>
             </div>
         </div>
@@ -3465,14 +3512,51 @@ export function showWatermarkModal() {
     document.getElementById('watermarkAngle').oninput = (e) => {
         document.getElementById('watermarkAngleValue').textContent = e.target.value + '°';
     };
+    document.getElementById('watermarkImageSize').oninput = (e) => {
+        document.getElementById('watermarkImageSizeValue').textContent = e.target.value + 'px';
+    };
 }
 
+// Toggle fields based on watermark type
+window.toggleWatermarkTypeFields = function () {
+    const type = document.getElementById('watermarkType').value;
+    const textOpts = document.getElementById('watermarkTextOptions');
+    const imageOpts = document.getElementById('watermarkImageOptions');
+    const commonOpts = document.getElementById('watermarkCommonOptions');
+
+    textOpts.style.display = type === 'text' ? 'block' : 'none';
+    imageOpts.style.display = type === 'image' ? 'block' : 'none';
+    commonOpts.style.display = type === 'none' ? 'none' : 'block';
+};
+
+// Handle image upload
+window.handleWatermarkImageUpload = function (event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('watermarkImageUrl').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
 export function applyWatermark() {
+    const type = document.getElementById('watermarkType')?.value || 'text';
+
+    if (type === 'none') {
+        removeWatermark();
+        return;
+    }
+
     const text = document.getElementById('watermarkText')?.value || 'TASLAK';
     const fontSize = parseInt(document.getElementById('watermarkFontSize')?.value || 48);
-    const opacity = parseInt(document.getElementById('watermarkOpacity')?.value || 15) / 100;
+    const opacity = parseInt(document.getElementById('watermarkOpacity')?.value || 20) / 100;
     const color = document.getElementById('watermarkColor')?.value || '#888888';
     const angle = parseInt(document.getElementById('watermarkAngle')?.value || -30);
+    const position = document.getElementById('watermarkPosition')?.value || 'center';
+    const imageUrl = document.getElementById('watermarkImageUrl')?.value;
+    const imageSize = parseInt(document.getElementById('watermarkImageSize')?.value || 150);
 
     // Apply to selected chart or all charts
     const chartId = VIZ_STATE.selectedChart;
@@ -3481,28 +3565,114 @@ export function applyWatermark() {
     charts.forEach(id => {
         const chart = VIZ_STATE.echartsInstances[id];
         if (chart) {
-            const currentOption = chart.getOption();
-            chart.setOption({
-                graphic: [{
-                    type: 'text',
-                    z: 100,
-                    left: 'center',
-                    top: 'middle',
-                    rotation: angle * Math.PI / 180,
-                    style: {
-                        text: text,
-                        fontSize: fontSize,
-                        fill: color,
-                        opacity: opacity,
-                        fontWeight: 'bold'
+            let graphicConfig;
+
+            // Position mapping
+            const posMap = {
+                'center': { left: 'center', top: 'middle' },
+                'top-left': { left: '10%', top: '10%' },
+                'top-right': { right: '10%', top: '10%' },
+                'bottom-left': { left: '10%', bottom: '10%' },
+                'bottom-right': { right: '10%', bottom: '10%' }
+            };
+            const pos = posMap[position] || posMap.center;
+
+            if (type === 'image' && imageUrl) {
+                // Image watermark
+                if (position === 'tile') {
+                    // Tile mode - multiple images
+                    graphicConfig = [];
+                    for (let x = 10; x <= 90; x += 30) {
+                        for (let y = 10; y <= 90; y += 30) {
+                            graphicConfig.push({
+                                type: 'image',
+                                z: 100,
+                                left: x + '%',
+                                top: y + '%',
+                                rotation: angle * Math.PI / 180,
+                                style: {
+                                    image: imageUrl,
+                                    width: imageSize / 2,
+                                    opacity: opacity
+                                }
+                            });
+                        }
                     }
-                }]
-            });
+                } else {
+                    graphicConfig = [{
+                        type: 'image',
+                        z: 100,
+                        ...pos,
+                        rotation: angle * Math.PI / 180,
+                        style: {
+                            image: imageUrl,
+                            width: imageSize,
+                            opacity: opacity
+                        }
+                    }];
+                }
+            } else {
+                // Text watermark
+                if (position === 'tile') {
+                    // Tile mode - multiple texts
+                    graphicConfig = [];
+                    for (let x = 10; x <= 90; x += 25) {
+                        for (let y = 10; y <= 90; y += 25) {
+                            graphicConfig.push({
+                                type: 'text',
+                                z: 100,
+                                left: x + '%',
+                                top: y + '%',
+                                rotation: angle * Math.PI / 180,
+                                style: {
+                                    text: text,
+                                    fontSize: fontSize / 2,
+                                    fill: color,
+                                    opacity: opacity,
+                                    fontWeight: 'bold'
+                                }
+                            });
+                        }
+                    }
+                } else {
+                    graphicConfig = [{
+                        type: 'text',
+                        z: 100,
+                        ...pos,
+                        rotation: angle * Math.PI / 180,
+                        style: {
+                            text: text,
+                            fontSize: fontSize,
+                            fill: color,
+                            opacity: opacity,
+                            fontWeight: 'bold'
+                        }
+                    }];
+                }
+            }
+
+            chart.setOption({ graphic: graphicConfig });
         }
     });
 
     document.getElementById('watermarkModal')?.remove();
     if (typeof showToast === 'function') showToast('Filigran eklendi', 'success');
+}
+
+// Remove watermark from charts
+export function removeWatermark() {
+    const chartId = VIZ_STATE.selectedChart;
+    const charts = chartId ? [chartId] : VIZ_STATE.charts.map(c => c.id);
+
+    charts.forEach(id => {
+        const chart = VIZ_STATE.echartsInstances[id];
+        if (chart) {
+            chart.setOption({ graphic: [] });
+        }
+    });
+
+    document.getElementById('watermarkModal')?.remove();
+    if (typeof showToast === 'function') showToast('Filigran kaldırıldı', 'info');
 }
 
 // -----------------------------------------------------
@@ -3664,6 +3834,7 @@ window.renderGanttChart = renderGanttChart;
 window.renderWaterfallChart = renderWaterfallChart;
 window.showWatermarkModal = showWatermarkModal;
 window.applyWatermark = applyWatermark;
+window.removeWatermark = removeWatermark;
 window.renderErrorBar = renderErrorBar;
 window.downloadFile = downloadFile;
 window.rerenderAllCharts = rerenderAllCharts;

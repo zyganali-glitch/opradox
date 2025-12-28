@@ -2,6 +2,7 @@
 // STATS.JS - Opradox Visual Studio Statistics Module
 // Part 1: Mathematical Core & Distribution Tables
 // =====================================================
+console.log('[BUILD_ID]', '20241228-2051', 'stats.js');
 
 import { VIZ_STATE, getText } from './core.js';
 import { showToast } from './ui.js';
@@ -1525,6 +1526,44 @@ export function renderStatResults(result, type) {
             <div class="stat-result-body">
     `;
 
+    // SPECIAL CASE: Descriptive statistics - render results array as table
+    if (result.testType === 'descriptive' && result.results && Array.isArray(result.results)) {
+        html += `
+            <table class="stat-table stat-descriptive-table">
+                <thead>
+                    <tr>
+                        <th>Değişken</th>
+                        <th>N</th>
+                        <th>Ortalama</th>
+                        <th>Std. Sapma</th>
+                        <th>Medyan</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${result.results.map(r => `
+                        <tr>
+                            <td>${r.column}</td>
+                            <td>${r.n}</td>
+                            <td>${r.mean?.toFixed(3) || '-'}</td>
+                            <td>${r.stdDev?.toFixed(3) || '-'}</td>
+                            <td>${r.median?.toFixed(3) || '-'}</td>
+                            <td>${r.min?.toFixed(2) || '-'}</td>
+                            <td>${r.max?.toFixed(2) || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        // Add interpretation and return early
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${result.interpretation}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
     // Main statistics table
     html += '<table class="stat-table">';
 
@@ -1711,6 +1750,12 @@ export function renderStatResults(result, type) {
         `;
     }
 
+    // P1.4: Missing Data Academic Note
+    const missingNote = generateMissingDataNote(result);
+    if (missingNote) {
+        html += missingNote;
+    }
+
     html += `
             </div>
             <div class="stat-result-footer">
@@ -1731,6 +1776,252 @@ function formatStatRow(label, value) {
         (Number.isInteger(value) ? value : value.toFixed(4)) : value;
     return `<tr><td>${label}</td><td>${displayValue}</td></tr>`;
 }
+
+// =====================================================
+// P1.3: X/Y COLUMN DIAGNOSTICS
+// =====================================================
+
+/**
+ * Render column diagnostics for a stat widget
+ * Shows X/Y column types, unique counts, missing counts, and dataset summary
+ */
+export function renderColumnDiagnostics(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) return '';
+
+    const datasetId = widget.dataset.datasetId;
+    const dataset = VIZ_STATE.getDatasetById ? VIZ_STATE.getDatasetById(datasetId) :
+        { data: VIZ_STATE.data || [], columns: VIZ_STATE.columns || [] };
+
+    if (!dataset || !dataset.data || dataset.data.length === 0) {
+        return '<div class="stat-diagnostics stat-warning"><i class="fas fa-info-circle"></i> Veri yüklenmemiş</div>';
+    }
+
+    const data = dataset.data;
+    const columns = dataset.columns || Object.keys(data[0] || {});
+
+    const xCol = document.getElementById(`${widgetId}_xCol`)?.value;
+    const yCol = document.getElementById(`${widgetId}_yCol`)?.value;
+
+    // Count column types
+    let numericCount = 0;
+    let categoricalCount = 0;
+    columns.forEach(col => {
+        const sample = data.slice(0, 100).map(r => r[col]);
+        const numericVals = sample.filter(v => v !== null && v !== '' && !isNaN(parseFloat(v)));
+        if (numericVals.length > sample.length * 0.7) {
+            numericCount++;
+        } else {
+            categoricalCount++;
+        }
+    });
+
+    // X column diagnostics
+    let xDiag = '';
+    if (xCol) {
+        const xVals = data.map(r => r[xCol]);
+        const xMissing = xVals.filter(v => v === null || v === '' || v === undefined).length;
+        const xUnique = new Set(xVals.filter(v => v !== null && v !== '')).size;
+        const xNumeric = xVals.filter(v => v !== null && v !== '' && !isNaN(parseFloat(v))).length;
+        const xType = xNumeric > xVals.length * 0.7 ? 'Sayısal' : 'Kategorik';
+
+        xDiag = `<span class="diag-item"><b>X (${xCol}):</b> ${xType}, ${xUnique} benzersiz, ${xMissing} eksik</span>`;
+    }
+
+    // Y column diagnostics
+    let yDiag = '';
+    if (yCol) {
+        const yVals = data.map(r => r[yCol]);
+        const yMissing = yVals.filter(v => v === null || v === '' || v === undefined).length;
+        const yValid = yVals.filter(v => v !== null && v !== '' && !isNaN(parseFloat(v))).length;
+        const yNumeric = yValid > 0;
+
+        yDiag = `<span class="diag-item"><b>Y (${yCol}):</b> ${yNumeric ? 'Sayısal' : 'Kategorik'}, n=${yValid}, ${yMissing} eksik</span>`;
+    }
+
+    return `
+        <div class="stat-diagnostics">
+            <div class="diag-row">
+                ${xDiag}
+                ${yDiag}
+            </div>
+            <div class="diag-summary">
+                <i class="fas fa-database"></i> 
+                ${data.length} satır, ${numericCount} sayısal, ${categoricalCount} kategorik sütun
+            </div>
+        </div>
+    `;
+}
+
+// =====================================================
+// P1.4: MISSING DATA ACADEMIC NOTE
+// =====================================================
+
+/**
+ * Generate academic-style missing data note
+ * Uses result.imputationActions and result.xMissing/yMissing for accuracy
+ * Returns HTML with Turkish/English academic language
+ */
+export function generateMissingDataNote(result, lang = 'tr') {
+    if (!result) return '';
+
+    let note = '<div class="stat-missing-note">';
+    note += '<i class="fas fa-info-circle"></i> ';
+
+    // ✅ USE RESULT VALUES DIRECTLY (injected by runStatWidgetAnalysis)
+    const missingX = result.xMissing || 0;
+    const missingY = result.yMissing || 0;
+    const totalMissing = missingX + missingY;
+    const xCol = result.xColumn || '';
+    const yCol = result.yColumn || '';
+
+    // Use result.imputationActions (pre-filtered for these columns)
+    let relevantActions = result.imputationActions || [];
+
+    // ✅ FALLBACK: If no column-specific actions, check global VIZ_STATE.dataActions
+    if (relevantActions.length === 0 && typeof VIZ_STATE !== 'undefined') {
+        const allActions = VIZ_STATE.dataActions || [];
+        // Check if any imputation was done on yCol (main analysis column)
+        relevantActions = allActions.filter(a =>
+            a.type === 'imputation' && (a.column === yCol || a.column === xCol)
+        );
+        // If still empty but there are ANY imputation actions, show general note
+        if (relevantActions.length === 0 && allActions.length > 0) {
+            relevantActions = allActions.filter(a => a.type === 'imputation');
+        }
+    }
+
+
+    // Academic text templates
+    const texts = {
+        tr: {
+            imputed: (col, count, method, value) =>
+                `${col} değişkeninde ${count} eksik gözlem ${method}${value ? ` (${value})` : ''} ile tamamlanmıştır.`,
+            noAction: (x, y, xName, yName) => {
+                let msg = '';
+                if (y > 0) msg += `${yName} değişkeninde n=${y} eksik gözlem tespit edilmiştir; `;
+                if (x > 0) msg += `${xName} değişkeninde n=${x} eksik gözlem tespit edilmiştir; `;
+                msg += 'eksik veri için herhangi bir doldurma işlemi uygulanmamıştır. Analiz listwise deletion ile yürütülmüştür.';
+                return msg;
+            },
+            noMissing: 'Analize dahil edilen değişkenlerde eksik veri bulunmamaktadır.'
+        },
+        en: {
+            imputed: (col, count, method, value) =>
+                `${count} missing observations in ${col} were imputed using ${method}${value ? ` (${value})` : ''}.`,
+            noAction: (x, y, xName, yName) => {
+                let msg = '';
+                if (y > 0) msg += `n=${y} missing observations in ${yName}; `;
+                if (x > 0) msg += `n=${x} missing observations in ${xName}; `;
+                msg += 'no imputation was applied. Analysis was conducted using listwise deletion.';
+                return msg;
+            },
+            noMissing: 'No missing data were found in the variables included in the analysis.'
+        }
+    };
+
+    const t = texts[lang] || texts.tr;
+
+    // ✅ Filter out any actions with missing/invalid data
+    const validActions = relevantActions.filter(a =>
+        a && a.column && a.type === 'imputation' && a.count !== undefined
+    );
+
+    if (validActions.length > 0) {
+        // Imputation was applied - show what was done
+        validActions.forEach(action => {
+            // Safe access to methodName with multiple fallbacks
+            let methodName = 'bilinmeyen yöntem';
+            if (action.methodName) {
+                if (typeof action.methodName === 'object') {
+                    methodName = action.methodName[lang] || action.methodName.tr || action.method || 'yöntem';
+                } else {
+                    methodName = action.methodName;
+                }
+            } else if (action.method) {
+                methodName = action.method;
+            }
+
+            const colName = action.column || 'sütun';
+            const count = action.count || '?';
+            const value = action.value || '';
+
+            note += t.imputed(colName, count, methodName, value);
+            note += ' ';
+        });
+    } else if (totalMissing > 0) {
+        // Missing data exists but NO imputation was done
+        note += t.noAction(missingX, missingY, xCol, yCol);
+    } else {
+        // Truly no missing data
+        note += t.noMissing;
+    }
+
+    note += '</div>';
+    return note;
+}
+
+
+// =====================================================
+// P1.6: COPY AS TABLE (TSV FORMAT)
+// =====================================================
+
+/**
+ * Copy stat widget results as TSV table (Excel/Sheets compatible)
+ */
+export function copyStatAsTable(widgetId) {
+    const widget = document.getElementById(widgetId);
+    if (!widget) {
+        showToast('Widget bulunamadı', 'error');
+        return;
+    }
+
+    const body = widget.querySelector('.viz-stat-body, .viz-widget-body');
+    if (!body) return;
+
+    const tables = body.querySelectorAll('table');
+    let tsv = '';
+
+    // Add title row
+    const title = widget.querySelector('.viz-widget-title');
+    if (title) {
+        tsv += title.textContent.trim() + '\n';
+    }
+
+    tables.forEach(table => {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td, th');
+            const rowData = Array.from(cells).map(c => c.textContent.trim());
+            tsv += rowData.join('\t') + '\n';
+        });
+        tsv += '\n'; // Empty line between tables
+    });
+
+    // Add interpretation if exists
+    const interp = body.querySelector('.stat-interpretation');
+    if (interp) {
+        tsv += 'Yorum\t' + interp.textContent.trim() + '\n';
+    }
+
+    // Add missing data note if exists
+    const missingNote = body.querySelector('.stat-missing-note');
+    if (missingNote) {
+        tsv += 'Not\t' + missingNote.textContent.trim() + '\n';
+    }
+
+    navigator.clipboard.writeText(tsv).then(() => {
+        showToast('Tablo olarak kopyalandı (Excel/Sheets uyumlu)', 'success');
+    }).catch(err => {
+        console.error('Copy error:', err);
+        showToast('Kopyalama başarısız', 'error');
+    });
+}
+
+// Window bindings for P1.3-P1.6
+window.renderColumnDiagnostics = renderColumnDiagnostics;
+window.generateMissingDataNote = generateMissingDataNote;
+window.copyStatAsTable = copyStatAsTable;
 
 /**
  * Format stat result for widget display (compact version)
@@ -1770,38 +2061,7 @@ let statWidgetCounter = 0;
 // =====================================================
 // RESTORED UI ENGINE (From viz_SOURCE.js)
 // =====================================================
-
-/**
- * İstatistik türü için başlık döndürür
- */
-export function getStatTitle(statType) {
-    const titles = {
-        'ttest': 't-Test Analizi',
-        'anova': 'ANOVA Analizi',
-        'chi-square': 'Ki-Kare Testi',
-        'correlation': 'Korelasyon Matrisi',
-        'normality': 'Normallik Testi',
-        'descriptive': 'Betimsel İstatistik',
-        'mann-whitney': 'Mann-Whitney U',
-        'wilcoxon': 'Wilcoxon Testi',
-        'kruskal': 'Kruskal-Wallis',
-        'levene': 'Levene Testi',
-        'effect-size': 'Etki Büyüklüğü',
-        'frequency': 'Frekans Analizi',
-        'pca': 'PCA Analizi',
-        'kmeans': 'K-Means Kümeleme',
-        'cronbach': 'Cronbach Alpha',
-        'logistic': 'Lojistik Regresyon',
-        'timeseries': 'Zaman Serisi',
-        'apa': 'APA Raporu',
-        'friedman': 'Friedman Testi',
-        'power': 'Güç Analizi',
-        'regression-coef': 'Regresyon Katsayıları',
-        'discriminant': 'Diskriminant Analizi',
-        'survival': 'Sağkalım Analizi'
-    };
-    return titles[statType] || `${statType} Analizi`;
-}
+// NOTE: getStatTitle is already defined above (line 1477), using that version.
 
 /**
  * UI tipine göre parametre seçicileri oluşturur
@@ -1934,10 +2194,14 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             let colsToUse = useX ? (categoricalCols.length > 0 ? categoricalCols : allCols) : (numericCols.length > 0 ? numericCols : allCols);
             if (analysisInfo.columnTypes?.includes('categorical') && analysisInfo.columnTypes?.includes('numeric')) colsToUse = allCols;
 
+            // Determine appropriate type hint
+            const typeEHint = analysisInfo.columnTypes?.includes('numeric') ? 'Sayısal' :
+                analysisInfo.columnTypes?.includes('categorical') ? 'Kategori' : 'Sayısal';
+
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>Sütun:</label>
+                        <label>Sütun (${typeEHint}):</label>
                         <select id="${widgetId}_${useX ? 'xCol' : 'yCol'}" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(colsToUse)}
                         </select>
@@ -1954,13 +2218,13 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>${statType === 'survival' ? 'Süre:' : 'Zaman:'}</label>
+                        <label>${statType === 'survival' ? 'Süre (Sayısal/Tarih):' : 'Zaman (Tarih/Sayısal):'}</label>
                         <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(dateCols.length > 0 ? dateCols : allCols)}
                         </select>
                     </div>
                     <div class="viz-param-group">
-                        <label>${statType === 'survival' ? 'Olay:' : 'Değer:'}</label>
+                        <label>${statType === 'survival' ? 'Olay (0/1 Sayısal):' : 'Değer (Sayısal):'}</label>
                         <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(numericCols.length > 0 ? numericCols : allCols)}
                         </select>
@@ -1971,18 +2235,30 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
         case 'TYPE_G':
         case 'TYPE_H':
         default:
+            // Define data type hints based on stat type requirements
+            const xTypeHint = analysisInfo.xColumnType === 'numeric' ? 'Sayısal' :
+                analysisInfo.xColumnType === 'categorical' ? 'Grup/Kategori' :
+                    statType.includes('chi') ? 'Kategori' : 'Grup/Kategori';
+            const yTypeHint = analysisInfo.yColumnType === 'numeric' ? 'Değer/Sayısal' :
+                analysisInfo.yColumnType === 'categorical' ? 'Kategori' :
+                    statType.includes('chi') ? 'Kategori' : 'Değer/Sayısal';
+
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>X:</label>
+                        <label>X (${xTypeHint}):</label>
                         <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
-                            ${makeOptions(allCols)}
+                            ${makeOptions(analysisInfo.xColumnType === 'categorical' ?
+                (categoricalCols.length > 0 ? categoricalCols : allCols) :
+                allCols)}
                         </select>
                     </div>
                     <div class="viz-param-group">
-                        <label>Y:</label>
+                        <label>Y (${yTypeHint}):</label>
                         <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
-                            ${makeOptions(allCols)}
+                            ${makeOptions(analysisInfo.yColumnType === 'numeric' ?
+                    (numericCols.length > 0 ? numericCols : allCols) :
+                    allCols)}
                         </select>
                     </div>
                 </div>`;
@@ -2030,12 +2306,18 @@ export async function createStatWidget(statType, options = {}) {
         <div class="viz-widget-header">
             <span class="viz-widget-title">${getStatTitle(statType)}</span>
             <div class="viz-widget-actions">
+                <button class="viz-widget-btn" onclick="copyStatAsText('${widgetId}')" title="Metin Kopyala"><i class="fas fa-copy"></i></button>
+                <button class="viz-widget-btn" onclick="copyStatAsAPA('${widgetId}')" title="APA Kopyala"><i class="fas fa-graduation-cap"></i></button>
+                <button class="viz-widget-btn" onclick="copyStatAsTable('${widgetId}')" title="Tablo Kopyala"><i class="fas fa-table"></i></button>
+                <button class="viz-widget-btn" onclick="copyStatAsImage('${widgetId}')" title="Resim Kopyala"><i class="fas fa-image"></i></button>
+                <button class="viz-widget-btn" onclick="toggleFormula('${widgetId}')" title="Formüller"><i class="fas fa-square-root-alt"></i></button>
                 <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}')" title="Yenile"><i class="fas fa-sync-alt"></i></button>
                 <button class="viz-widget-btn" onclick="embedStatToChart('${widgetId}')" title="Grafiğe Göm"><i class="fas fa-compress-arrows-alt"></i></button>
                 <button class="viz-widget-close" onclick="removeWidget('${widgetId}')"><i class="fas fa-times"></i></button>
             </div>
         </div>
         <div class="viz-stat-params" id="${widgetId}_params">${paramsHTML}</div>
+        <div class="viz-stat-diagnostics" id="${widgetId}_diagnostics"></div>
         <div class="viz-widget-body viz-stat-body" id="${widgetId}_body">
             <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hazır</div>
         </div>
@@ -2049,6 +2331,12 @@ export async function createStatWidget(statType, options = {}) {
     const yColSelect = document.getElementById(`${widgetId}_yCol`);
     if (xColSelect) xColSelect.value = defaultX;
     if (yColSelect) yColSelect.value = defaultY;
+
+    // P1.3: Populate diagnostics div
+    const diagEl = document.getElementById(`${widgetId}_diagnostics`);
+    if (diagEl) {
+        diagEl.innerHTML = renderColumnDiagnostics(widgetId);
+    }
 
     if (analysisInfo.needsGroupSelection) {
         populateGroupSelectors(widgetId);
@@ -2112,7 +2400,15 @@ export async function refreshStatWidget(widgetId) {
     const yCol = document.getElementById(`${widgetId}_yCol`)?.value;
     widget.dataset.xCol = xCol || '';
     widget.dataset.yCol = yCol || '';
-    await runStatForWidget(widgetId, widget.dataset.statType, widget.dataset.datasetId, xCol, yCol);
+
+    // P1.3: Update diagnostics when X/Y changes
+    const diagEl = document.getElementById(`${widgetId}_diagnostics`);
+    if (diagEl) {
+        diagEl.innerHTML = renderColumnDiagnostics(widgetId);
+    }
+
+    // FIX: Call runStatWidgetAnalysis which has the complete 23-test router
+    runStatWidgetAnalysis(widgetId);
 }
 
 export function embedStatToChart(widgetId) {
@@ -2195,24 +2491,45 @@ export function runStatWidgetAnalysis(widgetId) {
 
 
     const type = widget.dataset.type || widget.dataset.statType;
-    const resultsContainer = document.getElementById(`${widgetId}_results`);
+    // FIX: Widget body uses _body, not _results
+    const resultsContainer = document.getElementById(`${widgetId}_body`) || document.getElementById(`${widgetId}_results`);
+
+    if (!resultsContainer) {
+        console.error(`[STAT] Results container not found for widget ${widgetId}`);
+        return;
+    }
 
     // Show loading
     resultsContainer.innerHTML = '<div class="viz-stat-loading"><i class="fas fa-spinner fa-spin"></i> Analiz yapılıyor...</div>';
 
     try {
-        // Get configuration values
-        const var1 = document.getElementById(`${widgetId}_var1`)?.value;
-        const var2 = document.getElementById(`${widgetId}_var2`)?.value;
-        const group = document.getElementById(`${widgetId}_group`)?.value;
+        // FIX: Get configuration values using CORRECT element IDs (widgets use _xCol/_yCol, not _var1/_var2)
+        const var1 = document.getElementById(`${widgetId}_var1`)?.value || document.getElementById(`${widgetId}_xCol`)?.value;
+        const var2 = document.getElementById(`${widgetId}_var2`)?.value || document.getElementById(`${widgetId}_yCol`)?.value;
+        const group = document.getElementById(`${widgetId}_group`)?.value || document.getElementById(`${widgetId}_xCol`)?.value;
+        const group1 = document.getElementById(`${widgetId}_group1`)?.value;
+        const group2 = document.getElementById(`${widgetId}_group2`)?.value;
         const popMean = parseFloat(document.getElementById(`${widgetId}_popmean`)?.value) || 0;
         const alpha = parseFloat(document.getElementById(`${widgetId}_alpha`)?.value) || 0.05;
         const multiVars = getMultiSelectValues(`${widgetId}_multivars`);
 
-        // Get data
-        const data = VIZ_STATE.data || [];
+        // Get data - FIX: Use proper dataset chain
+        const activeDataset = VIZ_STATE.getActiveDataset ? VIZ_STATE.getActiveDataset() : null;
+        const data = activeDataset?.data || VIZ_STATE.data || [];
         if (data.length === 0) {
             throw new Error('Veri yüklenmemiş');
+        }
+
+        // ✅ CALCULATE MISSING COUNTS FOR ACADEMIC NOTE
+        const xCol = group || var1 || document.getElementById(`${widgetId}_xCol`)?.value;
+        const yCol = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+
+        let xMissing = 0, yMissing = 0;
+        if (xCol) {
+            xMissing = data.filter(r => r[xCol] === null || r[xCol] === '' || r[xCol] === undefined).length;
+        }
+        if (yCol) {
+            yMissing = data.filter(r => r[yCol] === null || r[yCol] === '' || r[yCol] === undefined || isNaN(parseFloat(r[yCol]))).length;
         }
 
         let result;
@@ -2222,12 +2539,21 @@ export function runStatWidgetAnalysis(widgetId) {
             // ==================== T-TESTS ====================
             case 'ttest':
             case 'ttest-independent':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
-                result = runIndependentTTest(
-                    data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
-                    data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
-                    alpha
-                );
+                // FIX: For group-based t-test, filter data by group values
+                if (group1 && group2 && group && var2) {
+                    const g1Data = data.filter(r => r[group] === group1).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                    const g2Data = data.filter(r => r[group] === group2).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                    if (g1Data.length < 2 || g2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    result = runIndependentTTest(g1Data, g2Data, alpha);
+                } else if (var1 && var2) {
+                    result = runIndependentTTest(
+                        data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
+                        data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
+                        alpha
+                    );
+                } else {
+                    throw new Error('Grup veya değişken seçmelisiniz');
+                }
                 break;
 
             case 'ttest-paired':
@@ -2274,16 +2600,20 @@ export function runStatWidgetAnalysis(widgetId) {
             // ==================== NORMALITY ====================
             case 'normality':
             case 'shapiro-wilk':
-                if (!var1) throw new Error('Değişken seçmelisiniz');
+                // FIX: Use var2 (yCol) as the numeric column, var1 (xCol) is typically categorical
+                const normalityCol = var2 || var1;
+                if (!normalityCol) throw new Error('Değişken seçmelisiniz');
                 result = runShapiroWilkTest(
-                    data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
+                    data.map(r => parseFloat(r[normalityCol])).filter(v => !isNaN(v)),
                     alpha
                 );
                 break;
 
             // ==================== DESCRIPTIVE ====================
             case 'descriptive':
-                result = runDescriptiveStats(data, var1 ? [var1] : VIZ_STATE.columns);
+                // FIX: Use var2 (yCol) as the numeric column for descriptive stats
+                const descCol = var2 || var1;
+                result = runDescriptiveStats(data, descCol ? [descCol] : VIZ_STATE.columns);
                 break;
 
             // ==================== NON-PARAMETRIC TESTS ====================
@@ -2392,6 +2722,19 @@ export function runStatWidgetAnalysis(widgetId) {
 
             default:
                 throw new Error(`Desteklenmeyen test tipi: ${type}`);
+        }
+
+        // ✅ INJECT MISSING DATA INFO INTO RESULT FOR ACADEMIC NOTE
+        if (result && typeof result === 'object') {
+            result.xMissing = xMissing;
+            result.yMissing = yMissing;
+            result.xColumn = xCol;
+            result.yColumn = yCol;
+            // Check if any imputation was done on these columns
+            const dataActions = VIZ_STATE.dataActions || [];
+            result.imputationActions = dataActions.filter(a =>
+                a.type === 'imputation' && (a.column === xCol || a.column === yCol)
+            );
         }
 
         // Render results
@@ -3372,8 +3715,22 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
  * Generate APA Report
  */
 export function generateAPAReport(data, columns) {
-    const numericCols = columns.filter(col => {
-        const sample = data.slice(0, 10).map(r => r[col]);
+    // Use VIZ_STATE as fallback when called without parameters
+    const dataset = VIZ_STATE.getActiveDataset ? VIZ_STATE.getActiveDataset() : null;
+    const actualData = data || (dataset ? dataset.data : VIZ_STATE.data) || [];
+    const actualColumns = columns || (dataset ? dataset.columns : VIZ_STATE.columns) || [];
+
+    if (actualData.length === 0 || actualColumns.length === 0) {
+        return {
+            testType: 'apa',
+            testName: 'APA Raporu',
+            error: 'Veri bulunamadı. Önce bir dosya yükleyin.',
+            html: '<div class="apa-report"><p class="error">Veri bulunamadı.</p></div>'
+        };
+    }
+
+    const numericCols = actualColumns.filter(col => {
+        const sample = actualData.slice(0, 10).map(r => r[col]);
         return sample.some(v => !isNaN(parseFloat(v)));
     });
 
@@ -3381,7 +3738,7 @@ export function generateAPAReport(data, columns) {
     report += '<h4>APA Formatında İstatistik Raporu</h4>';
 
     numericCols.forEach(col => {
-        const values = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+        const values = actualData.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
         if (values.length === 0) return;
 
         const m = calculateMean(values);

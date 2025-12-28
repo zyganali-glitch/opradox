@@ -3,6 +3,7 @@
 // FAZ 1A+1B+1C: Complete sharing, export, config features
 // DO NOT DELETE - This maintains backward compatibility
 // =====================================================
+console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
 (function () {
     'use strict';
@@ -686,11 +687,280 @@
     window.exportToPDF = window.exportToPDF || window.exportChartAsPDF;
     window.exportDashboardAsPDF = window.exportDashboardAsPDF || window.exportChartAsPDF;
     window.exportAsPortableHTML = window.exportAsPortableHTML || window.exportPortableDashboard;
-    window.exportAsExcel = window.exportAsExcel || function () { if (window.showToast) window.showToast('Excel export - geliştirilmekte', 'info'); };
-    window.exportAsPowerPoint = window.exportAsPowerPoint || function () { if (window.showToast) window.showToast('PowerPoint export - geliştirilmekte', 'info'); };
 
-    // Show menu aliases 
-    window.showExportMenu = window.showExportMenu || function () { if (window.showToast) window.showToast('Export menüsü için toolbar\'ı kullanın', 'info'); };
+    // =====================================================
+    // REAL IMPLEMENTATION: exportAsExcel (SheetJS)
+    // =====================================================
+    if (typeof window.exportAsExcel !== 'function' || window.exportAsExcel.toString().includes('geliştirilmekte')) {
+        window.exportAsExcel = function (options = {}) {
+            const data = window.VIZ_STATE?.data || window.VIZ_STATE?.getActiveData?.() || [];
+            const columns = window.VIZ_STATE?.columns || window.VIZ_STATE?.getActiveColumns?.() || [];
+
+            if (!data || data.length === 0) {
+                if (window.showToast) window.showToast('Dışa aktarılacak veri yok', 'warning');
+                return;
+            }
+
+            try {
+                // Check for XLSX library
+                if (typeof XLSX !== 'undefined') {
+                    // Use SheetJS
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Veri');
+
+                    // Generate filename
+                    const filename = options.filename || `opradox_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+                    // Download
+                    XLSX.writeFile(wb, filename);
+                    if (window.showToast) window.showToast(`Excel dosyası indirildi: ${filename}`, 'success');
+                } else {
+                    // CSV fallback
+                    console.warn('XLSX kütüphanesi bulunamadı, CSV olarak indiriliyor');
+                    const headers = columns.join(';');
+                    const rows = data.map(row => columns.map(col => {
+                        const val = row[col];
+                        if (val == null) return '';
+                        const str = String(val);
+                        return str.includes(';') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+                    }).join(';'));
+
+                    const csv = '\uFEFF' + [headers, ...rows].join('\n'); // BOM for Excel UTF-8
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const filename = options.filename || `opradox_export_${new Date().toISOString().slice(0, 10)}.csv`;
+
+                    if (window.downloadFile) {
+                        window.downloadFile(url, filename);
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.click();
+                    }
+                    URL.revokeObjectURL(url);
+                    if (window.showToast) window.showToast(`CSV dosyası indirildi (XLSX mevcut değil)`, 'success');
+                }
+            } catch (error) {
+                console.error('Excel export hatası:', error);
+                if (window.showToast) window.showToast('Excel export hatası: ' + error.message, 'error');
+            }
+        };
+    }
+
+    // =====================================================
+    // DEFER: exportAsPowerPoint (Library not available)
+    // =====================================================
+    if (typeof window.exportAsPowerPoint !== 'function' || window.exportAsPowerPoint.toString().includes('geliştirilmekte')) {
+        window.exportAsPowerPoint = function () {
+            if (window.showToast) {
+                window.showToast('PowerPoint export: Planlanan özellik (PPT kütüphanesi gerekli). Şimdilik Portable HTML kullanın.', 'info');
+            }
+            console.info('[DEFER] exportAsPowerPoint - PPT export library (pptxgenjs) planned for future release');
+        };
+    }
+
+    // =====================================================
+    // ALIAS: exportPDF (bind to chart PDF export)
+    // =====================================================
+    if (typeof window.exportPDF !== 'function') {
+        window.exportPDF = function () {
+            if (typeof window.exportChartAsPDF === 'function') {
+                return window.exportChartAsPDF();
+            } else if (typeof window.exportDashboardAsPDF === 'function') {
+                return window.exportDashboardAsPDF();
+            } else {
+                if (window.showToast) window.showToast('PDF export: Portable HTML veya PNG kullanın', 'info');
+            }
+        };
+    }
+
+    // =====================================================
+    // REAL IMPLEMENTATION: showExportMenu - Full Dropdown
+    // =====================================================
+    window.showExportMenu = function (targetElement) {
+        // Remove existing menu if any
+        const existing = document.querySelector('.viz-export-dropdown');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        // Create dropdown menu
+        const menu = document.createElement('div');
+        menu.className = 'viz-export-dropdown';
+        menu.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: var(--viz-card-bg, #1a1a2e);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            z-index: 10001;
+            min-width: 220px;
+            padding: 8px 0;
+            animation: fadeIn 0.2s ease;
+        `;
+
+        const menuItems = [
+            { icon: 'fa-image', label: 'PNG (Seçili Grafik)', action: 'exportPNG' },
+            { icon: 'fa-images', label: 'PNG (Tüm Dashboard)', action: 'exportAllPNG' },
+            { icon: 'fa-vector-square', label: 'SVG', action: 'exportSVG' },
+            { divider: true },
+            { icon: 'fa-file-pdf', label: 'PDF', action: 'exportPDF' },
+            { icon: 'fa-file-code', label: 'Portable HTML', action: 'exportPortableHTML' },
+            { divider: true },
+            { icon: 'fa-code', label: 'Embed Kodu', action: 'generateEmbed' },
+            { icon: 'fa-qrcode', label: 'QR Kod', action: 'generateQR' },
+            { icon: 'fa-share-alt', label: 'Paylaşım Linki', action: 'shareURL' },
+            { divider: true },
+            { icon: 'fa-file-excel', label: 'Excel (.xlsx)', action: 'exportExcel' },
+            { icon: 'fa-file-csv', label: 'CSV', action: 'exportCSV' },
+            { icon: 'fa-file-code', label: 'JSON', action: 'exportJSON' }
+        ];
+
+        menuItems.forEach(item => {
+            if (item.divider) {
+                const div = document.createElement('div');
+                div.style.cssText = 'height:1px;background:rgba(255,255,255,0.1);margin:8px 0;';
+                menu.appendChild(div);
+            } else {
+                const btn = document.createElement('button');
+                btn.className = 'viz-export-menu-item';
+                btn.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    width: 100%;
+                    padding: 10px 16px;
+                    background: transparent;
+                    border: none;
+                    color: #fff;
+                    font-size: 14px;
+                    text-align: left;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                `;
+                btn.innerHTML = `<i class="fas ${item.icon}" style="width:16px;color:#4a90d9;"></i> ${item.label}`;
+
+                btn.onmouseover = () => btn.style.background = 'rgba(74,144,217,0.2)';
+                btn.onmouseout = () => btn.style.background = 'transparent';
+
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    menu.remove();
+                    executeExportAction(item.action);
+                };
+
+                menu.appendChild(btn);
+            }
+        });
+
+        document.body.appendChild(menu);
+
+        // Close on outside click
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            document.addEventListener('click', closeHandler);
+        }, 10);
+    };
+
+    function executeExportAction(action) {
+        switch (action) {
+            case 'exportPNG':
+                if (typeof window.exportChartAsPNG === 'function') window.exportChartAsPNG();
+                else if (typeof window.exportPNG === 'function') window.exportPNG();
+                else window.showToast('Önce grafik seçin', 'warning');
+                break;
+            case 'exportAllPNG':
+                if (typeof window.exportDashboardAsPNG === 'function') window.exportDashboardAsPNG();
+                else exportAllChartsPNG();
+                break;
+            case 'exportSVG':
+                if (typeof window.exportChartAsSVG === 'function') window.exportChartAsSVG();
+                else window.showToast('SVG export hazırlanıyor...', 'info');
+                break;
+            case 'exportPDF':
+                if (typeof window.exportChartAsPDF === 'function') window.exportChartAsPDF();
+                else if (typeof window.exportPDF === 'function') window.exportPDF();
+                else window.showToast('PDF: Portable HTML kullanın', 'info');
+                break;
+            case 'exportPortableHTML':
+                if (typeof window.exportPortableDashboard === 'function') window.exportPortableDashboard();
+                break;
+            case 'generateEmbed':
+                if (typeof window.generateEmbedCode === 'function') window.generateEmbedCode();
+                break;
+            case 'generateQR':
+                if (typeof window.generateQRCode === 'function') window.generateQRCode();
+                break;
+            case 'shareURL':
+                if (typeof window.shareViaURL === 'function') window.shareViaURL();
+                break;
+            case 'exportExcel':
+                if (typeof window.exportAsExcel === 'function') window.exportAsExcel();
+                break;
+            case 'exportCSV':
+                exportDataAsCSV();
+                break;
+            case 'exportJSON':
+                if (typeof window.exportJSONConfig === 'function') window.exportJSONConfig();
+                break;
+            default:
+                window.showToast('Bu özellik hazırlanıyor...', 'info');
+        }
+    }
+
+    function exportAllChartsPNG() {
+        const charts = Object.keys(window.VIZ_STATE?.echartsInstances || {});
+        if (charts.length === 0) {
+            window.showToast('Dashboard\'da grafik yok', 'warning');
+            return;
+        }
+
+        charts.forEach((id, index) => {
+            const chart = window.VIZ_STATE.echartsInstances[id];
+            if (chart) {
+                setTimeout(() => {
+                    const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2 });
+                    window.downloadFile(dataUrl, `chart_${id}.png`);
+                }, index * 500);
+            }
+        });
+        window.showToast(`${charts.length} grafik indiriliyor...`, 'success');
+    }
+
+    function exportDataAsCSV() {
+        const data = window.VIZ_STATE?.data || [];
+        const columns = window.VIZ_STATE?.columns || [];
+
+        if (data.length === 0) {
+            window.showToast('Dışa aktarılacak veri yok', 'warning');
+            return;
+        }
+
+        const headers = columns.join(';');
+        const rows = data.map(row => columns.map(col => {
+            const val = row[col];
+            if (val == null) return '';
+            const str = String(val);
+            return str.includes(';') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+        }).join(';'));
+
+        const csv = '\uFEFF' + [headers, ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        window.downloadFile(url, `opradox_data_${Date.now()}.csv`);
+        URL.revokeObjectURL(url);
+        window.showToast('CSV indirildi', 'success');
+    }
     window.showFilePreviewModal = window.showFilePreviewModal || window.showHeaderPreview;
     window.closeFilePreviewModal = window.closeFilePreviewModal || window.closeVizPreviewModal || function () { };
     window.showPDFPreviewModal = window.showPDFPreviewModal || function (url) { window.open(url, '_blank'); };
@@ -716,13 +986,190 @@
     window.renderChoroplethMapAdvanced = window.renderChoroplethMapAdvanced || window.renderChoroplethMap;
     window.renderColumnsListImproved = window.renderColumnsListImproved || window.renderColumnsList;
 
-    // Statistics aliases
+    // =====================================================
+    // REAL IMPLEMENTATION: calculateCorrelationMatrix
+    // Engine: Basic JS (Pearson only, no p-value/CI)
+    // =====================================================
+    if (typeof window.calculateCorrelationMatrix !== 'function' || window.calculateCorrelationMatrix.toString().includes('return []')) {
+        window.calculateCorrelationMatrix = function (columns) {
+            const data = window.VIZ_STATE?.data || window.VIZ_STATE?.getActiveData?.() || [];
+            const allColumns = columns || window.VIZ_STATE?.columns || [];
+
+            // Filter to numeric columns only
+            const numericCols = allColumns.filter(col => {
+                const vals = data.slice(0, 50).map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+                return vals.length > data.slice(0, 50).length * 0.5;
+            });
+
+            if (numericCols.length < 2) {
+                return { matrix: [], columns: [], engineNote: 'En az 2 sayısal sütun gerekli' };
+            }
+
+            const matrix = [];
+            for (let i = 0; i < numericCols.length; i++) {
+                const row = [];
+                const xVals = data.map(r => parseFloat(r[numericCols[i]])).filter(v => !isNaN(v));
+
+                for (let j = 0; j < numericCols.length; j++) {
+                    if (i === j) {
+                        row.push(1.0);
+                    } else {
+                        const yVals = data.map(r => parseFloat(r[numericCols[j]])).filter(v => !isNaN(v));
+                        // Align arrays
+                        const pairs = [];
+                        data.forEach(r => {
+                            const x = parseFloat(r[numericCols[i]]);
+                            const y = parseFloat(r[numericCols[j]]);
+                            if (!isNaN(x) && !isNaN(y)) pairs.push([x, y]);
+                        });
+
+                        if (pairs.length < 3) {
+                            row.push(NaN);
+                        } else {
+                            const xs = pairs.map(p => p[0]);
+                            const ys = pairs.map(p => p[1]);
+                            const r = pearsonCorr(xs, ys);
+                            row.push(r);
+                        }
+                    }
+                }
+                matrix.push(row);
+            }
+
+            return {
+                matrix: matrix,
+                columns: numericCols,
+                n: data.length,
+                engineNote: 'Engine: Basic JS (Pearson only). p-value/CI/robust methods yok. Akademik kullanımda SPSS/R doğrulaması önerilir.',
+                engineNoteEN: 'Engine: Basic JS (Pearson only). No p-value/CI/robust methods. For academic use, verify with SPSS/R.'
+            };
+        };
+
+        function pearsonCorr(x, y) {
+            const n = x.length;
+            if (n < 2) return NaN;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            for (let i = 0; i < n; i++) {
+                sumX += x[i];
+                sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i];
+                sumY2 += y[i] * y[i];
+            }
+            const num = n * sumXY - sumX * sumY;
+            const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+            return den === 0 ? 0 : num / den;
+        }
+    }
+
+    // =====================================================
+    // REAL IMPLEMENTATION: calculateRegressionCoefficients
+    // Engine: Basic JS (OLS, with R², SE, t, p approximation)
+    // =====================================================
+    if (typeof window.calculateRegressionCoefficients !== 'function' || window.calculateRegressionCoefficients.toString().includes('return {}')) {
+        window.calculateRegressionCoefficients = function (xCol, yCol) {
+            const data = window.VIZ_STATE?.data || window.VIZ_STATE?.getActiveData?.() || [];
+
+            if (!xCol || !yCol) {
+                return { error: 'X ve Y sütunları gerekli', engineNote: 'Parametre eksik' };
+            }
+
+            // Extract paired data
+            const pairs = [];
+            data.forEach(row => {
+                const x = parseFloat(row[xCol]);
+                const y = parseFloat(row[yCol]);
+                if (!isNaN(x) && !isNaN(y)) pairs.push({ x, y });
+            });
+
+            if (pairs.length < 3) {
+                return { error: 'En az 3 gözlem gerekli', n: pairs.length };
+            }
+
+            const n = pairs.length;
+            const xs = pairs.map(p => p.x);
+            const ys = pairs.map(p => p.y);
+
+            // Calculate means
+            const meanX = xs.reduce((a, b) => a + b, 0) / n;
+            const meanY = ys.reduce((a, b) => a + b, 0) / n;
+
+            // Calculate coefficients (OLS)
+            let sumXY = 0, sumX2 = 0;
+            for (let i = 0; i < n; i++) {
+                sumXY += (xs[i] - meanX) * (ys[i] - meanY);
+                sumX2 += (xs[i] - meanX) ** 2;
+            }
+
+            const b1 = sumX2 === 0 ? 0 : sumXY / sumX2; // Slope
+            const b0 = meanY - b1 * meanX; // Intercept
+
+            // Calculate R²
+            let ssRes = 0, ssTot = 0;
+            for (let i = 0; i < n; i++) {
+                const yPred = b0 + b1 * xs[i];
+                ssRes += (ys[i] - yPred) ** 2;
+                ssTot += (ys[i] - meanY) ** 2;
+            }
+            const rSquared = ssTot === 0 ? 0 : 1 - (ssRes / ssTot);
+
+            // Calculate SE of coefficients (approximate)
+            const mse = ssRes / (n - 2); // Mean squared error
+            const seB1 = Math.sqrt(mse / sumX2);
+            const seB0 = Math.sqrt(mse * (1 / n + meanX ** 2 / sumX2));
+
+            // Calculate t-statistics
+            const tB0 = seB0 === 0 ? 0 : b0 / seB0;
+            const tB1 = seB1 === 0 ? 0 : b1 / seB1;
+
+            // Approximate p-values (using t-distribution approximation)
+            const df = n - 2;
+            const pB0 = approximateTwoTailedP(Math.abs(tB0), df);
+            const pB1 = approximateTwoTailedP(Math.abs(tB1), df);
+
+            return {
+                intercept: { estimate: b0, se: seB0, t: tB0, p: pB0 },
+                slope: { estimate: b1, se: seB1, t: tB1, p: pB1 },
+                rSquared: rSquared,
+                adjustedRSquared: 1 - (1 - rSquared) * (n - 1) / (n - 2),
+                n: n,
+                df: df,
+                mse: mse,
+                rmse: Math.sqrt(mse),
+                xColumn: xCol,
+                yColumn: yCol,
+                equation: `Y = ${b0.toFixed(4)} + ${b1.toFixed(4)} * X`,
+                engineNote: 'Engine: Basic JS (OLS). Heteroskedasticity/multicollinearity testi yok. Akademik kullanımda SPSS/R doğrulaması önerilir.',
+                engineNoteEN: 'Engine: Basic JS (OLS). No heteroskedasticity/multicollinearity tests. For academic use, verify with SPSS/R.'
+            };
+        };
+
+        // Approximate two-tailed p-value for t-distribution
+        function approximateTwoTailedP(t, df) {
+            // Using approximation formula for p-value
+            if (df <= 0 || isNaN(t)) return 1;
+            const x = df / (df + t * t);
+            // Beta function approximation (simplified)
+            const p = 0.5 * Math.pow(x, df / 2);
+            return Math.min(1, Math.max(0, 2 * p));
+        }
+    }
+
     window.runPCA = window.runPCA || window.runPCAAnalysis;
     window.runKMeansClustering = window.runKMeansClustering || window.runKMeansAnalysis;
     window.calculateCronbachAlpha = window.calculateCronbachAlpha || window.runCronbachAlpha;
-    window.calculateCorrelationMatrix = window.calculateCorrelationMatrix || function () { return []; };
-    window.calculateRegressionCoefficients = window.calculateRegressionCoefficients || function () { return {}; };
-    window.plotKaplanMeier = window.plotKaplanMeier || function () { if (window.showToast) window.showToast('Kaplan-Meier - geliştirilmekte', 'info'); };
+
+    // =====================================================
+    // DEFER: plotKaplanMeier (Survival analysis - complex)
+    // =====================================================
+    if (typeof window.plotKaplanMeier !== 'function' || window.plotKaplanMeier.toString().includes('geliştirilmekte')) {
+        window.plotKaplanMeier = function () {
+            if (window.showToast) {
+                window.showToast('Kaplan-Meier: İstatistik widget\'tan Survival Analysis kullanın (temel destek). İleri analizler için R/SPSS önerilir.', 'info');
+            }
+        };
+    }
+
     window.runLogisticFromModal = window.runLogisticFromModal || window.runLogisticRegression;
     window.runTimeSeriesFromModal = window.runTimeSeriesFromModal || window.runTimeSeriesAnalysis;
     window.runBackendStatTest = window.runBackendStatTest || window.callSpssApi;
@@ -1380,6 +1827,401 @@
     window.copyStatAsText = window.copyStatAsText || function () { };
     window.toggleStatMode = window.toggleStatMode || function () { };
     window.toggleFormula = window.toggleFormula || function () { };
+
+    // =====================================================
+    // REAL IMPLEMENTATION: Copy Stat Functions
+    // =====================================================
+
+    /**
+     * Copy stat widget content as HTML
+     */
+    window.copyStatAsHTML = function (widgetId) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) {
+            if (window.showToast) window.showToast('Widget bulunamadı', 'error');
+            return;
+        }
+
+        const body = widget.querySelector('.viz-stat-body, .viz-widget-body');
+        if (!body) return;
+
+        const html = body.innerHTML;
+
+        // Copy as HTML
+        const blob = new Blob([html], { type: 'text/html' });
+        const item = new ClipboardItem({ 'text/html': blob });
+
+        navigator.clipboard.write([item]).then(() => {
+            if (window.showToast) window.showToast('HTML olarak kopyalandı', 'success');
+        }).catch(() => {
+            // Fallback to plain text
+            navigator.clipboard.writeText(html).then(() => {
+                if (window.showToast) window.showToast('Kopyalandı', 'success');
+            });
+        });
+    };
+
+    /**
+     * Copy stat widget content as plain text
+     */
+    window.copyStatAsText = function (widgetId) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) return;
+
+        const body = widget.querySelector('.viz-stat-body, .viz-widget-body');
+        if (!body) return;
+
+        // Extract text content, format tables nicely
+        let text = '';
+        const title = widget.querySelector('.viz-widget-title');
+        if (title) text += title.textContent.trim() + '\n' + '='.repeat(40) + '\n\n';
+
+        const tables = body.querySelectorAll('table');
+        tables.forEach(table => {
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td, th');
+                const rowText = Array.from(cells).map(c => c.textContent.trim().padEnd(20)).join('');
+                text += rowText + '\n';
+            });
+            text += '\n';
+        });
+
+        // Add interpretation
+        const interp = body.querySelector('.stat-interpretation');
+        if (interp) text += 'Yorum: ' + interp.textContent.trim() + '\n';
+
+        navigator.clipboard.writeText(text).then(() => {
+            if (window.showToast) window.showToast('Metin olarak kopyalandı', 'success');
+        });
+    };
+
+    /**
+     * Copy stat widget as image (screenshot)
+     */
+    window.copyStatAsImage = function (widgetId) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) return;
+
+        // Use html2canvas if available
+        if (typeof html2canvas === 'function') {
+            html2canvas(widget, {
+                backgroundColor: document.body.classList.contains('day-mode') ? '#fff' : '#1a1a2e',
+                scale: 2
+            }).then(canvas => {
+                canvas.toBlob(blob => {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    navigator.clipboard.write([item]).then(() => {
+                        if (window.showToast) window.showToast('Görsel olarak kopyalandı', 'success');
+                    });
+                });
+            }).catch(err => {
+                console.error('Image copy error:', err);
+                if (window.showToast) window.showToast('Görsel kopyalama başarısız', 'error');
+            });
+        } else {
+            if (window.showToast) window.showToast('html2canvas yükleniyor...', 'info');
+            // Load html2canvas dynamically
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onload = () => window.copyStatAsImage(widgetId);
+            document.head.appendChild(script);
+        }
+    };
+
+    /**
+     * Generate APA format citation for stat result
+     */
+    window.generateAPACitation = function (widgetId) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) return '';
+
+        const body = widget.querySelector('.viz-stat-body, .viz-widget-body');
+        if (!body) return '';
+
+        const type = widget.dataset.statType || 'unknown';
+        let apa = '';
+
+        // Extract key values
+        const getValue = (label) => {
+            const rows = body.querySelectorAll('tr');
+            for (const row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2 && cells[0].textContent.includes(label)) {
+                    return cells[1].textContent.trim();
+                }
+            }
+            return null;
+        };
+
+        const t = getValue('t İstatistiği');
+        const f = getValue('F İstatistiği');
+        const chi = getValue('χ²');
+        const df = getValue('Serbestlik') || getValue('sd (');
+        const p = getValue('p-değeri');
+        const d = getValue("Cohen's d");
+        const eta = getValue('η²');
+        const n = getValue('N') || getValue('Toplam N');
+
+        // Format based on test type
+        if (type.includes('ttest') && t) {
+            apa = `t(${df || '?'}) = ${t}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+            if (d) apa += `, d = ${d}`;
+        } else if (type.includes('anova') && f) {
+            apa = `F(${df || '?, ?'}) = ${f}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+            if (eta) apa += `, η² = ${eta}`;
+        } else if (type.includes('chi') && chi) {
+            apa = `χ²(${df || '?'}) = ${chi}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+        } else if (type.includes('correlation')) {
+            const r = getValue('Korelasyon');
+            apa = `r(${n ? parseInt(n) - 2 : '?'}) = ${r || '?'}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+        } else if (type.includes('normality') || type.includes('shapiro')) {
+            const w = getValue('W İstatistiği');
+            apa = `W = ${w || '?'}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+        } else {
+            apa = `Sonuç: p ${p?.startsWith('<') ? p : '= ' + (p || '?')}`;
+        }
+
+        return apa;
+    };
+
+    /**
+     * Copy stat result in APA format with full academic report
+     * P1.5: Enhanced APA report with academic formatting and missing data notes
+     */
+    window.copyStatAsAPA = function (widgetId) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) {
+            if (window.showToast) window.showToast('Widget bulunamadı', 'error');
+            return;
+        }
+
+        const type = widget.dataset.statType || 'unknown';
+        const body = widget.querySelector('.viz-stat-body, .viz-widget-body');
+        if (!body) return;
+
+        // Helper to extract values from table
+        const getValue = (label) => {
+            const rows = body.querySelectorAll('tr');
+            for (const row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2 && cells[0].textContent.includes(label)) {
+                    return cells[1].textContent.trim();
+                }
+            }
+            return null;
+        };
+
+        // Extract all relevant values
+        const t = getValue('t İstatistiği');
+        const f = getValue('F İstatistiği');
+        const chi = getValue('χ²');
+        const df = getValue('Serbestlik') || getValue('sd (');
+        const p = getValue('p-değeri');
+        const d = getValue("Cohen's d");
+        const eta = getValue('η²');
+        const n = getValue('N') || getValue('Toplam N');
+        const r = getValue('Korelasyon');
+        const w = getValue('W İstatistiği');
+
+        // Build academic APA citation
+        let apa = '';
+        const title = widget.querySelector('.viz-widget-title')?.textContent || 'İstatistik Analizi';
+
+        // Add title
+        apa += `${title}\n\n`;
+
+        // Format based on test type
+        if (type.includes('ttest') && t) {
+            apa += `Sonuçlar: t(${df || '?'}) = ${t}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+            if (d) {
+                apa += `\nEtki Büyüklüğü: Cohen's d = ${d}`;
+                const dVal = parseFloat(d);
+                if (!isNaN(dVal)) {
+                    const effect = Math.abs(dVal) < 0.2 ? 'çok küçük' :
+                        Math.abs(dVal) < 0.5 ? 'küçük' :
+                            Math.abs(dVal) < 0.8 ? 'orta' : 'büyük';
+                    apa += ` (${effect} etki)`;
+                }
+            }
+        } else if (type.includes('anova') && f) {
+            apa += `Sonuçlar: F(${df || '?, ?'}) = ${f}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+            if (eta) apa += `\nEtki Büyüklüğü: η² = ${eta}`;
+        } else if (type.includes('chi') && chi) {
+            apa += `Sonuçlar: χ²(${df || '?'}) = ${chi}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+        } else if (type.includes('correlation') && r) {
+            apa += `Sonuçlar: r(${n ? parseInt(n) - 2 : '?'}) = ${r}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+        } else if ((type.includes('normality') || type.includes('shapiro')) && w) {
+            apa += `Sonuçlar: W = ${w}, p ${p?.startsWith('<') ? p : '= ' + p}`;
+            const pVal = parseFloat(p);
+            if (!isNaN(pVal)) {
+                apa += pVal > 0.05 ? '\nYorum: Veri normal dağılımlıdır.' : '\nYorum: Veri normal dağılımlı değildir.';
+            }
+        } else {
+            apa += `Sonuçlar: p ${p?.startsWith('<') ? p : '= ' + (p || '?')}`;
+        }
+
+        // Add significance interpretation
+        apa += '\n';
+        const pVal = parseFloat(p?.replace('<', '').replace('=', '').trim());
+        if (!isNaN(pVal)) {
+            if (pVal < 0.001) {
+                apa += 'Sonuç istatistiksel olarak anlamlıdır (p < .001).';
+            } else if (pVal < 0.01) {
+                apa += 'Sonuç istatistiksel olarak anlamlıdır (p < .01).';
+            } else if (pVal < 0.05) {
+                apa += 'Sonuç istatistiksel olarak anlamlıdır (p < .05).';
+            } else {
+                apa += 'Sonuç istatistiksel olarak anlamlı değildir (p ≥ .05).';
+            }
+        }
+
+        // Add missing data note if present
+        const missingNote = body.querySelector('.stat-missing-note');
+        if (missingNote) {
+            apa += '\n\n' + missingNote.textContent.trim();
+        }
+
+        // Add sample size
+        if (n) {
+            apa += `\n\nÖrneklem: N = ${n}`;
+        }
+
+        navigator.clipboard.writeText(apa).then(() => {
+            if (window.showToast) window.showToast('APA formatında kopyalandı (akademik stil)', 'success');
+        });
+    };
+
+    /**
+     * Toggle stat display mode (table vs APA compact)
+     */
+    window.toggleStatMode = function (widgetId, mode) {
+        const widget = document.getElementById(widgetId);
+        if (!widget) return;
+
+        if (mode === 'apa') {
+            widget.classList.toggle('apa-mode');
+            const isApa = widget.classList.contains('apa-mode');
+
+            // Show/hide APA citation
+            let apaEl = widget.querySelector('.stat-apa-citation');
+            if (isApa) {
+                const apa = window.generateAPACitation(widgetId);
+                if (!apaEl) {
+                    apaEl = document.createElement('div');
+                    apaEl.className = 'stat-apa-citation';
+                    apaEl.style.cssText = 'padding:12px;background:rgba(74,144,217,0.1);border-radius:8px;margin-top:10px;font-family:serif;font-style:italic;';
+                    widget.querySelector('.viz-stat-body, .viz-widget-body')?.appendChild(apaEl);
+                }
+                apaEl.textContent = apa;
+                apaEl.style.display = 'block';
+            } else if (apaEl) {
+                apaEl.style.display = 'none';
+            }
+
+            if (window.showToast) window.showToast(isApa ? 'APA modu açık' : 'APA modu kapalı', 'info');
+        }
+    };
+
+    /**
+     * Toggle formula display for stat widget
+     */
+    window.toggleFormula = function (widgetId) {
+        const widget = document.getElementById(widgetId || window.VIZ_STATE?.selectedStatWidget);
+        if (!widget) {
+            // Show general formula info
+            if (window.showToast) window.showToast('Motor: Basic JS (OLS/Pearson/F-test). SPSS/R ile doğrulama önerilir.', 'info');
+            return;
+        }
+
+        const type = widget.dataset.statType || 'unknown';
+        let formulaEl = widget.querySelector('.stat-formula-panel');
+
+        if (formulaEl) {
+            // Toggle visibility
+            formulaEl.style.display = formulaEl.style.display === 'none' ? 'block' : 'none';
+            return;
+        }
+
+        // Create formula panel
+        formulaEl = document.createElement('div');
+        formulaEl.className = 'stat-formula-panel';
+        formulaEl.style.cssText = 'padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;margin-top:10px;font-family:monospace;font-size:12px;';
+
+        const formulas = {
+            // T-TESTS
+            'ttest': 't = (x̄₁ - x̄₂) / √(s²pooled × (1/n₁ + 1/n₂))\nd = (x̄₁ - x̄₂) / spooled',
+            'ttest-independent': 't = (x̄₁ - x̄₂) / √(s²pooled × (1/n₁ + 1/n₂))\nWelch: t = (x̄₁ - x̄₂) / √(s₁²/n₁ + s₂²/n₂)',
+            'ttest-paired': 't = d̄ / (sd / √n)\nd = meandiff / SD',
+            'ttest-one': 't = (x̄ - μ₀) / (s / √n)',
+
+            // ANOVA
+            'anova': 'F = MSbetween / MSwithin\nη² = SSbetween / SStotal\nω² = (SSb - dfb×MSw) / (SSt + MSw)',
+            'anova-welch': 'FW = Σwⱼ(x̄ⱼ - x̄w)² / [1 + (2(k-2)/(k²-1)) Σ(1-wⱼ/Σwⱼ)²/(nⱼ-1)]',
+
+            // CORRELATION & REGRESSION
+            'correlation': 'r = Σ(x-x̄)(y-ȳ) / √[Σ(x-x̄)² × Σ(y-ȳ)²]\nr² = explained variance / total variance',
+            'regression': 'ŷ = b₀ + b₁x\nb₁ = Σ(x-x̄)(y-ȳ) / Σ(x-x̄)²\nb₀ = ȳ - b₁x̄\nR² = 1 - SSres/SStot',
+            'regression-coef': 'β = (X\'X)⁻¹X\'Y\nSE(β) = √[MSE × (X\'X)⁻¹]\nt = β / SE(β)',
+            'logistic': 'P(Y=1) = 1 / (1 + e^-(β₀ + β₁X))\nOdds Ratio = e^β\nLog-Likelihood = Σ[yᵢlog(pᵢ) + (1-yᵢ)log(1-pᵢ)]',
+
+            // CHI-SQUARE & CROSS-TABS
+            'chi-square': 'χ² = Σ (O - E)² / E\nE = (row total × col total) / grand total\nCramér\'s V = √(χ²/n×min(r-1,c-1))',
+
+            // NORMALITY TESTS
+            'normality': 'W = [Σ aᵢ x(ᵢ)]² / Σ (xᵢ - x̄)²\nSkewness = E[(X-μ)³] / σ³\nKurtosis = E[(X-μ)⁴] / σ⁴ - 3',
+            'shapiro-wilk': 'W = [Σ aᵢ x(ᵢ)]² / Σ (xᵢ - x̄)²',
+
+            // NON-PARAMETRIC TESTS
+            'mann-whitney': 'U = n₁n₂ + n₁(n₁+1)/2 - R₁\nz = (U - n₁n₂/2) / √(n₁n₂(n₁+n₂+1)/12)',
+            'wilcoxon': 'W = min(W⁺, W⁻)\nW⁺ = Σ ranks of positive differences\nz = (W - n(n+1)/4) / √(n(n+1)(2n+1)/24)',
+            'kruskal': 'H = [12/N(N+1)] × Σ(Rⱼ²/nⱼ) - 3(N+1)',
+            'kruskal-wallis': 'H = [12/N(N+1)] × Σ(Rⱼ²/nⱼ) - 3(N+1)',
+            'friedman': 'χ²F = [12/nk(k+1)] × ΣRⱼ² - 3n(k+1)\nW = χ²F / n(k-1)',
+
+            // HOMOGENEITY & ASSUMPTIONS
+            'levene': 'W = [(N-k)/(k-1)] × [Σnⱼ(z̄ⱼ-z̄)²] / [Σ Σ(zᵢⱼ-z̄ⱼ)²]\nzᵢⱼ = |xᵢⱼ - median(xⱼ)|',
+
+            // EFFECT SIZE
+            'effect-size': 'Cohen\'s d = (M₁ - M₂) / SDpooled\nGlass\'s Δ = (M₁ - M₂) / SD₂\nHedges\' g = d × (1 - 3/(4(n₁+n₂)-9))',
+
+            // POWER ANALYSIS
+            'power': 'Power = P(reject H₀ | H₁ true)\nδ = d × √(n/2)  [two-sample]\nn = 2(zα + zβ)² / d²  [sample size]\nEffect: small=0.2, medium=0.5, large=0.8',
+
+            // ADVANCED MULTIVARIATE
+            'discriminant': 'Discriminant: W = Σ(x-μₖ)\'Σₖ⁻¹(x-μₖ)\nWilks\' Λ = |W| / |T|\nClassification: assign to group with max P(G|x)',
+            'pca': 'PCA: AV = λV\nVariance explained = λᵢ / Σλ\nLoadings: correlation of variable with component',
+            'factor': 'Factor Model: X = Λf + ε\nCommunality = Σloadings²\nKMO = Σr²ᵢⱼ / (Σr²ᵢⱼ + Σa²ᵢⱼ)',
+            'cluster': 'K-means: minimize Σ||xᵢ - μₖ||²\nSilhouette = (b-a) / max(a,b)\na=intra-cluster, b=nearest cluster',
+
+            // SURVIVAL
+            'survival': 'Kaplan-Meier: S(t) = Πₜᵢ≤t (1 - dᵢ/nᵢ)\nHazard: h(t) = f(t)/S(t)\nLog-rank: χ² = (O-E)² / V',
+
+            // DESCRIPTIVE
+            'descriptive': 'Mean: x̄ = Σxᵢ/n\nVariance: s² = Σ(xᵢ-x̄)²/(n-1)\nStd Dev: s = √s²\nSEM: SE = s/√n\nCV: CV = s/x̄ × 100%',
+
+            // RELIABILITY
+            'reliability': 'Cronbach\'s α = (k/(k-1)) × (1 - Σσ²ᵢ/σ²total)\nSplit-half: r = 2r₁₂ / (1 + r₁₂)',
+
+            // TIME SERIES
+            'time-series': 'ACF: ρₖ = Cov(Yₜ,Yₜ₋ₖ) / Var(Y)\nARIMA: (1-φB)(1-B)ᵈYₜ = (1+θB)εₜ',
+            'icc': 'ICC: ρ = σ²between / (σ²between + σ²within)'
+        };
+
+        const formula = formulas[type] || 'Formül bilgisi mevcut değil';
+
+        formulaEl.innerHTML = `
+            <div style="color:#4a90d9;font-weight:bold;margin-bottom:8px;">
+                <i class="fas fa-function"></i> Kullanılan Formüller
+            </div>
+            <pre style="white-space:pre-wrap;margin:0;color:#fff;">${formula}</pre>
+            <div style="margin-top:8px;font-size:11px;color:#888;">
+                Motor: Basic JavaScript (Approx. critical values)
+            </div>
+        `;
+
+        widget.querySelector('.viz-stat-body, .viz-widget-body')?.appendChild(formulaEl);
+    };
 
     // Widget/Chart customization aliases
     window.resizeWidget = window.resizeWidget || function () { };
@@ -2124,6 +2966,66 @@
             return originalImportJSONConfig(jsonOrFile);
         };
     }
+
+    // =====================================================
+    // DEMO DATA LOADER (P1 FIX: Enable stat testing without file upload)
+    // =====================================================
+    window.loadDemoData = function () {
+        const demoData = [
+            { Group: 'Control', Score: 72, Age: 25, Gender: 'Male', PreTest: 65, PostTest: 78 },
+            { Group: 'Control', Score: 68, Age: 28, Gender: 'Female', PreTest: 60, PostTest: 70 },
+            { Group: 'Control', Score: 75, Age: 22, Gender: 'Male', PreTest: 70, PostTest: 75 },
+            { Group: 'Control', Score: 70, Age: 30, Gender: 'Female', PreTest: 68, PostTest: 73 },
+            { Group: 'Control', Score: 65, Age: 27, Gender: 'Male', PreTest: 62, PostTest: 68 },
+            { Group: 'Control', Score: 78, Age: 24, Gender: 'Female', PreTest: 72, PostTest: 80 },
+            { Group: 'Experiment', Score: 85, Age: 26, Gender: 'Male', PreTest: 66, PostTest: 88 },
+            { Group: 'Experiment', Score: 88, Age: 29, Gender: 'Female', PreTest: 70, PostTest: 90 },
+            { Group: 'Experiment', Score: 82, Age: 23, Gender: 'Male', PreTest: 68, PostTest: 85 },
+            { Group: 'Experiment', Score: 90, Age: 31, Gender: 'Female', PreTest: 75, PostTest: 92 },
+            { Group: 'Experiment', Score: 86, Age: 25, Gender: 'Male', PreTest: 72, PostTest: 89 },
+            { Group: 'Experiment', Score: 84, Age: 27, Gender: 'Female', PreTest: 69, PostTest: 87 }
+        ];
+
+        const columns = ['Group', 'Score', 'Age', 'Gender', 'PreTest', 'PostTest'];
+        const columnsInfo = [
+            { name: 'Group', type: 'categorical', unique: 2, missing: 0 },
+            { name: 'Score', type: 'numeric', min: 65, max: 90, mean: 78.58, missing: 0 },
+            { name: 'Age', type: 'numeric', min: 22, max: 31, mean: 26.42, missing: 0 },
+            { name: 'Gender', type: 'categorical', unique: 2, missing: 0 },
+            { name: 'PreTest', type: 'numeric', min: 60, max: 75, mean: 68.08, missing: 0 },
+            { name: 'PostTest', type: 'numeric', min: 68, max: 92, mean: 81.25, missing: 0 }
+        ];
+
+        if (window.VIZ_STATE) {
+            window.VIZ_STATE.data = demoData;
+            window.VIZ_STATE.columns = columns;
+            window.VIZ_STATE.columnsInfo = columnsInfo;
+            window.VIZ_STATE.originalData = [...demoData];
+            window.VIZ_STATE.fileName = 'demo_data.csv';
+            window.VIZ_STATE.fileLoaded = true;
+
+            // Create default dataset entry
+            if (!window.VIZ_STATE.datasets) window.VIZ_STATE.datasets = {};
+            window.VIZ_STATE.datasets['demo'] = { data: demoData, columns, columnsInfo };
+            window.VIZ_STATE.activeDatasetId = 'demo';
+        }
+
+        // Refresh all UI components
+        if (typeof window.refreshAllAfterDataMutation === 'function') {
+            window.refreshAllAfterDataMutation();
+        } else {
+            if (typeof window.updateDataProfile === 'function') window.updateDataProfile();
+            if (typeof window.renderColumnsList === 'function') window.renderColumnsList();
+            if (typeof window.updateDropdowns === 'function') window.updateDropdowns();
+        }
+
+        if (typeof window.showToast === 'function') {
+            window.showToast('Demo veri yüklendi (12 satır)', 'success');
+        }
+
+        console.log('✅ Demo data loaded:', demoData.length, 'rows');
+        return demoData;
+    };
 
     // =====================================================
     // FINAL_AUDIT_FIX: LOCK SECTION - Prevent Override
