@@ -188,12 +188,49 @@ async def get_sheet_names(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/preview-rows")
+async def get_preview_rows(
+    file: UploadFile = File(...),
+    max_rows: int = Query(20, description="Maximum rows to preview"),
+    sheet_name: str = Query(None, description="Sheet name for Excel files")
+):
+    """
+    Dosyanın ilk N satırını raw olarak döner (başlık seçimi için).
+    Frontend'de kullanıcı hangi satırın header olduğunu seçebilir.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename.lower()
+        
+        if filename.endswith(".csv"):
+            # CSV için header=None ile oku (tüm satırlar data olarak gelsin)
+            df = pd.read_csv(BytesIO(content), header=None, nrows=max_rows)
+        else:
+            xls = pd.ExcelFile(BytesIO(content))
+            active_sheet = sheet_name if sheet_name and sheet_name in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=None, nrows=max_rows)
+        
+        # Her satırı {cells: [...]} formatında döndür
+        rows = []
+        for idx, row in df.iterrows():
+            cells = [str(cell) if pd.notna(cell) else "" for cell in row.values]
+            rows.append({"cells": cells})
+        
+        return {
+            "rows": rows,
+            "total_preview": len(rows),
+            "columns_count": len(df.columns) if len(df) > 0 else 0
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/data")
 async def get_viz_data(
     file: UploadFile = File(...),
-    sheet_name: str = Form(None),
-    header_row: int = Form(0),
-    limit: int = Form(None, description="Max satır sayısı (None = sınırsız)")
+    sheet_name: str = Query(None, description="Sheet name for Excel files"),
+    header_row: int = Query(0, description="Row index to use as header (0-indexed)"),
+    limit: int = Query(None, description="Max row count (None = unlimited)")
 ):
     """
     Görselleştirme için tam veri seti döner.
@@ -224,8 +261,16 @@ async def get_viz_data(
             df = pd.read_csv(BytesIO(content), header=header_row, nrows=limit)
         else:
             xls = pd.ExcelFile(BytesIO(content))
+            # Debug: Log sheet selection
+            print(f"[DEBUG /viz/data] sheet_name param: '{sheet_name}'")
+            print(f"[DEBUG /viz/data] available sheets: {xls.sheet_names}")
+            print(f"[DEBUG /viz/data] sheet_name in sheets: {sheet_name in xls.sheet_names}")
+            
             active_sheet = sheet_name if sheet_name in xls.sheet_names else xls.sheet_names[0]
+            print(f"[DEBUG /viz/data] active_sheet selected: '{active_sheet}'")
+            
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row, nrows=limit)
+            print(f"[DEBUG /viz/data] loaded {len(df)} rows, {len(df.columns)} columns from '{active_sheet}'")
         
         # Column info - fillna'dan ÖNCE tip tespiti yap
         columns_info = []

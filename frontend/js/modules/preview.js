@@ -25,31 +25,36 @@ export function showHeaderPreview() {
 
     // Modal oluştur veya mevcut olanı kullan
     let modal = document.getElementById("vizFilePreviewModal");
-    if (!modal) {
-        modal = document.createElement("div");
-        modal.id = "vizFilePreviewModal";
-        modal.className = "gm-modal";
-        modal.innerHTML = `
-            <div class="gm-modal-content" style="max-width: 95vw; width: 95vw; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
-                <div class="gm-modal-header" style="flex-shrink: 0;">
-                    <h3 id="vizPreviewModalTitle"><i class="fas fa-table"></i> ${lang === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row'}</h3>
-                    <button class="gm-modal-close" onclick="closeVizPreviewModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="gm-modal-body" id="vizPreviewContent" style="flex: 1; overflow: auto; padding: 15px;"></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener("click", (e) => {
-            if (e.target === modal) modal.style.display = "none";
-        });
+
+    // Always recreate modal content to avoid stale structure
+    if (modal) {
+        modal.remove();
     }
 
+    modal = document.createElement("div");
+    modal.id = "vizFilePreviewModal";
+    modal.className = "gm-modal";
+    modal.style.display = "flex"; // Show immediately
+    modal.innerHTML = `
+        <div class="gm-modal-content" style="max-width: 95vw; width: 95vw; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="gm-modal-header" style="flex-shrink: 0;">
+                <h3 id="vizPreviewModalTitle"><i class="fas fa-table"></i> ${lang === 'tr' ? 'Başlık Satırını Seçin' : 'Select Header Row'}</h3>
+                <button class="gm-modal-close" onclick="closeVizPreviewModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="gm-modal-body" id="vizPreviewContent" style="flex: 1; overflow: auto; padding: 15px;"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.style.display = "none";
+    });
+
     // İçeriği yerleştir
-    let content = modal.querySelector("#vizPreviewContent");
+    let content = document.getElementById("vizPreviewContent");
     if (!content) {
-        console.error('Modal body not found');
+        console.error('Modal body not found - this should not happen');
         return;
     }
 
@@ -194,51 +199,34 @@ export async function vizApplySelectedHeaderRow() {
     if (currentFile) {
         console.log(`🔄 Refreshing data with header_row=${rowIndex}...`);
 
-        if (typeof showToast === 'function') {
-            showToast(lang === 'tr' ? 'Veri yeniden yükleniyor...' : 'Reloading data...', 'info');
+        if (typeof window.showToast === 'function') {
+            window.showToast(lang === 'tr' ? 'Veri yeniden yükleniyor...' : 'Reloading data...', 'info');
         }
 
-        if (typeof loadVizDataWithOptions === 'function') {
-            await loadVizDataWithOptions(currentFile);
+        // Use reloadWithOptions which is properly bound to window and handles everything
+        if (typeof window.reloadWithOptions === 'function') {
+            await window.reloadWithOptions();
+            console.log('✅ reloadWithOptions completed - UI should be updated');
+        } else if (typeof window.loadDataWithOptions === 'function') {
+            // Fallback to loadDataWithOptions
+            await window.loadDataWithOptions();
+            console.log('✅ loadDataWithOptions completed');
         } else {
-            // Fallback: Doğrudan fetch
-            const formData = new FormData();
-            formData.append('file', currentFile);
-
-            const sheetSelector = document.getElementById('vizSheetSelector');
-            const sheetName = sheetSelector ? sheetSelector.value : '';
-
-            let url = `/viz/data?header_row=${rowIndex}`;
-            if (sheetName) url += `&sheet_name=${encodeURIComponent(sheetName)}`;
-
-            try {
-                const response = await fetch(url, { method: 'POST', body: formData });
-                if (response.ok) {
-                    const result = await response.json();
-
-                    VIZ_STATE.data = result.data || [];
-                    VIZ_STATE.columns = result.columns || [];
-                    VIZ_STATE.columnsInfo = result.columns_info || [];
-
-                    const dataset = VIZ_STATE.getActiveDataset();
-                    if (dataset) {
-                        dataset.data = result.data;
-                        dataset.columns = result.columns;
-                        dataset.columnsInfo = result.columns_info;
-                    }
-
-                    if (typeof renderColumnsList === 'function') renderColumnsList();
-                    if (typeof updateDropdowns === 'function') updateDropdowns();
-                    if (typeof updateDataProfile === 'function') updateDataProfile();
-                    if (typeof detectColumnTypes === 'function') detectColumnTypes();
-                }
-            } catch (e) {
-                console.error('Data reload failed:', e);
-            }
+            console.error('❌ No reload function available');
         }
 
-        if (typeof showToast === 'function') {
-            showToast(lang === 'tr'
+        // Re-render all charts with new data
+        if (window.VIZ_STATE && window.VIZ_STATE.charts) {
+            window.VIZ_STATE.charts.forEach(config => {
+                if (typeof window.renderChart === 'function') {
+                    window.renderChart(config);
+                }
+            });
+            console.log('✅ Charts re-rendered');
+        }
+
+        if (typeof window.showToast === 'function') {
+            window.showToast(lang === 'tr'
                 ? `${rowIndex + 1}. satır başlık olarak uygulandı`
                 : `Row ${rowIndex + 1} applied as header`, 'success');
         }

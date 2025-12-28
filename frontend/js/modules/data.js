@@ -15,10 +15,30 @@ export function handleFileSelect(e) {
 
 export async function loadFile(file) {
     try {
+        // Store file reference globally for header preview and reload
+        VIZ_STATE.file = file;
+        window.VIZ_CURRENT_FILE = file;
+
         const datasetId = VIZ_STATE.addDataset(file, [], [], [], []);
+
+        // Fetch preview rows for header selection
+        try {
+            const previewFormData = new FormData();
+            previewFormData.append('file', file);
+            const previewResponse = await fetch('/viz/preview-rows?max_rows=20', { method: 'POST', body: previewFormData });
+            if (previewResponse.ok) {
+                const previewData = await previewResponse.json();
+                window.VIZ_RAW_PREVIEW_ROWS = previewData.rows || [];
+                window.VIZ_SELECTED_HEADER_ROW = 0;
+            }
+        } catch (previewError) {
+            console.warn('Preview fetch failed:', previewError);
+            window.VIZ_RAW_PREVIEW_ROWS = [];
+        }
+
+        // Fetch sheet names
         const sheetsFormData = new FormData();
         sheetsFormData.append('file', file);
-
         const sheetsResponse = await fetch('/viz/sheets', { method: 'POST', body: sheetsFormData });
         let sheets = [];
 
@@ -84,13 +104,27 @@ export function updateDatasetSelector() {
 }
 
 export async function loadDataWithOptions() {
-    const file = VIZ_STATE.file;
-    if (!file) return;
+    const file = VIZ_STATE.file || window.VIZ_CURRENT_FILE;
+    if (!file) {
+        console.error('❌ loadDataWithOptions: No file available');
+        return;
+    }
 
     const sheetSelector = document.getElementById('vizSheetSelector');
     const headerRowSelector = document.getElementById('vizHeaderRow');
     const selectedSheet = sheetSelector?.value || null;
-    const headerRow = parseInt(headerRowSelector?.value || '0');
+
+    // Prefer dropdown value when available, use global variable only if dropdown is missing
+    // This ensures dropdown changes are immediately reflected
+    const dropdownValue = headerRowSelector ? parseInt(headerRowSelector.value || '0') : null;
+    const headerRow = dropdownValue !== null ? dropdownValue : (window.VIZ_SELECTED_HEADER_ROW ?? 0);
+
+    // Sync global variable with dropdown for consistency
+    if (dropdownValue !== null) {
+        window.VIZ_SELECTED_HEADER_ROW = dropdownValue;
+    }
+
+    console.log(`🔄 Loading data: sheet=${selectedSheet}, headerRow=${headerRow}`);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -106,9 +140,18 @@ export async function loadDataWithOptions() {
         if (!response.ok) throw new Error('Dosya yüklenemedi');
 
         const data = await response.json();
+        console.log(`📊 API Response: ${data.columns?.length} columns:`, data.columns?.slice(0, 5), `rows: ${data.data?.length}`);
         VIZ_STATE.data = data.data || [];
         VIZ_STATE.columns = data.columns || [];
         VIZ_STATE.columnsInfo = data.columns_info || [];
+
+        // Update active dataset as well
+        const activeDataset = VIZ_STATE.getActiveDataset();
+        if (activeDataset) {
+            activeDataset.data = VIZ_STATE.data;
+            activeDataset.columns = VIZ_STATE.columns;
+            activeDataset.columnsInfo = VIZ_STATE.columnsInfo;
+        }
 
         document.getElementById('vizDropZone').style.display = 'none';
         document.getElementById('vizFileInfo').style.display = 'block';
@@ -129,7 +172,34 @@ export async function loadDataWithOptions() {
     }
 }
 
-export function reloadWithOptions() { loadDataWithOptions(); }
+export async function reloadWithOptions() {
+    console.log('🔄 reloadWithOptions called');
+
+    // Also refresh preview rows for new sheet/header
+    const file = VIZ_STATE.file || window.VIZ_CURRENT_FILE;
+    const sheetSelector = document.getElementById('vizSheetSelector');
+    const headerRowSelector = document.getElementById('vizHeaderRow');
+
+    if (file) {
+        try {
+            const previewFormData = new FormData();
+            previewFormData.append('file', file);
+            const sheetName = sheetSelector?.value || null;
+            let previewUrl = '/viz/preview-rows?max_rows=20';
+            if (sheetName) previewUrl += `&sheet_name=${encodeURIComponent(sheetName)}`;
+
+            const previewResponse = await fetch(previewUrl, { method: 'POST', body: previewFormData });
+            if (previewResponse.ok) {
+                const previewData = await previewResponse.json();
+                window.VIZ_RAW_PREVIEW_ROWS = previewData.rows || [];
+            }
+        } catch (e) {
+            console.warn('Preview refresh failed:', e);
+        }
+    }
+
+    await loadDataWithOptions();
+}
 
 export function clearData() {
     if (VIZ_STATE.activeDatasetId) VIZ_STATE.removeDataset(VIZ_STATE.activeDatasetId);
@@ -223,7 +293,11 @@ export function updateDataProfile() {
 
 export function renderColumnsList() {
     const container = document.getElementById('vizColumnsList');
-    if (!container) return;
+    console.log('📋 renderColumnsList called, columns:', VIZ_STATE.columns?.length, VIZ_STATE.columns?.slice(0, 5));
+    if (!container) {
+        console.warn('⚠️ vizColumnsList container not found!');
+        return;
+    }
 
     if (VIZ_STATE.columns.length === 0) {
         container.innerHTML = `<div class="viz-no-data" data-i18n="no_data_loaded"><i class="fas fa-info-circle"></i>${getText('no_data_loaded')}</div>`;

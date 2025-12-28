@@ -8,16 +8,7 @@ import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 // -----------------------------------------------------
 // TOAST NOTIFICATIONS
 // -----------------------------------------------------
-export function showToast(message, type = 'info', duration = 3000) {
-    // Mevcut toast container'ı al veya oluştur
-    let container = document.getElementById('vizToastContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'vizToastContainer';
-        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;';
-        document.body.appendChild(container);
-    }
-
+export function showToast(message, type = 'info', duration = 5000) {
     const toast = document.createElement('div');
     toast.className = `viz-toast viz-toast-${type}`;
 
@@ -28,54 +19,22 @@ export function showToast(message, type = 'info', duration = 3000) {
         'info': 'fa-info-circle'
     };
 
-    const colors = {
-        'success': '#27ae60',
-        'error': '#e74c3c',
-        'warning': '#f39c12',
-        'info': '#4a90d9'
-    };
-
-    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> <span>${message}</span>`;
-    toast.style.cssText = `
-        padding: 12px 18px;
-        background: ${colors[type] || colors.info};
-        color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.9rem;
-        animation: slideIn 0.3s ease;
-        max-width: 350px;
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || icons.info}"></i>
+        <span>${message}</span>
     `;
 
-    container.appendChild(toast);
+    document.body.appendChild(toast);
 
-    // Animasyonla kaldır
+    // CSS transition ile göster (.show class ekleyerek)
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // Belirtilen süre sonra kaldır
     setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 280);
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
     }, duration);
 }
-
-// Toast animasyonları için CSS ekle
-(function addToastStyles() {
-    if (document.getElementById('viz-toast-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'viz-toast-styles';
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
-})();
 
 // -----------------------------------------------------
 // SETTINGS PANEL
