@@ -35,7 +35,6 @@ export function showToast(message, type = 'info', duration = 5000) {
     toast.innerHTML = `
         <i class="fas ${icons[type] || icons.info}"></i>
         <span>${message}</span>
-        <button class="viz-toast-close" onclick="this.parentElement.remove(); repositionToasts();">&times;</button>
     `;
 
     document.body.appendChild(toast);

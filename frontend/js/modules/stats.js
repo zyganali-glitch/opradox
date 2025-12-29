@@ -1289,7 +1289,17 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     }
 
     if (n > 5000) {
-        return { error: 'Shapiro-Wilk testi 5000 gözlemden fazlasını desteklemez', valid: false };
+        return {
+            valid: true,
+            testName: 'Shapiro-Wilk Normallik Testi',
+            n: n,
+            warning: true,
+            interpretation: `Shapiro-Wilk testi bilimsel olarak n ≤ 5000 ile sınırlıdır. Bu kadar büyük örneklerde (n = ${n}) Merkezi Limit Teoremi gereği dağılım yaklaşık normal kabul edilir. Alternatif olarak D'Agostino-Pearson veya Kolmogorov-Smirnov testleri önerilir.`,
+            interpretationEN: `Shapiro-Wilk test is scientifically limited to n ≤ 5000. For samples this large (n = ${n}), the Central Limit Theorem suggests approximate normality. Consider D'Agostino-Pearson or Kolmogorov-Smirnov tests as alternatives.`,
+            isNormal: true, // Assume normal for large samples
+            pValue: null,
+            wStatistic: null
+        };
     }
 
     // Sort data
@@ -1499,6 +1509,50 @@ export function getStatTitle(type) {
 }
 
 /**
+ * FAZ-2: Safe number formatting - NaN/null → '-'
+ */
+function fmtNum(val, digits = 4) {
+    if (val === null || val === undefined) return '-';
+    if (typeof val !== 'number' || !isFinite(val)) return '-';
+    return val.toFixed(digits);
+}
+
+/**
+ * FAZ-2: Safe p-value formatting - NaN/null → 'N/A'
+ */
+function fmtP(p) {
+    if (p === null || p === undefined || typeof p !== 'number' || !isFinite(p)) return 'N/A';
+    return p < 0.001 ? '< .001' : p.toFixed(4);
+}
+
+/**
+ * FAZ-2: Safe text rendering - [object Object] → localized string
+ */
+function renderText(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+        // Try localized text
+        const lang = VIZ_STATE?.lang || 'tr';
+        if (val[lang]) return val[lang];
+        if (val.tr) return val.tr;
+        if (val.en) return val.en;
+        // Object with summary
+        if (val.summary) return val.summary;
+        if (val.message) return val.message;
+        // Table/array data - don't stringify, return placeholder
+        if (Array.isArray(val)) return `[${val.length} öğe]`;
+        // Last resort: key-value pairs
+        const keys = Object.keys(val).slice(0, 3);
+        if (keys.length > 0) {
+            return keys.map(k => `${k}: ${val[k]}`).join(', ');
+        }
+        return '[Veri]';
+    }
+    return String(val);
+}
+
+/**
  * Render statistical results to HTML
  */
 export function renderStatResults(result, type) {
@@ -1511,17 +1565,32 @@ export function renderStatResults(result, type) {
     }
 
     const title = result.testName || getStatTitle(type);
-    const sigClass = result.significant ? 'significant' : 'not-significant';
-    const sigText = result.significant ? 'Anlamlı' : 'Anlamsız';
-    const sigIcon = result.significant ? 'fa-check-circle' : 'fa-times-circle';
+
+    // FAZ-2: Significance rozeti SADECE anlamlılık testlerinde
+    // Descriptive, Frequency, PCA, KMeans, TimeSeries, APA için rozet yok
+    const noSignificanceTests = ['descriptive', 'frequency', 'pca', 'kmeans', 'timeseries', 'apa', 'cronbach', 'power'];
+    const showSignificance = result.significant !== undefined &&
+        result.significant !== null &&
+        !noSignificanceTests.includes(type);
+
+    let sigHtml = '';
+    if (showSignificance) {
+        const sigClass = result.significant ? 'significant' : 'not-significant';
+        // GATE-14: Akademik dile uygun - "Anlamsız" yerine "Anlamlı Değil"
+        const sigText = result.significant ? 'Anlamlı' : 'Anlamlı Değil';
+        const sigIcon = result.significant ? 'fa-check-circle' : 'fa-times-circle';
+        sigHtml = `
+            <span class="stat-significance ${sigClass}">
+                <i class="fas ${sigIcon}"></i> ${sigText}
+            </span>
+        `;
+    }
 
     let html = `
         <div class="stat-result-container">
             <div class="stat-result-header">
                 <h4>${title}</h4>
-                <span class="stat-significance ${sigClass}">
-                    <i class="fas ${sigIcon}"></i> ${sigText}
-                </span>
+                ${sigHtml}
             </div>
             <div class="stat-result-body">
     `;
@@ -1546,60 +1615,215 @@ export function renderStatResults(result, type) {
                         <tr>
                             <td>${r.column}</td>
                             <td>${r.n}</td>
-                            <td>${r.mean?.toFixed(3) || '-'}</td>
-                            <td>${r.stdDev?.toFixed(3) || '-'}</td>
-                            <td>${r.median?.toFixed(3) || '-'}</td>
-                            <td>${r.min?.toFixed(2) || '-'}</td>
-                            <td>${r.max?.toFixed(2) || '-'}</td>
+                            <td>${fmtNum(r.mean, 3)}</td>
+                            <td>${fmtNum(r.stdDev, 3)}</td>
+                            <td>${fmtNum(r.median, 3)}</td>
+                            <td>${fmtNum(r.min, 2)}</td>
+                            <td>${fmtNum(r.max, 2)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         `;
-        // Add interpretation and return early
         if (result.interpretation) {
-            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${result.interpretation}</span></div>`;
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
         }
         html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
         return html;
     }
 
-    // Main statistics table
+    // FAZ-5: SPECIAL CASE: Frequency analysis - render top results table
+    if (result.testType === 'frequency' && result.topResults) {
+        html += `
+            <div class="stat-freq-summary">
+                <div class="stat-freq-stat"><strong>Toplam N:</strong> ${result.validCount || result.total}</div>
+                <div class="stat-freq-stat"><strong>Benzersiz Değer:</strong> ${result.uniqueCount}</div>
+                <div class="stat-freq-stat"><strong>Mod:</strong> "${result.mode}" (n=${result.modeCount}, %${result.modePercent})</div>
+                <div class="stat-freq-stat"><strong>Eksik:</strong> ${result.missingCount || 0}</div>
+            </div>
+            <table class="stat-table stat-freq-table">
+                <thead>
+                    <tr>
+                        <th>Değer</th>
+                        <th>n</th>
+                        <th>%</th>
+                        <th>Kümülatif %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${result.topResults.map(r => `
+                        <tr>
+                            <td>${r.value}</td>
+                            <td>${r.count}</td>
+                            <td>${r.percent}%</td>
+                            <td>${r.cumPercent}%</td>
+                        </tr>
+                    `).join('')}
+                    ${result.otherCount > 0 ? `
+                        <tr class="stat-freq-other">
+                            <td><em>Diğer (${result.uniqueCount - result.topResults.length} değer)</em></td>
+                            <td>${result.otherCount}</td>
+                            <td>${result.otherPercent}%</td>
+                            <td>100.0%</td>
+                        </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+        `;
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
+    // FAZ-5: SPECIAL CASE: PCA - render eigenvalues and loadings
+    if (result.testType === 'pca' && result.eigenvalues) {
+        html += `
+            <div class="stat-pca-summary">
+                <div class="stat-pca-stat"><strong>Değişken Sayısı:</strong> ${result.variableCount || result.eigenvalues.length}</div>
+            </div>
+            <h5>Açıklanan Varyans</h5>
+            <table class="stat-table stat-pca-table">
+                <thead>
+                    <tr>
+                        <th>Bileşen</th>
+                        <th>Özdeğer</th>
+                        <th>Açıklanan %</th>
+                        <th>Kümülatif %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${result.eigenvalues.slice(0, 5).map((ev, i) => `
+                        <tr>
+                            <td>PC${i + 1}</td>
+                            <td>${fmtNum(ev, 3)}</td>
+                            <td>${fmtNum(result.varianceExplained?.[i] * 100, 1)}%</td>
+                            <td>${fmtNum(result.cumulativeVariance?.[i] * 100, 1)}%</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
+    // FAZ-5: SPECIAL CASE: KMeans - render cluster sizes and centroids
+    if (result.testType === 'kmeans' && result.clusters) {
+        html += `
+            <div class="stat-kmeans-summary">
+                <div class="stat-kmeans-stat"><strong>Küme Sayısı (k):</strong> ${result.k || result.clusters.length}</div>
+                <div class="stat-kmeans-stat"><strong>Toplam N:</strong> ${result.totalN || result.n}</div>
+            </div>
+            <h5>Küme Boyutları</h5>
+            <table class="stat-table stat-kmeans-table">
+                <thead>
+                    <tr>
+                        <th>Küme</th>
+                        <th>N</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${result.clusters.map((c, i) => `
+                        <tr>
+                            <td>Küme ${i + 1}</td>
+                            <td>${c.size || c.n || c.count}</td>
+                            <td>${fmtNum((c.size || c.n || c.count) / (result.totalN || result.n) * 100, 1)}%</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
+    // FAZ-6: SPECIAL CASE: APA Report - render html directly
+    if (result.testType === 'apa' && result.html) {
+        html += `
+            <div class="stat-apa-container">
+                ${result.html}
+                <div class="stat-apa-actions">
+                    <button class="viz-btn viz-btn-sm" onclick="navigator.clipboard.writeText(this.closest('.stat-apa-container').querySelector('.apa-report').innerText); showToast('APA raporu kopyalandı', 'success');">
+                        <i class="fas fa-copy"></i> APA Kopyala
+                    </button>
+                </div>
+            </div>
+        `;
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
+    // FAZ-5: SPECIAL CASE: TimeSeries - render trend and forecast
+    if (result.testType === 'timeseries') {
+        if (result.error) {
+            html += `<div class="stat-error"><i class="fas fa-exclamation-triangle"></i> ${result.error}</div>`;
+        } else {
+            html += `
+                <div class="stat-timeseries-summary">
+                    <div class="stat-ts-stat"><strong>Trend:</strong> ${result.trend || '-'}</div>
+                    <div class="stat-ts-stat"><strong>Ortalama:</strong> ${fmtNum(result.mean, 2)}</div>
+                    <div class="stat-ts-stat"><strong>Veri Noktası:</strong> ${result.n || result.dataPoints || '-'}</div>
+                </div>
+            `;
+            if (result.forecast) {
+                html += `<div class="stat-ts-stat"><strong>Tahmin:</strong> ${fmtNum(result.forecast, 2)}</div>`;
+            }
+        }
+        if (result.interpretation) {
+            html += `<div class="stat-interpretation"><i class="fas fa-info-circle"></i><span>${renderText(result.interpretation)}</span></div>`;
+        }
+        html += `</div><div class="stat-result-footer"><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
+
     html += '<table class="stat-table">';
 
     // Add statistics based on test type
     if (result.tStatistic !== undefined) {
-        html += formatStatRow('t İstatistiği', result.tStatistic.toFixed(4));
+        html += formatStatRow('t İstatistiği', fmtNum(result.tStatistic));
     }
     if (result.fStatistic !== undefined) {
-        html += formatStatRow('F İstatistiği', result.fStatistic.toFixed(4));
+        html += formatStatRow('F İstatistiği', fmtNum(result.fStatistic));
     }
     if (result.chiSquare !== undefined) {
-        html += formatStatRow('χ² İstatistiği', result.chiSquare.toFixed(4));
+        html += formatStatRow('χ² İstatistiği', fmtNum(result.chiSquare));
     }
     if (result.chi2Statistic !== undefined) {
-        html += formatStatRow('χ² İstatistiği', result.chi2Statistic.toFixed(4));
+        html += formatStatRow('χ² İstatistiği', fmtNum(result.chi2Statistic));
     }
     if (result.U !== undefined) {
-        html += formatStatRow('U İstatistiği', result.U.toFixed(2));
+        html += formatStatRow('U İstatistiği', fmtNum(result.U, 2));
     }
     if (result.hStatistic !== undefined) {
-        html += formatStatRow('H İstatistiği', result.hStatistic.toFixed(4));
+        html += formatStatRow('H İstatistiği', fmtNum(result.hStatistic));
     }
     if (result.W !== undefined) {
-        html += formatStatRow('W İstatistiği', result.W.toFixed(2));
+        html += formatStatRow('W İstatistiği', fmtNum(result.W, 2));
     }
     if (result.wStatistic !== undefined) {
-        html += formatStatRow('W İstatistiği', result.wStatistic.toFixed(4));
+        html += formatStatRow('W İstatistiği', fmtNum(result.wStatistic));
     }
     if (result.zStatistic !== undefined) {
-        html += formatStatRow('z İstatistiği', result.zStatistic.toFixed(4));
+        html += formatStatRow('z İstatistiği', fmtNum(result.zStatistic));
     }
     if (result.correlation !== undefined) {
-        html += formatStatRow('Korelasyon (r)', result.correlation.toFixed(4));
+        html += formatStatRow('Korelasyon (r)', fmtNum(result.correlation));
     }
     if (result.rSquared !== undefined) {
-        html += formatStatRow('R²', result.rSquared.toFixed(4));
+        html += formatStatRow('R²', fmtNum(result.rSquared));
     }
 
     // Degrees of freedom
@@ -1613,11 +1837,11 @@ export function renderStatResults(result, type) {
         }
     }
 
-    // P-value with color coding
+    // P-value with color coding - FAZ-2: fmtP guard
     if (result.pValue !== undefined) {
-        const pClass = result.pValue < 0.001 ? 'p-very-sig' : (result.pValue < 0.05 ? 'p-sig' : 'p-not-sig');
-        const pDisplay = result.pValue < 0.001 ? '< 0.001' : result.pValue.toFixed(4);
-        html += `<tr><td>p-değeri</td><td class="${pClass}">${pDisplay}</td></tr>`;
+        const pClass = (result.pValue !== null && result.pValue < 0.001) ? 'p-very-sig' :
+            (result.pValue !== null && result.pValue < 0.05) ? 'p-sig' : 'p-not-sig';
+        html += `<tr><td>p-değeri</td><td class="${pClass}">${fmtP(result.pValue)}</td></tr>`;
     }
 
     // Alpha level
@@ -1625,29 +1849,29 @@ export function renderStatResults(result, type) {
         html += formatStatRow('α (Anlamlılık Düzeyi)', result.alpha);
     }
 
-    // Effect sizes
+    // Effect sizes - FAZ-2: fmtNum guard
     if (result.cohensD !== undefined) {
-        html += formatStatRow('Cohen\'s d', result.cohensD.toFixed(4));
+        html += formatStatRow('Cohen\'s d', fmtNum(result.cohensD));
         if (result.effectSizeInterpretation) {
-            html += formatStatRow('Etki Büyüklüğü', result.effectSizeInterpretation);
+            html += formatStatRow('Etki Büyüklüğü', renderText(result.effectSizeInterpretation));
         }
     }
     if (result.etaSquared !== undefined) {
-        html += formatStatRow('η² (Eta Kare)', result.etaSquared.toFixed(4));
+        html += formatStatRow('η² (Eta Kare)', fmtNum(result.etaSquared));
     }
     if (result.cramersV !== undefined) {
-        html += formatStatRow('Cramer\'s V', result.cramersV.toFixed(4));
+        html += formatStatRow('Cramer\'s V', fmtNum(result.cramersV));
     }
     if (result.effectSizeR !== undefined) {
-        html += formatStatRow('Etki Büyüklüğü (r)', result.effectSizeR.toFixed(4));
+        html += formatStatRow('Etki Büyüklüğü (r)', fmtNum(result.effectSizeR));
     }
     if (result.kendallW !== undefined) {
-        html += formatStatRow('Kendall\'s W', result.kendallW.toFixed(4));
+        html += formatStatRow('Kendall\'s W', fmtNum(result.kendallW));
     }
 
     // Mean difference
     if (result.meanDifference !== undefined) {
-        html += formatStatRow('Ortalama Farkı', result.meanDifference.toFixed(4));
+        html += formatStatRow('Ortalama Farkı', fmtNum(result.meanDifference));
     }
 
     // Sample sizes
@@ -2078,10 +2302,16 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
 
     const allCols = columns.length > 0 ? columns : (numericCols.length > 0 ? numericCols : ['Col1', 'Col2']);
 
-    const makeOptions = (cols, selected) => cols.map(c =>
-        `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
-    ).join('');
+    // FAZ-1: "Seçiniz" default - kullanıcı seçmeden çalışmayacak
+    const makeOptions = (cols, selected, includeEmpty = true) => {
+        let opts = includeEmpty ? '<option value="">-- Seçiniz --</option>' : '';
+        opts += cols.map(c =>
+            `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
+        ).join('');
+        return opts;
+    };
 
+    // FAZ-1: Varsayılan seçim kapalı - defaultChecked boş
     const makeCheckboxes = (cols, idPrefix, defaultChecked = []) => cols.map((c, i) =>
         `<label class="viz-checkbox-item">
             <input type="checkbox" id="${idPrefix}_${i}" name="${idPrefix}" value="${c}" 
@@ -2092,6 +2322,7 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
     ).join('');
 
     let html = `<div class="viz-stat-info">${analysisInfo.description}</div>`;
+    html += `<div class="viz-stat-default-info"><small><i class="fas fa-info-circle"></i> Değişken seçin ve Yenile butonuna basın.</small></div>`;
 
     switch (analysisInfo.uiType) {
         case 'TYPE_A':
@@ -2173,7 +2404,8 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
         case 'TYPE_D':
             const targetCols = analysisInfo.targetType === 'binary' ? categoricalCols : categoricalCols;
             const predictorCols = numericCols;
-            const defaultPredictors = predictorCols.slice(0, 2);
+            // GATE-9: Varsayılan seçim YOK - kullanıcı seçmeli
+            const defaultPredictors = [];
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
@@ -2329,10 +2561,9 @@ export async function createStatWidget(statType, options = {}) {
     dashboard.appendChild(widget);
     if (window.updateEmptyState) window.updateEmptyState();
 
-    const xColSelect = document.getElementById(`${widgetId}_xCol`);
-    const yColSelect = document.getElementById(`${widgetId}_yCol`);
-    if (xColSelect) xColSelect.value = defaultX;
-    if (yColSelect) yColSelect.value = defaultY;
+    // GATE-9: Varsayılan seçim KAPATILDI - kullanıcı seçmeli
+    // xColSelect.value = defaultX ve yColSelect.value = defaultY KALDIRILDI
+    // Dropdown'lar "Seçiniz" ile açılacak
 
     // P1.3: Populate diagnostics div
     const diagEl = document.getElementById(`${widgetId}_diagnostics`);
@@ -2340,12 +2571,15 @@ export async function createStatWidget(statType, options = {}) {
         diagEl.innerHTML = renderColumnDiagnostics(widgetId);
     }
 
+    // FAZ-0: Legacy runStatForWidget kaldırıldı
+    // İlk render'da analiz çalıştırılmaz - kullanıcı seçim yapıp Yenile basmalı
+    const bodyEl = document.getElementById(`${widgetId}_body`);
     if (analysisInfo.needsGroupSelection) {
         populateGroupSelectors(widgetId);
-        const bodyEl = document.getElementById(`${widgetId}_body`);
         if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> Karşılaştırılacak grupları seçin ve Yenile butonuna basın.</div>';
     } else {
-        await runStatForWidget(widgetId, statType, datasetId, defaultX, defaultY);
+        // FAZ-1: Varsayılan seçim kapalı - kullanıcı seçmeli
+        if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> Değişken(ler)i seçin ve Yenile butonuna basın.</div>';
     }
 }
 
@@ -2506,14 +2740,30 @@ export function runStatWidgetAnalysis(widgetId) {
 
     try {
         // FIX: Get configuration values using CORRECT element IDs (widgets use _xCol/_yCol, not _var1/_var2)
-        const var1 = document.getElementById(`${widgetId}_var1`)?.value || document.getElementById(`${widgetId}_xCol`)?.value;
-        const var2 = document.getElementById(`${widgetId}_var2`)?.value || document.getElementById(`${widgetId}_yCol`)?.value;
+        const var1 = document.getElementById(`${widgetId}_var1`)?.value
+            || document.getElementById(`${widgetId}_xCol`)?.value
+            || document.getElementById(`${widgetId}_col1`)?.value  // TYPE_C paired
+            || document.getElementById(`${widgetId}_target`)?.value; // TYPE_D target
+        const var2 = document.getElementById(`${widgetId}_var2`)?.value
+            || document.getElementById(`${widgetId}_yCol`)?.value
+            || document.getElementById(`${widgetId}_col2`)?.value; // TYPE_C paired
         const group = document.getElementById(`${widgetId}_group`)?.value || document.getElementById(`${widgetId}_xCol`)?.value;
         const group1 = document.getElementById(`${widgetId}_group1`)?.value;
         const group2 = document.getElementById(`${widgetId}_group2`)?.value;
         const popMean = parseFloat(document.getElementById(`${widgetId}_popmean`)?.value) || 0;
         const alpha = parseFloat(document.getElementById(`${widgetId}_alpha`)?.value) || 0.05;
-        const multiVars = getMultiSelectValues(`${widgetId}_multivars`);
+
+        // FIX: Use getCheckedValues for TYPE_B checkbox-based multi-selection
+        let multiVars = getMultiSelectValues(`${widgetId}_multivars`);
+        if (multiVars.length === 0) {
+            // Fallback to checkbox-based selection (TYPE_B UI)
+            multiVars = getCheckedValues(widgetId, `${widgetId}_col`);
+        }
+        // Also get predictors for TYPE_D (logistic/discriminant)
+        const predictors = getCheckedValues(widgetId, `${widgetId}_pred`);
+        if (predictors.length > 0 && multiVars.length === 0) {
+            multiVars = predictors;
+        }
 
         // Get data - FIX: Use proper dataset chain
         const activeDataset = VIZ_STATE.getActiveDataset ? VIZ_STATE.getActiveDataset() : null;
@@ -2579,8 +2829,11 @@ export function runStatWidgetAnalysis(widgetId) {
             // ==================== ANOVA ====================
             case 'anova':
             case 'anova-oneway':
-                if (!var1 || !group) throw new Error('Değer ve grup değişkeni seçmelisiniz');
-                result = runOneWayANOVA(groupDataByColumn(data, group, var1), alpha);
+                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                const anovaGroup = group || var1;
+                const anovaValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (!anovaValue || !anovaGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                result = runOneWayANOVA(groupDataByColumn(data, anovaGroup, anovaValue), alpha);
                 break;
 
             // ==================== CHI-SQUARE ====================
@@ -2591,12 +2844,26 @@ export function runStatWidgetAnalysis(widgetId) {
 
             // ==================== CORRELATION ====================
             case 'correlation':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
+                // TYPE_B: multiVars kullanarak korelasyon
+                let corrVar1, corrVar2;
+                if (multiVars.length >= 2) {
+                    // multiVars varsa ilk ikisini kullan
+                    corrVar1 = multiVars[0];
+                    corrVar2 = multiVars[1];
+                } else if (var1 && var2) {
+                    // Fallback: dropdown seçimi
+                    corrVar1 = var1;
+                    corrVar2 = var2;
+                } else {
+                    throw new Error('En az 2 değişken seçmelisiniz');
+                }
                 result = runCorrelationTest(
-                    data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
-                    data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
+                    data.map(r => parseFloat(r[corrVar1])).filter(v => !isNaN(v)),
+                    data.map(r => parseFloat(r[corrVar2])).filter(v => !isNaN(v)),
                     alpha
                 );
+                // Hangi değişkenler kullanıldığını kaydet
+                result.variables = [corrVar1, corrVar2];
                 break;
 
             // ==================== NORMALITY ====================
@@ -2620,12 +2887,19 @@ export function runStatWidgetAnalysis(widgetId) {
 
             // ==================== NON-PARAMETRIC TESTS ====================
             case 'mann-whitney':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
-                result = runMannWhitneyU(
-                    data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
-                    data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
-                    alpha
-                );
+                // TYPE_A: grup bazlı karşılaştırma (xCol=kategori, yCol=sayısal)
+                const mwGroup = group || var1;
+                const mwValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (group1 && group2 && mwGroup && mwValue) {
+                    const mw1Data = data.filter(r => String(r[mwGroup]).trim() === String(group1).trim())
+                        .map(r => parseFloat(r[mwValue])).filter(v => !isNaN(v));
+                    const mw2Data = data.filter(r => String(r[mwGroup]).trim() === String(group2).trim())
+                        .map(r => parseFloat(r[mwValue])).filter(v => !isNaN(v));
+                    if (mw1Data.length < 2 || mw2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    result = runMannWhitneyU(mw1Data, mw2Data, alpha);
+                } else {
+                    throw new Error('Grup (X), değer (Y) ve karşılaştırılacak 2 grup seçmelisiniz');
+                }
                 break;
 
             case 'wilcoxon':
@@ -2639,8 +2913,11 @@ export function runStatWidgetAnalysis(widgetId) {
 
             case 'kruskal':
             case 'kruskal-wallis':
-                if (!var1 || !group) throw new Error('Değer ve grup değişkeni seçmelisiniz');
-                result = runKruskalWallis(groupDataByColumn(data, group, var1), alpha);
+                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                const kruskalGroup = group || var1;
+                const kruskalValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (!kruskalValue || !kruskalGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                result = runKruskalWallis(groupDataByColumn(data, kruskalGroup, kruskalValue), alpha);
                 break;
 
             case 'friedman':
@@ -2650,17 +2927,28 @@ export function runStatWidgetAnalysis(widgetId) {
 
             // ==================== LEVENE (HOMOGENEITY) ====================
             case 'levene':
-                if (!var1 || !group) throw new Error('Değer ve grup değişkeni seçmelisiniz');
-                result = runLeveneTest(groupDataByColumn(data, group, var1), alpha);
+                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                const leveneGroup = group || var1;
+                const leveneValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (!leveneValue || !leveneGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                result = runLeveneTest(groupDataByColumn(data, leveneGroup, leveneValue), alpha);
                 break;
 
             // ==================== EFFECT SIZE ====================
             case 'effect-size':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
-                result = calculateEffectSize(
-                    data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
-                    data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v))
-                );
+                // TYPE_A: grup bazlı etki büyüklüğü (xCol=kategori, yCol=sayısal)
+                const esGroup = group || var1;
+                const esValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (group1 && group2 && esGroup && esValue) {
+                    const es1Data = data.filter(r => String(r[esGroup]).trim() === String(group1).trim())
+                        .map(r => parseFloat(r[esValue])).filter(v => !isNaN(v));
+                    const es2Data = data.filter(r => String(r[esGroup]).trim() === String(group2).trim())
+                        .map(r => parseFloat(r[esValue])).filter(v => !isNaN(v));
+                    if (es1Data.length < 2 || es2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    result = calculateEffectSize(es1Data, es2Data);
+                } else {
+                    throw new Error('Grup (X), değer (Y) ve karşılaştırılacak 2 grup seçmelisiniz');
+                }
                 break;
 
             // ==================== FREQUENCY ====================
@@ -2727,27 +3015,129 @@ export function runStatWidgetAnalysis(widgetId) {
         }
 
         // ✅ INJECT MISSING DATA INFO INTO RESULT FOR ACADEMIC NOTE
+        // KRİTİK: Her test tipi için GERÇEK kullanılan sütunları belirle
         if (result && typeof result === 'object') {
-            result.xMissing = xMissing;
-            result.yMissing = yMissing;
-            result.xColumn = xCol;
-            result.yColumn = yCol;
-            // Check if any imputation was done on these columns
-            const dataActions = VIZ_STATE.dataActions || [];
+            // Test tipine göre actualColumns belirle
+            let actualColumns = [];
 
-            // First try to match exact columns
-            let imputationActions = dataActions.filter(a =>
-                a.type === 'imputation' && (a.column === xCol || a.column === yCol)
-            );
+            switch (type) {
+                // TYPE_B: multiVars kullanan testler
+                case 'pca':
+                case 'kmeans':
+                case 'cronbach':
+                case 'friedman':
+                    actualColumns = multiVars || [];
+                    break;
 
-            // If no match found but there are imputation actions, include ALL of them
-            // This ensures the note shows that imputation was done even if columns don't match exactly
-            if (imputationActions.length === 0 && dataActions.length > 0) {
-                imputationActions = dataActions.filter(a => a.type === 'imputation');
+                // TYPE_B (correlation): iki değişken
+                case 'correlation':
+                    actualColumns = [var1, var2].filter(Boolean);
+                    break;
+
+                // TYPE_E: tek sütun kullanan testler
+                case 'normality':
+                case 'shapiro-wilk':
+                case 'descriptive':
+                    actualColumns = [var2 || var1].filter(Boolean);
+                    break;
+
+                case 'frequency':
+                    actualColumns = [var1].filter(Boolean);
+                    break;
+
+                // TYPE_A/G: grup + değer sütunu
+                case 'ttest':
+                case 'ttest-independent':
+                case 'anova':
+                case 'anova-oneway':
+                case 'mann-whitney':
+                case 'kruskal':
+                case 'kruskal-wallis':
+                case 'levene':
+                case 'effect-size':
+                    const grpCol = group || var1 || document.getElementById(`${widgetId}_xCol`)?.value;
+                    const valCol = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                    actualColumns = [grpCol, valCol].filter(Boolean);
+                    break;
+
+                // TYPE_C: iki sütun (paired)
+                case 'ttest-paired':
+                case 'wilcoxon':
+                    actualColumns = [var1, var2].filter(Boolean);
+                    break;
+
+                // TYPE_D: target + predictors
+                case 'logistic':
+                case 'discriminant':
+                    actualColumns = [var1, group, ...(multiVars || [])].filter(Boolean);
+                    break;
+
+                // TYPE_F: time + value
+                case 'timeseries':
+                case 'survival':
+                    actualColumns = [var1, var2, group].filter(Boolean);
+                    break;
+
+                // TYPE_H: x + y
+                case 'chi-square':
+                case 'regression-coef':
+                    actualColumns = [var1, var2].filter(Boolean);
+                    break;
+
+                // Other
+                case 'ttest-one':
+                    actualColumns = [var1].filter(Boolean);
+                    break;
+
+                case 'power':
+                case 'apa':
+                    actualColumns = []; // Parametre bazlı, sütun yok
+                    break;
+
+                default:
+                    actualColumns = [var1, var2].filter(Boolean);
             }
 
+            // Unique columns only
+            actualColumns = [...new Set(actualColumns)];
+
+            // Calculate missing counts for ACTUAL columns
+            let totalMissing = 0;
+            const missingByColumn = {};
+
+            for (const col of actualColumns) {
+                if (!col) continue;
+                const missing = data.filter(r =>
+                    r[col] === null || r[col] === '' || r[col] === undefined ||
+                    (typeof r[col] === 'number' && isNaN(r[col]))
+                ).length;
+                missingByColumn[col] = missing;
+                totalMissing += missing;
+            }
+
+            // Set result fields
+            result.actualColumns = actualColumns;
+            result.missingByColumn = missingByColumn;
+            result.totalMissing = totalMissing;
+            result.xColumn = actualColumns[0] || null;
+            result.yColumn = actualColumns[1] || null;
+            result.xMissing = missingByColumn[actualColumns[0]] || 0;
+            result.yMissing = missingByColumn[actualColumns[1]] || 0;
+
+            // Get imputation actions for ACTUAL columns only
+            const dataActions = VIZ_STATE.dataActions || [];
+            const imputationActions = dataActions.filter(a =>
+                a.type === 'imputation' && actualColumns.includes(a.column)
+            );
 
             result.imputationActions = imputationActions;
+            result.selectedColumns = actualColumns;
+
+            // ✅ FAZ-1: Inject engine metadata
+            result.engine = getEngineMetadata(type);
+
+            // ✅ FAZ-6: Generate academic report sentences
+            result.report = generateAcademicReport(result, type);
         }
 
 
@@ -2771,6 +3161,169 @@ function getMultiSelectValues(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return [];
     return Array.from(select.selectedOptions).map(o => o.value);
+}
+
+/**
+ * Get checked values from checkbox group (TYPE_B UI fix)
+ * Looks for checkboxes with name attribute starting with prefix
+ * @param {string} widgetId - The widget ID
+ * @param {string} namePrefix - The checkbox name prefix (e.g., 'stat_001_col')
+ * @returns {string[]} Array of checked values
+ */
+function getCheckedValues(widgetId, namePrefix) {
+    // Try multiple naming conventions
+    const prefixes = [
+        `${widgetId}_col`,      // TYPE_B columns
+        `${widgetId}_pred`,     // TYPE_D predictors
+        namePrefix              // Custom prefix
+    ].filter(Boolean);
+
+    const values = [];
+
+    for (const prefix of prefixes) {
+        // Find all checkboxes matching this prefix pattern
+        const checkboxes = document.querySelectorAll(`input[type="checkbox"][name^="${prefix}"]`);
+        if (checkboxes.length > 0) {
+            checkboxes.forEach(cb => {
+                if (cb.checked) values.push(cb.value);
+            });
+            if (values.length > 0) break; // Found values, stop searching
+        }
+
+        // Also try ID-based lookup (for checkboxes without name attribute)
+        for (let i = 0; i < 50; i++) {
+            const cb = document.getElementById(`${prefix}_${i}`);
+            if (!cb) break;
+            if (cb.checked) values.push(cb.value);
+        }
+        if (values.length > 0) break;
+    }
+
+    return values;
+}
+
+/**
+ * FAZ-1: Get engine metadata for stat type
+ * @param {string} statType - The statistical test type
+ * @returns {object} Engine metadata with name, method, limitations
+ */
+function getEngineMetadata(statType) {
+    const methodMap = {
+        'ttest': 'Welch t-test with incompleteBeta CDF for p-value',
+        'ttest-independent': 'Welch t-test with incompleteBeta CDF for p-value',
+        'ttest-paired': 'Paired t-test with incompleteBeta CDF',
+        'ttest-one': 'One-sample t-test with incompleteBeta CDF',
+        'anova': 'One-way ANOVA with F-distribution approximation',
+        'chi-square': 'Chi-square test with incompleteGamma CDF',
+        'correlation': 'Pearson r with Fisher z-transformation for CI',
+        'normality': 'Shapiro-Wilk W statistic approximation',
+        'shapiro-wilk': 'Shapiro-Wilk W statistic approximation',
+        'mann-whitney': 'Mann-Whitney U with normal approximation for large samples',
+        'wilcoxon': 'Wilcoxon signed-rank with normal approximation',
+        'kruskal': 'Kruskal-Wallis H with chi-square approximation',
+        'friedman': 'Friedman test with chi-square approximation',
+        'levene': 'Brown-Forsythe modified Levene test',
+        'pca': 'PCA via covariance matrix, power iteration eigenvalues',
+        'kmeans': 'Lloyd\'s algorithm with k-means++ initialization',
+        'logistic': 'Logistic regression via gradient descent optimization',
+        'survival': 'Kaplan-Meier estimator with log-rank test',
+        'timeseries': 'Moving average + linear trend estimation',
+        'discriminant': 'Linear Discriminant Analysis (LDA)',
+        'cronbach': 'Cronbach\'s alpha with item-total correlations'
+    };
+
+    const limitationMap = {
+        'normality': 'n ≤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
+        'shapiro-wilk': 'n ≤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
+        'logistic': 'Gradient descent may not converge for highly collinear predictors',
+        'pca': 'Power iteration may be slow for many variables',
+        'kmeans': 'Results depend on initialization; run multiple times for stability',
+        'survival': 'Assumes non-informative censoring'
+    };
+
+    return {
+        name: 'Opradox Local Statistical Engine',
+        version: '2.0',
+        method: methodMap[statType] || 'Standard statistical computation',
+        limitations: limitationMap[statType] || null
+    };
+}
+
+/**
+ * FAZ-6: Generate academic report sentences (TR/EN)
+ * @param {object} result - The test result object
+ * @param {string} statType - The statistical test type
+ * @returns {object} Report with tr and en keys
+ */
+function generateAcademicReport(result, statType) {
+    if (!result || !result.valid) {
+        return { tr: null, en: null };
+    }
+
+    const formatP = (p) => p < 0.001 ? '< .001' : p.toFixed(3);
+    const formatN = (n) => n?.toFixed ? n.toFixed(2) : n;
+
+    let tr = '', en = '';
+
+    switch (statType) {
+        case 'ttest':
+        case 'ttest-independent':
+            tr = `Bağımsız örneklem t-testi sonucunda gruplar arasında ${result.significant ? 'istatistiksel olarak anlamlı' : 'anlamlı olmayan'} bir fark saptanmıştır, t(${formatN(result.degreesOfFreedom)}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}, Cohen's d = ${formatN(result.cohensD)}.`;
+            en = `An independent samples t-test revealed a ${result.significant ? 'statistically significant' : 'non-significant'} difference between groups, t(${formatN(result.degreesOfFreedom)}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}, Cohen's d = ${formatN(result.cohensD)}.`;
+            break;
+
+        case 'ttest-paired':
+            tr = `Eşleştirilmiş örneklem t-testi sonucunda ölçümler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark bulunmuştur, t(${result.degreesOfFreedom}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}.`;
+            en = `A paired samples t-test showed a ${result.significant ? 'significant' : 'non-significant'} difference between measurements, t(${result.degreesOfFreedom}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'anova':
+            tr = `Tek yönlü ANOVA sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark saptanmıştır, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, η² = ${formatN(result.etaSquared)}.`;
+            en = `A one-way ANOVA revealed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, η² = ${formatN(result.etaSquared)}.`;
+            break;
+
+        case 'correlation':
+            tr = `Pearson korelasyon analizi sonucu değişkenler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} ${result.interpretation || ''} ilişki bulunmuştur, r = ${formatN(result.correlation)}, p ${formatP(result.pValue)}.`;
+            en = `Pearson correlation analysis revealed a ${result.significant ? 'significant' : 'non-significant'} ${result.interpretation || ''} relationship between variables, r = ${formatN(result.correlation)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'chi-square':
+            tr = `Ki-kare bağımsızlık testi sonucu değişkenler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} ilişki saptanmıştır, χ²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
+            en = `A chi-square test of independence showed a ${result.significant ? 'significant' : 'non-significant'} association between variables, χ²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'normality':
+        case 'shapiro-wilk':
+            tr = `Shapiro-Wilk normallik testi sonucu dağılım ${result.isNormal ? 'normal' : 'normal değil'}, W = ${formatN(result.wStatistic)}, p ${formatP(result.pValue)}.`;
+            en = `Shapiro-Wilk normality test indicated the distribution is ${result.isNormal ? 'normal' : 'non-normal'}, W = ${formatN(result.wStatistic)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'mann-whitney':
+            tr = `Mann-Whitney U testi sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark bulunmuştur, U = ${formatN(result.uStatistic)}, p ${formatP(result.pValue)}.`;
+            en = `A Mann-Whitney U test revealed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, U = ${formatN(result.uStatistic)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'kruskal':
+            tr = `Kruskal-Wallis testi sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark saptanmıştır, H = ${formatN(result.hStatistic)}, p ${formatP(result.pValue)}.`;
+            en = `A Kruskal-Wallis test showed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, H = ${formatN(result.hStatistic)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'levene':
+            tr = `Levene testi sonucu varyanslar ${result.significant ? 'homojen değil' : 'homojen'}, W = ${formatN(result.wStatistic || result.fStatistic)}, p ${formatP(result.pValue)}.`;
+            en = `Levene's test indicated variances are ${result.significant ? 'heterogeneous' : 'homogeneous'}, W = ${formatN(result.wStatistic || result.fStatistic)}, p ${formatP(result.pValue)}.`;
+            break;
+
+        case 'descriptive':
+            tr = 'Betimsel istatistikler hesaplanmıştır.';
+            en = 'Descriptive statistics have been computed.';
+            break;
+
+        default:
+            tr = 'Analiz tamamlanmıştır.';
+            en = 'Analysis completed.';
+    }
+
+    return { tr, en };
 }
 
 
@@ -3460,17 +4013,32 @@ export function runLeveneTest(groups, alpha = 0.05) {
     const W = ((N - k) * ssb) / ((k - 1) * ssw);
     const df1 = k - 1;
     const df2 = N - k;
+
+    // NaN koruması
+    if (isNaN(W) || !isFinite(W) || ssw === 0) {
+        return {
+            valid: false,
+            error: 'Varyans hesaplanamadı (gruplar çok benzer veya veri yetersiz)',
+            testName: "Levene's Test"
+        };
+    }
+
     const pValue = 1 - approximateFTestPValue(W, df1, df2);
+    const significant = pValue < alpha;
 
     return {
+        valid: true,
         testType: 'levene',
         testName: "Levene's Test",
         wStatistic: W,
+        fStatistic: W, // Alias for compatibility
         df1: df1,
         df2: df2,
         pValue: pValue,
-        isSignificant: pValue < alpha,
-        interpretation: pValue < alpha
+        alpha: alpha,
+        significant: significant,
+        isSignificant: significant,
+        interpretation: significant
             ? 'Varyanslar eşit değil (homojenlik varsayımı karşılanmıyor)'
             : 'Varyanslar eşit (homojenlik varsayımı karşılanıyor)'
     };
@@ -3478,12 +4046,43 @@ export function runLeveneTest(groups, alpha = 0.05) {
 
 /**
  * Calculate effect size (Cohen's d) for two groups
+ * FAZ-4: NaN guard eklendi
  */
 export function calculateEffectSize(group1, group2) {
+    if (!group1 || !group2 || group1.length < 2 || group2.length < 2) {
+        return {
+            valid: false,
+            error: 'Her grupta en az 2 değer olmalı',
+            testName: "Cohen's d"
+        };
+    }
+
     const mean1 = calculateMean(group1);
     const mean2 = calculateMean(group2);
     const pooledSD = calculatePooledStdDev(group1, group2);
+
+    // FAZ-4: SD=0 guard - tüm değerler aynıysa Cohen's d tanımsız
+    if (pooledSD === 0 || !isFinite(pooledSD)) {
+        return {
+            valid: false,
+            error: 'Varyans 0 olduğu için Cohen\'s d tanımsız (tüm değerler aynı veya çok benzer)',
+            testName: "Cohen's d",
+            group1Mean: mean1,
+            group2Mean: mean2,
+            pooledSD: pooledSD
+        };
+    }
+
     const d = (mean1 - mean2) / pooledSD;
+
+    // FAZ-4: NaN guard
+    if (!isFinite(d)) {
+        return {
+            valid: false,
+            error: 'Etki büyüklüğü hesaplanamadı',
+            testName: "Cohen's d"
+        };
+    }
 
     let interpretation;
     const absD = Math.abs(d);
@@ -3493,10 +4092,12 @@ export function calculateEffectSize(group1, group2) {
     else interpretation = 'Büyük etki';
 
     return {
+        valid: true,
         testType: 'effect-size',
         testName: "Cohen's d",
         cohensD: d,
         effectSize: absD,
+        effectSizeInterpretation: interpretation,
         interpretation: interpretation,
         group1Mean: mean1,
         group2Mean: mean2,
@@ -3891,10 +4492,11 @@ export function runKMeansAnalysis(data, columns, k = 3) {
 
 /**
  * Run Cronbach's Alpha
+ * FAZ-4: valid field ve NaN guard eklendi
  */
 export function runCronbachAlpha(data, columns) {
     const k = columns.length;
-    if (k < 2) return { error: 'En az 2 madde gerekli' };
+    if (k < 2) return { valid: false, error: 'En az 2 madde gerekli', testName: "Cronbach's Alpha" };
 
     // Calculate item variances
     const itemVars = columns.map(col => {
@@ -3908,8 +4510,26 @@ export function runCronbachAlpha(data, columns) {
     });
     const totalVar = calculateVariance(totals);
 
+    // FAZ-4: Guard - totalVar = 0 durumunda alpha tanımsız
+    if (totalVar === 0 || !isFinite(totalVar)) {
+        return {
+            valid: false,
+            error: 'Toplam varyans 0 - tüm skorlar aynı',
+            testName: "Cronbach's Alpha"
+        };
+    }
+
     const sumItemVars = itemVars.reduce((a, b) => a + b, 0);
     const alpha = (k / (k - 1)) * (1 - sumItemVars / totalVar);
+
+    // FAZ-4: NaN guard
+    if (!isFinite(alpha)) {
+        return {
+            valid: false,
+            error: 'Alpha hesaplanamadı',
+            testName: "Cronbach's Alpha"
+        };
+    }
 
     let interpretation;
     if (alpha >= 0.9) interpretation = 'Mükemmel güvenilirlik';
@@ -3919,9 +4539,11 @@ export function runCronbachAlpha(data, columns) {
     else interpretation = 'Zayıf güvenilirlik';
 
     return {
+        valid: true,
         testType: 'cronbach',
         testName: "Cronbach's Alpha",
         alpha: alpha,
+        cronbachAlpha: alpha,
         itemCount: k,
         interpretation: interpretation
     };

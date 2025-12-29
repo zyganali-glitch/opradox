@@ -2215,12 +2215,34 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 <i class="fas fa-function"></i> Kullanılan Formüller
             </div>
             <pre style="white-space:pre-wrap;margin:0;color:#fff;">${formula}</pre>
-            <div style="margin-top:8px;font-size:11px;color:#888;">
-                Motor: Basic JavaScript (Approx. critical values)
+            <div style="margin-top:8px;font-size:11px;color:#888;" id="${widgetId}_motorInfo">
+                Motor: Analiz çalıştırılınca görünecek
             </div>
         `;
 
         widget.querySelector('.viz-stat-body, .viz-widget-body')?.appendChild(formulaEl);
+
+        // GATE-15: Motor bilgisini widget'tan oku (eğer varsa)
+        const motorEl = document.getElementById(`${widgetId}_motorInfo`);
+        if (motorEl) {
+            const lastResult = widget.dataset.lastResult ? JSON.parse(widget.dataset.lastResult) : null;
+            if (lastResult?.engine) {
+                motorEl.textContent = `Motor: ${lastResult.engine.name || type} (${lastResult.engine.method || 'local'})`;
+            } else {
+                // Fallback: statType bazlı temel bilgi
+                const engineMap = {
+                    'ttest': 'T-Test Engine (Welch/Student)',
+                    'anova': 'ANOVA Engine (One-Way F-test)',
+                    'correlation': 'Pearson/Spearman Engine',
+                    'chi-square': 'Chi-Square Engine (χ² test)',
+                    'normality': 'Normality Engine (Shapiro-Wilk approx.)',
+                    'regression': 'OLS Regression Engine',
+                    'pca': 'PCA Engine (Power iteration)',
+                    'kmeans': 'K-Means Engine (Lloyd algorithm)'
+                };
+                motorEl.textContent = `Motor: ${engineMap[type] || 'JavaScript (Local calculation)'}`;
+            }
+        }
     };
 
     // Widget/Chart customization aliases
