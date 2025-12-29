@@ -13,6 +13,10 @@ import logging
 import scipy.stats as stats
 import numpy as np
 
+# Smart type coercion for mixed numeric/text columns
+from app.excel_utils import smart_type_coercion
+
+
 # Global imports for ML and Survival Analysis with fallback logging
 try:
     from sklearn.decomposition import PCA
@@ -272,6 +276,15 @@ async def get_viz_data(
             df = pd.read_excel(BytesIO(content), sheet_name=active_sheet, header=header_row, nrows=limit)
             print(f"[DEBUG /viz/data] loaded {len(df)} rows, {len(df.columns)} columns from '{active_sheet}'")
         
+        # ✅ SMART TYPE COERCION: Convert 80%+ numeric columns, report failed values
+        try:
+            df, conversion_report = smart_type_coercion(df, threshold=0.8)
+            if conversion_report:
+                print(f"[DEBUG /viz/data] Smart type coercion applied: {list(conversion_report.keys())}")
+        except Exception as e:
+            logging.warning(f"Smart type coercion failed: {e}")
+            conversion_report = {}
+        
         # Column info - fillna'dan ÖNCE tip tespiti yap
         columns_info = []
         for col in df.columns:
@@ -320,8 +333,10 @@ async def get_viz_data(
             "data": df.to_dict(orient="records"),
             "row_count": len(df),
             "truncated": limit is not None and len(df) >= limit,
-            "raw_preview_rows": raw_preview_rows  # Önizleme için ham satırlar
+            "raw_preview_rows": raw_preview_rows,  # Önizleme için ham satırlar
+            "conversion_report": conversion_report  # ✅ NEW: Dönüştürme raporu
         }
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

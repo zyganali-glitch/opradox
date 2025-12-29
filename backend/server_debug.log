@@ -974,3 +974,33 @@ Sheet: Sayfa1
 Header Row: 0
 Params Raw: {"":"Sayfa2","rows":"Üniversite Adı, Program Adı","columns":"Fakülte/Yüksekokul Adı","values":"Kontenjan","aggfunc":"sum","show_totals":"Kontenjan","show_percentage":"Kontenjan, Yerleşen"}...
 Calling runner for pivot-builder-pro...
+
+============================================================
+REQUEST RECEIVED AT 2025-12-27 12:47:44.834804
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (2).xlsx
+Sheet: Sayfa1
+Header Row: 2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]}","":"katip"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-27 12:48:04.132615
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (2).xlsx
+Sheet: Sayfa1
+Header Row: 2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"output\",\"output_type\":\"sheet_per_group\",\"group_by_sheet\":\"Üniversite Adı\",\"summary_sheet\":true,\"slicers\":null,\"column_descriptions\":null}]}","":""}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-27 12:50:38.104920
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (2).xlsx
+Sheet: Sayfa1
+Header Row: 2
+Params Raw: {"config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"Doluluk OLranı\",\"ctype\":\"arithmetic\",\"columns\":[\"Kontenjan\",\"Yerleşen\"],\"operation\":\"percent\"},{\"type\":\"filter\",\"column\"...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.

@@ -6,9 +6,22 @@
 import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 
 // -----------------------------------------------------
-// TOAST NOTIFICATIONS
+// TOAST NOTIFICATIONS (with queue/stack system)
 // -----------------------------------------------------
+const toastQueue = [];
+const MAX_VISIBLE_TOASTS = 3;
+let lastToastMessage = '';
+let lastToastTime = 0;
+
 export function showToast(message, type = 'info', duration = 5000) {
+    // Deduplication: same message within 2 seconds = skip
+    const now = Date.now();
+    if (message === lastToastMessage && (now - lastToastTime) < 2000) {
+        return;
+    }
+    lastToastMessage = message;
+    lastToastTime = now;
+
     const toast = document.createElement('div');
     toast.className = `viz-toast viz-toast-${type}`;
 
@@ -22,9 +35,22 @@ export function showToast(message, type = 'info', duration = 5000) {
     toast.innerHTML = `
         <i class="fas ${icons[type] || icons.info}"></i>
         <span>${message}</span>
+        <button class="viz-toast-close" onclick="this.parentElement.remove(); repositionToasts();">&times;</button>
     `;
 
     document.body.appendChild(toast);
+    toastQueue.push(toast);
+
+    // Remove oldest if exceeding max
+    if (toastQueue.length > MAX_VISIBLE_TOASTS) {
+        const oldest = toastQueue.shift();
+        if (oldest && oldest.parentElement) {
+            oldest.remove();
+        }
+    }
+
+    // Stack positioning (bottom-right, stacked upward)
+    repositionToasts();
 
     // CSS transition ile göster (.show class ekleyerek)
     setTimeout(() => toast.classList.add('show'), 10);
@@ -32,9 +58,29 @@ export function showToast(message, type = 'info', duration = 5000) {
     // Belirtilen süre sonra kaldır
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
+        setTimeout(() => {
+            const idx = toastQueue.indexOf(toast);
+            if (idx > -1) toastQueue.splice(idx, 1);
+            toast.remove();
+            repositionToasts();
+        }, 300);
     }, duration);
 }
+
+function repositionToasts() {
+    let offset = 20;
+    for (let i = toastQueue.length - 1; i >= 0; i--) {
+        const t = toastQueue[i];
+        if (t && t.style) {
+            t.style.bottom = `${offset}px`;
+            offset += 60; // Toast height + gap
+        }
+    }
+}
+
+// Make repositionToasts available globally for close button
+window.repositionToasts = repositionToasts;
+
 
 // -----------------------------------------------------
 // SETTINGS PANEL

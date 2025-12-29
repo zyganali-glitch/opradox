@@ -146,6 +146,22 @@ export async function loadDataWithOptions() {
         VIZ_STATE.columns = data.columns || [];
         VIZ_STATE.columnsInfo = data.columns_info || [];
 
+        // ✅ Reset dataActions on new file load to prevent stale missing-data messages
+        VIZ_STATE.dataActions = [];
+
+
+        // ✅ Store and handle conversion report (smart type coercion results)
+        VIZ_STATE.conversionReport = data.conversion_report || {};
+        if (data.conversion_report && Object.keys(data.conversion_report).length > 0) {
+            const affectedCols = Object.keys(data.conversion_report);
+            const totalFailed = Object.values(data.conversion_report).reduce((sum, r) => sum + (r.failed_count || 0), 0);
+            console.log('⚠️ Conversion report:', data.conversion_report);
+
+            if (typeof showToast === 'function') {
+                showToast(`${affectedCols.length} sütunda ${totalFailed} değer sayıya dönüştürülemedi`, 'warning', 5000);
+            }
+        }
+
         // Update active dataset as well
         const activeDataset = VIZ_STATE.getActiveDataset();
         if (activeDataset) {
@@ -166,6 +182,7 @@ export async function loadDataWithOptions() {
         if (typeof showToast === 'function') showToast(`${VIZ_STATE.data.length.toLocaleString('tr-TR')} satır yüklendi`, 'success');
 
         VIZ_STATE.charts.forEach(config => { if (typeof renderChart === 'function') renderChart(config); });
+
 
     } catch (error) {
         console.error('Veri yükleme hatası:', error);
@@ -1097,14 +1114,17 @@ export function fillMissingData() {
     };
 }
 
-export function applyFillMissing() {
-    const column = document.getElementById('fillColumn')?.value;
-    const method = document.getElementById('fillMethod')?.value;
-    const customValue = document.getElementById('fillCustomValue')?.value;
+export function applyFillMissing(colParam = null, methodParam = null, customValueParam = null) {
+    // Accept parameters OR read from DOM (supports both call patterns)
+    const column = colParam || document.getElementById('fillColumn')?.value;
+    const method = methodParam || document.getElementById('fillMethod')?.value;
+    const customValue = customValueParam || document.getElementById('fillCustomValue')?.value;
 
     if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) return;
 
+
     const columnsToFill = column === '__all__' ? VIZ_STATE.columns : [column];
+
     let totalFilledCount = 0;
 
     // ✅ Track per-column fill info for accurate logging

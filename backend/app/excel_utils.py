@@ -54,6 +54,82 @@ def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None, head
     return df
 
 
+def smart_type_coercion(df: pd.DataFrame, threshold: float = 0.8) -> tuple:
+    """
+    Her sütun için akıllı tip dönüştürme uygular.
+    
+    Eğer bir sütundaki değerlerin %80'i (threshold) veya daha fazlası sayısalsa:
+    - Sütunu sayısal tipe dönüştürür
+    - Dönüştürülemeyen değerleri NaN yapar
+    - Hangi değerlerin dönüştürülemediğini raporlar
+    
+    Args:
+        df: pandas DataFrame
+        threshold: Sayısal kabul eşiği (0-1 arası, varsayılan 0.8)
+    
+    Returns:
+        tuple: (dönüştürülmüş_df, conversion_report)
+        conversion_report: {
+            column_name: {
+                'original_type': str,
+                'new_type': str,
+                'converted_count': int,
+                'failed_count': int,
+                'failed_values': list (ilk 10 unique değer),
+                'failed_rows': list (ilk 20 satır indeksi)
+            }
+        }
+    """
+    report = {}
+    
+    for col in df.columns:
+        original_type = str(df[col].dtype)
+        
+        # Zaten sayısal sütunları atla
+        if pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        
+        # Sayısal dönüşüm dene
+        numeric_result = pd.to_numeric(df[col], errors='coerce')
+        
+        # Boş olmayan değerler üzerinden hesapla
+        non_null_original = df[col].notna()
+        non_null_count = non_null_original.sum()
+        
+        if non_null_count == 0:
+            continue
+        
+        valid_numeric_count = (non_null_original & numeric_result.notna()).sum()
+        numeric_ratio = valid_numeric_count / non_null_count
+        
+        # Eşik değerini geçtiyse dönüştür
+        if numeric_ratio >= threshold:
+            # Dönüştürülemeyen değerleri tespit et
+            failed_mask = non_null_original & numeric_result.isna()
+            failed_count = failed_mask.sum()
+            
+            if failed_count > 0:
+                # Sorunlu değerleri raporla
+                failed_values = df.loc[failed_mask, col].unique().tolist()
+                failed_rows = df[failed_mask].index.tolist()
+                
+                report[col] = {
+                    'original_type': original_type,
+                    'new_type': 'float64',
+                    'converted_count': int(valid_numeric_count),
+                    'failed_count': int(failed_count),
+                    'failed_values': [str(v) for v in failed_values[:10]],  # İlk 10 unique
+                    'failed_rows': [int(r) for r in failed_rows[:20]],  # İlk 20 satır
+                    'numeric_ratio': round(numeric_ratio * 100, 1)
+                }
+            
+            # Sütunu dönüştür
+            df[col] = numeric_result
+    
+    return df, report
+
+
+
 def build_condition_mask(df: pd.DataFrame, column: str, operator: str, value: str) -> pd.Series:
     """
     Tek bir koşul için True/False maskesi döndürür.
