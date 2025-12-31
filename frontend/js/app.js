@@ -666,6 +666,78 @@ window.addEventListener("DOMContentLoaded", () => {
     // Metinleri İlk Dile Göre Ayarla
     updateUITexts();
 
+    // ===== SENARYO ARAMA İŞLEYİCİSİ =====
+    const scenarioSearch = document.getElementById("scenarioSearch");
+    if (scenarioSearch) {
+        scenarioSearch.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const container = document.getElementById("scenarioListContainer");
+            if (!container) return;
+
+            const cards = container.querySelectorAll(".gm-excel-scenario-card");
+            const categories = container.querySelectorAll(".gm-excel-category-label");
+            const categoryVisibility = {};
+
+            // Tüm kartları filtrele
+            cards.forEach(card => {
+                const title = (card.dataset.title || "").toLowerCase();
+                const catKey = card.dataset.category || "";
+                const matches = query === "" || title.includes(query);
+
+                card.style.display = matches ? "" : "none";
+
+                // Kategori görünürlüğünü takip et
+                if (!categoryVisibility[catKey]) categoryVisibility[catKey] = false;
+                if (matches) categoryVisibility[catKey] = true;
+            });
+
+            // Kategori başlıklarını güncelle
+            categories.forEach(cat => {
+                const catKey = cat.dataset.category || "";
+                cat.style.display = categoryVisibility[catKey] ? "" : "none";
+            });
+        });
+    }
+
+    // ===== SÜRÜKLE-BIRAK DROP HANDLER =====
+    const middlePane = document.querySelector(".gm-middle-pane");
+    if (middlePane) {
+        middlePane.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            middlePane.classList.add("drag-over");
+        });
+
+        middlePane.addEventListener("dragleave", (e) => {
+            // Sadece pane dışına çıkıldığında kaldır
+            if (!middlePane.contains(e.relatedTarget)) {
+                middlePane.classList.remove("drag-over");
+            }
+        });
+
+        middlePane.addEventListener("drop", (e) => {
+            e.preventDefault();
+            middlePane.classList.remove("drag-over");
+
+            try {
+                const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+                if (data && data.id) {
+                    // Senaryo nesnesini bul
+                    const scenario = SCENARIO_LIST.find(sc => sc.id === data.id);
+                    if (scenario) {
+                        // Kartı bul ve seç
+                        const card = document.querySelector(`.gm-excel-scenario-card[data-id="${data.id}"]`);
+                        selectScenario(scenario, card);
+                        if (typeof showToast === "function") {
+                            showToast(`✅ ${scenario.title} seçildi`, "success", 2000);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Drop parse error:", err);
+            }
+        });
+    }
+
     // Veriyi Çek
     initApp();
 });
@@ -1821,6 +1893,7 @@ function renderAccordionMenu() {
         // Kategori başlığı
         const categoryLabel = document.createElement("div");
         categoryLabel.className = "gm-excel-category-label";
+        categoryLabel.dataset.category = catKey; // Arama için kategori işareti
         categoryLabel.innerHTML = `<i class="fas ${config.icon}" style="margin-right:6px;"></i>${config.name}`;
         container.appendChild(categoryLabel);
 
@@ -1831,6 +1904,9 @@ function renderAccordionMenu() {
             card.dataset.id = sc.id;
             card.dataset.params = JSON.stringify(sc.params || []);
             card.dataset.title = sc.title;
+            card.dataset.category = catKey; // Arama için kategori işareti
+            card.draggable = true; // Sürükle-bırak için
+            card.title = sc.title; // Hover tooltip için
 
             if (sc.id === ACTIVE_SCENARIO_ID) card.classList.add("active");
 
@@ -1964,10 +2040,38 @@ function renderDynamicForm(scenarioId, params) {
     // YENİ: PRO BUILDER BYPASS & GLOBAL OPTIONS INIT
     // ============================================================================
 
+    // Visual Builder Container referansı
+    const vbContainer = document.getElementById("visualBuilderContainer");
+
     // PRO Builder senaryosunu atla (dokunma!)
     if (scenarioId === 'custom-report-builder') {
         console.log('⚠️ PRO Builder detected - using existing code, skipping optional features');
         // Mevcut PRO Builder kodunu çalıştır (aşağıda devam ediyor)
+        if (vbContainer) vbContainer.style.display = 'none';
+    }
+    // Visual Builder için özel senaryo - Oyun Hamuru PRO
+    else if (scenarioId === 'custom-report-builder-pro') {
+        console.log('🎨 Visual Builder PRO detected - opening Visual Builder');
+
+        // Normal form container'ı gizle, Visual Builder'ı göster
+        container.innerHTML = `
+            <div class="gm-info-box" style="padding:12px; margin-bottom:10px;">
+                <i class="fas fa-wand-magic-sparkles" style="color:#8b5cf6;"></i>
+                <strong>Visual Builder Aktif</strong> - Blokları sürükleyerek veya tıklayarak pipeline oluşturun.
+            </div>
+        `;
+
+        if (vbContainer) {
+            vbContainer.style.display = 'grid';
+            // Visual Builder'ı başlat
+            if (typeof VisualBuilder !== 'undefined') {
+                VisualBuilder.init();
+            }
+        }
+        return; // Normal form render'ı atla
+    } else {
+        // Diğer senaryolarda Visual Builder'ı gizle
+        if (vbContainer) vbContainer.style.display = 'none';
     }
 
     // Global opsiyonları yükle (ilk çağrıda)

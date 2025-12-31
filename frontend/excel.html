@@ -25,11 +25,12 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/style.css?v=20241231b" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script defer src="js/optional_features.js?v=20241218d"></script>
+    <script defer src="js/visualBuilder.js?v=20241231d"></script>
     <script defer src="js/app.js?v=20241220b"></script>
 </head>
 
@@ -81,6 +82,12 @@
                 <div class="gm-scenarios-section">
                     <div class="gm-card gm-scenario-list-card">
                         <h2 data-i18n="step2_title">2. Senaryonu Seç</h2>
+                        <!-- Visual Builder PRO Kısayol Butonu -->
+                        <button id="vbProShortcut" class="gm-vb-pro-btn"
+                            onclick="selectScenario('custom-report-builder-pro')">
+                            <i class="fas fa-magic"></i>
+                            <span data-i18n="vb_pro_shortcut">✨ Visual Builder PRO</span>
+                        </button>
                         <div class="gm-search-wrapper">
                             <i class="fas fa-search"></i>
                             <input id="scenarioSearch" class="gm-scenario-search" placeholder="..." />
@@ -240,6 +247,19 @@
                         <div class="gm-info-box" style="text-align:center; padding:30px; opacity:0.6;">
                             <i class="fas fa-arrow-left fa-2x"></i><br>Seçim Bekleniyor...
                         </div>
+                    </div>
+                </div>
+
+                <!-- VISUAL BUILDER CONTAINER (PRO seçildiğinde görünür) -->
+                <div id="visualBuilderContainer" class="gm-visual-builder" style="display:none;">
+                    <div id="vbPalette" class="vb-palette">
+                        <!-- Blok Paleti JS ile doldurulacak -->
+                    </div>
+                    <div id="vbCanvas" class="vb-canvas">
+                        <!-- İşlem Zinciri JS ile doldurulacak -->
+                    </div>
+                    <div id="vbSettings" class="vb-settings">
+                        <!-- Blok Ayarları JS ile doldurulacak -->
                     </div>
                 </div>
 

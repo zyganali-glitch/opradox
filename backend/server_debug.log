@@ -1004,3 +1004,49 @@ Header Row: 2
 Params Raw: {"config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"Doluluk OLranı\",\"ctype\":\"arithmetic\",\"columns\":[\"Kontenjan\",\"Yerleşen\"],\"operation\":\"percent\"},{\"type\":\"filter\",\"column\"...
 Calling runner for custom-report-builder-pro...
 Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-30 11:08:52.955488
+Scenario ID: custom-report-builder-pro
+Filename: tablo4.xls
+Sheet: None
+Header Row: 0
+Params Raw: {"config":"{\"actions\":[{\"type\":\"computed\",\"name\":\"doluluk\",\"ctype\":\"arithmetic\",\"columns\":[\"Kontenjan\",\"Yerleşen\"],\"operation\":\"percent\"},{\"type\":\"filter\",\"column\":\"Üniv...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-31 13:32:13.590817
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (2).xlsx
+Sheet: Sayfa1
+Header Row: 2
+Params Raw: {"column":"Yerleşen"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2025-12-31 14:34:37.220013
+Scenario ID: custom-report-builder-pro
+Filename: tablo4.xls
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-31 14:34:44.366502
+Scenario ID: custom-report-builder-pro
+Filename: tablo4.xls
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2025-12-31 14:42:45.827250
+Scenario ID: custom-report-builder-pro
+Filename: tablo4.xls
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
