@@ -314,7 +314,20 @@ const EXTRA_TEXTS = {
         "new_cc_col1": "Birinci Sütun",
         "new_cc_col2": "İkinci Sütun",
         "new_cc_date1": "Başlangıç Tarihi Sütunu",
-        "new_cc_date2": "Bitiş Tarihi Sütunu"
+        "new_cc_date2": "Bitiş Tarihi Sütunu",
+
+        // === EXCEL STUDIO V2 (2024-12) ===
+        "pro_title": "Özel Rapor Oluşturucu",
+        "pro_subtitle": "Sürükle, Bırak, Raporla",
+        "add_file": "Dosya Ekle",
+        "file_preview": "Önizleme",
+        "search_scenarios": "Senaryo ara...",
+        "active": "Aktif",
+        "help_placeholder": "Detaylar için senaryo seçin.",
+        "waiting_selection": "Seçim Bekleniyor...",
+        "step3_title": "Senaryo Ayarları",
+        "pro_coming_soon": "Visual Builder yakında aktif olacak!",
+        "new_file": "Yeni Dosya"
     },
     "en": {
         "file_ph_1": "Select File / Drag & Drop",
@@ -623,7 +636,20 @@ const EXTRA_TEXTS = {
         "new_cc_col1": "First Column",
         "new_cc_col2": "Second Column",
         "new_cc_date1": "Start Date Column",
-        "new_cc_date2": "End Date Column"
+        "new_cc_date2": "End Date Column",
+
+        // === EXCEL STUDIO V2 (2024-12) ===
+        "pro_title": "Custom Report Builder",
+        "pro_subtitle": "Drag, Drop, Report",
+        "add_file": "Add File",
+        "file_preview": "Preview",
+        "search_scenarios": "Search scenarios...",
+        "active": "Active",
+        "help_placeholder": "Select a scenario for details.",
+        "waiting_selection": "Waiting for selection...",
+        "step3_title": "Scenario Settings",
+        "pro_coming_soon": "Visual Builder coming soon!",
+        "new_file": "New File"
     }
 };
 
@@ -1407,7 +1433,7 @@ function populateCrossSheetDropdown() {
 
     select.innerHTML = FILE_SHEET_NAMES
         .filter(s => s !== FILE_SELECTED_SHEET) // Seçili sayfayı hariç tut
-        .map(s => `< option value = "${s}" > ${s}</option > `)
+        .map(s => `<option value="${s}">${s}</option>`)
         .join('');
 }
 
@@ -1649,7 +1675,7 @@ window.fetchCrossSheetColumns = async function (select) {
         if (data.columns) {
             // 1. Görsel listeyi güncelle (capsule biçiminde - modern stil)
             columnList.innerHTML = data.columns.map(col =>
-                `< span class="gm-col-chip-modern" onclick = "copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
+                `<span class="gm-col-chip-modern" onclick="copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
             ).join('');
 
             // 2. Autocomplete listesini güncelle (file2-columns datalist)
@@ -1722,76 +1748,190 @@ function renderAccordionMenu() {
     if (!container) return;
     container.innerHTML = "";
 
-    // Kategori İsimleri
-    const niceNames = {
-        "lookup_join": CURRENT_LANG === 'tr' ? "Veri Birleştirme" : "Lookup & Join",
-        "counting_frequency": CURRENT_LANG === 'tr' ? "Sayma & Sıklık" : "Counting",
-        "conditional_aggregation": CURRENT_LANG === 'tr' ? "Toplama & Ortalama" : "Aggregation",
-        "data_tools_dynamic": CURRENT_LANG === 'tr' ? "Veri Araçları" : "Data Tools",
-        "text_cleaning": CURRENT_LANG === 'tr' ? "Metin Temizleme" : "Cleaning",
-        "reporting_pivot": CURRENT_LANG === 'tr' ? "Rapor & Pivot" : "Reporting",
-        "charts_visualization": CURRENT_LANG === 'tr' ? "Grafik" : "Charts",
-        "dates_durations": CURRENT_LANG === 'tr' ? "Tarih İşlemleri" : "Dates",
-        "duplicates_uniques": CURRENT_LANG === 'tr' ? "Tekrar/Benzersiz" : "Duplicates",
-        "stats": CURRENT_LANG === 'tr' ? "İstatistik" : "Stats",
-        "conditional_formatting": CURRENT_LANG === 'tr' ? "Renklendirme" : "Formatting",
-        "conditional_logic_segmentation": CURRENT_LANG === 'tr' ? "Mantıksal" : "Logic",
-        "data_quality_validation": CURRENT_LANG === 'tr' ? "Veri Kalitesi" : "Quality",
-        "other": CURRENT_LANG === 'tr' ? "Diğer" : "Other"
+    // Kategori İsimleri ve İkonları
+    const categoryConfig = {
+        "lookup_join": {
+            name: CURRENT_LANG === 'tr' ? "Veri Birleştirme" : "Lookup & Join",
+            icon: "fa-link", color: "#4a90d9"
+        },
+        "counting_frequency": {
+            name: CURRENT_LANG === 'tr' ? "Sayma & Sıklık" : "Counting",
+            icon: "fa-calculator", color: "#10b981"
+        },
+        "conditional_aggregation": {
+            name: CURRENT_LANG === 'tr' ? "Toplama & Ortalama" : "Aggregation",
+            icon: "fa-chart-bar", color: "#8b5cf6"
+        },
+        "data_tools_dynamic": {
+            name: CURRENT_LANG === 'tr' ? "Veri Araçları" : "Data Tools",
+            icon: "fa-tools", color: "#f59e0b"
+        },
+        "text_cleaning": {
+            name: CURRENT_LANG === 'tr' ? "Metin Temizleme" : "Cleaning",
+            icon: "fa-broom", color: "#06b6d4"
+        },
+        "reporting_pivot": {
+            name: CURRENT_LANG === 'tr' ? "Rapor & Pivot" : "Reporting",
+            icon: "fa-table", color: "#ec4899"
+        },
+        "charts_visualization": {
+            name: CURRENT_LANG === 'tr' ? "Grafik" : "Charts",
+            icon: "fa-chart-pie", color: "#14b8a6"
+        },
+        "dates_durations": {
+            name: CURRENT_LANG === 'tr' ? "Tarih İşlemleri" : "Dates",
+            icon: "fa-calendar-alt", color: "#f97316"
+        },
+        "duplicates_uniques": {
+            name: CURRENT_LANG === 'tr' ? "Tekrar/Benzersiz" : "Duplicates",
+            icon: "fa-clone", color: "#6366f1"
+        },
+        "stats": {
+            name: CURRENT_LANG === 'tr' ? "İstatistik" : "Stats",
+            icon: "fa-chart-line", color: "#3b82f6"
+        },
+        "conditional_formatting": {
+            name: CURRENT_LANG === 'tr' ? "Renklendirme" : "Formatting",
+            icon: "fa-palette", color: "#a855f7"
+        },
+        "conditional_logic_segmentation": {
+            name: CURRENT_LANG === 'tr' ? "Mantıksal" : "Logic",
+            icon: "fa-code-branch", color: "#22c55e"
+        },
+        "data_quality_validation": {
+            name: CURRENT_LANG === 'tr' ? "Veri Kalitesi" : "Quality",
+            icon: "fa-check-circle", color: "#eab308"
+        },
+        "other": {
+            name: CURRENT_LANG === 'tr' ? "Diğer" : "Other",
+            icon: "fa-ellipsis-h", color: "#64748b"
+        }
     };
 
     Object.keys(SCENARIO_CATALOG).forEach(catKey => {
         const scenarios = SCENARIO_CATALOG[catKey];
         if (!scenarios || scenarios.length === 0) return;
 
-        const itemDiv = document.createElement("div");
-        itemDiv.className = "gm-accordion-item";
+        const config = categoryConfig[catKey] || {
+            name: catKey.replace(/_/g, " "),
+            icon: "fa-folder",
+            color: "#64748b"
+        };
 
-        // Başlık Formatlama
-        let title = niceNames[catKey] || catKey.replace(/_/g, " ");
-        title = title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
+        // Kategori başlığı
+        const categoryLabel = document.createElement("div");
+        categoryLabel.className = "gm-excel-category-label";
+        categoryLabel.innerHTML = `<i class="fas ${config.icon}" style="margin-right:6px;"></i>${config.name}`;
+        container.appendChild(categoryLabel);
 
-        const headerBtn = document.createElement("button");
-        headerBtn.className = "gm-accordion-header";
-        headerBtn.innerHTML = `<span>${title}</span> <i class="fas fa-chevron-down"></i>`;
-
-        const contentDiv = document.createElement("div");
-        contentDiv.className = "gm-accordion-content";
-
+        // Senaryo kartları
         scenarios.forEach(sc => {
-            const btn = document.createElement("button");
-            btn.className = "gm-scenario-btn";
-            btn.textContent = sc.title;
-            btn.dataset.id = sc.id;
-            btn.dataset.params = JSON.stringify(sc.params || []);
+            const card = document.createElement("div");
+            card.className = "gm-excel-scenario-card";
+            card.dataset.id = sc.id;
+            card.dataset.params = JSON.stringify(sc.params || []);
+            card.dataset.title = sc.title;
 
-            if (sc.id === ACTIVE_SCENARIO_ID) btn.classList.add("active");
+            if (sc.id === ACTIVE_SCENARIO_ID) card.classList.add("active");
 
-            btn.addEventListener("click", () => selectScenario(sc, btn));
-            contentDiv.appendChild(btn);
+            // Scenario-specific icons based on ID or keywords
+            const scenarioIcons = {
+                "custom-report-builder-pro": { icon: "fa-wand-magic-sparkles", color: "#8b5cf6" },
+                "pivot-builder-pro": { icon: "fa-table-cells", color: "#10b981" },
+                "custom-report-builder": { icon: "fa-shapes", color: "#f97316" },
+                "vlookup-basic": { icon: "fa-link", color: "#4a90d9" },
+                "vlookup-multi-column": { icon: "fa-arrows-left-right", color: "#4a90d9" },
+                "index-match": { icon: "fa-search-plus", color: "#4a90d9" },
+                "countif-advanced": { icon: "fa-calculator", color: "#10b981" },
+                "sumif-multicolumn": { icon: "fa-sigma", color: "#10b981" },
+                "rank-simple": { icon: "fa-trophy", color: "#f59e0b" },
+                "rank-grouped": { icon: "fa-medal", color: "#f59e0b" },
+                "filter-advanced": { icon: "fa-filter", color: "#ec4899" },
+                "text-split": { icon: "fa-scissors", color: "#06b6d4" },
+                "text-clean": { icon: "fa-broom", color: "#06b6d4" },
+                "date-diff": { icon: "fa-calendar-days", color: "#9a3050" },
+                "pivot-multi-level": { icon: "fa-layer-group", color: "#8b5cf6" },
+                "duplicate-finder": { icon: "fa-copy", color: "#ef4444" },
+                "concatenate-columns": { icon: "fa-text-width", color: "#06b6d4" },
+                "formula-column": { icon: "fa-function", color: "#f97316" },
+            };
+
+            // Get scenario icon or fall back to category icon
+            let iconInfo = scenarioIcons[sc.id];
+            if (!iconInfo) {
+                // Try to match by keywords in title
+                const title = (sc.title || "").toLowerCase();
+                if (title.includes("vlookup") || title.includes("birleşt")) iconInfo = { icon: "fa-link", color: "#4a90d9" };
+                else if (title.includes("rank") || title.includes("sıra")) iconInfo = { icon: "fa-trophy", color: "#f59e0b" };
+                else if (title.includes("pivot") || title.includes("özet")) iconInfo = { icon: "fa-table-cells", color: "#8b5cf6" };
+                else if (title.includes("filter") || title.includes("filtre")) iconInfo = { icon: "fa-filter", color: "#ec4899" };
+                else if (title.includes("sayı") || title.includes("count") || title.includes("topla") || title.includes("sum")) iconInfo = { icon: "fa-calculator", color: "#10b981" };
+                else if (title.includes("tarih") || title.includes("date")) iconInfo = { icon: "fa-calendar", color: "#9a3050" };
+                else if (title.includes("metin") || title.includes("text") || title.includes("birleş")) iconInfo = { icon: "fa-font", color: "#06b6d4" };
+                else iconInfo = { icon: config.icon, color: config.color };
+            }
+
+            card.innerHTML = `
+                <div class="gm-excel-scenario-icon" style="background:${iconInfo.color};">
+                    <i class="fas ${iconInfo.icon}"></i>
+                </div>
+                <div class="gm-excel-scenario-info">
+                    <h4>${sc.title}</h4>
+                    <p>${sc.short || sc.description || sc.hint || ''}</p>
+                </div>
+            `;
+
+            // Click event
+            card.addEventListener("click", () => selectScenario(sc, card));
+
+            // Drag start event
+            card.addEventListener("dragstart", (e) => {
+                e.dataTransfer.setData("text/plain", JSON.stringify({
+                    id: sc.id,
+                    title: sc.title,
+                    params: sc.params || []
+                }));
+                card.classList.add("dragging");
+            });
+
+            card.addEventListener("dragend", () => {
+                card.classList.remove("dragging");
+            });
+
+            container.appendChild(card);
         });
-
-        headerBtn.addEventListener("click", () => {
-            contentDiv.classList.toggle("open");
-            headerBtn.querySelector("i").className = contentDiv.classList.contains("open") ? "fas fa-chevron-up" : "fas fa-chevron-down";
-        });
-
-        itemDiv.appendChild(headerBtn);
-        itemDiv.appendChild(contentDiv);
-        container.appendChild(itemDiv);
     });
 }
 
 async function selectScenario(scenario, btnElement) {
-    document.querySelectorAll(".gm-scenario-btn").forEach(b => b.classList.remove("active"));
+    // Clear both old button format and new card format
+    document.querySelectorAll(".gm-scenario-btn, .gm-excel-scenario-card").forEach(b => b.classList.remove("active"));
     if (btnElement) btnElement.classList.add("active");
+
+    // Deselect PRO card
+    const proCard = document.getElementById("proBuilderCard");
+    if (proCard) proCard.classList.remove("active");
+
+    // YENİ: Senaryo seçildiğinde dosya alanını otomatik daralt
+    const filesSection = document.getElementById("filesSection");
+    if (filesSection && !filesSection.classList.contains("collapsed")) {
+        filesSection.classList.add("collapsed");
+    }
+
+    // YENİ: Dosya yüklenmemişse kullanıcıya uyarı göster
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (typeof showToast === 'function') {
+            showToast("📁 Henüz dosya yüklenmedi. Devam etmeden önce dosyanızı yüklemeyi unutmayın!", "info", 4000);
+        }
+    }
 
     ACTIVE_SCENARIO_ID = scenario.id;
     document.getElementById("scenarioTitle").textContent = scenario.title;
-    document.getElementById("scenarioSubtitle").textContent = scenario.short || "";
+    document.getElementById("scenarioSubtitle").textContent = scenario.short || scenario.description || "";
 
-    let params = [];
-    try { params = JSON.parse(btnElement.dataset.params); } catch (e) { }
+    // Use scenario.params directly instead of parsing from btnElement
+    const params = scenario.params || [];
     renderDynamicForm(scenario.id, params);
     loadScenarioHelp(scenario.id);
 
@@ -4642,11 +4782,18 @@ function bindEvents() {
     // 2. Dosya Seçimi
     document.getElementById("fileInput").addEventListener("change", (e) => {
         if (e.target.files[0]) {
-            document.getElementById("selectedFileName").textContent = e.target.files[0].name;
+            const fileName = e.target.files[0].name;
+            document.getElementById("selectedFileName").textContent = fileName;
             updateUITexts();
-            document.querySelector(".gm-file-label").style.borderColor = "var(--gm-success)";
+            const fileLabel = document.querySelector(".gm-file-label");
+            if (fileLabel) fileLabel.style.borderColor = "var(--gm-success)";
             CURRENT_FILE = e.target.files[0]; // YENİ: Dosya referansını kaydet
             inspectFile(e.target.files[0]); // Inspect columns
+
+            // Excel Studio V2: Create file tab in file bar
+            if (typeof createFileTab === 'function') {
+                createFileTab(fileName, 1);
+            }
         }
     });
     const f2 = document.getElementById("fileInput2");
@@ -5042,7 +5189,230 @@ function bindEvents() {
             }
         });
     }
+
+    // ============================================================================
+    // EXCEL STUDIO V2 - NEW EVENT HANDLERS
+    // ============================================================================
+
+    // Help Panel Toggle Button - Support both header (helpToggle) and any other toggle (helpToggleBtn)
+    const helpToggleBtn = document.getElementById("helpToggleBtn") || document.getElementById("helpToggle");
+    const helpToggleHeader = document.getElementById("helpToggle"); // Header button
+    const helpCloseBtn = document.getElementById("helpCloseBtn");
+    const mainContent = document.getElementById("mainContent");
+
+    function toggleExcelHelp() {
+        if (!mainContent) return;
+
+        if (mainContent.classList.contains("excel-help-closed")) {
+            mainContent.classList.remove("excel-help-closed");
+            mainContent.classList.add("excel-help-open");
+            if (helpToggleBtn) helpToggleBtn.classList.add("active");
+            if (helpToggleHeader) helpToggleHeader.classList.add("active");
+        } else {
+            mainContent.classList.remove("excel-help-open");
+            mainContent.classList.add("excel-help-closed");
+            if (helpToggleBtn) helpToggleBtn.classList.remove("active");
+            if (helpToggleHeader) helpToggleHeader.classList.remove("active");
+        }
+    }
+
+    if (helpToggleBtn) {
+        helpToggleBtn.addEventListener("click", toggleExcelHelp);
+    }
+    // Also bind to header help toggle if different
+    if (helpToggleHeader && helpToggleHeader !== helpToggleBtn) {
+        helpToggleHeader.addEventListener("click", toggleExcelHelp);
+    }
+
+    if (helpCloseBtn) {
+        helpCloseBtn.addEventListener("click", function () {
+            if (mainContent) {
+                mainContent.classList.remove("excel-help-open");
+                mainContent.classList.add("excel-help-closed");
+                if (helpToggleBtn) helpToggleBtn.classList.remove("active");
+            }
+        });
+    }
+
+    // Note: fileInput change handler is in bindEvents (line 4732) which calls both inspectFile and createFileTab
+
+    // Add Second File Button
+    const addSecondFileBtn = document.getElementById("addSecondFileBtn");
+    if (addSecondFileBtn) {
+        addSecondFileBtn.addEventListener("click", function () {
+            // Trigger second file upload
+            const fi2 = document.getElementById("fileInput2");
+            if (fi2) fi2.click();
+        });
+    }
+
+    // Second File Input change event
+    const fileInput2El = document.getElementById("fileInput2");
+    if (fileInput2El) {
+        fileInput2El.addEventListener("change", function () {
+            if (this.files && this.files.length > 0) {
+                const fileName = this.files[0].name;
+                createFileTab(fileName, 2);
+            }
+        });
+    }
 }
+
+// Create file tab in the file bar
+function createFileTab(fileName, fileNumber) {
+    const container = document.getElementById("fileTabsContainer");
+    if (!container) return;
+
+    // Check if tab already exists
+    const existingTab = document.querySelector(`.gm-excel-file-tab[data-file="${fileNumber}"]`);
+    if (existingTab) {
+        // Update existing tab
+        const nameSpan = existingTab.querySelector(".tab-name");
+        if (nameSpan) nameSpan.textContent = fileName;
+        return;
+    }
+
+    // Find upload tab position
+    const uploadTab = document.getElementById(`file${fileNumber}UploadTab`);
+
+    // Create new file tab
+    const tab = document.createElement("div");
+    tab.className = "gm-excel-file-tab active";
+    tab.dataset.file = fileNumber;
+    tab.innerHTML = `
+        <span class="tab-dot"></span>
+        <span class="tab-name">${fileName}</span>
+        <span class="tab-close" onclick="removeFileTab(${fileNumber})">&times;</span>
+    `;
+
+    // Insert after upload tab or at the end
+    if (uploadTab) {
+        uploadTab.style.display = "none"; // Hide upload tab when file is loaded
+        container.insertBefore(tab, uploadTab.nextSibling);
+    } else {
+        container.appendChild(tab);
+    }
+
+    // Show + button for second file if it's first file
+    if (fileNumber === 1) {
+        const addBtn = document.getElementById("addSecondFileBtn");
+        if (addBtn) addBtn.style.display = "flex";
+
+        // Add file-loaded class to file bar
+        const fileBar = container.closest(".gm-excel-file-bar");
+        if (fileBar) fileBar.classList.add("file-loaded");
+    }
+
+    // Deactivate other tabs
+    container.querySelectorAll(".gm-excel-file-tab").forEach(t => {
+        if (t !== tab) t.classList.remove("active");
+    });
+}
+
+// Remove file tab
+function removeFileTab(fileNumber) {
+    const tab = document.querySelector(`.gm-excel-file-tab[data-file="${fileNumber}"]`);
+    if (tab) tab.remove();
+
+    // Show upload tab again
+    const uploadTab = document.getElementById(`file${fileNumber}UploadTab`);
+    if (uploadTab) uploadTab.style.display = "flex";
+
+    // Hide + button and remove file-loaded class if first file is removed
+    if (fileNumber === 1) {
+        const addBtn = document.getElementById("addSecondFileBtn");
+        if (addBtn) addBtn.style.display = "none";
+
+        const fileBar = document.querySelector(".gm-excel-file-bar");
+        if (fileBar) fileBar.classList.remove("file-loaded");
+
+        // Hide file info panel
+        const fileInfoPanel = document.getElementById("fileInfoPanel");
+        if (fileInfoPanel) fileInfoPanel.style.display = "none";
+    }
+
+    // Hide file info panel 2 if second file removed
+    if (fileNumber === 2) {
+        const fileInfoPanel2 = document.getElementById("fileInfoPanel2");
+        if (fileInfoPanel2) fileInfoPanel2.style.display = "none";
+    }
+
+    // Clear file input
+    const input = document.getElementById(fileNumber === 1 ? "fileInput" : "fileInput2");
+    if (input) input.value = "";
+}
+
+// Open Visual Builder - Oyun Hamuru PRO (Gelişmiş Dinamik Rapor)
+function openVisualBuilder() {
+    // Find the custom-report-builder-pro scenario in SCENARIO_LIST (note: hyphen, not underscore)
+    const proScenario = SCENARIO_LIST.find(sc => sc.id === "custom-report-builder-pro");
+
+    if (proScenario) {
+        // Use existing selectScenario logic with the found scenario
+        const titleEl = document.getElementById("scenarioTitle");
+        const subtitleEl = document.getElementById("scenarioSubtitle");
+
+        if (titleEl) titleEl.textContent = proScenario.title;
+        if (subtitleEl) subtitleEl.textContent = proScenario.short || proScenario.description || "";
+
+        // Clear any previously selected scenario buttons
+        document.querySelectorAll(".gm-excel-scenario-card.active, .gm-scenario-btn.active").forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+        // Highlight PRO card
+        const proCard = document.getElementById("proBuilderCard");
+        if (proCard) proCard.classList.add("active");
+
+        // Set active scenario
+        ACTIVE_SCENARIO_ID = proScenario.id;
+
+        // Render the dynamic form
+        renderDynamicForm(proScenario.id, proScenario.params || []);
+
+        // Load help content
+        loadScenarioHelp(proScenario.id);
+    } else {
+        // Fallback: Show placeholder if scenario not found
+        const T = EXTRA_TEXTS[CURRENT_LANG];
+        const formContainer = document.getElementById("dynamicFormContainer");
+        const titleEl = document.getElementById("scenarioTitle");
+        const subtitleEl = document.getElementById("scenarioSubtitle");
+
+        if (titleEl) titleEl.textContent = T.pro_title || "Özel Rapor Oluşturucu";
+        if (subtitleEl) subtitleEl.textContent = T.pro_subtitle || "Sürükle, Bırak, Raporla";
+
+        if (formContainer) {
+            formContainer.innerHTML = `
+                <div style="text-align:center; padding:60px 20px;">
+                    <div style="font-size:4rem; margin-bottom:20px;">🚀</div>
+                    <h3 style="color:var(--gm-primary); margin-bottom:10px;">Oyun Hamuru PRO</h3>
+                    <p style="color:var(--gm-text-muted); font-size:0.9rem;">${T.pro_coming_soon || "Yükleniyor..."}</p>
+                    <p style="font-size:0.8rem; color:#ef4444; margin-top:20px;">
+                        ⚠️ Senaryo yüklenemedi. Lütfen sayfayı yenileyin veya backend'in çalıştığından emin olun.
+                    </p>
+                </div>
+            `;
+        }
+
+        // Clear active scenario - this is a special mode
+        ACTIVE_SCENARIO_ID = null;
+
+        // Clear any previously selected scenario buttons
+        document.querySelectorAll(".gm-excel-scenario-card.active, .gm-scenario-btn.active").forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+        // Highlight PRO card
+        const proCard = document.getElementById("proBuilderCard");
+        if (proCard) proCard.classList.add("active");
+    }
+}
+
+// Export new functions to window for onclick handlers
+window.openVisualBuilder = openVisualBuilder;
+window.createFileTab = createFileTab;
+window.removeFileTab = removeFileTab;
 
 // ============================================================================
 // PHASE 1: CROSS-SHEET CORE FUNCTIONS

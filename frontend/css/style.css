@@ -10313,3 +10313,1629 @@ body.day-mode .viz-param-group input[type="number"] {
 body.day-mode .viz-stat-note {
     background: rgba(99, 102, 241, 0.08);
 }
+
+/* ============================================
+   EXCEL STUDIO V2 - MODERN UI COMPONENTS
+   ============================================ */
+
+/* === GRID LAYOUT TRANSITIONS === */
+.gm-main.excel-help-closed {
+    grid-template-columns: 280px 1fr 0px;
+    gap: 16px;
+}
+
+.gm-main.excel-help-closed .gm-right-pane {
+    display: none;
+    width: 0;
+    overflow: hidden;
+}
+
+.gm-main.excel-help-open {
+    grid-template-columns: 280px 1fr 350px;
+}
+
+/* === LEFT SIDEBAR (EXCEL) === */
+.gm-excel-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* === PRO FEATURE CARD === */
+.gm-excel-pro-card {
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.12), rgba(154, 48, 80, 0.12));
+    border: 2px solid transparent;
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.gm-excel-pro-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    padding: 2px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.gm-excel-pro-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 12px 28px rgba(74, 144, 217, 0.25),
+        0 0 40px rgba(154, 48, 80, 0.15);
+}
+
+.gm-excel-pro-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--gm-primary), var(--gm-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.gm-excel-pro-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-excel-pro-content h3 {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--gm-text);
+}
+
+.gm-excel-pro-content p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-excel-pro-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* === FILE TAB BAR === */
+.gm-excel-file-bar {
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+}
+
+.gm-excel-file-bar::-webkit-scrollbar {
+    height: 4px;
+}
+
+.gm-excel-file-bar::-webkit-scrollbar-thumb {
+    background: var(--gm-card-border);
+    border-radius: 2px;
+}
+
+.gm-excel-file-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.gm-excel-file-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--gm-text);
+}
+
+.gm-excel-file-tab:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.08);
+}
+
+.gm-excel-file-tab.active {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.12);
+    color: var(--gm-primary);
+}
+
+.gm-excel-file-tab .tab-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gm-success);
+}
+
+.gm-excel-file-tab .tab-close {
+    margin-left: 4px;
+    opacity: 0.5;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+.gm-excel-file-tab .tab-close:hover {
+    opacity: 1;
+    color: var(--gm-accent);
+}
+
+.gm-excel-file-upload {
+    border-style: dashed;
+    border-color: var(--gm-text-muted);
+    background: transparent;
+    color: var(--gm-text-muted);
+}
+
+.gm-excel-file-upload:hover {
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+}
+
+.gm-excel-file-upload label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.gm-excel-file-upload input[type="file"] {
+    display: none;
+}
+
+.gm-excel-add-file-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px dashed var(--gm-card-border);
+    background: transparent;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+
+.gm-excel-add-file-btn:hover {
+    border-color: var(--gm-primary);
+    color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.08);
+}
+
+/* Bar Actions Container */
+.gm-excel-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Help Toggle when inside bar */
+.gm-excel-bar-actions .gm-excel-help-toggle {
+    position: static;
+    width: 36px;
+    height: 36px;
+}
+
+/* === SCENARIO CARDS === */
+.gm-excel-scenarios {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 6px;
+}
+
+.gm-excel-scenarios::-webkit-scrollbar {
+    width: 4px;
+}
+
+.gm-excel-scenarios::-webkit-scrollbar-thumb {
+    background: var(--gm-card-border);
+    border-radius: 2px;
+}
+
+.gm-excel-category-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gm-text-muted);
+    margin: 12px 0 8px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-excel-scenario-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.gm-excel-scenario-card:hover {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.06);
+    transform: translateX(4px);
+}
+
+.gm-excel-scenario-card.active {
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.1);
+    border-left: 3px solid var(--gm-primary);
+}
+
+.gm-excel-scenario-card[draggable="true"] {
+    cursor: grab;
+}
+
+.gm-excel-scenario-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.gm-excel-scenario-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.gm-excel-scenario-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-excel-scenario-info h4 {
+    margin: 0 0 3px 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-excel-scenario-info p {
+    margin: 0;
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-excel-active-badge {
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 217, 126, 0.15);
+    color: var(--gm-success);
+    text-transform: uppercase;
+}
+
+/* === HELP TOGGLE BUTTON === */
+.gm-excel-help-toggle {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.gm-excel-help-toggle:hover {
+    color: var(--gm-primary);
+    border-color: var(--gm-primary);
+    background: rgba(74, 144, 217, 0.08);
+}
+
+.gm-excel-help-toggle.active {
+    background: var(--gm-primary);
+    border-color: var(--gm-primary);
+    color: white;
+}
+
+/* === MIDDLE PANE ADJUSTMENTS === */
+.gm-middle-pane {
+    position: relative;
+}
+
+/* === DAY MODE OVERRIDES === */
+body.day-mode .gm-excel-pro-card {
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.08), rgba(154, 48, 80, 0.08));
+}
+
+body.day-mode .gm-excel-pro-card:hover {
+    box-shadow:
+        0 12px 28px rgba(74, 144, 217, 0.15),
+        0 0 40px rgba(154, 48, 80, 0.1);
+}
+
+body.day-mode .gm-excel-file-tab {
+    background: #fff;
+}
+
+body.day-mode .gm-excel-scenario-card {
+    background: #fff;
+}
+
+body.day-mode .gm-excel-scenario-card:hover {
+    background: rgba(74, 144, 217, 0.04);
+}
+
+body.day-mode .gm-excel-help-toggle {
+    background: #fff;
+}
+
+/* === FILE INFO CARD === */
+.gm-file-info-card {
+    padding: 12px 16px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+}
+
+.gm-file-info-card .gm-info-stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.gm-file-info-card .gm-info-stats span {
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-file-info-card .gm-info-stats strong {
+    color: var(--gm-text);
+    margin-right: 4px;
+}
+
+.gm-file-info-card .gm-btn-preview {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+}
+
+/* Info Tooltip Icon */
+.gm-info-tooltip {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    opacity: 0.6;
+    margin-left: 4px;
+    cursor: help;
+    transition: opacity 0.2s;
+}
+
+.gm-info-tooltip:hover {
+    opacity: 1;
+    color: var(--gm-primary);
+}
+
+/* Sheet Selector */
+.gm-sheet-selector,
+.gm-sheet-select-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(74, 144, 217, 0.1);
+    border: 1px solid var(--gm-primary);
+    border-radius: 8px;
+    color: var(--gm-primary);
+}
+
+.gm-sheet-selector i,
+.gm-sheet-select-container i,
+.gm-sheet-label i {
+    font-size: 0.9rem;
+    color: var(--gm-primary);
+}
+
+.gm-sheet-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--gm-primary);
+}
+
+.gm-sheet-select {
+    background: transparent;
+    border: none;
+    color: var(--gm-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    max-width: 150px;
+}
+
+.gm-sheet-select option {
+    background: var(--gm-card-bg);
+    color: var(--gm-text);
+}
+
+.gm-sheet-count {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    opacity: 0.7;
+}
+
+body.day-mode .gm-file-info-card {
+    background: #fff;
+}
+
+body.day-mode .gm-sheet-selector {
+    background: rgba(74, 144, 217, 0.08);
+}
+
+/* Dragging state for scenario cards */
+.gm-excel-scenario-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+}
+
+/* Hide second file button initially - show after first file */
+.gm-excel-add-file-btn {
+    display: none;
+}
+
+.gm-excel-file-bar:has(.gm-excel-file-tab[data-file="1"]) .gm-excel-add-file-btn,
+.file-loaded .gm-excel-add-file-btn {
+    display: flex;
+}
+
+/* === RESPONSIVE ADJUSTMENTS === */
+@media (max-width: 1200px) {
+    .gm-main.excel-help-closed {
+        grid-template-columns: 240px 1fr 0px;
+    }
+
+    .gm-main.excel-help-open {
+        grid-template-columns: 240px 1fr 300px;
+    }
+}
+
+@media (max-width: 900px) {
+
+    .gm-main.excel-help-closed,
+    .gm-main.excel-help-open {
+        grid-template-columns: 1fr;
+    }
+
+    .gm-excel-sidebar {
+        display: none;
+    }
+}
+
+/* ===================================================== 
+   EXCEL STUDIO v2 - SENARYO KARTLARI VE PRO KART STİLLERİ 
+===================================================== */
+
+/* Sol Sidebar */
+.gm-excel-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 12px;
+    height: fit-content;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+/* PRO Feature Card */
+.gm-excel-pro-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gm-excel-pro-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.gm-excel-pro-card:hover::before {
+    left: 100%;
+}
+
+.gm-excel-pro-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.gm-excel-pro-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.gm-excel-pro-icon i {
+    font-size: 1.4rem;
+    color: white;
+}
+
+.gm-excel-pro-content h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gm-text);
+}
+
+.gm-excel-pro-content p {
+    margin: 4px 0 0 0;
+    font-size: 0.75rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-excel-pro-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 8px;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Senaryo Listesi Container */
+.gm-excel-scenarios {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Kategori Label */
+.gm-excel-category-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--gm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 0 4px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--gm-card-border);
+}
+
+.gm-excel-category-label:first-child {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Senaryo Kartları */
+.gm-excel-scenario-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(74, 144, 217, 0.05);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gm-excel-scenario-card:hover {
+    background: rgba(74, 144, 217, 0.12);
+    border-color: var(--gm-primary);
+    transform: translateX(3px);
+}
+
+.gm-excel-scenario-card.active {
+    background: rgba(154, 48, 80, 0.12);
+    border-color: var(--gm-accent);
+    box-shadow: 0 2px 8px rgba(154, 48, 80, 0.2);
+}
+
+.gm-excel-scenario-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.gm-excel-scenario-icon i {
+    font-size: 0.9rem;
+    color: white;
+}
+
+.gm-excel-scenario-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm-excel-scenario-info h4 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-excel-scenario-info p {
+    margin: 2px 0 0 0;
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* File Bar */
+.gm-excel-file-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+
+.gm-excel-file-tabs {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.gm-excel-file-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(33, 115, 70, 0.1);
+    border: 1px solid rgba(33, 115, 70, 0.3);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--gm-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.gm-excel-file-tab:hover {
+    background: rgba(33, 115, 70, 0.2);
+}
+
+.gm-excel-file-tab.active {
+    background: rgba(33, 115, 70, 0.25);
+    border-color: #217346;
+}
+
+.gm-excel-file-tab i {
+    color: #217346;
+}
+
+.gm-excel-file-tab .tab-close {
+    background: none;
+    border: none;
+    color: var(--gm-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    margin-left: 4px;
+    font-size: 0.75rem;
+}
+
+.gm-excel-file-tab .tab-close:hover {
+    color: #ef4444;
+}
+
+/* Bar Actions */
+.gm-excel-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* File Info Card */
+.gm-file-info-card {
+    padding: 15px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+}
+
+.gm-info-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.gm-info-stats span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--gm-text-muted);
+}
+
+.gm-info-stats span i {
+    color: var(--gm-primary);
+}
+
+.gm-info-stats strong {
+    color: var(--gm-text);
+    font-weight: 600;
+}
+
+/* Column Chips */
+.gm-column-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Day Mode Overrides */
+body.day-mode .gm-excel-pro-card {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.08));
+}
+
+body.day-mode .gm-excel-scenario-card {
+    background: rgba(74, 144, 217, 0.03);
+}
+
+body.day-mode .gm-excel-scenario-card:hover {
+    background: rgba(74, 144, 217, 0.08);
+}
+
+body.day-mode .gm-excel-scenario-card.active {
+    background: rgba(154, 48, 80, 0.08);
+}
+
+/* =====================================================
+   EXCEL STUDIO - YATAY DOSYA YÜKLEME DÜZENİ
+===================================================== */
+
+/* Files section - no scroll, flex shrink disabled */
+.gm-files-section {
+    flex-shrink: 0;
+    z-index: 10;
+    background: var(--gm-bg);
+    margin-bottom: 10px;
+}
+
+.gm-files-section .gm-upload-card {
+    margin-bottom: 0;
+    overflow: hidden;
+}
+
+/* Collapsible Header - tıklanabilir */
+.gm-files-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.gm-files-header:hover {
+    background: rgba(74, 144, 217, 0.03);
+}
+
+.gm-files-header h2 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Toggle Button - modern stil */
+.gm-files-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(74, 144, 217, 0.1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gm-files-toggle i {
+    color: var(--gm-primary);
+    font-size: 0.85rem;
+    transition: transform 0.3s ease;
+}
+
+.gm-files-toggle:hover {
+    background: var(--gm-primary);
+}
+
+.gm-files-toggle:hover i {
+    color: white;
+}
+
+/* Collapsible Body - animasyonlu */
+.gm-files-body {
+    max-height: 200px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    padding: 0 15px 15px 15px;
+    opacity: 1;
+}
+
+/* Collapsed durumu */
+.gm-files-section.collapsed .gm-files-body {
+    max-height: 0;
+    padding: 0 15px;
+    opacity: 0;
+}
+
+.gm-files-section.collapsed .gm-files-header {
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.gm-files-section.collapsed .gm-files-toggle i {
+    transform: rotate(180deg);
+}
+
+/* File Badges - collapsed durumda görünür */
+.gm-file-badges {
+    display: none;
+    gap: 8px;
+    flex: 1;
+    margin-left: 15px;
+}
+
+.gm-files-section.collapsed .gm-file-badges {
+    display: flex;
+}
+
+.gm-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gm-text);
+    background: rgba(74, 144, 217, 0.12);
+    border: 1px solid rgba(74, 144, 217, 0.3);
+    border-radius: 20px;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gm-file-badge i {
+    color: var(--gm-primary);
+    font-size: 0.8rem;
+}
+
+.gm-file-badge-secondary {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.gm-file-badge-secondary i {
+    color: var(--gm-accent);
+}
+
+/* Day mode */
+body.day-mode .gm-files-toggle {
+    background: rgba(74, 144, 217, 0.08);
+}
+
+body.day-mode .gm-files-header:hover {
+    background: rgba(74, 144, 217, 0.04);
+}
+
+body.day-mode .gm-file-badge {
+    background: rgba(74, 144, 217, 0.08);
+}
+
+body.day-mode .gm-file-badge-secondary {
+    background: rgba(139, 92, 246, 0.08);
+}
+
+/* Ana konteyner - Flexbox yatay düzen */
+.gm-file-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    min-height: 120px;
+    max-height: 140px;
+}
+
+/* Her kolon için temel stil */
+.gm-file-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(74, 144, 217, 0.03);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    padding: 10px;
+    overflow: hidden;
+}
+
+/* gm-file-info - hem kolon hem bilgi paneli olarak çalışır */
+.gm-file-col.gm-file-info {
+    flex: 1;
+    min-width: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.gm-file-col.gm-file-info .gm-info-note {
+    font-size: 0.7rem;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    line-height: 1.3;
+    color: var(--gm-text-muted);
+    background: rgba(74, 144, 217, 0.05);
+    border-radius: 4px;
+    border-left: 2px solid var(--gm-primary);
+}
+
+.gm-file-col.gm-file-info .gm-info-note strong {
+    color: var(--gm-text);
+}
+
+.gm-file-col.gm-file-info .gm-info-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+
+.gm-file-col.gm-file-info .gm-column-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 50px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* Dosya yükleme kolonları */
+.gm-file-upload-col {
+    flex: 0 0 160px;
+    max-width: 180px;
+    justify-content: center;
+    align-items: center;
+}
+
+.gm-file-upload-col .gm-file-label {
+    padding: 10px;
+    font-size: 0.8rem;
+    min-height: auto;
+    height: auto;
+}
+
+.gm-file-upload-col .gm-file-label i {
+    font-size: 1.3rem !important;
+    margin-bottom: 4px !important;
+}
+
+/* Dosya bilgi kolonları - scroll destekli */
+.gm-file-info-col {
+    flex: 1;
+    min-width: 200px;
+}
+
+.gm-file-info-inner {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gm-accent) transparent;
+}
+
+.gm-file-info-inner::-webkit-scrollbar {
+    width: 4px;
+}
+
+.gm-file-info-inner::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.gm-file-info-inner::-webkit-scrollbar-thumb {
+    background: var(--gm-accent);
+    border-radius: 4px;
+}
+
+/* Bilgi notu - daha kompakt */
+.gm-file-info-col .gm-info-note {
+    font-size: 0.7rem;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+/* İstatistikler - yatay düzen */
+.gm-file-info-col .gm-info-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+
+/* Sütun chip'leri - yatay scroll */
+.gm-file-info-col .gm-column-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 40px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* İkinci dosya kolonu - toggle butonu */
+.gm-file-col-secondary {
+    background: transparent;
+    border: 1px dashed var(--gm-card-border);
+}
+
+.gm-file-col-secondary .gm-second-file-toggle {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.gm-file-col-secondary .gm-second-file-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.gm-file-col-secondary .gm-file-label {
+    min-height: auto;
+    padding: 8px;
+}
+
+/* Tek dosya durumunda genişleme */
+.gm-file-row:has(.gm-file-col:nth-child(2):not([style*="display: none"])):not(:has(.gm-file-col:nth-child(4):not([style*="display: none"]))) .gm-file-info-col:first-of-type {
+    flex: 2;
+}
+
+/* Panel görünür olduğunda kolon ayarları */
+.gm-file-col[style*="display: flex"],
+.gm-file-col:not([style*="display: none"]):not([style*="display:none"]) {
+    display: flex;
+}
+
+/* Dört kolon görünürken eşit dağılım */
+.gm-file-row:has(.gm-file-col:nth-child(4):not([style*="display: none"])) .gm-file-info-col {
+    flex: 1;
+}
+
+/* Upload card kompakt hali */
+.gm-upload-card {
+    padding: 12px 15px;
+}
+
+.gm-upload-card>h2 {
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+/* Responsive - mobil için dikey düzen */
+@media (max-width: 900px) {
+    .gm-file-row {
+        flex-direction: column;
+        max-height: none;
+    }
+
+    .gm-file-col {
+        flex: none;
+        max-width: none;
+    }
+
+    .gm-file-upload-col {
+        flex: none;
+        max-width: none;
+    }
+}
+
+/* Day mode overrides */
+body.day-mode .gm-file-col {
+    background: rgba(74, 144, 217, 0.02);
+}
+
+body.day-mode .gm-file-col-secondary {
+    background: transparent;
+}
+
+/* =====================================================
+   YATAY BİLGİ PANELİ DÜZENİ (Not Sol, Veri Sağ)
+===================================================== */
+
+/* Yatay iç düzen */
+.gm-file-info-horizontal {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    height: 100%;
+}
+
+/* Sol taraf - Kompakt açıklama notu (scroll yok) */
+.gm-info-note-compact {
+    flex: 0 0 auto;
+    max-width: 180px;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--gm-text-muted);
+    padding: 8px;
+    background: rgba(74, 144, 217, 0.05);
+    border-radius: 6px;
+    border-left: 2px solid var(--gm-primary);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    cursor: help;
+}
+
+.gm-info-note-compact strong {
+    color: var(--gm-text);
+}
+
+.gm-info-note-compact .gm-info-more {
+    margin-top: 4px;
+    color: var(--gm-primary);
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.gm-info-note-compact .gm-info-more:hover {
+    opacity: 1;
+}
+
+/* Eski note-side stil (geriye uyumluluk) */
+.gm-info-note-side {
+    flex: 0 0 22%;
+    max-width: 25%;
+    font-size: 0.65rem;
+    line-height: 1.3;
+    color: var(--gm-text-muted);
+    padding: 6px;
+    background: rgba(74, 144, 217, 0.05);
+    border-radius: 6px;
+    border-left: 2px solid var(--gm-primary);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.gm-info-note-side strong {
+    color: var(--gm-text);
+}
+
+/* =====================================================
+   3 KOLONLU BİLGİ PANELİ DÜZENİ
+===================================================== */
+
+/* 3 kolonlu yatay düzen */
+.gm-file-info-3col {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    height: 100%;
+}
+
+/* Orta kolon - Sayfa Seçici + İstatistikler */
+.gm-info-stats-side {
+    flex: 0 0 auto;
+    min-width: 90px;
+    max-width: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(74, 144, 217, 0.03);
+    border-radius: 6px;
+    border: 1px solid var(--gm-card-border);
+    overflow: hidden;
+}
+
+.gm-info-stats-side .gm-info-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.gm-info-stats-side .gm-sheet-select-container {
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+    overflow: hidden;
+}
+
+.gm-info-stats-side .gm-sheet-select-container select {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+    max-width: 100%;
+}
+
+/* Sağ kolon - Sütun Chip'leri + Önizleme */
+.gm-info-chips-side {
+    flex: 1 1 55%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.gm-info-chips-side .gm-column-chips {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    max-height: none;
+    align-content: flex-start;
+}
+
+.gm-info-chips-side .gm-column-chips .gm-col-chip {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+}
+
+.gm-info-chips-side .gm-btn-preview {
+    margin-top: auto;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    align-self: flex-start;
+}
+
+/* =====================================================
+   İKİNCİ DOSYA TOGGLE GİZLEME KURALI
+===================================================== */
+
+/* secondFileWrapper görünür olduğunda (display:block veya display:flex) toggle gizle */
+.gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display: block"]) .gm-second-file-toggle,
+.gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display:block"]) .gm-second-file-toggle,
+.gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display: flex"]) .gm-second-file-toggle,
+.gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display:flex"]) .gm-second-file-toggle {
+    display: none !important;
+}
+
+/* Toggle varsayılan görünüm */
+.gm-file-col-secondary .gm-second-file-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* =====================================================
+   VS-STYLE ÖNİZLEME BAR
+===================================================== */
+
+/* Preview bar - panel altında tam genişlik */
+.gm-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    background: linear-gradient(180deg, rgba(74, 144, 217, 0.08) 0%, rgba(74, 144, 217, 0.02) 100%);
+    border-top: 1px solid var(--gm-card-border);
+    border-radius: 0 0 8px 8px;
+    margin-top: auto;
+}
+
+/* Preview button - VS Code style */
+.gm-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gm-text);
+    background: var(--gm-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.gm-preview-btn:hover {
+    background: var(--gm-primary);
+    color: white;
+    border-color: var(--gm-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+}
+
+.gm-preview-btn:active {
+    transform: translateY(0);
+}
+
+.gm-preview-btn i {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Info panel düzeni - flex column */
+.gm-file-info-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.gm-file-info-col .gm-file-info-inner {
+    flex: 1;
+}
+
+/* Day mode için preview bar */
+body.day-mode .gm-preview-bar {
+    background: linear-gradient(180deg, rgba(74, 144, 217, 0.06) 0%, rgba(74, 144, 217, 0.01) 100%);
+}
+
+body.day-mode .gm-preview-btn {
+    background: white;
+    border-color: #ddd;
+    color: #333;
+}
+
+body.day-mode .gm-preview-btn:hover {
+    background: var(--gm-primary);
+    color: white;
+    border-color: var(--gm-primary);
+}
+
+/* =====================================================
+   İKİNCİ DOSYA BUTONLARI
+===================================================== */
+
+/* Butonlar konteyneri */
+.gm-second-file-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Crosssheet toggle butonu */
+.gm-crosssheet-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    color: var(--gm-accent);
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px dashed var(--gm-accent);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gm-crosssheet-toggle:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-style: solid;
+}
+
+.gm-crosssheet-toggle i {
+    font-size: 0.9rem;
+}
+
+/* Day mode */
+body.day-mode .gm-crosssheet-toggle {
+    background: rgba(139, 92, 246, 0.05);
+}
+
+/* =====================================================
+   EXCEL TOAST BİLDİRİM
+===================================================== */
+.gm-excel-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 12px 24px;
+    background: rgba(74, 144, 217, 0.95);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.gm-excel-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.gm-excel-toast-info {
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.95), rgba(59, 130, 246, 0.95));
+}
+
+.gm-excel-toast-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(234, 88, 12, 0.95));
+}
+
+.gm-excel-toast-error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+}
+
+.gm-excel-toast-success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+}
+
+/* Day mode toast */
+body.day-mode .gm-excel-toast {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* =====================================================
+   TEMA UYUMLU SCROLLBAR STİLLERİ
+===================================================== */
+
+/* Dark mode scrollbar */
+.gm-file-info::-webkit-scrollbar,
+.gm-column-chips::-webkit-scrollbar,
+.gm-files-body::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.gm-file-info::-webkit-scrollbar-track,
+.gm-column-chips::-webkit-scrollbar-track,
+.gm-files-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.gm-file-info::-webkit-scrollbar-thumb,
+.gm-column-chips::-webkit-scrollbar-thumb,
+.gm-files-body::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 217, 0.4);
+    border-radius: 3px;
+}
+
+.gm-file-info::-webkit-scrollbar-thumb:hover,
+.gm-column-chips::-webkit-scrollbar-thumb:hover,
+.gm-files-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 144, 217, 0.6);
+}
+
+/* Day mode scrollbar */
+body.day-mode .gm-file-info::-webkit-scrollbar-track,
+body.day-mode .gm-column-chips::-webkit-scrollbar-track,
+body.day-mode .gm-files-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.day-mode .gm-file-info::-webkit-scrollbar-thumb,
+body.day-mode .gm-column-chips::-webkit-scrollbar-thumb,
+body.day-mode .gm-files-body::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 217, 0.3);
+}
+
+body.day-mode .gm-file-info::-webkit-scrollbar-thumb:hover,
+body.day-mode .gm-column-chips::-webkit-scrollbar-thumb:hover,
+body.day-mode .gm-files-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 144, 217, 0.5);
+}
+
+/* Firefox scrollbar */
+.gm-file-info,
+.gm-column-chips,
+.gm-files-body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 144, 217, 0.4) rgba(255, 255, 255, 0.05);
+}
+
+body.day-mode .gm-file-info,
+body.day-mode .gm-column-chips,
+body.day-mode .gm-files-body {
+    scrollbar-color: rgba(74, 144, 217, 0.3) rgba(0, 0, 0, 0.05);
+}

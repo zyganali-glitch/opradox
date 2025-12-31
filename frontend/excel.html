@@ -75,87 +75,141 @@
         </header>
 
         <main class="gm-main" id="mainContent">
-            <!-- SOL PANEL: DOSYALAR + SENARYOLAR (ORİJİNAL YAPI) -->
+            <!-- SOL PANEL: SADECE SENARYOLAR -->
             <section class="gm-left-pane">
-                <!-- FILES SECTION -->
-                <div class="gm-files-section">
+                <!-- SCENARIOS SECTION -->
+                <div class="gm-scenarios-section">
+                    <div class="gm-card gm-scenario-list-card">
+                        <h2 data-i18n="step2_title">2. Senaryonu Seç</h2>
+                        <div class="gm-search-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input id="scenarioSearch" class="gm-scenario-search" placeholder="..." />
+                        </div>
+                        <div id="scenarioListContainer" class="gm-accordion-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ORTA PANEL: DOSYALAR + FORM + SONUÇ -->
+            <section class="gm-middle-pane">
+                <!-- FILES SECTION - COLLAPSIBLE -->
+                <div class="gm-files-section" id="filesSection">
                     <div class="gm-card gm-upload-card">
-                        <h2 data-i18n="step1_title">1. Dosyanı Yükle</h2>
-                        <label class="gm-file-label" id="dropZone">
-                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
-                            <i class="fas fa-file-excel" style="font-size:1.8rem; margin-bottom:5px;"></i>
-                            <span id="fileLabelText" data-i18n="file_placeholder">Ana Dosya Seç</span>
-                        </label>
-                        <div id="selectedFileName" class="gm-selected-file"></div>
-
-                        <!-- Dosya Bilgi Paneli 1 (Orijinal) -->
-                        <div id="fileInfoPanel" class="gm-file-info" style="display:none;">
-                            <div class="gm-info-note" data-i18n="column_ref_note">
-                                💡 İşlem sayfasının başında birleştirilmiş hücrelerden oluşan başlık varsa
-                                <strong>Önizleme</strong> butonundan sütun isimlerinin olduğu satırı seçin. Buradan
-                                sütun adını <strong>tıklayarak kopyalayabilirsiniz</strong>. Ayrıca parametre alanına
-                                <strong>sütun adı</strong>, <strong>harf kodu (A, B...)</strong> da yazabilir ya da
-                                <strong>listeden seçebilirsiniz</strong>. Aynı parametrede birden fazla sütun için işlem
-                                yapılacaksa sütun isimlerini virgül ve boşluk bırakarak yazın.
+                        <!-- Collapsible Header -->
+                        <div class="gm-files-header" onclick="toggleFilesPanel()">
+                            <h2 data-i18n="step1_title">1. Dosyanı Yükle</h2>
+                            <!-- Dosya İsimleri (collapsed durumda görünür) -->
+                            <div class="gm-file-badges" id="fileBadges">
+                                <span class="gm-file-badge" id="file1Badge" style="display:none;">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span id="file1BadgeName">-</span>
+                                </span>
+                                <span class="gm-file-badge gm-file-badge-secondary" id="file2Badge"
+                                    style="display:none;">
+                                    <i class="fas fa-copy"></i>
+                                    <span id="file2BadgeName">-</span>
+                                </span>
                             </div>
-                            <div class="gm-info-stats">
-                                <span><i class="fas fa-table"></i> <strong id="fileRowCount">0</strong> <span
-                                        data-i18n="info_rows">satır</span></span>
-                                <span><i class="fas fa-columns"></i> <strong id="fileColCount">0</strong> <span
-                                        data-i18n="info_cols">sütun</span></span>
-                            </div>
-                            <div id="fileColumnList" class="gm-column-chips"></div>
+                            <button class="gm-files-toggle" type="button" aria-label="Toggle files panel">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
                         </div>
 
-                        <!-- İkinci Dosya Ekle Butonu -->
-                        <div class="gm-second-file-toggle" id="secondFileToggle" onclick="toggleSecondFile()">
-                            <i class="fas fa-plus-circle"></i> <span data-i18n="add_second_file">İkinci Dosya
-                                Ekle</span>
-                        </div>
+                        <!-- Collapsible Body -->
+                        <div class="gm-files-body">
+                            <!-- YATAY DOSYA SATIRI -->
+                            <div class="gm-file-row">
+                                <!-- KOLON 1: Ana Dosya Yükleme -->
+                                <div class="gm-file-col gm-file-upload-col">
+                                    <label class="gm-file-label" id="dropZone">
+                                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+                                        <i class="fas fa-file-excel" style="font-size:1.5rem; margin-bottom:4px;"></i>
+                                        <span id="fileLabelText" data-i18n="file_placeholder">Ana Dosya Seç</span>
+                                    </label>
+                                    <div id="selectedFileName" class="gm-selected-file"></div>
+                                </div>
 
-                        <div id="secondFileWrapper" class="gm-second-file-wrapper" style="display:none;">
-                            <!-- Crosssheet seçeneği -->
-                            <div class="gm-crosssheet-option" id="crossSheetOption" style="display:none;">
-                                <label class="gm-crosssheet-checkbox">
-                                    <input type="checkbox" id="useSameFileDifferentSheet"
-                                        onchange="toggleCrossSheetMode()">
-                                    <span data-i18n="use_same_file_sheet">Ana dosyadan farklı sayfa kullan</span>
-                                </label>
-                                <div id="crossSheetSelector" class="gm-crosssheet-selector pro-crosssheet-selector"
-                                    style="display:none; align-items:center; gap:8px; margin-top:5px;">
-                                    <div style="flex:0 0 auto; display:flex; align-items:center; gap:6px;">
-                                        <label class="gm-sheet-label" style="font-size:0.8rem;">
-                                            <i class="fas fa-layer-group"></i> <span
-                                                data-i18n="select_sheet">Sayfa:</span>
-                                        </label>
-                                        <select id="crossSheetSelect" class="gm-sheet-select"
-                                            onchange="fetchCrossSheetColumns(this)">
-                                        </select>
+                                <!-- KOLON 2: Ana Dosya Bilgi Paneli (Orijinal) -->
+                                <div id="fileInfoPanel" class="gm-file-col gm-file-info" style="display:none;">
+                                    <div class="gm-info-note" data-i18n="column_ref_note">
+                                        💡 İşlem sayfasının başında birleştirilmiş hücrelerden oluşan başlık varsa
+                                        <strong>Önizleme</strong> butonundan sütun isimlerinin olduğu satırı seçin.
+                                        Buradan
+                                        sütun adını <strong>tıklayarak kopyalayabilirsiniz</strong>. Ayrıca parametre
+                                        alanına
+                                        <strong>sütun adı</strong>, <strong>harf kodu (A, B...)</strong> da yazabilir ya
+                                        da
+                                        <strong>listeden seçebilirsiniz</strong>. Aynı parametrede birden fazla sütun
+                                        için
+                                        işlem
+                                        yapılacaksa sütun isimlerini virgül ve boşluk bırakarak yazın.
                                     </div>
-                                    <div class="pro-crosssheet-columns"
-                                        style="flex:1; min-width:0; padding:2px 8px; background:var(--gm-bg); border-radius:4px; font-size:0.7rem; overflow:hidden; border:1px solid var(--gm-card-border); display:flex; align-items:center;">
-                                        <div class="pro-crosssheet-column-list gm-column-chips"
-                                            style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:4px; align-items:center; white-space:nowrap; padding-bottom:2px; height:24px; scrollbar-width:thin;">
-                                            <span
-                                                style="color:var(--gm-text-muted); font-size:0.7rem; font-style:italic;">Sayfa
-                                                seçin...</span>
+                                    <div class="gm-info-stats">
+                                        <span><i class="fas fa-table"></i> <strong id="fileRowCount">0</strong> <span
+                                                data-i18n="info_rows">satır</span></span>
+                                        <span><i class="fas fa-columns"></i> <strong id="fileColCount">0</strong> <span
+                                                data-i18n="info_cols">sütun</span></span>
+                                    </div>
+                                    <div id="fileColumnList" class="gm-column-chips"></div>
+                                </div>
+
+                                <!-- KOLON 3: İkinci Dosya (Toggle + Crosssheet + Upload) -->
+                                <div class="gm-file-col gm-file-col-secondary" id="secondFileCol">
+                                    <!-- İkinci Dosya Ekle Butonu -->
+                                    <div class="gm-second-file-toggle" id="secondFileToggle"
+                                        onclick="toggleSecondFile()">
+                                        <i class="fas fa-plus-circle"></i> <span data-i18n="add_second_file">İkinci
+                                            Dosya
+                                            Ekle</span>
+                                    </div>
+
+                                    <div id="secondFileWrapper" class="gm-second-file-wrapper" style="display:none;">
+                                        <!-- Crosssheet seçeneği (Orijinal) -->
+                                        <div class="gm-crosssheet-option" id="crossSheetOption" style="display:none;">
+                                            <label class="gm-crosssheet-checkbox">
+                                                <input type="checkbox" id="useSameFileDifferentSheet"
+                                                    onchange="toggleCrossSheetMode()">
+                                                <span data-i18n="use_same_file_sheet">Ana dosyadan farklı sayfa
+                                                    kullan</span>
+                                            </label>
+                                            <div id="crossSheetSelector"
+                                                class="gm-crosssheet-selector pro-crosssheet-selector"
+                                                style="display:none; align-items:center; gap:8px; margin-top:5px;">
+                                                <div style="flex:0 0 auto; display:flex; align-items:center; gap:6px;">
+                                                    <label class="gm-sheet-label" style="font-size:0.8rem;">
+                                                        <i class="fas fa-layer-group"></i> <span
+                                                            data-i18n="select_sheet">Sayfa:</span>
+                                                    </label>
+                                                    <select id="crossSheetSelect" class="gm-sheet-select"
+                                                        onchange="fetchCrossSheetColumns(this)"></select>
+                                                </div>
+                                                <div class="pro-crosssheet-columns"
+                                                    style="flex:1; min-width:0; padding:2px 8px; background:var(--gm-bg); border-radius:4px; font-size:0.7rem; overflow:hidden; border:1px solid var(--gm-card-border); display:flex; align-items:center;">
+                                                    <div class="pro-crosssheet-column-list gm-column-chips"
+                                                        style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:4px; align-items:center; white-space:nowrap; padding-bottom:2px; height:24px; scrollbar-width:thin;">
+                                                        <span
+                                                            style="color:var(--gm-text-muted); font-size:0.7rem; font-style:italic;">Sayfa
+                                                            seçin...</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- İkinci dosya yükleme alanı -->
+                                        <div id="file2UploadArea">
+                                            <label class="gm-file-label" id="dropZone2" style="border-style:dotted;">
+                                                <input type="file" id="fileInput2" accept=".xlsx,.xls,.csv" />
+                                                <i class="fas fa-copy" style="font-size:1.2rem; margin-bottom:5px;"></i>
+                                                <span id="fileLabelText2" style="font-size:0.8rem;"
+                                                    data-i18n="file_placeholder_2">İkinci Dosya (Opsiyonel)</span>
+                                            </label>
+                                            <div id="selectedFileName2" class="gm-selected-file"></div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- İkinci dosya yükleme alanı -->
-                            <div id="file2UploadArea">
-                                <label class="gm-file-label" id="dropZone2" style="border-style:dotted;">
-                                    <input type="file" id="fileInput2" accept=".xlsx,.xls,.csv" />
-                                    <i class="fas fa-copy" style="font-size:1.2rem; margin-bottom:5px;"></i>
-                                    <span id="fileLabelText2" style="font-size:0.8rem;"
-                                        data-i18n="file_placeholder_2">İkinci Dosya (Opsiyonel)</span>
-                                </label>
-                                <div id="selectedFileName2" class="gm-selected-file"></div>
-
-                                <!-- Dosya Bilgi Paneli 2 -->
-                                <div id="fileInfoPanel2" class="gm-file-info" style="display:none;">
+                                <!-- KOLON 4: İkinci Dosya Bilgi Paneli (Orijinal) -->
+                                <div id="fileInfoPanel2" class="gm-file-col gm-file-info" style="display:none;">
                                     <div class="gm-info-note" data-i18n="column_ref_note_2">
                                         💡 <strong>İkinci dosya</strong> sütun adlarını tıklayarak kopyalayabilirsiniz.
                                     </div>
@@ -170,25 +224,12 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <datalist id="file2-columns"></datalist>
-                </div>
-
-                <!-- SCENARIOS SECTION -->
-                <div class="gm-scenarios-section">
-                    <div class="gm-card gm-scenario-list-card">
-                        <h2 data-i18n="step2_title">2. Senaryonu Seç</h2>
-                        <div class="gm-search-wrapper">
-                            <i class="fas fa-search"></i>
-                            <input id="scenarioSearch" class="gm-scenario-search" placeholder="..." />
-                        </div>
-                        <div id="scenarioListContainer" class="gm-accordion-container"></div>
+                        <!-- /gm-files-body -->
                     </div>
                 </div>
-            </section>
+                <datalist id="file2-columns"></datalist>
 
-            <!-- ORTA PANEL: FORM + SONUÇ (ORİJİNAL YAPI) -->
-            <section class="gm-middle-pane">
+                <!-- SENARYO FORMU -->
                 <div class="gm-card gm-scenario-card">
                     <div class="gm-card-header">
                         <h2 id="scenarioTitle" data-i18n="step3_title">3. Senaryo Ayarları</h2>
@@ -433,6 +474,74 @@
                 console.log('[Excel] Varsayılan help-collapsed eklendi');
             }
         });
+
+        // Dosya paneli toggle fonksiyonu
+        function toggleFilesPanel() {
+            const filesSection = document.getElementById('filesSection');
+            if (filesSection) {
+                filesSection.classList.toggle('collapsed');
+            }
+        }
+
+        // Dosya badge'lerini güncelle
+        function updateFileBadges() {
+            const file1Name = document.getElementById('selectedFileName');
+            const file2Name = document.getElementById('selectedFileName2');
+            const badge1 = document.getElementById('file1Badge');
+            const badge1Name = document.getElementById('file1BadgeName');
+            const badge2 = document.getElementById('file2Badge');
+            const badge2Name = document.getElementById('file2BadgeName');
+
+            // Dosya 1
+            if (file1Name && file1Name.textContent.trim()) {
+                badge1.style.display = 'inline-flex';
+                badge1Name.textContent = file1Name.textContent.trim();
+            } else {
+                badge1.style.display = 'none';
+            }
+
+            // Dosya 2
+            if (file2Name && file2Name.textContent.trim()) {
+                badge2.style.display = 'inline-flex';
+                badge2Name.textContent = file2Name.textContent.trim();
+            } else {
+                badge2.style.display = 'none';
+            }
+        }
+
+        // Dosya isim değişikliklerini izle
+        window.addEventListener('load', () => {
+            const observer = new MutationObserver(updateFileBadges);
+            const file1El = document.getElementById('selectedFileName');
+            const file2El = document.getElementById('selectedFileName2');
+
+            if (file1El) observer.observe(file1El, { childList: true, characterData: true, subtree: true });
+            if (file2El) observer.observe(file2El, { childList: true, characterData: true, subtree: true });
+        });
+
+        // Toast bildirim fonksiyonu
+        function showToast(message, type = 'info', duration = 4000) {
+            // Mevcut toast varsa kaldır
+            const existing = document.querySelector('.gm-excel-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `gm-excel-toast gm-excel-toast-${type}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            document.body.appendChild(toast);
+
+            // Animasyonla göster
+            setTimeout(() => toast.classList.add('show'), 10);
+
+            // Otomatik kapat
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Global erişim için
+        window.showToast = showToast;
     </script>
 
 </body>
