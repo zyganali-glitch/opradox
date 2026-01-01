@@ -762,10 +762,35 @@ const VisualBuilder = {
 
             // ===== ÇIKTI AYARLARI =====
             case 'output_settings':
-                html += this.renderCheckbox("freeze_header", block.config.freeze_header, { tr: "Başlık Satırını Dondur", en: "Freeze Header Row" });
-                html += this.renderCheckbox("auto_fit_columns", block.config.auto_fit_columns, { tr: "Sütun Genişliklerini Otomatik Ayarla", en: "Auto-fit Columns" });
-                html += this.renderInput("number_format", block.config.number_format, { tr: "Sayı Formatı (örn: #,##0.00)", en: "Number Format" });
-                html += this.renderCheckbox("header_style", block.config.header_style, { tr: "Başlık Stilini Uygula", en: "Apply Header Style" });
+                // Çıktı Tipi
+                html += this.renderSelect("output_type", block.config.output_type || "single_sheet", [
+                    { value: "single_sheet", label: { tr: "📄 Tek Sayfa", en: "📄 Single Sheet" } },
+                    { value: "multi_sheet", label: { tr: "📑 Çoklu Sayfa (Özet + Detay)", en: "📑 Multi Sheet (Summary + Detail)" } },
+                    { value: "sheet_per_group", label: { tr: "📊 Grup Başına Sayfa", en: "📊 Sheet Per Group" } }
+                ], { tr: "Çıktı Tipi", en: "Output Type" });
+
+                // Grup bazlı sayfa için grup sütunu
+                if (block.config.output_type === 'sheet_per_group') {
+                    html += this.renderColumnSelect("group_by_sheet", block.config.group_by_sheet, columns,
+                        { tr: "Grup Sütunu (Her değer için ayrı sayfa)", en: "Group Column (Separate sheet per value)" });
+                    html += this.renderCheckbox("drill_down_index", block.config.drill_down_index !== false,
+                        { tr: "📋 Hyperlink'li İndeks Sayfası Oluştur", en: "📋 Create Hyperlinked Index Sheet" });
+                }
+
+                // Özet Sayfası
+                html += this.renderCheckbox("summary_sheet", block.config.summary_sheet,
+                    { tr: "📈 Özet Sayfası Ekle", en: "📈 Add Summary Sheet" });
+
+                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Excel Formatları", en: "Excel Formatting" })}</strong></div>`;
+
+                html += this.renderCheckbox("freeze_header", block.config.freeze_header !== false,
+                    { tr: "❄️ Başlık Satırını Dondur", en: "❄️ Freeze Header Row" });
+                html += this.renderCheckbox("auto_fit_columns", block.config.auto_fit_columns !== false,
+                    { tr: "📏 Sütun Genişliklerini Otomatik Ayarla", en: "📏 Auto-fit Column Widths" });
+                html += this.renderCheckbox("header_style", block.config.header_style !== false,
+                    { tr: "🎨 Başlık Stilini Uygula (Mavi/Beyaz)", en: "🎨 Apply Header Style (Blue/White)" });
+                html += this.renderInput("number_format", block.config.number_format,
+                    { tr: "Sayı Formatı (örn: #,##0.00)", en: "Number Format (e.g., #,##0.00)" });
                 break;
 
             // ===== UNION (Alt Alta Birleştir) =====
@@ -898,17 +923,26 @@ const VisualBuilder = {
             case 'what_if_variable':
                 html += this.renderInput("name", block.config.name, { tr: "Değişken Adı", en: "Variable Name" });
                 html += this.renderInput("value", block.config.value, { tr: "Değer (Sayı)", en: "Value (Number)" });
-                html += `<div class="vb-form-hint" style="font-size:0.75rem; color:var(--gm-text-muted); margin-top:10px; padding:10px; background:var(--gm-bg); border-radius:6px; border-left:3px solid #f97316;">
-                    <strong style="color:#f97316;">📊 ${this.getText({ tr: "Nasıl Kullanılır?", en: "How to Use?" })}</strong><br>
-                    <div style="margin-top:6px;">
-                        1️⃣ ${this.getText({
+                // Tema uyumlu açıklama kutusu
+                html += `<div class="vb-hint-box">
+                    <div class="vb-hint-title">
+                        <i class="fas fa-lightbulb"></i> ${this.getText({ tr: "Nasıl Kullanılır?", en: "How to Use?" })}
+                    </div>
+                    <div class="vb-hint-content">
+                        <div class="vb-hint-item">
+                            <span class="vb-hint-num">1</span>
+                            ${this.getText({
                     tr: "<b>Formül bloğunda:</b> <code>SütunAdı * $DeğişkenAdı</code>",
                     en: "<b>In Formula block:</b> <code>ColumnName * $VariableName</code>"
-                })}<br>
-                        2️⃣ ${this.getText({
-                    tr: "<b>Hesaplama bloğunda:</b> 'Değişkenle Çarp' operasyonunu seçin",
+                })}
+                        </div>
+                        <div class="vb-hint-item">
+                            <span class="vb-hint-num">2</span>
+                            ${this.getText({
+                    tr: "<b>Hesaplama bloğunda:</b> 'Değişkenle Çarp' seçin",
                     en: "<b>In Calculation block:</b> Select 'Multiply by Variable'"
                 })}
+                        </div>
                     </div>
                 </div>`;
                 break;

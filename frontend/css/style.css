@@ -13014,3 +13014,81 @@ body:not(.day-mode) .vb-block-icon i {
     flex: 1;
     overflow-y: auto;
 }
+ 
+ 
+/* ===== VISUAL BUILDER HINT BOX - Tema Uyumlu ===== */
+.vb-hint-box {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 10px;
+    font-size: 0.8rem;
+}
+
+.vb-hint-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--gm-primary);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gm-card-border);
+}
+
+.vb-hint-title i {
+    font-size: 0.9rem;
+    color: #f59e0b;
+}
+
+.vb-hint-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vb-hint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--gm-text-muted);
+    line-height: 1.4;
+}
+
+.vb-hint-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--gm-primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.vb-hint-item b {
+    color: var(--gm-text);
+}
+
+.vb-hint-item code {
+    background: rgba(74, 144, 217, 0.15);
+    color: var(--gm-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.75rem;
+}
+
+body:not(.day-mode) .vb-hint-box {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.day-mode .vb-hint-box {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
