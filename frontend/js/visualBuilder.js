@@ -83,6 +83,8 @@ const VisualBuilder = {
                 { value: "multiply", label: { tr: "Çarp (×)", en: "Multiply (×)" } },
                 { value: "divide", label: { tr: "Böl (÷)", en: "Divide (÷)" } },
                 { value: "percent", label: { tr: "Yüzde (%)", en: "Percent (%)" } },
+                { value: "multiply_var", label: { tr: "📊 Değişkenle Çarp (What-If)", en: "📊 Multiply by Variable (What-If)" } },
+                { value: "divide_multiply", label: { tr: "Böl ve Çarp (÷×)", en: "Divide & Multiply" } },
                 { value: "concat", label: { tr: "Metin Birleştir", en: "Concatenate" } },
                 { value: "date_diff", label: { tr: "Tarih Farkı (Gün)", en: "Date Diff (Days)" } },
                 { value: "running_total", label: { tr: "Kümülatif Toplam", en: "Running Total" } },
@@ -768,7 +770,20 @@ const VisualBuilder = {
 
             // ===== UNION (Alt Alta Birleştir) =====
             case 'union':
-                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "İkinci dosya alt alta eklenir", en: "Second file will be appended" })}</strong></div>`;
+                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Eklenecek Veri Kaynağı", en: "Data Source to Append" })}</strong></div>`;
+                // Kaynak tipi seçimi
+                html += this.renderSelect("source_type", block.config.source_type || "second_file", [
+                    { value: "second_file", label: { tr: "İkinci Dosya", en: "Second File" } },
+                    { value: "same_file_sheet", label: { tr: "Aynı Dosya - Farklı Sayfa", en: "Same File - Different Sheet" } }
+                ], { tr: "Kaynak", en: "Source" });
+
+                // Crosssheet seçiliyse sayfa listesi göster
+                if (block.config.source_type === 'same_file_sheet' && sheets.length > 0) {
+                    html += this.renderSelect("source_sheet", block.config.source_sheet,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: "Sayfa", en: "Sheet" });
+                }
+
                 html += this.renderCheckbox("ignore_index", block.config.ignore_index, { tr: "İndeksi Sıfırla", en: "Reset Index" });
                 break;
 
@@ -776,14 +791,52 @@ const VisualBuilder = {
             case 'diff':
                 html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Ana Tablo", en: "Main Table" })}</strong></div>`;
                 html += this.renderColumnSelect("left_on", block.config.left_on, columns, { tr: "Karşılaştırma Sütunu", en: "Compare Column" });
-                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Kaynak Tablo", en: "Source Table" })}</strong></div>`;
-                html += this.renderColumnSelect("right_on", block.config.right_on, columns2.length > 0 ? columns2 : columns, { tr: "Eşleşme Sütunu", en: "Match Column" });
+
+                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Kaynak Tablo (Karşılaştırılacak)", en: "Source Table (to Compare)" })}</strong></div>`;
+                // Kaynak tipi seçimi
+                html += this.renderSelect("source_type", block.config.source_type || "second_file", [
+                    { value: "second_file", label: { tr: "İkinci Dosya", en: "Second File" } },
+                    { value: "same_file_sheet", label: { tr: "Aynı Dosya - Farklı Sayfa", en: "Same File - Different Sheet" } }
+                ], { tr: "Kaynak", en: "Source" });
+
+                // Crosssheet seçiliyse sayfa listesi göster
+                if (block.config.source_type === 'same_file_sheet' && sheets.length > 0) {
+                    html += this.renderSelect("source_sheet", block.config.source_sheet,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: "Sayfa", en: "Sheet" });
+                }
+
+                // Kaynak sütunları
+                const diffSourceColumns = (block.config.source_type === 'same_file_sheet' && crosssheetColumns.length > 0)
+                    ? crosssheetColumns
+                    : (columns2.length > 0 ? columns2 : columns);
+                html += this.renderColumnSelect("right_on", block.config.right_on, diffSourceColumns, { tr: "Eşleşme Sütunu", en: "Match Column" });
                 break;
 
             // ===== VALIDATE (Doğrula) =====
             case 'validate':
                 html += this.renderColumnSelect("left_on", block.config.left_on, columns, { tr: "Doğrulanacak Sütun", en: "Column to Validate" });
-                html += this.renderColumnSelect("right_on", block.config.right_on, columns2.length > 0 ? columns2 : columns, { tr: "Referans Liste Sütunu", en: "Reference Column" });
+
+                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Referans Liste", en: "Reference List" })}</strong></div>`;
+                // Kaynak tipi seçimi
+                html += this.renderSelect("source_type", block.config.source_type || "second_file", [
+                    { value: "second_file", label: { tr: "İkinci Dosya", en: "Second File" } },
+                    { value: "same_file_sheet", label: { tr: "Aynı Dosya - Farklı Sayfa", en: "Same File - Different Sheet" } }
+                ], { tr: "Kaynak", en: "Source" });
+
+                // Crosssheet seçiliyse sayfa listesi göster
+                if (block.config.source_type === 'same_file_sheet' && sheets.length > 0) {
+                    html += this.renderSelect("source_sheet", block.config.source_sheet,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: "Sayfa", en: "Sheet" });
+                }
+
+                // Referans sütunları
+                const validateSourceColumns = (block.config.source_type === 'same_file_sheet' && crosssheetColumns.length > 0)
+                    ? crosssheetColumns
+                    : (columns2.length > 0 ? columns2 : columns);
+                html += this.renderColumnSelect("right_on", block.config.right_on, validateSourceColumns, { tr: "Referans Sütunu", en: "Reference Column" });
+
                 html += this.renderInput("valid_label", block.config.valid_label || "Geçerli", { tr: "Geçerli Etiketi", en: "Valid Label" });
                 html += this.renderInput("invalid_label", block.config.invalid_label || "Geçersiz", { tr: "Geçersiz Etiketi", en: "Invalid Label" });
                 break;
@@ -844,9 +897,19 @@ const VisualBuilder = {
             // ===== WHAT-IF VARIABLE =====
             case 'what_if_variable':
                 html += this.renderInput("name", block.config.name, { tr: "Değişken Adı", en: "Variable Name" });
-                html += this.renderInput("value", block.config.value, { tr: "Değer", en: "Value" });
-                html += `<div class="vb-form-section" style="font-size:0.7rem;color:var(--gm-text-muted);">
-                    ${this.getText({ tr: "Formüllerde $DeğişkenAdı şeklinde kullanın", en: "Use as $VariableName in formulas" })}
+                html += this.renderInput("value", block.config.value, { tr: "Değer (Sayı)", en: "Value (Number)" });
+                html += `<div class="vb-form-hint" style="font-size:0.75rem; color:var(--gm-text-muted); margin-top:10px; padding:10px; background:var(--gm-bg); border-radius:6px; border-left:3px solid #f97316;">
+                    <strong style="color:#f97316;">📊 ${this.getText({ tr: "Nasıl Kullanılır?", en: "How to Use?" })}</strong><br>
+                    <div style="margin-top:6px;">
+                        1️⃣ ${this.getText({
+                    tr: "<b>Formül bloğunda:</b> <code>SütunAdı * $DeğişkenAdı</code>",
+                    en: "<b>In Formula block:</b> <code>ColumnName * $VariableName</code>"
+                })}<br>
+                        2️⃣ ${this.getText({
+                    tr: "<b>Hesaplama bloğunda:</b> 'Değişkenle Çarp' operasyonunu seçin",
+                    en: "<b>In Calculation block:</b> Select 'Multiply by Variable'"
+                })}
+                    </div>
                 </div>`;
                 break;
         }
