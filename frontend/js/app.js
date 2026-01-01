@@ -9,6 +9,309 @@ let CURRENT_LANG = "tr";
 let ACTIVE_SCENARIO_ID = null;
 let LAST_RESULT_DATA = null;
 
+// ===== UNIFIED TOAST NOTIFICATION SYSTEM =====
+// Global toast function - single source for all pages (Excel Studio, Visual Studio, etc.)
+const TOAST_MAX_VISIBLE = 3;
+const TOAST_QUEUE = [];
+let TOAST_ACTIVE_COUNT = 0;
+
+/**
+ * Show a toast notification (bottom-right, stacking, no icons)
+ * @param {string} message - Toast message text
+ * @param {string} type - Toast type: 'success' | 'info' | 'warn' | 'error'
+ * @param {number} duration - Duration in ms (default: 4000)
+ */
+window.showToast = function (message, type = 'info', duration = 4000) {
+    // Ensure host container exists
+    let host = document.querySelector('.op-toast-host');
+    if (!host) {
+        host = document.createElement('div');
+        host.className = 'op-toast-host';
+        document.body.appendChild(host);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `op-toast op-toast-${type}`;
+    toast.innerHTML = `<span class="op-toast-message">${message}</span>`;
+
+    // Queue management - max 3 visible at once
+    if (TOAST_ACTIVE_COUNT >= TOAST_MAX_VISIBLE) {
+        // Remove oldest toast to make room
+        const oldestToast = host.querySelector('.op-toast.show');
+        if (oldestToast) {
+            dismissToast(oldestToast);
+        }
+    }
+
+    // Add to DOM
+    host.appendChild(toast);
+    TOAST_ACTIVE_COUNT++;
+
+    // Trigger show animation
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+    });
+
+    // Auto dismiss after duration
+    const dismissTimeout = setTimeout(() => {
+        dismissToast(toast);
+    }, duration);
+
+    // Store timeout for potential early dismissal
+    toast._dismissTimeout = dismissTimeout;
+
+    function dismissToast(t) {
+        if (t._dismissed) return;
+        t._dismissed = true;
+
+        clearTimeout(t._dismissTimeout);
+        t.classList.remove('show');
+        t.classList.add('hide');
+
+        setTimeout(() => {
+            if (t.parentNode) {
+                t.parentNode.removeChild(t);
+                TOAST_ACTIVE_COUNT = Math.max(0, TOAST_ACTIVE_COUNT - 1);
+            }
+        }, 300);
+    }
+
+    return toast;
+};
+
+// ===== RESULT DISPLAY SYSTEM =====
+// Global result display function - used by VisualBuilder and scenario execution
+// ===== RESULT DISPLAY SYSTEM =====
+// Global result display function - used by VisualBuilder and scenario execution
+window.displayResult = function (result) {
+    console.log("📊 displayResult called with:", result);
+
+    // Store for later use (share, feedback, etc.)
+    if (typeof LAST_RESULT_DATA !== 'undefined') {
+        window.LAST_RESULT_DATA = result;
+    }
+
+    const resultContainer = document.getElementById("resultJson");
+    const markdownResult = document.getElementById("markdownResult");
+    const downloadPlaceholder = document.getElementById("downloadExcelPlaceholder");
+    const statusMessage = document.getElementById("statusMessage");
+    const feedbackWidget = document.getElementById("inlineFeedbackWidget");
+
+    if (!resultContainer) {
+        console.error("resultJson container not found");
+        return;
+    }
+
+    // Clear previous content
+    if (statusMessage) statusMessage.innerHTML = '';
+    if (markdownResult) markdownResult.style.display = 'none';
+
+    const T = typeof EXTRA_TEXTS !== 'undefined' && typeof CURRENT_LANG !== 'undefined'
+        ? EXTRA_TEXTS[CURRENT_LANG] : {};
+
+    // --- 1. SUMMARY SECTION ---
+    // Try technical_details first, then summary, then fallback
+    const tech = result.technical_details || {};
+    const summ = result.summary || {};
+
+    // Helper for safe value display
+    const safeVal = (v, suffix = '') => (v !== undefined && v !== null && v !== '') ? `<strong>${v}</strong>${suffix}` : '—';
+
+    const inputRows = safeVal(tech.input_rows ?? summ["Girdi Satır Sayısı"] ?? summ["Input Rows"], ' ' + (T.info_rows || 'satır'));
+    const outputRows = safeVal(tech.output_rows ?? summ["Sonuç Satır Sayısı"] ?? summ["Output Rows"], ' ' + (T.info_rows || 'satır'));
+    const outputCols = safeVal(tech.output_columns ?? summ["Sonuç Sütun Sayısı"] ?? summ["Output Columns"], ' ' + (T.info_cols || 'sütun'));
+    const engine = safeVal(tech.engine ?? summ["Motor"] ?? result.engine);
+    const operations = tech.operations ? tech.operations.join(', ') : (summ["Yapılan İşlemler"] ?? summ["Operations"] ?? '—');
+
+    const summaryHtml = `
+        <div class="gm-result-success" style="padding:16px; background:rgba(16,185,129,0.1); border-radius:8px; margin-bottom:12px; border-left:3px solid #10b981;">
+            <h4 style="color:#10b981; margin:0 0 12px 0; font-size:1rem;">
+                <i class="fas fa-check-circle"></i> ${CURRENT_LANG === 'tr' ? 'İşlem Tamamlandı' : 'Operation Complete'}
+            </h4>
+            <ul style="list-style:none; padding:0; margin:0; color:var(--gm-text); font-size:0.9rem;">
+                <li style="margin-bottom:6px;">📥 ${CURRENT_LANG === 'tr' ? 'Girdi' : 'Input'}: ${inputRows}</li>
+                <li style="margin-bottom:6px;">📤 ${CURRENT_LANG === 'tr' ? 'Çıktı' : 'Output'}: ${outputRows}, ${outputCols}</li>
+                <li style="margin-bottom:6px;">⚙️ ${CURRENT_LANG === 'tr' ? 'İşlemler' : 'Operations'}: ${operations}</li>
+                <li style="margin-bottom:6px;">🔧 ${CURRENT_LANG === 'tr' ? 'Motor' : 'Engine'}: ${engine}</li>
+            </ul>
+        </div>
+    `;
+
+    // --- 2. DOWNLOAD BUTTONS (3 TYPES) ---
+    const backendUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : '';
+    const dlUrl = (url) => url ? (url.startsWith('http') ? url : backendUrl + url) : null;
+
+    const excelUrl = dlUrl(result.download_url);
+    const csvUrl = dlUrl(result.csv_url);
+    const jsonUrl = dlUrl(result.json_url);
+
+    let downloadHtml = `<div class="gm-download-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;">`;
+
+    if (excelUrl) {
+        downloadHtml += `
+            <a href="${excelUrl}" class="gm-gradient-btn" download style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-size:0.85rem; padding:8px 16px;">
+                <i class="fas fa-file-excel"></i> ${T.download_excel || 'Excel Olarak İndir'}
+            </a>`;
+    }
+
+    if (csvUrl) {
+        downloadHtml += `
+            <a href="${csvUrl}" class="gm-pill-btn" download style="display:inline-flex; align-items:center; gap:6px;">
+                <i class="fas fa-file-csv"></i> CSV
+            </a>`;
+    }
+
+    if (jsonUrl) {
+        downloadHtml += `
+            <a href="${jsonUrl}" class="gm-pill-btn" download style="display:inline-flex; align-items:center; gap:6px;">
+                <i class="fas fa-file-code"></i> JSON
+            </a>`;
+    } else if (result.data) {
+        downloadHtml += `
+            <button onclick="downloadResultAsJson()" class="gm-pill-btn" style="display:inline-flex; align-items:center; gap:6px;">
+                 <i class="fas fa-file-code"></i> JSON
+            </button>`;
+    }
+
+    downloadHtml += `</div>`;
+
+    // --- 3. SHARE OPTIONS ---
+    const shareHtml = `
+        <div class="gm-share-section" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.85rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Paylaş:' : 'Share:'}</span>
+            <button onclick="copyResultLink()" class="gm-icon-btn is-sm" title="Link Kopyala"><i class="fas fa-link"></i></button>
+            <button onclick="shareViaEmail()" class="gm-icon-btn is-sm" title="Email"><i class="fas fa-envelope"></i></button>
+            <button onclick="copyResultSummary()" class="gm-icon-btn is-sm" title="Özet Kopyala"><i class="fas fa-copy"></i></button>
+        </div>
+    `;
+
+    // --- 4. PYTHON CODE SECTION ---
+    let codeHtml = '';
+    if (result.generated_python_code) {
+        codeHtml = `
+            <div class="gm-code-section" style="margin-top:16px; border:1px solid var(--gm-card-border); border-radius:8px; overflow:hidden;">
+                <div class="gm-code-header" style="padding:8px 12px; background:rgba(139,92,246,0.15); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:600; color:var(--gm-text); font-size:0.85rem;">
+                        <i class="fab fa-python" style="color:#3776ab;"></i> ${T.code_summary_title || 'Python Kodu'}
+                    </span>
+                    <button onclick="copyPythonCode()" class="gm-pill-btn" style="font-size:0.75rem; padding:4px 10px;">
+                        <i class="fas fa-copy"></i> ${T.copy_code || 'Kopyala'}
+                    </button>
+                </div>
+                <pre id="generatedPythonCode" style="margin:0; padding:12px; background:var(--gm-bg); font-size:0.8rem; overflow-x:auto; max-height:250px; overflow-y:auto;"><code class="language-python">${escapeHtml(result.generated_python_code)}</code></pre>
+            </div>
+        `;
+    }
+
+    // --- 5. NEW SCENARIO BUTTON ---
+    const newScenarioHtml = `
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--gm-card-border); display:flex; justify-content:space-between;">
+             <button onclick="clearResultAndReset()" class="gm-pill-btn" style="font-size:0.85rem; border:1px solid var(--gm-card-border);">
+                <i class="fas fa-undo"></i> ${CURRENT_LANG === 'tr' ? 'Seçimleri Temizle' : 'Reset Inputs'}
+            </button>
+            <button onclick="showScenarioList()" class="gm-gradient-btn" style="font-size:0.85rem;">
+                <i class="fas fa-plus"></i> ${CURRENT_LANG === 'tr' ? 'Yeni Senaryo Seç' : 'New Scenario'}
+            </button>
+        </div>
+    `;
+
+    // --- COMBINE ---
+    resultContainer.innerHTML = summaryHtml + downloadHtml + shareHtml + codeHtml + newScenarioHtml;
+    resultContainer.style.display = 'block';
+
+    // Show download text/button in placeholder logic if needed
+    if (downloadPlaceholder) {
+        downloadPlaceholder.innerHTML = '';
+    }
+
+    // Show feedback widget
+    if (feedbackWidget && typeof showInlineFeedbackWidget === 'function') {
+        showInlineFeedbackWidget();
+    } else if (feedbackWidget) {
+        feedbackWidget.style.display = 'block';
+    }
+
+    // --- HIGHLIGHT ---
+    if (typeof highlightPython === 'function') {
+        highlightPython();
+    } else if (typeof Prism !== 'undefined') {
+        Prism.highlightAllInside && Prism.highlightAllInside(resultContainer) || Prism.highlightAll();
+    }
+};
+
+// Start helpers for share/download
+window.downloadResultAsJson = function () {
+    if (!LAST_RESULT_DATA) return;
+    const blob = new Blob([JSON.stringify(LAST_RESULT_DATA, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `result_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.copyResultLink = function () {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => showToast("Link kopyalandı", "success"));
+};
+
+window.shareViaEmail = function () {
+    window.open('mailto:?subject=Opradox Result&body=Check this out');
+};
+
+window.copyResultSummary = function () {
+    const text = document.querySelector('.gm-result-success')?.innerText || '';
+    navigator.clipboard.writeText(text).then(() => showToast("Özet kopyalandı", "success"));
+};
+
+window.showScenarioList = function () {
+    const scList = document.getElementById('scenarioListContainer');
+    if (scList) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    showToast("Yeni senaryo için listeden seçim yapın", "info");
+};
+
+// Helper: Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper: Copy Python code to clipboard
+window.copyPythonCode = function () {
+    const codeEl = document.getElementById('generatedPythonCode');
+    if (codeEl) {
+        navigator.clipboard.writeText(codeEl.textContent).then(() => {
+            if (typeof showToast === 'function') {
+                showToast('✓ ' + (CURRENT_LANG === 'tr' ? 'Kod kopyalandı!' : 'Code copied!'), 'success', 2000);
+            }
+        });
+    }
+};
+
+// Helper: Clear result and reset for new scenario
+window.clearResultAndReset = function () {
+    const resultContainer = document.getElementById("resultJson");
+    const feedbackWidget = document.getElementById("inlineFeedbackWidget");
+
+    if (resultContainer) {
+        resultContainer.innerHTML = '// ' + (CURRENT_LANG === 'tr' ? 'Sonuçlar burada görünecek.' : 'Results will appear here.');
+        resultContainer.style.whiteSpace = 'pre';
+    }
+    if (feedbackWidget) {
+        feedbackWidget.style.display = 'none';
+    }
+
+    window.LAST_RESULT_DATA = null;
+};
+
 // UI İçin Sabit Metinler (Backend'den gelmeyenler)
 const EXTRA_TEXTS = {
     "tr": {
@@ -915,12 +1218,22 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
         const data = await res.json();
         console.log(`✅ Backend: sheet="${data.active_sheet}" rows=${data.row_count} cols=${data.columns?.length} first="${data.columns?.[0]}"`);
 
+        // Dosya yükleme toast bildirimi
+        if (typeof showToast === 'function' && data.columns && data.row_count) {
+            const T = EXTRA_TEXTS[CURRENT_LANG];
+            const successMsg = CURRENT_LANG === 'tr'
+                ? `📁 ${data.row_count} satır, ${data.columns.length} sütun yüklendi`
+                : `📁 ${data.row_count} rows, ${data.columns.length} columns loaded`;
+            showToast(successMsg, 'success', 3000);
+        }
+
         if (data.columns) {
             FILE_COLUMNS = data.columns;
 
             // Sheet bilgilerini kaydet (sadece ilk yüklemede)
             if (!skipDropdownRebuild && data.sheet_names && data.sheet_names.length > 0) {
                 FILE_SHEET_NAMES = data.sheet_names;
+                window.SHEET_NAMES = data.sheet_names; // VisualBuilder için global erişim
                 FILE_SELECTED_SHEET = data.active_sheet || data.sheet_names[0];
             }
 

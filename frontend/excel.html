@@ -82,12 +82,7 @@
                 <div class="gm-scenarios-section">
                     <div class="gm-card gm-scenario-list-card">
                         <h2 data-i18n="step2_title">2. Senaryonu Seç</h2>
-                        <!-- Visual Builder PRO Kısayol Butonu -->
-                        <button id="vbProShortcut" class="gm-vb-pro-btn"
-                            onclick="selectScenario('custom-report-builder-pro')">
-                            <i class="fas fa-magic"></i>
-                            <span data-i18n="vb_pro_shortcut">✨ Visual Builder PRO</span>
-                        </button>
+                        <!-- Visual Builder PRO butonu kaldırıldı - kullanıcı isteği -->
                         <div class="gm-search-wrapper">
                             <i class="fas fa-search"></i>
                             <input id="scenarioSearch" class="gm-scenario-search" placeholder="..." />
@@ -263,7 +258,7 @@
                     </div>
                 </div>
 
-                <div class="gm-card gm-result-card">
+                <div class="gm-card gm-result-card" style="max-height: 400px; overflow-y: auto;">
                     <div class="gm-result-header">
                         <h2 data-i18n="results_title">Sonuç</h2>
                         <div class="gm-result-share" id="resultShareContainer" style="position:relative;">
@@ -539,29 +534,8 @@
             if (file2El) observer.observe(file2El, { childList: true, characterData: true, subtree: true });
         });
 
-        // Toast bildirim fonksiyonu
-        function showToast(message, type = 'info', duration = 4000) {
-            // Mevcut toast varsa kaldır
-            const existing = document.querySelector('.gm-excel-toast');
-            if (existing) existing.remove();
-
-            const toast = document.createElement('div');
-            toast.className = `gm-excel-toast gm-excel-toast-${type}`;
-            toast.innerHTML = `<span>${message}</span>`;
-            document.body.appendChild(toast);
-
-            // Animasyonla göster
-            setTimeout(() => toast.classList.add('show'), 10);
-
-            // Otomatik kapat
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
-        }
-
-        // Global erişim için
-        window.showToast = showToast;
+        // NOTE: showToast is now provided globally by app.js (Unified Toast System)
+        // Old inline toast function removed - see app.js window.showToast
     </script>
 
 </body>

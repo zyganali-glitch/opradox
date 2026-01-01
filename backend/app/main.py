@@ -101,6 +101,9 @@ async def run_scenario(
     except:
         header_row2_int = 0
     
+    import time
+    start_time = time.time()
+    
     # DEBUG LOGGING TO FILE
     try:
         with open("server_debug.log", "a", encoding="utf-8") as f:
@@ -233,11 +236,44 @@ async def run_scenario(
         #      print("DEBUG: No output stored!")
 
         
-    # --- 6) JSON Yanıtını hazırla ---
-    summary_raw = result.get("summary", "Senaryo başarıyla çalıştırıldı.")
+    # --- 6) JSON Yanıtını hazırla (STANDARDIZED) ---
+    import time
+    time_ms = int((time.time() - (start_time if 'start_time' in locals() else time.time())) * 1000)
     
-    # Frontend string bekliyor, dict gelirse markdown listesine çevir
-    if isinstance(summary_raw, dict):
+    technical_details = result.get("technical_details") or {}
+    
+    # 1. Input Stats (Garanti)
+    technical_details["input_rows"] = technical_details.get("input_rows", len(df))
+    technical_details["input_columns"] = technical_details.get("input_columns", list(df.columns))
+    technical_details["input_cols"] = len(df.columns) # Convenience aliases
+    
+    # 2. Output Stats (Garanti)
+    if "df_out" in result and result["df_out"] is not None:
+        out_rows = len(result["df_out"])
+        out_cols = len(result["df_out"].columns)
+    else:
+        out_rows = technical_details.get("output_rows", 0)
+        out_cols = technical_details.get("output_columns", 0)
+        
+    technical_details["output_rows"] = out_rows
+    technical_details["output_columns"] = out_cols # Consistent naming
+    technical_details["output_cols"] = out_cols
+    
+    # 3. Meta Stats
+    technical_details["engine"] = scenario_id
+    technical_details["time_ms"] = time_ms
+    
+    # 4. Summary Calculation (Fallback logic)
+    summary_raw = result.get("summary")
+    if not summary_raw:
+        # Auto-summary if missing
+        summary = (
+            f"İşlem tamamlandı ({time_ms}ms).\n"
+            f"- Girdi: {technical_details['input_rows']} satır\n"
+            f"- Çıktı: {technical_details['output_rows']} satır, {technical_details['output_cols']} sütun"
+        )
+    elif isinstance(summary_raw, dict):
+        # Dict to Markdown list
         summary_lines = []
         for k, v in summary_raw.items():
             formatted_key = k.replace("_", " ").title()
@@ -245,26 +281,24 @@ async def run_scenario(
         summary = "\n".join(summary_lines)
     else:
         summary = str(summary_raw)
-    technical_details = result.get("technical_details")
 
-    # Eğer senaryo teknik detay vermediyse otomatik üret (Code Summary)
-    if not technical_details:
-         technical_details = {
-             "scenario_id": scenario_id,
-             "parameters": params_dict,
-             "input_rows": len(df),
-             "input_columns": list(df.columns),
-             "note": "Auto-generated summary because scenario did not return details."
-         }
-
-    return {
+    # 5. Download URLs
+    response_data = {
         "summary": summary,
         "technical_details": technical_details,
         "excel_available": has_output,
-        "excel_filename": "", # Artık dinamik
+        "excel_filename": "", # Deprecated, use download_url
         "scenario_id": scenario_id,
-        "data_columns": list(df.columns) 
+        "data_columns": list(df.columns),
+        "generated_python_code": result.get("generated_python_code")
     }
+    
+    if has_output:
+        response_data["download_url"] = f"/download/{scenario_id}?format=xlsx"
+        response_data["csv_url"] = f"/download/{scenario_id}?format=csv"
+        response_data["json_url"] = f"/download/{scenario_id}?format=json"
+
+    return response_data
 
 
 # -------------------------------------------------------
@@ -579,18 +613,24 @@ async def serve_config(filename: str):
         )
     raise HTTPException(status_code=404, detail=f"Config file not found: {filename}")
 
-# Ana sayfa için özel endpoint:
+# Ana sayfa için özel endpoint (Hub):
 
 @app.get("/")
 async def read_index():
     return FileResponse(
-        FRONTEND_DIR / "index.html",
+        FRONTEND_DIR / "hub.html",
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
             "Expires": "0"
         }
     )
+
+# Legacy index.html isteklerini excel.html'e yönlendir
+@app.get("/index.html")
+async def redirect_index():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/excel.html", status_code=301)
 
 @app.get("/login.html")
 async def read_login():

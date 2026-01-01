@@ -42,11 +42,26 @@ def read_table_from_upload(upload_file: UploadFile, sheet_name: str = None, head
         else:
             # Excel için sheet_name ve header parametrelerini kullan
             df = pd.read_excel(buffer, sheet_name=sheet_name, header=header_row)
+            
+            # CRITICAL FIX: pd.read_excel sheet_name=None ile çağrılırsa dict döner
+            # Bu durumda ilk sheet'i seç
+            if isinstance(df, dict):
+                if len(df) > 0:
+                    first_sheet_name = list(df.keys())[0]
+                    df = df[first_sheet_name]
+                else:
+                    raise HTTPException(status_code=400, detail="Excel dosyasında sayfa bulunamadı.")
+    except HTTPException:
+        raise  # HTTPException'ları tekrar fırlat
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Dosya okunurken hata oluştu: {str(e)}",
         )
+
+    # SAFETY CHECK: df'in DataFrame olduğundan emin ol
+    if not isinstance(df, pd.DataFrame):
+        raise HTTPException(status_code=400, detail=f"Beklenmeyen veri tipi: {type(df).__name__}")
 
     if df.empty:
         raise HTTPException(status_code=400, detail="Dosyada hiç satır bulunamadı.")

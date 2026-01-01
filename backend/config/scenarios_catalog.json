@@ -668,7 +668,8 @@
     "title_en": "Dynamic Report Builder (Play-Doh)",
     "short_tr": "Kendi raporunu kendin yap! Filtrele, Grupla, Sırala, Topla.",
     "short_en": "Build your own report! Filter, Group, Sort, Aggregate dynamically.",
-    "status": "implemented",
+    "status": "deprecated",
+    "visible": false,
     "implementation": {
       "module": "app.scenarios.custom_report_builder",
       "func": "run"

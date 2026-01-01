@@ -1,9 +1,10 @@
 // =====================================================
 // SERVICE WORKER - Opradox VIZ PWA
 // Basic cache-first strategy for offline support
+// FAZ-10: Version bump for stats/adapters/ui updates
 // =====================================================
 
-const CACHE_NAME = 'opradox-viz-v1';
+const CACHE_NAME = 'opradox-viz-v4';
 const ASSETS_TO_CACHE = [
     '/viz.html',
     '/js/viz.js',

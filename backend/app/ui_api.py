@@ -102,6 +102,12 @@ async def get_ui_menu(lang: str = "tr", status: Optional[str] = None):
     categories: Dict[str, List[Dict[str, Any]]] = {}
 
     for entry in catalog:
+        # Gizli senaryoları atla (visible: false veya status: deprecated)
+        if entry.get("visible") == False:
+            continue
+        if entry.get("status") == "deprecated":
+            continue
+            
         # Status filtresi varsa uygula
         if status and entry.get("status") != status:
             continue

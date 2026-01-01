@@ -8,25 +8,9 @@
 
 console.log("🎨 Visual Builder Module loaded");
 
-// ===== TOAST NOTIFICATION (viz_SOURCE.js satır 2962-2977'den birebir) =====
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `viz-toast viz-toast-${type}`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
-    `;
+// NOTE: showToast is now provided globally by app.js (Unified Toast System)
+// Old local toast function removed - see app.js window.showToast
 
-    document.body.appendChild(toast);
-
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-// Global erişim için
-window.showToast = showToast;
 
 const VisualBuilder = {
     // ===== STATE =====
@@ -896,9 +880,10 @@ const VisualBuilder = {
 
         switch (block.type) {
             case 'data_source':
-                return c.source_type === 'main' ? this.getText({ tr: "Ana Dosya", en: "Main File" }) :
-                    c.source_type === 'second' ? this.getText({ tr: "İkinci Dosya", en: "Second File" }) :
-                        c.sheet_name || notConfigured;
+                if (c.source_type === 'main') return this.getText({ tr: "Ana Dosya", en: "Main File" });
+                if (c.source_type === 'second') return this.getText({ tr: "İkinci Dosya", en: "Second File" });
+                if (c.source_type === 'cross_sheet') return c.sheet_name ? `📄 ${c.sheet_name}` : this.getText({ tr: "Sayfa seçin", en: "Select sheet" });
+                return this.getText({ tr: "Kaynak seçildi", en: "Source selected" });
             case 'lookup_join':
                 return c.main_key ? `${c.main_key} ⇔ ${c.source_key || '?'}` : notConfigured;
             case 'filter':
@@ -1010,6 +995,8 @@ const VisualBuilder = {
                     break;
 
                 case 'computed':
+                    // Backend expects: type="computed", ctype="arithmetic", columns, operation
+                    action.ctype = 'arithmetic';
                     action.name = block.config.name;
                     action.columns = block.config.columns;
                     action.operation = block.config.operation;
@@ -1017,7 +1004,8 @@ const VisualBuilder = {
                     break;
 
                 case 'time_series':
-                    action.cc_type = block.config.analysis_type;
+                    // Backend expects: type="computed", ctype=analysis_type, date_column, value_column
+                    action.ctype = block.config.analysis_type; // ytd_sum, mtd_sum, yoy_change, qoq_change, date_hierarchy
                     action.name = block.config.output_name || `TS_${block.config.analysis_type}`;
                     action.date_column = block.config.date_column;
                     action.value_column = block.config.value_column;
@@ -1102,38 +1090,78 @@ const VisualBuilder = {
                     break;
 
                 case 'text_transform':
+                    // Backend expects: type="computed", ctype="text_transform", source_column, transform_type
                     action.type = 'computed';
-                    action.cc_type = 'text_transform';
+                    action.ctype = 'text_transform';
                     action.name = block.config.output_name || block.config.column;
-                    action.column = block.config.column;
+                    action.source_column = block.config.column;  // Backend expects source_column
                     action.transform_type = block.config.transform_type;
+                    // Optional params for specific transform types
+                    if (block.config.word_count) action.word_count = parseInt(block.config.word_count);
+                    if (block.config.pattern) action.pattern = block.config.pattern;
+                    if (block.config.replacement) action.replacement = block.config.replacement;
                     break;
 
                 case 'advanced_computed':
+                    // Backend expects: type="computed", ctype=advanced_type
                     action.type = 'computed';
-                    action.cc_type = block.config.advanced_type;
+                    action.ctype = block.config.advanced_type;
                     action.name = block.config.output_name || `${block.config.advanced_type}_result`;
-                    action.column = block.config.column;
-                    action.columns = [block.config.column];
-                    if (block.config.column2) action.columns.push(block.config.column2);
-                    if (block.config.separator) action.separator = block.config.separator;
-                    if (block.config.part_index) action.part_index = parseInt(block.config.part_index);
+
+                    // Type-specific parameter mapping
+                    const advType = block.config.advanced_type;
+
+                    if (advType === 'split') {
+                        // Backend expects: source_column, separator, index
+                        action.source_column = block.config.column;
+                        action.separator = block.config.separator || ',';
+                        action.index = parseInt(block.config.part_index) || 0;
+                    } else if (advType === 'business_days') {
+                        // Backend expects: date1_column, date2_column
+                        action.date1_column = block.config.column;
+                        action.date2_column = block.config.column2;
+                    } else if (advType === 'correlation') {
+                        // Backend expects: column1, column2
+                        action.column1 = block.config.column;
+                        action.column2 = block.config.column2;
+                    } else if (['z_score', 'percentile_rank', 'running_total', 'moving_avg', 'growth_rate'].includes(advType)) {
+                        // Backend expects: value_column or columns[0]
+                        action.value_column = block.config.column;
+                        action.columns = [block.config.column];
+                        if (block.config.column2) action.group_column = block.config.column2;
+                        if (block.config.window_size) action.window_size = parseInt(block.config.window_size);
+                    } else if (['age', 'weekday', 'extract_year', 'extract_month', 'extract_day', 'extract_week'].includes(advType)) {
+                        // Backend expects: date_column
+                        action.date_column = block.config.column;
+                        action.columns = [block.config.column];
+                    } else if (['duplicate_flag', 'missing_flag', 'normalize_turkish', 'extract_numbers'].includes(advType)) {
+                        // Backend expects: check_column or source_column
+                        action.source_column = block.config.column;
+                        action.check_column = block.config.column;
+                        action.columns = [block.config.column];
+                    } else {
+                        // Fallback: send columns array
+                        action.columns = [block.config.column];
+                        if (block.config.column2) action.columns.push(block.config.column2);
+                    }
                     break;
 
                 case 'if_else':
+                    // Backend expects: type="computed", ctype="if_else", condition_column, operator, condition_value
                     action.type = 'computed';
-                    action.cc_type = 'if_else';
+                    action.ctype = 'if_else';
                     action.name = block.config.name;
-                    action.column = block.config.column;
-                    action.condition = block.config.condition;
-                    action.compare_value = block.config.compare_value;
+                    action.condition_column = block.config.column;  // Backend expects condition_column
+                    action.operator = block.config.condition;       // Backend expects operator
+                    action.condition_value = block.config.compare_value;  // Backend expects condition_value
                     action.true_value = block.config.true_value;
                     action.false_value = block.config.false_value;
                     break;
 
                 case 'formula':
+                    // Backend expects: type="computed", ctype="formula", formula
                     action.type = 'computed';
-                    action.cc_type = 'formula';
+                    action.ctype = 'formula';
                     action.name = block.config.name;
                     action.formula = block.config.formula;
                     break;
@@ -1178,76 +1206,70 @@ const VisualBuilder = {
                 return;
             }
 
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+            // Serialize block configuration
+            const configJson = JSON.stringify(actions);
 
-            // İkinci dosya (merge/lookup için)
-            const fileInput2 = document.getElementById("fileInput2");
-            if (fileInput2 && fileInput2.files && fileInput2.files.length > 0) {
-                formData.append("file2", fileInput2.files[0]);
+            // --- DELEGATION TO STANDARD RUNNER ---
+
+            // 1. Ensure hidden config input exists (Robustness Check)
+            // app.js renderDynamicForm creates #pro_config_config, but we check just in case.
+            let configInput = document.getElementById('pro_config_config');
+            if (!configInput) {
+                console.warn("VisualBuilder: #pro_config_config not found, creating fallback container.");
+
+                // Check or create container form
+                let form = document.getElementById('form_custom-report-builder-pro');
+                if (!form) {
+                    const formContainer = document.getElementById("dynamicFormContainer") || document.body;
+                    form = document.createElement("form");
+                    form.id = "form_custom-report-builder-pro";
+                    form.style.display = "none";
+                    formContainer.appendChild(form);
+                }
+
+                // Create input
+                configInput = document.createElement("input");
+                configInput.type = "hidden";
+                configInput.id = "pro_config_config";
+                configInput.name = "config";
+                form.appendChild(configInput);
             }
 
-            // Sheet name (varsa)
-            const sheetSelect = document.getElementById("sheetSelect");
-            const headerInput = document.getElementById("headerRowInput");
-
-            // Backend'in beklediği format: params['config'] = JSON array of actions
-            const paramsObj = {
-                config: actions  // Backend bu formatı bekliyor (satır 2522-2535)
-            };
-
-            // Sheet varsa ekle
-            if (sheetSelect && sheetSelect.value) {
-                paramsObj.sheet_name = sheetSelect.value;
+            // 2. Set the config value
+            if (configInput) {
+                configInput.value = configJson;
+                // Also trigger change event just in case listeners are watching
+                configInput.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log("VisualBuilder: Config saved to hidden input.", { actions_count: actions.length });
             }
 
-            // Header row varsa ekle
-            if (headerInput && headerInput.value) {
-                paramsObj.header_row = parseInt(headerInput.value);
-            }
+            // 3. Call standard scenario runner
+            if (typeof window.runScenario === 'function') {
+                console.log("VisualBuilder: Delegating to window.runScenario...");
 
-            formData.append("params", JSON.stringify(paramsObj));
+                // Show loading state on button manually since runScenario might not see the specific vbRunBtn immediately
+                const runBtn = document.getElementById("vbRunBtn");
+                if (runBtn) {
+                    const originalText = runBtn.innerHTML;
+                    runBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> İşleniyor...';
+                    runBtn.disabled = true;
 
-            // Backend'e gönder - DOĞRU ENDPOINT: /run/{scenario_id}
-            const backendUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : 'http://localhost:8100';
-            const response = await fetch(`${backendUrl}/run/custom-report-builder-pro`, {
-                method: "POST",
-                body: formData
-            });
+                    // Restore button state after a delay or when result is ready
+                    // Note: runScenario usually handles global loading state, but we do this for immediate feedback
+                    // The standard runner will trigger its own UI updates
+                    setTimeout(() => {
+                        runBtn.innerHTML = originalText;
+                        runBtn.disabled = false;
+                    }, 2000);
+                }
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-
-            const result = await response.json();
-            console.log("✅ Result:", result);
-
-            // Başarı mesajı
-            if (typeof showToast === 'function') {
-                const rowCount = result.summary?.["Sonuç Satır Sayısı"] || '?';
-                showToast(`✅ İşlem tamamlandı! ${rowCount} satır`, "success", 3000);
-            }
-
-            // Sonucu göster (app.js'deki displayResult fonksiyonu)
-            if (typeof displayResult === 'function') {
-                displayResult(result);
-            } else if (typeof window.displayResult === 'function') {
-                window.displayResult(result);
+                window.runScenario('custom-report-builder-pro');
             } else {
-                // Fallback: Sonuç container'ına yaz
-                const resultContainer = document.getElementById("resultPreview");
-                if (resultContainer && result.summary) {
-                    resultContainer.innerHTML = `
-                        <div class="gm-result-success">
-                            <h4><i class="fas fa-check-circle"></i> İşlem Tamamlandı</h4>
-                            <ul>
-                                <li>Girdi: ${result.summary["Girdi Satır Sayısı"]} satır</li>
-                                <li>Çıktı: ${result.summary["Sonuç Satır Sayısı"]} satır, ${result.summary["Sonuç Sütun Sayısı"]} sütun</li>
-                                <li>${result.summary["Yapılan İşlemler"]}</li>
-                            </ul>
-                        </div>
-                    `;
+                console.error("CRITICAL: window.runScenario is not defined!");
+                if (typeof showToast === 'function') {
+                    showToast("❌ Sistem hatası: Senaryo çalıştırıcı bulunamadı.", "error");
+                } else {
+                    alert("Sistem hatası: Senaryo çalıştırıcı bulunamadı.");
                 }
             }
 
