@@ -119,9 +119,14 @@ const VisualBuilder = {
                 { value: "dense_rank", label: { tr: "Dense RANK (Kesintisiz Sıra)", en: "Dense RANK" } },
                 { value: "row_number", label: { tr: "Satır Numarası", en: "Row Number" } },
                 { value: "percent_rank", label: { tr: "Yüzdelik Sıra", en: "Percent Rank" } },
+                { value: "ntile", label: { tr: "N'e Böl (Quartile/Decile)", en: "NTile (Quartile)" } },
                 { value: "cumsum", label: { tr: "Kümülatif Toplam", en: "Cumulative Sum" } },
-                { value: "lag", label: { tr: "LAG (Önceki Değer)", en: "LAG (Previous)" } },
-                { value: "lead", label: { tr: "LEAD (Sonraki Değer)", en: "LEAD (Next)" } }
+                { value: "cummean", label: { tr: "Kümülatif Ortalama", en: "Cumulative Mean" } },
+                { value: "count", label: { tr: "Grup Sayısı (Count)", en: "Group Count" } },
+                { value: "sum", label: { tr: "Grup Toplamı", en: "Group Sum" } },
+                { value: "mean", label: { tr: "Grup Ortalaması", en: "Group Average" } },
+                { value: "min", label: { tr: "Grup Minimumu", en: "Group Min" } },
+                { value: "max", label: { tr: "Grup Maksimumu", en: "Group Max" } }
             ]
         },
 
@@ -544,14 +549,35 @@ const VisualBuilder = {
                     value = target.value;
                 }
 
+                // Hibrit sütun seçici mantığı:
+                // Eğer bu bir _manual suffix'li input ise, asıl field adını bul
+                let fieldName = target.name;
+                if (fieldName && fieldName.endsWith('_manual')) {
+                    const baseFieldName = fieldName.replace('_manual', '');
+                    // Manuel değer varsa, dropdown'u geçersiz kıl
+                    if (value && value.trim()) {
+                        this.updateBlockConfig(this.selectedBlockId, baseFieldName, value.trim());
+                        // Dropdown'ı temizle
+                        const dropdown = settings.querySelector(`[name="${baseFieldName}"]`);
+                        if (dropdown) dropdown.value = '';
+                    }
+                    return; // Manuel input işlendi, çık
+                }
+
+                // Dropdown değiştiğinde manuel alanı temizle (hibrit senkronizasyon)
+                const manualInput = settings.querySelector(`[name="${fieldName}_manual"]`);
+                if (manualInput && value) {
+                    manualInput.value = '';
+                }
+
                 this.updateBlockConfig(this.selectedBlockId, target.name, value);
             };
 
             // Listen to change event for all
             input.addEventListener("change", handler);
 
-            // Also listen to input event for textarea (real-time updates)
-            if (input.tagName === 'TEXTAREA') {
+            // Also listen to input event for textarea and manual inputs (real-time updates)
+            if (input.tagName === 'TEXTAREA' || input.classList.contains('vb-manual-input')) {
                 input.addEventListener("input", handler);
             }
         });
@@ -665,10 +691,34 @@ const VisualBuilder = {
             // ===== WINDOW FONKSİYONLARI =====
             case 'window_function':
                 html += this.renderSelect("window_type", block.config.window_type, config.windowTypes, { tr: "Fonksiyon", en: "Function" });
-                html += this.renderColumnSelect("value_column", block.config.value_column, columns, { tr: "Değer Sütunu", en: "Value Column" });
-                html += this.renderColumnSelect("partition_by", block.config.partition_by, columns, { tr: "Gruplama (Opsiyonel)", en: "Partition By (Optional)" });
-                html += this.renderColumnSelect("order_by", block.config.order_by, columns, { tr: "Sıralama Sütunu", en: "Order By" });
+                html += this.renderColumnSelect("value_column", block.config.value_column, columns, { tr: "Değer Sütunu (Sıralama için)", en: "Value Column (for ordering)" });
+
+                // YENİ: Sıralama yönü (ascending/descending)
+                html += this.renderSelect("direction", block.config.direction || "desc", [
+                    { value: "asc", label: { tr: "Artan (Küçükten Büyüğe → 1=En Düşük)", en: "Ascending (Lowest = 1)" } },
+                    { value: "desc", label: { tr: "Azalan (Büyükten Küçüğe → 1=En Yüksek)", en: "Descending (Highest = 1)" } }
+                ], { tr: "Sıralama Yönü", en: "Sort Direction" });
+
+                // YENİ: Çoklu partition_by (grup bazlı rank için)
+                html += this.renderColumnSelect("partition_by", block.config.partition_by, columns,
+                    { tr: "Gruplama Sütunları (Opsiyonel - Grup Bazlı Rank)", en: "Partition By (Optional - Group-based Rank)" }, true);
+
+                // YENİ: ntile için N değeri
+                if (block.config.window_type === 'ntile') {
+                    html += this.renderInput("ntile_n", block.config.ntile_n || 4,
+                        { tr: "Kaç Gruba Böl (N)", en: "Number of Buckets (N)" });
+                }
+
+                // Çıktı sütun adı
                 html += this.renderInput("output_name", block.config.output_name, { tr: "Çıktı Sütun Adı", en: "Output Column Name" });
+
+                // YENİ: Manuel sütun girişi için ipucu
+                html += `<div class="vb-form-hint" style="font-size:0.7rem; color:var(--gm-text-muted); margin-top:8px; padding:8px; background:var(--gm-bg); border-radius:4px;">
+                    💡 ${this.getText({
+                    tr: "İpucu: Önceki blokta oluşturduğunuz sütunları kullanmak için Değer Sütununu manuel yazabilirsiniz.",
+                    en: "Tip: You can manually type column names created in previous blocks."
+                })}
+                </div>`;
                 break;
 
             // ===== PİVOT =====
@@ -829,6 +879,12 @@ const VisualBuilder = {
     },
 
     renderColumnSelect(name, value, columns, label, multiple = false) {
+        // Hibrit yapı: Dropdown + Manuel giriş
+        // Eğer value dropdown'da yoksa manuel girişe aktarılır
+        const isManualEntry = value && !columns.includes(value) && !Array.isArray(value);
+        const manualValue = isManualEntry ? value : '';
+        const selectValue = isManualEntry ? '' : value;
+
         let html = `
             <div class="vb-form-row">
                 <label>${this.getText(label)}</label>
@@ -839,11 +895,25 @@ const VisualBuilder = {
         }
         columns.forEach(col => {
             const selected = multiple ?
-                (Array.isArray(value) && value.includes(col) ? 'selected' : '') :
-                (col === value ? 'selected' : '');
+                (Array.isArray(selectValue) && selectValue.includes(col) ? 'selected' : '') :
+                (col === selectValue ? 'selected' : '');
             html += `<option value="${col}" ${selected}>${col}</option>`;
         });
-        html += `</select></div>`;
+        html += `</select>`;
+
+        // Manuel giriş alanı (tek seçim için)
+        if (!multiple) {
+            html += `
+                <input type="text" 
+                       name="${name}_manual" 
+                       value="${manualValue}" 
+                       class="vb-input vb-manual-input" 
+                       placeholder="${this.getText({ tr: "veya manuel yazın...", en: "or type manually..." })}"
+                       style="margin-top:4px; font-size:0.8rem; background:var(--gm-card-bg); border:1px dashed var(--gm-card-border);">
+            `;
+        }
+
+        html += `</div>`;
         return html;
     },
 
@@ -1080,7 +1150,7 @@ const VisualBuilder = {
         lookup_join: ['main_key', 'source_key', 'fetch_columns'],
         computed: ['name', 'columns', 'operation'],
         time_series: ['analysis_type', 'date_column', 'value_column'],
-        window_function: ['window_type', 'value_column', 'order_by'],
+        window_function: ['window_type', 'value_column'],  // direction opsiyonel (default: desc)
         pivot: ['rows', 'values', 'aggregation'],
         chart: ['chart_type', 'x_column', 'y_columns'],
         sort: ['column', 'order'],
@@ -1190,8 +1260,25 @@ const VisualBuilder = {
 
                 case 'window_function':
                     action.wf_type = block.config.window_type;
-                    action.order_by = block.config.order_by;
-                    action.partition_by = block.config.partition_by ? [block.config.partition_by] : [];
+                    action.order_by = block.config.value_column; // UI'da value_column, backend'de order_by
+
+                    // YENİ: Sıralama yönü (default: desc - en yüksek=1)
+                    action.direction = block.config.direction || 'desc';
+
+                    // YENİ: Çoklu partition_by desteği (array olarak gönder)
+                    if (block.config.partition_by) {
+                        action.partition_by = Array.isArray(block.config.partition_by)
+                            ? block.config.partition_by
+                            : [block.config.partition_by];
+                    } else {
+                        action.partition_by = [];
+                    }
+
+                    // YENİ: ntile için N değeri
+                    if (block.config.window_type === 'ntile' && block.config.ntile_n) {
+                        action.ntile_n = parseInt(block.config.ntile_n);
+                    }
+
                     action.alias = block.config.output_name || `${block.config.window_type}_result`;
                     break;
 
