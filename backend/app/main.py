@@ -70,6 +70,30 @@ app.include_router(scheduled_router)      # /viz/schedule/* (Zamanlanmış Rapor
 
 
 # -------------------------------------------------------
+# GET SHEET COLUMNS (Visual Builder için dinamik sütun çekme)
+# -------------------------------------------------------
+@app.post("/get-sheet-columns")
+async def get_sheet_columns(
+    file: UploadFile = File(...),
+    sheet_name: str = Form(...)
+):
+    """
+    Excel dosyasından belirli bir sayfanın sütun isimlerini döndürür.
+    Visual Builder'da farklı sayfa seçildiğinde sütunları dinamik güncellemek için kullanılır.
+    """
+    try:
+        df = read_table_from_upload(file, sheet_name=sheet_name, header_row=0)
+        columns = list(df.columns)
+        return {
+            "sheet_name": sheet_name,
+            "columns": columns,
+            "row_count": len(df)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Sayfa okunamadı: {str(e)}")
+
+
+# -------------------------------------------------------
 # SCENARIO RUNNER
 # -------------------------------------------------------
 @app.post("/run/{scenario_id}")

@@ -364,9 +364,10 @@ const VisualBuilder = {
         html += `<div class="vb-palette-blocks">`;
 
         Object.entries(this.blockTypes).forEach(([type, config]) => {
+            const tooltipText = this.getText(config.name) + '\n' + this.getText(config.description);
             html += `
-                <div class="vb-palette-block" draggable="true" data-block-type="${type}">
-                    <div class="vb-palette-icon" style="background:${config.color};">
+                <div class="vb-palette-block" draggable="true" data-block-type="${type}" title="${tooltipText}">
+                    <div class="vb-palette-icon" data-color="${config.color}">
                         <i class="fas ${config.icon}"></i>
                     </div>
                     <div class="vb-palette-info">
@@ -522,20 +523,55 @@ const VisualBuilder = {
         html += `</div>`;
         settings.innerHTML = html;
 
-        // Settings form değişikliklerini dinle
-        settings.querySelectorAll("input, select").forEach(input => {
-            input.addEventListener("change", (e) => {
-                this.updateBlockConfig(this.selectedBlockId, e.target.name, e.target.value);
-            });
+        // Settings form değişikliklerini dinle (input, select, textarea)
+        settings.querySelectorAll("input, select, textarea").forEach(input => {
+            const handler = (e) => {
+                let value;
+                const target = e.target;
+
+                // Handle different input types properly
+                if (target.type === 'checkbox') {
+                    // Checkbox: use checked property, not value
+                    value = target.checked;
+                } else if (target.multiple) {
+                    // Multi-select: get array of selected values
+                    value = Array.from(target.selectedOptions).map(o => o.value);
+                } else if (target.type === 'number') {
+                    // Number fields: parse as float
+                    value = target.value ? parseFloat(target.value) : null;
+                } else {
+                    // Text, select, textarea: use value
+                    value = target.value;
+                }
+
+                this.updateBlockConfig(this.selectedBlockId, target.name, value);
+            };
+
+            // Listen to change event for all
+            input.addEventListener("change", handler);
+
+            // Also listen to input event for textarea (real-time updates)
+            if (input.tagName === 'TEXTAREA') {
+                input.addEventListener("input", handler);
+            }
         });
     },
 
     // ===== BLOK AYAR FORMLARI =====
     renderBlockSettings(block) {
         const config = this.blockTypes[block.type];
-        const columns = typeof FILE_COLUMNS !== 'undefined' ? FILE_COLUMNS : [];
+        const baseColumns = typeof FILE_COLUMNS !== 'undefined' ? FILE_COLUMNS : [];
         const columns2 = typeof FILE2_COLUMNS !== 'undefined' ? FILE2_COLUMNS : [];
         const sheets = typeof SHEET_NAMES !== 'undefined' ? SHEET_NAMES : [];
+        // Crosssheet için dinamik sütunlar (sayfa seçildiğinde güncellenir)
+        const crosssheetColumns = typeof CROSSSHEET_COLUMNS !== 'undefined' ? CROSSSHEET_COLUMNS : [];
+
+        // Pipeline'daki data_source bloğuna bak - crosssheet seçilmişse o sütunları kullan
+        let columns = baseColumns;
+        const dataSourceBlock = this.blocks.find(b => b.type === 'data_source');
+        if (dataSourceBlock && dataSourceBlock.config.source_type === 'cross_sheet' && crosssheetColumns.length > 0) {
+            columns = crosssheetColumns;
+        }
 
         let html = '';
 
@@ -547,10 +583,16 @@ const VisualBuilder = {
                     { value: "second", label: { tr: "İkinci Dosya", en: "Second File" } },
                     { value: "cross_sheet", label: { tr: "Aynı Dosyadan Farklı Sayfa", en: "Cross-Sheet" } }
                 ], { tr: "Kaynak Tipi", en: "Source Type" });
-                if (sheets.length > 0) {
+                if (block.config.source_type === 'cross_sheet' && sheets.length > 0) {
                     html += this.renderSelect("sheet_name", block.config.sheet_name,
                         sheets.map(s => ({ value: s, label: s })),
                         { tr: "Sayfa Seçimi", en: "Sheet Selection" });
+                    // Crosssheet sütunları yüklendiyse göster
+                    if (crosssheetColumns.length > 0) {
+                        html += `<div class="vb-form-section" style="font-size:0.75rem;color:var(--gm-primary);">
+                            ✅ ${crosssheetColumns.length} ${this.getText({ tr: "sütun yüklendi", en: "columns loaded" })}
+                        </div>`;
+                    }
                 }
                 break;
 
@@ -564,13 +606,34 @@ const VisualBuilder = {
                     { value: "second_file", label: { tr: "İkinci Dosya", en: "Second File" } },
                     { value: "same_file_sheet", label: { tr: "Aynı Dosya - Farklı Sayfa", en: "Same File - Different Sheet" } }
                 ], { tr: "Kaynak", en: "Source" });
+
+                // Crosssheet seçiliyse sayfa listesi göster
                 if (block.config.source_type === 'same_file_sheet' && sheets.length > 0) {
                     html += this.renderSelect("source_sheet", block.config.source_sheet,
                         sheets.map(s => ({ value: s, label: s })),
                         { tr: "Sayfa", en: "Sheet" });
                 }
-                html += this.renderColumnSelect("source_key", block.config.source_key, columns2.length > 0 ? columns2 : columns, { tr: "Eşleşme Sütunu", en: "Match Column" });
-                html += this.renderColumnSelect("fetch_columns", block.config.fetch_columns, columns2.length > 0 ? columns2 : columns, { tr: "Getirilecek Sütunlar", en: "Columns to Fetch" }, true);
+
+                // Kaynak sütunları: Crosssheet seçiliyse ve sütunlar yüklendiyse crosssheet sütunlarını kullan
+                const sourceColumns = (block.config.source_type === 'same_file_sheet' && crosssheetColumns.length > 0)
+                    ? crosssheetColumns
+                    : (columns2.length > 0 ? columns2 : columns);
+
+                html += this.renderColumnSelect("source_key", block.config.source_key, sourceColumns, { tr: "Eşleşme Sütunu", en: "Match Column" });
+                html += this.renderColumnSelect("fetch_columns", block.config.fetch_columns, sourceColumns, { tr: "Getirilecek Sütunlar", en: "Columns to Fetch" }, true);
+
+                // Bilgi mesajı
+                if (block.config.source_type === 'same_file_sheet') {
+                    if (crosssheetColumns.length > 0) {
+                        html += `<div class="vb-form-section" style="font-size:0.75rem;color:var(--gm-success);">
+                            ✅ ${crosssheetColumns.length} ${this.getText({ tr: "sütun yüklendi", en: "columns loaded" })}
+                        </div>`;
+                    } else if (block.config.source_sheet) {
+                        html += `<div class="vb-form-section" style="font-size:0.75rem;color:var(--gm-warning);">
+                            ⏳ ${this.getText({ tr: "Sayfa sütunları yükleniyor...", en: "Loading sheet columns..." })}
+                        </div>`;
+                    }
+                }
                 break;
 
             // ===== FİLTRE =====
@@ -843,7 +906,60 @@ const VisualBuilder = {
         const block = this.blocks.find(b => b.id === id);
         if (block) {
             block.config[key] = value;
+
+            // Sayfa değişikliğinde sütunları dinamik olarak güncelle
+            if ((key === 'sheet_name' || key === 'source_sheet') && value) {
+                this.loadCrossSheetColumns(value);
+            }
+
+            // source_type değişikliğinde de ayarları yenile
+            if (key === 'source_type') {
+                this.renderSettings();
+            }
+
             this.renderCanvas(); // Özeti güncelle
+        }
+    },
+
+    // Farklı sayfanın sütunlarını backend'den çek
+    async loadCrossSheetColumns(sheetName) {
+        const fileInput = document.getElementById("fileInput");
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            console.warn("VisualBuilder: Sütun çekmek için dosya yüklü değil");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sheet_name", sheetName);
+
+        try {
+            // Backend'e istek at
+            const response = await fetch("/get-sheet-columns", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.columns && Array.isArray(data.columns)) {
+                    // Global değişkene kaydet
+                    window.CROSSSHEET_COLUMNS = data.columns;
+                    console.log(`✅ ${sheetName} sayfası sütunları yüklendi:`, data.columns.length, "sütun");
+
+                    // Ayarlar panelini yenile (yeni sütunlarla)
+                    this.renderSettings();
+
+                    if (typeof showToast === 'function') {
+                        showToast(`📄 ${sheetName} sayfası: ${data.columns.length} sütun yüklendi`, "success", 2000);
+                    }
+                }
+            } else {
+                console.warn("Sütun çekme hatası:", response.status);
+            }
+        } catch (err) {
+            console.error("Crosssheet sütun çekme hatası:", err);
         }
     },
 
@@ -954,6 +1070,67 @@ const VisualBuilder = {
                 this.addBlock(blockType);
             }
         });
+    },
+
+    // ===== PIPELINE VALIDATION =====
+    // Required fields per block type (empty array means no required fields)
+    REQUIRED_FIELDS: {
+        data_source: ['source_type'],
+        filter: ['column', 'operator'],
+        lookup_join: ['main_key', 'source_key', 'fetch_columns'],
+        computed: ['name', 'columns', 'operation'],
+        time_series: ['analysis_type', 'date_column', 'value_column'],
+        window_function: ['window_type', 'value_column', 'order_by'],
+        pivot: ['rows', 'values', 'aggregation'],
+        chart: ['chart_type', 'x_column', 'y_columns'],
+        sort: ['column', 'order'],
+        conditional_format: ['column', 'cf_type'],
+        output_settings: [],
+        union: [],
+        diff: ['left_on', 'right_on'],
+        validate: ['left_on', 'right_on'],
+        grouping: ['groups', 'agg_column', 'agg_func'],
+        text_transform: ['column', 'transform_type'],
+        advanced_computed: ['advanced_type', 'column'],
+        if_else: ['name', 'column', 'condition'],
+        formula: ['name', 'formula'],
+        what_if_variable: ['name']
+    },
+
+    validatePipeline() {
+        const errors = [];
+        let firstInvalidId = null;
+
+        // Clear previous invalid states
+        document.querySelectorAll('.vb-block-invalid').forEach(el => {
+            el.classList.remove('vb-block-invalid');
+        });
+
+        this.blocks.forEach(block => {
+            const required = this.REQUIRED_FIELDS[block.type] || [];
+            const missing = [];
+
+            required.forEach(field => {
+                const val = block.config[field];
+                // Check for empty/null/undefined/empty array
+                if (val === undefined || val === null || val === '' ||
+                    (Array.isArray(val) && val.length === 0)) {
+                    missing.push(field);
+                }
+            });
+
+            if (missing.length > 0) {
+                const blockName = this.getText(this.blockTypes[block.type]?.name) || block.type;
+                errors.push({ id: block.id, blockName, missing, type: block.type });
+                if (!firstInvalidId) firstInvalidId = block.id;
+
+                // Add invalid class to block element
+                const el = document.querySelector(`[data-block-id="${block.id}"]`);
+                if (el) el.classList.add('vb-block-invalid');
+            }
+        });
+
+        return { valid: errors.length === 0, errors, firstInvalidId };
     },
 
     // ===== JSON EXPORT (Backend ile 1:1 uyumlu) =====
@@ -1185,6 +1362,26 @@ const VisualBuilder = {
             if (typeof showToast === 'function') {
                 showToast("⚠️ Önce blok ekleyin", "warning", 3000);
             }
+            return;
+        }
+
+        // Validate pipeline before running
+        const validation = this.validatePipeline();
+        if (!validation.valid) {
+            // Build error message
+            const firstError = validation.errors[0];
+            const errorMsg = `❌ ${firstError.blockName}: ${firstError.missing.join(', ')} eksik`;
+
+            if (typeof showToast === 'function') {
+                showToast(errorMsg, "warning", 5000);
+            }
+
+            // Select first invalid block to help user
+            if (validation.firstInvalidId) {
+                this.selectBlock(validation.firstInvalidId);
+            }
+
+            console.warn("Pipeline validation failed:", validation.errors);
             return;
         }
 
@@ -1465,6 +1662,26 @@ if (originalAddBlock) {
 // 5. BAŞLATMA
 document.addEventListener('DOMContentLoaded', function () {
     console.log('🔧 Düzeltmeler başlatılıyor...');
+
+    // Inject CSS for invalid block state
+    const vbStyles = document.createElement('style');
+    vbStyles.textContent = `
+        .vb-block-invalid {
+            border: 2px solid #ef4444 !important;
+            animation: vb-pulse-red 1s ease-in-out infinite !important;
+        }
+        
+        @keyframes vb-pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+        
+        .vb-block-invalid .vb-block-summary {
+            color: #ef4444 !important;
+            font-weight: 600;
+        }
+    `;
+    document.head.appendChild(vbStyles);
 
     // VB PRO buton
     setTimeout(fixVBProButton, 100);

@@ -2219,7 +2219,9 @@ function renderAccordionMenu() {
             card.dataset.title = sc.title;
             card.dataset.category = catKey; // Arama için kategori işareti
             card.draggable = true; // Sürükle-bırak için
-            card.title = sc.title; // Hover tooltip için
+            // Tooltip: başlık + açıklama
+            const tooltipText = sc.title + (sc.short || sc.description ? '\n' + (sc.short || sc.description) : '');
+            card.title = tooltipText;
 
             if (sc.id === ACTIVE_SCENARIO_ID) card.classList.add("active");
 
@@ -2261,7 +2263,7 @@ function renderAccordionMenu() {
             }
 
             card.innerHTML = `
-                <div class="gm-excel-scenario-icon" style="background:${iconInfo.color};">
+                <div class="gm-excel-scenario-icon" data-color="${iconInfo.color}">
                     <i class="fas ${iconInfo.icon}"></i>
                 </div>
                 <div class="gm-excel-scenario-info">

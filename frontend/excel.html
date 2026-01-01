@@ -25,7 +25,7 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <link rel="stylesheet" href="css/style.css?v=20241231b" />
+    <link rel="stylesheet" href="css/style.css?v=20250101c" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
@@ -67,8 +67,8 @@
                 <button id="themeToggle" class="gm-pill-btn"><i class="fas fa-moon"></i> / <i
                         class="fas fa-sun"></i></button>
                 <button id="langToggle" class="gm-pill-btn"><span id="langLabel">🇹🇷 Tr | En</span></button>
-                <button id="helpToggle" class="gm-pill-btn" title="Kılavuz">
-                    <i class="fas fa-question-circle"></i>
+                <button id="helpToggle" class="gm-pill-btn gm-help-toggle-btn" title="Kullanım Kılavuzu">
+                    <i class="fas fa-book-open"></i>
                 </button>
                 <button id="contactBtn" class="gm-pill-btn"><i class="fas fa-envelope"></i> <span
                         data-i18n="contact">Bize Ulaşın</span></button>
@@ -465,28 +465,86 @@
                 mainContent: !!mainContent
             });
 
-            function toggleHelpPane() {
-                console.log('[Excel] toggleHelpPane çağrıldı');
-                if (mainContent) {
-                    mainContent.classList.toggle('help-collapsed');
-                    console.log('[Excel] help-collapsed:', mainContent.classList.contains('help-collapsed'));
+            // Geliştirilmiş toggle fonksiyonu - forceClose parametresi ile
+            function toggleHelpPane(forceClose = null) {
+                console.log('[Excel] toggleHelpPane çağrıldı, forceClose:', forceClose);
+                if (!mainContent) return;
+
+                // Mevcut durumu doğru tespit et
+                const isCurrentlyOpen = !mainContent.classList.contains('help-collapsed') &&
+                    !mainContent.classList.contains('excel-help-closed');
+
+                // forceClose true ise kapat, false ise aç, null ise toggle
+                let shouldOpen;
+                if (forceClose === true) {
+                    shouldOpen = false;  // Kapatma butonu: her zaman kapat
+                } else if (forceClose === false) {
+                    shouldOpen = true;   // Açma butonu: her zaman aç
+                } else {
+                    shouldOpen = !isCurrentlyOpen;  // Toggle: mevcut durumun tersi
                 }
+
+                // Sınıfları ayarla
+                if (shouldOpen) {
+                    mainContent.classList.remove('help-collapsed');
+                    mainContent.classList.remove('excel-help-closed');
+                } else {
+                    mainContent.classList.add('help-collapsed');
+                    mainContent.classList.add('excel-help-closed');
+                }
+
+                // Toggle ikonunu güncelle
+                const icon = helpToggle ? helpToggle.querySelector('i') : null;
+                if (icon) {
+                    icon.className = shouldOpen ? 'fas fa-times-circle' : 'fas fa-book-open';
+                }
+
+                // aria-expanded güncelle
+                if (helpToggle) {
+                    helpToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                    // Panel açıkken toggle butonunu gizle, kapalıyken göster
+                    helpToggle.style.opacity = shouldOpen ? '0' : '1';
+                    helpToggle.style.pointerEvents = shouldOpen ? 'none' : 'auto';
+                    helpToggle.style.transform = shouldOpen ? 'scale(0.8)' : 'scale(1)';
+                }
+
+                // Toast mesajı göster (TR/EN)
+                if (typeof showToast === 'function') {
+                    const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+                    const openMsg = lang === 'tr' ? '📖 Kılavuz paneli açıldı' : '📖 Guide panel opened';
+                    const closeMsg = lang === 'tr' ? '📖 Kılavuz paneli kapandı' : '📖 Guide panel closed';
+                    showToast(shouldOpen ? openMsg : closeMsg, 'info', 2000);
+                }
+
+                console.log('[Excel] Panel durumu:', shouldOpen ? 'açık' : 'kapalı');
             }
 
+            // Header toggle butonu - toggle davranışı
             if (helpToggle) {
-                helpToggle.addEventListener('click', toggleHelpPane);
+                helpToggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleHelpPane();  // null = toggle
+                });
+                helpToggle.setAttribute('aria-expanded', 'false');
                 console.log('[Excel] helpToggle listener eklendi');
             }
 
+            // Panel içi kapatma butonu - her zaman kapat
             if (helpCloseBtn) {
-                helpCloseBtn.addEventListener('click', toggleHelpPane);
+                helpCloseBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleHelpPane(true);  // forceClose = true
+                });
                 console.log('[Excel] helpCloseBtn listener eklendi');
             }
 
-            // Kılavuz varsayılan kapalı
-            if (mainContent && !mainContent.classList.contains('help-collapsed')) {
+            // Kılavuz varsayılan kapalı (her iki sınıf da)
+            if (mainContent) {
                 mainContent.classList.add('help-collapsed');
-                console.log('[Excel] Varsayılan help-collapsed eklendi');
+                mainContent.classList.add('excel-help-closed');
+                console.log('[Excel] Varsayılan kapalı durumu ayarlandı');
             }
         });
 
