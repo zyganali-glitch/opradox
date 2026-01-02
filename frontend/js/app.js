@@ -1,4 +1,4 @@
-﻿console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
+console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
 const BACKEND_BASE_URL = "http://127.0.0.1:8100"; // Direct backend URL for development
 
 let SCENARIO_CATALOG = {};
@@ -4352,12 +4352,38 @@ function renderDynamicForm(scenarioId, params) {
 
         // ============================================================================
 
+        // FAZ 2.2: Buton container (Çalıştır + Önizleme)
+        const btnContainer = document.createElement("div");
+        btnContainer.style.cssText = "display: flex; gap: 12px; margin-top: 10px;";
+
+        // Çalıştır butonu
         const btn = document.createElement("button");
         btn.type = "submit";
         btn.className = "gm-gradient-btn";
         btn.textContent = EXTRA_TEXTS[CURRENT_LANG].run_btn;
-        btn.style.width = "100%";
-        form.appendChild(btn);
+        btn.style.flex = "1";
+        btnContainer.appendChild(btn);
+
+        // FAZ 2.2: Önizleme butonu
+        const previewBtn = document.createElement("button");
+        previewBtn.type = "button";
+        previewBtn.className = "preview-btn";
+        previewBtn.innerHTML = `<i class="fas fa-eye"></i> ${CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview'}`;
+        previewBtn.title = CURRENT_LANG === 'tr' ? 'İlk 100 satırı önizle (Excel oluşturmadan)' : 'Preview first 100 rows (without Excel generation)';
+        previewBtn.onclick = (e) => {
+            e.preventDefault();
+            if (typeof window.previewScenario === 'function') {
+                window.previewScenario(scenarioId);
+            } else {
+                console.error('previewScenario function not found');
+                if (typeof showToast === 'function') {
+                    showToast('Önizleme fonksiyonu bulunamadı', 'error', 3000);
+                }
+            }
+        };
+        btnContainer.appendChild(previewBtn);
+
+        form.appendChild(btnContainer);
         container.appendChild(form);
     } catch (err) {
         console.error("Form Render Error:", err);
@@ -5124,6 +5150,18 @@ async function runScenario(scenarioId) {
             LAST_RESULT_DATA = data;
             renderScenarioResult(data);
 
+            // FAZ 1.3: Warnings kontrolü - backend'den uyarı gelirse toast göster
+            if (data.warnings && data.warnings.length > 0) {
+                const warnCount = data.warnings.length;
+                const warnMsg = CURRENT_LANG === 'tr'
+                    ? `⚠️ ${warnCount} adımda uyarı oluştu. Detaylar için konsolu kontrol edin.`
+                    : `⚠️ ${warnCount} step(s) had warnings. Check console for details.`;
+                if (typeof showToast === 'function') {
+                    showToast(warnMsg, 'warn', 7000);
+                }
+                console.warn('Pipeline Warnings:', data.warnings);
+            }
+
             // YENİ: Feedback widget'ı göster
             if (typeof showInlineFeedbackWidget === 'function') {
                 showInlineFeedbackWidget(scenarioId);
@@ -5142,6 +5180,185 @@ async function runScenario(scenarioId) {
         alert("Hata: " + e.message);
     }
 }
+
+// ===== FAZ 2.2: GLOBAL PREVIEW SYSTEM =====
+/**
+ * Canlı Önizleme - Tüm senaryolar için merkezi önizleme fonksiyonu
+ * Backend'e is_preview: true göndererek sadece ilk 100 satırı işler
+ */
+async function previewScenario(scenarioId) {
+    console.log('🔍 previewScenario called with:', scenarioId);
+
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput || !fileInput.files[0]) {
+        if (typeof showToast === 'function') {
+            showToast(CURRENT_LANG === 'tr' ? "📁 Önce dosya yükleyin" : "📁 Please upload a file first", "warning", 3000);
+        }
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("header_row", SELECTED_HEADER_ROW.toString());
+
+    // Sheet name - doğru değişken adı
+    if (typeof FILE_SELECTED_SHEET !== 'undefined' && FILE_SELECTED_SHEET) {
+        formData.append("sheet_name", FILE_SELECTED_SHEET);
+    }
+
+    // Tüm form verilerini topla (runScenario ile aynı mantık)
+    const paramsData = { is_preview: true };
+
+    // Form ID'yi bul - normal senaryolar için form_scenarioId, PRO için vbSettings olabilir
+    let form = document.getElementById(`form_${scenarioId}`);
+    if (!form) {
+        // Visual Builder için config'i al
+        if (typeof VisualBuilder !== 'undefined' && VisualBuilder.exportToJSON) {
+            const vbConfig = VisualBuilder.exportToJSON();
+            paramsData.config = vbConfig;
+            console.log('🎨 Visual Builder config:', vbConfig);
+        }
+    } else {
+        form.querySelectorAll("input:not([name*='[]']), select, textarea").forEach(el => {
+            if (el.name && el.value) {
+                paramsData[el.name] = el.value;
+            }
+        });
+    }
+
+    formData.append("params", JSON.stringify(paramsData));
+    console.log('📤 Preview params:', paramsData);
+
+    // Preview loading state
+    const previewBtn = document.querySelector('.preview-btn');
+    if (previewBtn) {
+        previewBtn.disabled = true;
+        previewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (CURRENT_LANG === 'tr' ? 'Yükleniyor...' : 'Loading...');
+    }
+
+    try {
+        console.log('🌐 Fetching preview from:', `${BACKEND_BASE_URL}/run/${scenarioId}`);
+        const res = await fetch(`${BACKEND_BASE_URL}/run/${scenarioId}`, { method: "POST", body: formData });
+        const data = await res.json();
+        console.log('📥 Preview response:', data);
+
+        if (res.ok && data.preview_data) {
+            renderPreviewTable(data.preview_data);
+            if (typeof showToast === 'function') {
+                showToast(CURRENT_LANG === 'tr' ? '✓ Önizleme hazır' : '✓ Preview ready', 'success', 2000);
+            }
+        } else if (res.ok) {
+            // Normal result but no preview_data - bu senaryo is_preview desteklemiyor olabilir
+            console.warn('No preview_data in response. Backend may not support is_preview for this scenario.');
+            if (typeof showToast === 'function') {
+                showToast(CURRENT_LANG === 'tr' ? 'Bu senaryo önizleme desteklemiyor' : 'This scenario does not support preview', 'warning', 3000);
+            }
+        } else {
+            throw new Error(data.detail || 'Preview failed');
+        }
+    } catch (e) {
+        console.error('Preview error:', e);
+        if (typeof showToast === 'function') {
+            showToast('❌ ' + e.message, 'error', 5000);
+        }
+    } finally {
+        if (previewBtn) {
+            previewBtn.disabled = false;
+            previewBtn.innerHTML = '<i class="fas fa-eye"></i> ' + (CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview');
+        }
+    }
+}
+
+/**
+ * Önizleme Tablosu Render - Modal olarak gösterilir
+ */
+function renderPreviewTable(previewData) {
+    console.log('📊 renderPreviewTable called with:', previewData);
+
+    // Mevcut modal'ı kaldır
+    let existing = document.getElementById('previewTableContainer');
+    if (existing) existing.remove();
+
+    // Modal overlay oluştur
+    const overlay = document.createElement('div');
+    overlay.id = 'previewTableContainer';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+
+    // ESC ile kapatma
+    overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+    };
+
+    const { columns, rows, truncated, row_limit, total_rows } = previewData;
+
+    // Truncation helper
+    const truncateCell = (val) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        return str.length > 50 ? str.substring(0, 47) + '...' : str;
+    };
+
+    // Modal içeriği
+    const modal = document.createElement('div');
+    modal.className = 'gm-preview-container';
+    modal.style.cssText = `
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    modal.innerHTML = `
+        <div class="gm-preview-header">
+            <h4><i class="fas fa-table"></i> ${CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview'}</h4>
+            <span class="gm-preview-badge">
+                ${CURRENT_LANG === 'tr' ? 'Sadece ilk ' + row_limit + ' satır' : 'First ' + row_limit + ' rows only'}
+                ${truncated ? ' (' + (CURRENT_LANG === 'tr' ? 'toplam ' : 'total ') + total_rows + ')' : ''}
+            </span>
+            <button class="gm-preview-close" onclick="document.getElementById('previewTableContainer').remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="gm-preview-note">
+            <i class="fas fa-info-circle"></i> 
+            ${CURRENT_LANG === 'tr'
+            ? 'Not: Rank/Pivot gibi işlemler küçük örneklemde farklı sonuç verebilir.'
+            : 'Note: Rank/Pivot operations may yield different results on small samples.'}
+        </div>
+        <div class="gm-preview-table-wrapper" style="flex: 1; overflow: auto;">
+            <table class="gm-preview-table">
+                <thead>
+                    <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    ${rows.map(row => `<tr>${columns.map(col => `<td title="${String(row[col] || '')}">${truncateCell(row[col])}</td>`).join('')}</tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    console.log('✅ Preview modal rendered successfully');
+}
+
+// Global erişim için
+window.previewScenario = previewScenario;
+window.renderPreviewTable = renderPreviewTable;
 
 // Yardımcı: JSON Syntax Highlighting
 // Yardımcı: JSON Syntax Highlighting

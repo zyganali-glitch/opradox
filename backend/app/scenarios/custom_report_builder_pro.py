@@ -2511,11 +2511,23 @@ def run(df: pd.DataFrame, params: dict) -> dict:
     
     original_df = df.copy() # Orijinal veriyi sakla (bazı hesaplamalar için gerekebilir)
     
+    # FAZ 2.1: Preview mode kontrolü
+    is_preview = params.get("is_preview", False)
+    if is_preview:
+        # Preview modunda sadece ilk 100 satırı işle
+        df = df.head(100)
+        original_df = original_df.head(100)
+    
     # Config genellikle 'config' anahtarı altında gelir (Frontend'deki tanımlamaya bağlı)
     # Ancak parametre yapısı değişti. Artık direkt 'actions' listesi bekliyoruz.
     # Frontend json_builder_pro'dan gelen veri bir JSON stringi olabilir veya direkt dict.
     
     actions = []
+    
+    # FAZ 1.3: Warnings mekanizması
+    warnings = []
+    applied_steps = 0
+    skipped_steps = 0
     
     # 1. Parametreleri Çözümle
     # 'config' anahtarı varsa ve diğerleri yoksa, muhtemelen yeni yapıdır.
@@ -2671,15 +2683,41 @@ def run(df: pd.DataFrame, params: dict) -> dict:
                 output_config["variables"][var_name] = var_value
                     
         except Exception as e:
-            # Bir adım hata verirse tüm süreci durdurmak yerine o adımı atla ve rapora ekle?
-            # Kullanıcı hatayı görsün
+            # FAZ 1.3: Hata warnings listesine ekleniyor (sessiz hata yok)
+            skipped_steps += 1
+            warnings.append({
+                "step": actions.index(action) + 1,
+                "type": atype,
+                "message": str(e)
+            })
             print(f"Hata ({atype}): {e}")
-            # Opsiyonel: Hata sütunu ekle? Hayır, log yeterli.
 
     # 3. Kod Özeti Oluştur
     generated_code = generate_python_script(actions)
     
-    # 4. Çıktı Oluştur (YENİ: cf_configs ve chart_configs parametreleri eklendi)
+    # FAZ 2.1: Preview modunda Excel oluşturma atla
+    if is_preview:
+        # Sadece JSON veri dön, Excel oluşturma
+        preview_rows = df.head(100).replace({np.nan: None}).to_dict(orient='records')
+        return {
+            "preview_data": {
+                "columns": list(df.columns),
+                "rows": preview_rows,
+                "truncated": len(df) >= 100,
+                "row_limit": 100,
+                "total_rows": len(original_df)
+            },
+            "summary": {
+                "Girdi Satır Sayısı": len(original_df),
+                "Sonuç Satır Sayısı": len(df),
+                "Önizleme": "Sadece ilk 100 satır gösteriliyor."
+            },
+            "warnings": warnings,
+            "applied_steps": applied_steps,
+            "skipped_steps": skipped_steps
+        }
+    
+    # 4. Normal Mod: Çıktı Oluştur
     cf_configs = output_config.pop("cf_configs", None)
     chart_configs = output_config.pop("chart_configs", None)
     excel_buffer = generate_output(df, output_config, original_df, cf_configs, chart_configs)
@@ -2694,6 +2732,10 @@ def run(df: pd.DataFrame, params: dict) -> dict:
         "df_out": df, # Önizleme ve JSON indirme için
         "excel_bytes": excel_buffer, # Özel Excel formatı (renkli/çoklu sayfa) için
         "excel_filename": "oyun_hamuru_pro_sonuc",
+        # FAZ 1.3: Warnings ve step sayaçları
+        "warnings": warnings,
+        "applied_steps": applied_steps,
+        "skipped_steps": skipped_steps,
         "technical_details": {
             "actions": actions,
             "generated_python_code": f"```python\n{generated_code}\n```"

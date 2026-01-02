@@ -460,11 +460,19 @@ const VisualBuilder = {
 
         html += `</div>`;
 
-        // Çalıştır butonu
+        // Çalıştır butonu + FAZ 1.4: Auto-Fix butonu + FAZ 2.2: Önizleme butonu
         html += `
             <div class="vb-canvas-footer">
                 <button class="gm-gradient-btn vb-run-btn" onclick="VisualBuilder.run()">
                     <i class="fas fa-play"></i> ${this.getText({ tr: "Çalıştır", en: "Run" })}
+                </button>
+                <button class="preview-btn" onclick="VisualBuilder.preview()" 
+                        title="${this.getText({ tr: "İlk 100 satırı önizle", en: "Preview first 100 rows" })}">
+                    <i class="fas fa-eye"></i> ${this.getText({ tr: "Önizleme", en: "Preview" })}
+                </button>
+                <button class="vb-autofix-btn" onclick="VisualBuilder.autoFixOrder()" 
+                        title="${this.getText({ tr: "Blok sıralamasını önerilen düzene getir", en: "Auto-fix block order" })}">
+                    <i class="fas fa-wand-magic-sparkles"></i> ${this.getText({ tr: "Sıralamayı Düzelt", en: "Auto-Fix Order" })}
                 </button>
             </div>
         `;
@@ -1102,8 +1110,9 @@ const VisualBuilder = {
         formData.append("sheet_name", sheetName);
 
         try {
-            // Backend'e istek at
-            const response = await fetch("/get-sheet-columns", {
+            // Backend'e istek at - FAZ 1.2: BACKEND_BASE_URL ile standardize edildi
+            const baseUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : '';
+            const response = await fetch(`${baseUrl}/get-sheet-columns`, {
                 method: "POST",
                 body: formData
             });
@@ -1408,10 +1417,17 @@ const VisualBuilder = {
                     break;
 
                 case 'output_settings':
-                    action.freeze_header = block.config.freeze_header;
-                    action.auto_fit_columns = block.config.auto_fit_columns;
+                    // FAZ 1.1: Çıktı Bloğu Serileştirme Düzeltmesi
+                    action.output_type = block.config.output_type || "single_sheet";
+                    action.summary_sheet = !!block.config.summary_sheet;
+                    if (block.config.output_type === "sheet_per_group") {
+                        action.group_by_sheet = block.config.group_by_sheet;
+                        action.drill_down_index = (block.config.drill_down_index !== false);
+                    }
+                    action.freeze_header = (block.config.freeze_header !== false);
+                    action.auto_fit_columns = (block.config.auto_fit_columns !== false);
                     action.number_format = block.config.number_format;
-                    action.header_style = block.config.header_style;
+                    action.header_style = (block.config.header_style !== false);
                     break;
 
                 case 'data_source':
@@ -1682,6 +1698,107 @@ const VisualBuilder = {
             this.renderSettings();
         } catch (err) {
             console.error("Import error:", err);
+        }
+    },
+
+    // ===== FAZ 1.4: AUTO-FIX ORDER =====
+    autoFixOrder() {
+        if (this.blocks.length === 0) {
+            if (typeof showToast === 'function') {
+                showToast(this.getText({ tr: "Düzeltilecek blok yok.", en: "No blocks to fix." }), "info", 2000);
+            }
+            return;
+        }
+
+        // Sıralama: data_source → transform → output
+        const categoryOrder = {
+            'data_source': 0,
+            'lookup_join': 1,
+            'union': 1,
+            'diff': 1,
+            'validate': 1,
+            'filter': 2,
+            'computed': 3,
+            'text_transform': 3,
+            'time_series': 3,
+            'window_function': 4,
+            'formula': 4,
+            'if_else': 4,
+            'grouping': 5,
+            'pivot': 6,
+            'sort': 7,
+            'conditional_format': 8,
+            'chart': 8,
+            'output_settings': 9
+        };
+
+        // Mevcut sıralamayı kontrol et
+        const currentOrder = this.blocks.map(b => categoryOrder[b.type] || 5);
+        let needsFix = false;
+        for (let i = 1; i < currentOrder.length; i++) {
+            if (currentOrder[i] < currentOrder[i - 1]) {
+                needsFix = true;
+                break;
+            }
+        }
+
+        if (!needsFix) {
+            if (typeof showToast === 'function') {
+                showToast(this.getText({ tr: "✓ Blok sıralaması zaten doğru.", en: "✓ Block order is already correct." }), "success", 3000);
+            }
+            return;
+        }
+
+        // Kullanıcıdan onay al
+        const confirmMsg = this.getText({
+            tr: "Blokları önerilen sıraya göre düzenlemek ister misiniz?",
+            en: "Would you like to reorder blocks to the recommended order?"
+        });
+
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        // Sırala
+        this.blocks.sort((a, b) => {
+            const orderA = categoryOrder[a.type] || 5;
+            const orderB = categoryOrder[b.type] || 5;
+            return orderA - orderB;
+        });
+
+        // ID'leri yenile (sıralama sonrası)
+        this.blocks = this.blocks.map((block, index) => ({
+            ...block,
+            id: index + 1
+        }));
+        this.blockIdCounter = this.blocks.length;
+
+        // Yeniden render et
+        this.renderCanvas();
+        this.renderSettings();
+
+        if (typeof showToast === 'function') {
+            showToast(this.getText({ tr: "✓ Bloklar yeniden sıralandı.", en: "✓ Blocks reordered." }), "success", 3000);
+        }
+    },
+
+    // ===== FAZ 2.2: VISUAL BUILDER PREVIEW =====
+    async preview() {
+        if (this.blocks.length === 0) {
+            if (typeof showToast === 'function') {
+                showToast(this.getText({ tr: "⚠️ Önce blok ekleyin", en: "⚠️ Add blocks first" }), "warning", 3000);
+            }
+            return;
+        }
+
+        // previewScenario fonksiyonunu çağır
+        if (typeof window.previewScenario === 'function') {
+            window.previewScenario('custom-report-builder-pro');
+        } else {
+            console.error('previewScenario function not found');
+            if (typeof showToast === 'function') {
+                showToast('Önizleme fonksiyonu bulunamadı', 'error', 3000);
+            }
         }
     }
 };

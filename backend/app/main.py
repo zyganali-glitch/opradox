@@ -306,7 +306,39 @@ async def run_scenario(
     else:
         summary = str(summary_raw)
 
-    # 5. Download URLs
+    # ===== GLOBAL PREVIEW WRAPPER (FAZ 2.2) =====
+    # Eğer is_preview=true ve senaryo kendi preview_data'sını döndürmediyse,
+    # df_out'tan otomatik preview_data oluştur
+    is_preview = params_dict.get("is_preview", False)
+    
+    # Senaryo zaten preview_data döndürdüyse direkt onu kullan
+    if isinstance(result, dict) and "preview_data" in result:
+        return result
+    
+    # Preview mode ve df_out varsa, otomatik preview_data oluştur
+    if is_preview and isinstance(result, dict) and "df_out" in result and result["df_out"] is not None:
+        import numpy as np
+        df_out = result["df_out"]
+        total_rows = len(df_out)
+        preview_df = df_out.head(100)
+        
+        return {
+            "preview_data": {
+                "columns": list(preview_df.columns),
+                "rows": preview_df.replace({np.nan: None}).to_dict(orient='records'),
+                "truncated": total_rows > 100,
+                "row_limit": 100,
+                "total_rows": total_rows
+            },
+            "summary": {
+                "Girdi Satır Sayısı": len(df),
+                "Sonuç Satır Sayısı": total_rows,
+                "Önizleme": "Sadece ilk 100 satır gösteriliyor."
+            },
+            "scenario_id": scenario_id
+        }
+
+    # 5. Download URLs (Normal akış)
     response_data = {
         "summary": summary,
         "technical_details": technical_details,
