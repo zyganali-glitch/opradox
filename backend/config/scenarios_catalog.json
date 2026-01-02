@@ -2,10 +2,10 @@
   {
     "id": "custom-report-builder-pro",
     "category": "reporting_pivot",
-    "title_tr": "Oyun Hamuru PRO (Gelişmiş Dinamik Rapor)",
-    "title_en": "Dynamic Report Builder PRO",
-    "short_tr": "RANK, formül, çoklu sayfa - Profesyonel raporlama gücü!",
-    "short_en": "RANK, formulas, multi-sheet - Professional reporting power!",
+    "title_tr": "Rapor Stüdyosu PRO",
+    "title_en": "Report Studio PRO",
+    "short_tr": "Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.",
+    "short_en": "Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.",
     "status": "implemented",
     "implementation": {
       "module": "app.scenarios.custom_report_builder_pro",
