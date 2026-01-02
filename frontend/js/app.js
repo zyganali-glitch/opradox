@@ -2177,6 +2177,23 @@ function renderAccordionMenu() {
             }
         });
 
+        // Drag-and-drop support - Premium Card'ı dashboard'a sürükle
+        featureCard.draggable = true;
+
+        featureCard.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", JSON.stringify({
+                id: "custom-report-builder-pro",
+                title: CURRENT_LANG === 'tr' ? 'Rapor Stüdyosu PRO' : 'Report Studio PRO',
+                params: [],
+                isPremium: true
+            }));
+            featureCard.classList.add("dragging");
+        });
+
+        featureCard.addEventListener("dragend", () => {
+            featureCard.classList.remove("dragging");
+        });
+
         premiumContainer.appendChild(featureCard);
     }
     // ===== END PREMIUM FEATURE CARD =====
@@ -2344,6 +2361,65 @@ function renderAccordionMenu() {
         });
     });
 }
+
+// ===== DRAG-DROP ZONE SETUP FOR MIDDLE PANE =====
+// Senaryo kartlarını orta panele sürükleyerek aktif edebilme
+function setupMiddlePaneDropZone() {
+    const middlePane = document.querySelector('.gm-middle-pane');
+    if (!middlePane) return;
+
+    // Prevent default to allow drop
+    middlePane.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        middlePane.classList.add('drag-over');
+    });
+
+    middlePane.addEventListener('dragleave', (e) => {
+        // Only remove if leaving the actual element, not children
+        if (e.relatedTarget && middlePane.contains(e.relatedTarget)) return;
+        middlePane.classList.remove('drag-over');
+    });
+
+    middlePane.addEventListener('drop', (e) => {
+        e.preventDefault();
+        middlePane.classList.remove('drag-over');
+
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            if (!data || !data.id) return;
+
+            console.log('📦 Scenario dropped:', data);
+
+            // Find the scenario in SCENARIO_LIST
+            const scenario = SCENARIO_LIST.find(s => s.id === data.id);
+
+            if (data.isPremium || data.id === 'custom-report-builder-pro') {
+                // Premium Card dropped - activate Visual Builder
+                ACTIVE_SCENARIO_ID = 'custom-report-builder-pro';
+                if (scenario) {
+                    document.getElementById('scenarioTitle').textContent = scenario.title;
+                    renderDynamicForm('custom-report-builder-pro', scenario.params || []);
+                    loadScenarioHelp('custom-report-builder-pro');
+                }
+                if (typeof VisualBuilder !== 'undefined' && VisualBuilder.init) {
+                    VisualBuilder.init();
+                }
+                showToast(CURRENT_LANG === 'tr' ? '🎨 Visual Builder açıldı!' : '🎨 Visual Builder opened!', 'success');
+            } else if (scenario) {
+                // Normal scenario dropped
+                selectScenario(scenario, null);
+                showToast(CURRENT_LANG === 'tr' ? `✅ ${scenario.title} seçildi` : `✅ ${scenario.title} selected`, 'success');
+            }
+        } catch (err) {
+            console.warn('Drop data parse error:', err);
+        }
+    });
+
+    console.log('✅ Middle pane drop zone initialized');
+}
+
+// Call setup after renderAccordionMenu is called (deferred)
+setTimeout(setupMiddlePaneDropZone, 500);
 
 async function selectScenario(scenario, btnElement) {
     // Clear both old button format and new card format
