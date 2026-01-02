@@ -20,9 +20,9 @@
 ## 📝 Yapılacaklar (TODO)
 Bu oturumda yarım kalan veya test edilmesi gereken maddeler:
 
-- [ ] **Duplikasyon Temizliği:** "Rapor Stüdyosu PRO" hem Premium Kartta hem de normal "Rapor & Pivot" kategorisinde görünüyor. `renderAccordionMenu` döngüsünde bu ID (`custom-report-builder-pro`) normal listeden filtrelenmeli.
-- [ ] **Mobil Uyumluluk Testi:** Kartın mobildeki görünümü kontrol edilmeli.
-- [ ] **Animasyon Polish:** Hover efektleri ve geçişler incelenmeli.
+- [x] **Duplikasyon Temizliği:** `renderAccordionMenu` döngüsüne filtre eklendi - PRO senaryosu normal listeden çıkarıldı.
+- [x] **Mobil Uyumluluk Testi:** 375px genişlikte test edildi, Premium Card responsive çalışıyor.
+- [x] **Animasyon Polish:** Hover efektleri ve geçişler doğrulandı.
 
 ## Sonraki Adımlar
 Kaldığımız yerden devam ederken `app.js` içindeki `scenarios.forEach` döngüsüne bir filtre ekleyerek PRO senaryosunun tekrar listelenmesini engelleyeceğiz.

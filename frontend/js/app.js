@@ -2260,6 +2260,9 @@ function renderAccordionMenu() {
 
         // Senaryo kartları
         scenarios.forEach(sc => {
+            // Premium Card olarak gösterilen senaryoyu normal listeden atla (duplikasyon önleme)
+            if (sc.id === "custom-report-builder-pro") return;
+
             const card = document.createElement("div");
             card.className = "gm-excel-scenario-card";
             card.dataset.id = sc.id;
