@@ -2169,6 +2169,14 @@ function renderAccordionMenu() {
             const proScenario = SCENARIO_LIST.find(s => s.id === "custom-report-builder-pro");
             if (proScenario) {
                 document.getElementById("scenarioTitle").textContent = proScenario.title;
+                // Subtitle güncelleme - PRO açıklaması
+                const subtitle = document.getElementById("scenarioSubtitle");
+                if (subtitle) {
+                    subtitle.textContent = proScenario.short || proScenario.description ||
+                        (CURRENT_LANG === 'tr'
+                            ? 'Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.'
+                            : 'Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.');
+                }
                 renderDynamicForm("custom-report-builder-pro", proScenario.params || []);
                 loadScenarioHelp("custom-report-builder-pro");
             }
@@ -2398,6 +2406,14 @@ function setupMiddlePaneDropZone() {
                 ACTIVE_SCENARIO_ID = 'custom-report-builder-pro';
                 if (scenario) {
                     document.getElementById('scenarioTitle').textContent = scenario.title;
+                    // Subtitle güncelleme - PRO açıklaması
+                    const subtitle = document.getElementById('scenarioSubtitle');
+                    if (subtitle) {
+                        subtitle.textContent = scenario.short || scenario.description ||
+                            (CURRENT_LANG === 'tr'
+                                ? 'Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.'
+                                : 'Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.');
+                    }
                     renderDynamicForm('custom-report-builder-pro', scenario.params || []);
                     loadScenarioHelp('custom-report-builder-pro');
                 }
