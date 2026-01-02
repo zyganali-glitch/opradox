@@ -628,6 +628,7 @@ const EXTRA_TEXTS = {
         "active": "Aktif",
         "help_placeholder": "Detaylar için senaryo seçin.",
         "waiting_selection": "Seçim Bekleniyor...",
+        "results_placeholder": "// Sonuçlar burada görünecek.",
         "step3_title": "Senaryo Ayarları",
         "pro_coming_soon": "Visual Builder yakında aktif olacak!",
         "new_file": "Yeni Dosya"
@@ -950,6 +951,7 @@ const EXTRA_TEXTS = {
         "active": "Active",
         "help_placeholder": "Select a scenario for details.",
         "waiting_selection": "Waiting for selection...",
+        "results_placeholder": "// Results will appear here.",
         "step3_title": "Scenario Settings",
         "pro_coming_soon": "Visual Builder coming soon!",
         "new_file": "New File"
