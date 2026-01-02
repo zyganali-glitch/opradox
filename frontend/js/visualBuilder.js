@@ -200,7 +200,10 @@ const VisualBuilder = {
                 { value: "top_n", label: { tr: "En Yüksek N", en: "Top N" } },
                 { value: "bottom_n", label: { tr: "En Düşük N", en: "Bottom N" } },
                 { value: "duplicate", label: { tr: "Tekrarlananları İşaretle", en: "Highlight Duplicates" } },
-                { value: "unique", label: { tr: "Benzersizleri İşaretle", en: "Highlight Unique" } }
+                { value: "unique", label: { tr: "Benzersizleri İşaretle", en: "Highlight Unique" } },
+                { value: "text_contains", label: { tr: "Metin İçerir", en: "Text Contains" } },
+                { value: "blanks", label: { tr: "Boş Hücreler", en: "Blanks" } },
+                { value: "no_blanks", label: { tr: "Dolu Hücreler", en: "Non-Blanks" } }
             ]
         },
 
@@ -846,38 +849,7 @@ const VisualBuilder = {
                 }
                 break;
 
-            // ===== ÇIKTI AYARLARI =====
-            case 'output_settings':
-                // Çıktı Tipi
-                html += this.renderSelect("output_type", block.config.output_type || "single_sheet", [
-                    { value: "single_sheet", label: { tr: "📄 Tek Sayfa", en: "📄 Single Sheet" } },
-                    { value: "multi_sheet", label: { tr: "📑 Çoklu Sayfa (Özet + Detay)", en: "📑 Multi Sheet (Summary + Detail)" } },
-                    { value: "sheet_per_group", label: { tr: "📊 Grup Başına Sayfa", en: "📊 Sheet Per Group" } }
-                ], { tr: "Çıktı Tipi", en: "Output Type" });
 
-                // Grup bazlı sayfa için grup sütunu
-                if (block.config.output_type === 'sheet_per_group') {
-                    html += this.renderColumnSelect("group_by_sheet", block.config.group_by_sheet, columns,
-                        { tr: "Grup Sütunu (Her değer için ayrı sayfa)", en: "Group Column (Separate sheet per value)" });
-                    html += this.renderCheckbox("drill_down_index", block.config.drill_down_index !== false,
-                        { tr: "📋 Hyperlink'li İndeks Sayfası Oluştur", en: "📋 Create Hyperlinked Index Sheet" });
-                }
-
-                // Özet Sayfası
-                html += this.renderCheckbox("summary_sheet", block.config.summary_sheet,
-                    { tr: "📈 Özet Sayfası Ekle", en: "📈 Add Summary Sheet" });
-
-                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Excel Formatları", en: "Excel Formatting" })}</strong></div>`;
-
-                html += this.renderCheckbox("freeze_header", block.config.freeze_header !== false,
-                    { tr: "❄️ Başlık Satırını Dondur", en: "❄️ Freeze Header Row" });
-                html += this.renderCheckbox("auto_fit_columns", block.config.auto_fit_columns !== false,
-                    { tr: "📏 Sütun Genişliklerini Otomatik Ayarla", en: "📏 Auto-fit Column Widths" });
-                html += this.renderCheckbox("header_style", block.config.header_style !== false,
-                    { tr: "🎨 Başlık Stilini Uygula (Mavi/Beyaz)", en: "🎨 Apply Header Style (Blue/White)" });
-                html += this.renderInput("number_format", block.config.number_format,
-                    { tr: "Sayı Formatı (örn: #,##0.00)", en: "Number Format (e.g., #,##0.00)" });
-                break;
 
             // ===== UNION (Alt Alta Birleştir) =====
             case 'union':
@@ -1032,6 +1004,45 @@ const VisualBuilder = {
                     </div>
                 </div>`;
                 break;
+
+            // ===== OUTPUT SETTINGS (RESTORED) =====
+            case 'output_settings':
+                const outputTypes = [
+                    { value: "single_sheet", label: { tr: "Tek Sayfa", en: "Single Sheet" } },
+                    { value: "multi_sheet", label: { tr: "Çoklu Sayfa (Detay + Özet)", en: "Multi Sheet (Detail + Summary)" } },
+                    { value: "sheet_per_group", label: { tr: "Her Gruba Ayrı Sayfa", en: "Sheet Per Group" } }
+                ];
+                html += this.renderSelect("output_type", block.config.output_type || "single_sheet", outputTypes, { tr: "Çıktı Tipi", en: "Output Type" });
+
+                // Group params (only for sheet_per_group)
+                if (block.config.output_type === 'sheet_per_group') {
+                    html += `<div style="padding-left:10px; border-left:2px solid var(--gm-primary); margin-bottom:10px;">`;
+                    html += this.renderColumnSelect("group_by_sheet", block.config.group_by_sheet, columns, { tr: "Gruplanacak Sütun", en: "Group Column" });
+                    html += this.renderCheckbox("drill_down_index", block.config.drill_down_index !== false, { tr: "İndeks Sayfası (Linkli)", en: "Index Sheet (Hyperlinked)" });
+                    html += `</div>`;
+                }
+
+                html += this.renderCheckbox("summary_sheet", block.config.summary_sheet, { tr: "Özet Sayfası Ekle", en: "Add Summary Sheet" });
+
+                html += `<div class="vb-form-section"><strong>${this.getText({ tr: "Excel Formatları", en: "Excel Formatting" })}</strong></div>`;
+                html += this.renderCheckbox("freeze_header", block.config.freeze_header !== false, { tr: "❄️ Başlık Satırını Dondur", en: "❄️ Freeze Header Row" });
+                html += this.renderCheckbox("auto_fit_columns", block.config.auto_fit_columns !== false, { tr: "📏 Sütun Genişliklerini Otomatik Ayarla", en: "📏 Auto-fit Column Widths" });
+                html += this.renderCheckbox("header_style", block.config.header_style !== false, { tr: "🎨 Başlık Stilini Uygula (Mavi/Beyaz)", en: "🎨 Apply Header Style (Blue/White)" });
+                html += this.renderInput("number_format", block.config.number_format, { tr: "Sayı Formatı (örn: #,##0.00)", en: "Number Format (e.g., #,##0.00)" });
+
+                // Column Descriptions (New Feature)
+                html += `<div class="vb-form-row">
+                    <label>${this.getText({ tr: "Sütun Açıklamaları (Not)", en: "Column Descriptions (Note)" })}</label>
+                    <textarea name="descriptions_text" class="vb-input" rows="4" 
+                        placeholder="${this.getText({ tr: "Sütun: Açıklama\nSatış: Toplam ciro\nAdet: Satılan miktar", en: "Column: Description\nSales: Total revenue" })}">${block.config.descriptions_text || ''}</textarea>
+                    <div style="font-size:0.7rem; color:var(--gm-text-muted); margin-top:4px;">
+                        ${this.getText({ tr: "Her satıra bir sütun gelecek şekilde 'SütunAdı: Açıklama' formatında yazın.", en: "Format: 'ColumnName: Description' (one per line)." })}
+                    </div>
+                </div>`;
+
+                html += `<div class="vb-separator" style="height:1px; background:var(--gm-card-border); margin:15px 0 10px 0;"></div>`;
+                html += `<div style="font-size:0.75rem; color:var(--gm-text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">${this.getText({ tr: "Görünüm Ayarları", en: "View Settings" })}</div>`;
+                break;
         }
 
         return html;
@@ -1165,8 +1176,8 @@ const VisualBuilder = {
                 this.loadCrossSheetColumns(value);
             }
 
-            // source_type değişikliğinde de ayarları yenile
-            if (key === 'source_type') {
+            // source_type veya output_type değişikliğinde ayarları yenile (dinamik alanlar için)
+            if (key === 'source_type' || key === 'output_type') {
                 this.renderSettings();
             }
 
@@ -1189,7 +1200,7 @@ const VisualBuilder = {
 
         try {
             // Backend'e istek at - FAZ 1.2: BACKEND_BASE_URL ile standardize edildi
-            const baseUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : '';
+            const baseUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : 'http://localhost:8000';
             const response = await fetch(`${baseUrl}/get-sheet-columns`, {
                 method: "POST",
                 body: formData
@@ -1211,9 +1222,15 @@ const VisualBuilder = {
                 }
             } else {
                 console.warn("Sütun çekme hatası:", response.status);
+                if (typeof showToast === 'function') {
+                    showToast(`⚠️ Sütunlar çekilemedi (${response.status})`, "error", 3000);
+                }
             }
         } catch (err) {
             console.error("Crosssheet sütun çekme hatası:", err);
+            if (typeof showToast === 'function') {
+                showToast(`❌ Bağlantı Hatası: ${err.message}`, "error", 4000);
+            }
         }
     },
 
@@ -1506,6 +1523,23 @@ const VisualBuilder = {
                     action.auto_fit_columns = (block.config.auto_fit_columns !== false);
                     action.number_format = block.config.number_format;
                     action.header_style = (block.config.header_style !== false);
+
+                    // Column Descriptions Parsing
+                    if (block.config.descriptions_text) {
+                        const descMap = {};
+                        block.config.descriptions_text.split('\n').forEach(line => {
+                            const parts = line.split(':');
+                            if (parts.length >= 2) {
+                                const col = parts[0].trim();
+                                const desc = parts.slice(1).join(':').trim();
+                                if (col && desc) descMap[col] = desc;
+                            }
+                        });
+                        action.column_descriptions = descMap;
+                    }
+                    else {
+                        action.column_descriptions = {};
+                    }
                     break;
 
                 case 'data_source':
