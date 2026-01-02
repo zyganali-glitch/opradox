@@ -192,7 +192,7 @@ export function applyChartSettings() {
 
     // Grafiği yeniden render et
     if (typeof renderChart === 'function') renderChart(config);
-    showToast('Grafik ayarları uygulandı', 'success');
+    showToast(getText('toast_chart_settings_applied'), 'success');
 }
 
 // -----------------------------------------------------
@@ -333,7 +333,7 @@ export function loadFromSessionStorage() {
             const parsed = JSON.parse(excelData);
             VIZ_STATE.data = parsed.data || [];
             VIZ_STATE.columns = parsed.columns || [];
-            showToast(`Excel Studio'dan ${VIZ_STATE.data.length} satır veri yüklendi`, 'success');
+            showToast(getText('toast_data_loaded_from_excel').replace('{0}', VIZ_STATE.data.length), 'success');
             return true;
         }
     } catch (e) {
@@ -345,9 +345,9 @@ export function loadFromSessionStorage() {
 export function saveToSessionStorage(data, columns) {
     try {
         sessionStorage.setItem('opradox_excel_data', JSON.stringify({ data, columns }));
-        showToast('Veri sessionStorage\'a kaydedildi', 'success');
+        showToast(getText('toast_data_saved_to_session'), 'success');
     } catch (e) {
-        showToast('SessionStorage kayıt hatası', 'error');
+        showToast(getText('toast_session_save_error'), 'error');
     }
 }
 
@@ -549,7 +549,7 @@ export function showVideoHelpModal() {
 export function playHelpVideo(videoKey) {
     const video = HELP_VIDEOS[videoKey];
     if (!video) {
-        showToast('Video bulunamadı', 'error');
+        showToast(getText('toast_video_not_found'), 'error');
         return;
     }
 
@@ -562,7 +562,7 @@ export function playHelpVideo(videoKey) {
         player.style.display = 'block';
         videoEl.src = video.src;
         videoEl.play().catch(() => {
-            showToast('Video yüklenemedi. Dosya mevcut olmayabilir.', 'warning');
+            showToast(getText('toast_video_load_failed'), 'warning');
         });
     }
 }
@@ -623,7 +623,7 @@ export function submitFeedback() {
     const includeState = document.getElementById('feedbackIncludeState')?.checked;
 
     if (!message || message.trim().length < 10) {
-        showToast('Lütfen en az 10 karakter içeren bir mesaj yazın', 'warning');
+        showToast(getText('toast_feedback_min_chars'), 'warning');
         return;
     }
 
@@ -657,7 +657,7 @@ export function submitFeedback() {
     }
 
     closeModal('feedbackModal');
-    showToast('Geri bildiriminiz için teşekkürler! 🙏', 'success');
+    showToast(getText('toast_feedback_thanks'), 'success');
 }
 
 // -----------------------------------------------------
@@ -695,7 +695,7 @@ let annotationCanvas = null;
 export function toggleAnnotationMode() {
     const canvas = document.getElementById('vizCanvas') || document.getElementById('vizDashboardGrid');
     if (!canvas) {
-        showToast('Dashboard alanı bulunamadı', 'warning');
+        showToast(getText('toast_dashboard_area_not_found'), 'warning');
         return;
     }
 
@@ -704,7 +704,7 @@ export function toggleAnnotationMode() {
     if (fabricWrapper) {
         fabricWrapper.remove();
         annotationCanvas = null;
-        showToast('Annotation modu kapatıldı', 'info');
+        showToast(getText('toast_annotation_off'), 'info');
         return;
     }
 
@@ -743,9 +743,9 @@ export function toggleAnnotationMode() {
         `;
         fabricWrapper.appendChild(toolbar);
 
-        showToast('Annotation modu açıldı - Çizmeye başlayın!', 'success');
+        showToast(getText('toast_annotation_on'), 'success');
     } else {
-        showToast('Fabric.js yüklenmedi, annotation kullanılamıyor', 'error');
+        showToast(getText('toast_fabric_not_loaded'), 'error');
     }
 }
 
@@ -782,7 +782,7 @@ export function setAnnotationColor(color) {
 export function clearAnnotations() {
     if (annotationCanvas) {
         annotationCanvas.clear();
-        showToast('Annotations temizlendi', 'info');
+        showToast(getText('toast_annotations_cleared'), 'info');
     }
 }
 
@@ -790,7 +790,7 @@ export function saveAnnotations() {
     if (annotationCanvas) {
         const json = annotationCanvas.toJSON();
         localStorage.setItem('viz_annotations', JSON.stringify(json));
-        showToast('Annotations kaydedildi', 'success');
+        showToast(getText('toast_annotations_saved'), 'success');
     }
 }
 

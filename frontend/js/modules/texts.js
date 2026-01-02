@@ -292,7 +292,23 @@ export const VIZ_TEXTS = {
         chart_bubble_map: 'Bubble Map',
         chart_flow_map: 'Flow Map',
         chart_geo_heatmap: 'Geo Heatmap',
-        chart_point_map: 'Point Map'
+        chart_point_map: 'Point Map',
+
+        // ===== NEW TRANSLATIONS - Toast Messages =====
+        toast_chart_settings_applied: 'Grafik ayarları uygulandı',
+        toast_data_loaded_from_excel: 'Excel Studio\'dan {0} satır veri yüklendi',
+        toast_data_saved_to_session: 'Veri sessionStorage\'a kaydedildi',
+        toast_session_save_error: 'SessionStorage kayıt hatası',
+        toast_video_not_found: 'Video bulunamadı',
+        toast_video_load_failed: 'Video yüklenemedi. Dosya mevcut olmayabilir.',
+        toast_feedback_min_chars: 'Lütfen en az 10 karakter içeren bir mesaj yazın',
+        toast_feedback_thanks: 'Geri bildiriminiz için teşekkürler! 🙏',
+        toast_dashboard_area_not_found: 'Dashboard alanı bulunamadı',
+        toast_annotation_off: 'Annotation modu kapatıldı',
+        toast_annotation_on: 'Annotation modu açıldı - Çizmeye başlayın!',
+        toast_fabric_not_loaded: 'Fabric.js yüklenmedi, annotation kullanılamıyor',
+        toast_annotations_cleared: 'Annotations temizlendi',
+        toast_annotations_saved: 'Annotations kaydedildi'
     },
     en: {
         viz_subtitle: 'Visual Studio',
@@ -582,7 +598,23 @@ export const VIZ_TEXTS = {
         chart_bubble_map: 'Bubble Map',
         chart_flow_map: 'Flow Map',
         chart_geo_heatmap: 'Geo Heatmap',
-        chart_point_map: 'Point Map'
+        chart_point_map: 'Point Map',
+
+        // ===== NEW TRANSLATIONS - Toast Messages =====
+        toast_chart_settings_applied: 'Chart settings applied',
+        toast_data_loaded_from_excel: '{0} rows loaded from Excel Studio',
+        toast_data_saved_to_session: 'Data saved to sessionStorage',
+        toast_session_save_error: 'SessionStorage save error',
+        toast_video_not_found: 'Video not found',
+        toast_video_load_failed: 'Video could not be loaded. File may not exist.',
+        toast_feedback_min_chars: 'Please enter a message with at least 10 characters',
+        toast_feedback_thanks: 'Thank you for your feedback! 🙏',
+        toast_dashboard_area_not_found: 'Dashboard area not found',
+        toast_annotation_off: 'Annotation mode disabled',
+        toast_annotation_on: 'Annotation mode enabled - Start drawing!',
+        toast_fabric_not_loaded: 'Fabric.js not loaded, annotation unavailable',
+        toast_annotations_cleared: 'Annotations cleared',
+        toast_annotations_saved: 'Annotations saved'
     }
 };
 
