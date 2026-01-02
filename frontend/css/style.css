@@ -12314,6 +12314,88 @@ body.day-mode .gm-files-body {
     text-overflow: ellipsis;
 }
 
+/* ===== Palette Categories (Collapsible) ===== */
+.vb-palette-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vb-palette-category {
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.vb-category-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.08), rgba(74, 144, 217, 0.02));
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.vb-category-header:hover {
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.15), rgba(74, 144, 217, 0.05));
+}
+
+.vb-category-header i:first-child {
+    color: var(--gm-primary);
+    font-size: 0.95rem;
+    width: 20px;
+    text-align: center;
+}
+
+.vb-category-header span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gm-text);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vb-category-chevron {
+    font-size: 0.7rem;
+    color: var(--gm-text-muted);
+    transition: transform 0.25s ease;
+}
+
+.vb-palette-category.expanded .vb-category-chevron {
+    transform: rotate(180deg);
+}
+
+.vb-palette-category.expanded .vb-category-header {
+    border-bottom-color: var(--gm-card-border);
+}
+
+.vb-category-blocks {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+}
+
+.vb-palette-category.expanded .vb-category-blocks {
+    display: flex;
+}
+
+/* Blok stilini kategori içinde biraz küçült */
+.vb-category-blocks .vb-palette-block {
+    padding: 8px 10px;
+}
+
+.vb-category-blocks .vb-palette-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+}
+
 /* Orta Panel - Canvas (Ä°ÅŸlem Zinciri) */
 .vb-canvas {
     background: rgba(255, 255, 255, 0.02);

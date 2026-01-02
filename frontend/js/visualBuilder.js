@@ -343,6 +343,52 @@ const VisualBuilder = {
         }
     },
 
+    // ===== PALETTE CATEGORIES (ETL Flow Order) =====
+    paletteCategories: [
+        {
+            id: 'source',
+            name: { tr: 'Kaynak', en: 'Source' },
+            icon: 'fa-database',
+            blocks: ['data_source']
+        },
+        {
+            id: 'clean',
+            name: { tr: 'Temizleme', en: 'Clean' },
+            icon: 'fa-broom',
+            blocks: ['filter', 'text_transform']
+        },
+        {
+            id: 'transform',
+            name: { tr: 'Dönüştürme', en: 'Transform' },
+            icon: 'fa-wand-magic-sparkles',
+            blocks: ['what_if_variable', 'computed', 'formula', 'if_else', 'advanced_computed']
+        },
+        {
+            id: 'reshape',
+            name: { tr: 'Şekillendirme', en: 'Reshape' },
+            icon: 'fa-shapes',
+            blocks: ['grouping', 'pivot', 'sort', 'window_function', 'time_series']
+        },
+        {
+            id: 'combine',
+            name: { tr: 'Birleştirme', en: 'Combine' },
+            icon: 'fa-link',
+            blocks: ['lookup_join', 'union', 'diff', 'validate']
+        },
+        {
+            id: 'visualize',
+            name: { tr: 'Görselleştirme', en: 'Visualize' },
+            icon: 'fa-palette',
+            blocks: ['chart', 'conditional_format']
+        },
+        {
+            id: 'output',
+            name: { tr: 'Çıktı', en: 'Output' },
+            icon: 'fa-file-export',
+            blocks: ['output_settings']
+        }
+    ],
+
     // ===== INITIALIZATION =====
     init() {
         console.log("🎨 VisualBuilder.init()");
@@ -362,24 +408,48 @@ const VisualBuilder = {
         return obj[lang] || obj['tr'] || obj;
     },
 
-    // ===== RENDER PALETTE (Sol Panel - Blok Listesi) =====
+    // ===== RENDER PALETTE (Sol Panel - Kategorili Blok Listesi) =====
     renderPalette() {
         const palette = document.getElementById("vbPalette");
         if (!palette) return;
 
         let html = `<h3 class="vb-palette-title"><i class="fas fa-cubes"></i> ${this.getText({ tr: "Blok Paleti", en: "Block Palette" })}</h3>`;
-        html += `<div class="vb-palette-blocks">`;
+        html += `<div class="vb-palette-categories">`;
 
-        Object.entries(this.blockTypes).forEach(([type, config]) => {
-            const tooltipText = this.getText(config.name) + '\n' + this.getText(config.description);
+        // Kategori bazlı render
+        this.paletteCategories.forEach((category, catIndex) => {
+            const isExpanded = catIndex < 3; // İlk 3 kategori açık başlasın
+
             html += `
-                <div class="vb-palette-block" draggable="true" data-block-type="${type}" title="${tooltipText}">
-                    <div class="vb-palette-icon" data-color="${config.color}">
-                        <i class="fas ${config.icon}"></i>
+                <div class="vb-palette-category ${isExpanded ? 'expanded' : ''}" data-category="${category.id}">
+                    <div class="vb-category-header" onclick="VisualBuilder.toggleCategory('${category.id}')">
+                        <i class="fas ${category.icon}"></i>
+                        <span>${this.getText(category.name)}</span>
+                        <i class="fas fa-chevron-down vb-category-chevron"></i>
                     </div>
-                    <div class="vb-palette-info">
-                        <span class="vb-palette-name">${this.getText(config.name)}</span>
-                        <span class="vb-palette-desc">${this.getText(config.description)}</span>
+                    <div class="vb-category-blocks">
+            `;
+
+            // Kategorideki blokları render et
+            category.blocks.forEach(blockType => {
+                const config = this.blockTypes[blockType];
+                if (!config) return; // Blok tanımlı değilse atla
+
+                const tooltipText = this.getText(config.name) + '\n' + this.getText(config.description);
+                html += `
+                    <div class="vb-palette-block" draggable="true" data-block-type="${blockType}" title="${tooltipText}">
+                        <div class="vb-palette-icon" data-color="${config.color}">
+                            <i class="fas ${config.icon}"></i>
+                        </div>
+                        <div class="vb-palette-info">
+                            <span class="vb-palette-name">${this.getText(config.name)}</span>
+                            <span class="vb-palette-desc">${this.getText(config.description)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
                     </div>
                 </div>
             `;
@@ -402,6 +472,14 @@ const VisualBuilder = {
                 this.addBlock(block.dataset.blockType);
             });
         });
+    },
+
+    // ===== TOGGLE CATEGORY =====
+    toggleCategory(categoryId) {
+        const category = document.querySelector(`.vb-palette-category[data-category="${categoryId}"]`);
+        if (category) {
+            category.classList.toggle('expanded');
+        }
     },
 
     // ===== RENDER CANVAS (Orta Panel - İşlem Zinciri) =====
