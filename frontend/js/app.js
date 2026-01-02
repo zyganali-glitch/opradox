@@ -2130,55 +2130,55 @@ window.copyColumnToInput = function (chip, colName) {
 
 function renderAccordionMenu() {
     const container = document.getElementById("scenarioListContainer");
+    const premiumContainer = document.getElementById("premiumCardContainer");
     if (!container) return;
     container.innerHTML = "";
 
     // ===== PREMIUM FEATURE CARD - RAPOR STÜDYOSU PRO =====
-    const featureCard = document.createElement("div");
-    featureCard.className = "gm-feature-card";
-    featureCard.innerHTML = `
-        <span class="gm-feature-badge">${CURRENT_LANG === 'tr' ? '✦ Öne Çıkan' : '✦ Featured'}</span>
-        <div class="gm-feature-content">
-            <div class="gm-feature-icon">
-                <i class="fas fa-wand-magic-sparkles"></i>
-            </div>
-            <div class="gm-feature-text">
-                <h4 class="gm-feature-title">
-                    ${CURRENT_LANG === 'tr' ? 'Rapor Stüdyosu PRO' : 'Report Studio PRO'}
-                </h4>
-                <p class="gm-feature-desc">
-                    ${CURRENT_LANG === 'tr'
-            ? 'Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.'
-            : 'Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.'}
-                </p>
+    // Premium Card ayrı container'a eklenir (sticky, scroll etmez)
+    if (premiumContainer) {
+        premiumContainer.innerHTML = ""; // Temizle
+
+        const featureCard = document.createElement("div");
+        featureCard.className = "gm-feature-card";
+        featureCard.innerHTML = `
+            <span class="gm-feature-badge">${CURRENT_LANG === 'tr' ? '✦ Öne Çıkan' : '✦ Featured'}</span>
+            <div class="gm-feature-content">
+                <div class="gm-feature-icon">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="gm-feature-text">
+                    <h4 class="gm-feature-title">
+                        ${CURRENT_LANG === 'tr' ? 'Rapor Stüdyosu PRO' : 'Report Studio PRO'}
+                    </h4>
+                    <p class="gm-feature-desc">
+                        ${CURRENT_LANG === 'tr'
+                ? 'Görsel akış tasarlayın. Filtreleme, RANK, çoklu sayfa çıktısı.'
+                : 'Design visual pipelines. Filtering, RANK, multi-sheet exports.'}
+                    </p>
+                </div>
                 <button class="gm-feature-cta">
-                    ${CURRENT_LANG === 'tr' ? 'Stüdyoya Git' : 'Go to Studio'}
                     <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
-        </div>
-    `;
+        `;
 
-    // Feature card tıklama - Visual Builder'ı aktif et
-    featureCard.addEventListener("click", () => {
-        // Aktif senaryoyu ayarla
-        ACTIVE_SCENARIO_ID = "custom-report-builder-pro";
+        // Feature card tıklama - Visual Builder'ı aktif et
+        featureCard.addEventListener("click", () => {
+            ACTIVE_SCENARIO_ID = "custom-report-builder-pro";
+            const proScenario = SCENARIO_LIST.find(s => s.id === "custom-report-builder-pro");
+            if (proScenario) {
+                document.getElementById("scenarioTitle").textContent = proScenario.title;
+                renderDynamicForm("custom-report-builder-pro", proScenario.params || []);
+                loadScenarioHelp("custom-report-builder-pro");
+            }
+            if (typeof VisualBuilder !== 'undefined' && VisualBuilder.init) {
+                VisualBuilder.init();
+            }
+        });
 
-        // Senaryo bilgilerini al
-        const proScenario = SCENARIO_LIST.find(s => s.id === "custom-report-builder-pro");
-        if (proScenario) {
-            document.getElementById("scenarioTitle").textContent = proScenario.title;
-            renderDynamicForm("custom-report-builder-pro", proScenario.params || []);
-            loadScenarioHelp("custom-report-builder-pro");
-        }
-
-        // Visual Builder'ı aktif et
-        if (typeof VisualBuilder !== 'undefined' && VisualBuilder.init) {
-            VisualBuilder.init();
-        }
-    });
-
-    container.appendChild(featureCard);
+        premiumContainer.appendChild(featureCard);
+    }
     // ===== END PREMIUM FEATURE CARD =====
 
     // Kategori İsimleri ve İkonları
