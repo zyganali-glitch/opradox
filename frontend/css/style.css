@@ -12095,7 +12095,7 @@ body.day-mode .gm-files-body {
 /* Ana Container - 3 Kolonlu Grid */
 .gm-visual-builder {
     display: grid;
-    grid-template-columns: 220px 1fr 280px;
+    grid-template-columns: 280px 1fr 280px;
     gap: 16px;
     background: var(--gm-card-bg);
     border: 1px solid var(--gm-card-border);
@@ -13014,7 +13014,8 @@ body:not(.day-mode) .vb-block-icon i {
     flex: 1;
     overflow-y: auto;
 }
- 
+
+ 
  
 /* ===== VISUAL BUILDER HINT BOX - Tema Uyumlu ===== */
 .vb-hint-box {

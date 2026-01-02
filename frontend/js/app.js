@@ -3194,6 +3194,34 @@ function renderDynamicForm(scenarioId, params) {
                                     <textarea class="pro-out-col-desc" placeholder='${CURRENT_LANG === 'tr' ? '{"SütunAdı": "Açıklama...", "Diğer": "Yorum..."}' : '{"ColumnName": "Description...", "Other": "Note..."}'}' style="width:100%; height:50px; font-size:0.75rem; resize:vertical;"></textarea>
                                     <small style="color:var(--gm-text-muted); font-size:0.7rem;">${CURRENT_LANG === 'tr' ? 'JSON formatında. Excel başlık hücrelerine yorum olarak eklenir.' : 'JSON format. Added as comments to Excel header cells.'}</small>
                                 </div>
+                                <hr style="border:none; border-top:1px solid var(--gm-border-color); margin:10px 0;">
+                                <div>
+                                    <label>📐 ${CURRENT_LANG === 'tr' ? 'Excel Formatı' : 'Excel Formatting'}:</label>
+                                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top:5px;">
+                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                            <input type="checkbox" class="pro-out-freeze" checked style="cursor:pointer;">
+                                            ${CURRENT_LANG === 'tr' ? 'Başlığı Dondur' : 'Freeze Header'}
+                                        </label>
+                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                            <input type="checkbox" class="pro-out-autofit" checked style="cursor:pointer;">
+                                            ${CURRENT_LANG === 'tr' ? 'Otomatik Genişlik' : 'Auto-Fit Columns'}
+                                        </label>
+                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                            <input type="checkbox" class="pro-out-header-style" checked style="cursor:pointer;">
+                                            ${CURRENT_LANG === 'tr' ? 'Başlık Stili' : 'Header Style'}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div style="margin-top:8px;">
+                                    <label style="font-size:0.75rem;">${CURRENT_LANG === 'tr' ? 'Sayı Formatı' : 'Number Format'}:</label>
+                                    <select class="pro-out-numformat" style="width:100%;">
+                                        <option value="">${CURRENT_LANG === 'tr' ? 'Varsayılan' : 'Default'}</option>
+                                        <option value="#,##0">${CURRENT_LANG === 'tr' ? 'Tam Sayı (1.234)' : 'Integer (1,234)'}</option>
+                                        <option value="#,##0.00">${CURRENT_LANG === 'tr' ? 'Ondalıklı (1.234,56)' : 'Decimal (1,234.56)'}</option>
+                                        <option value="0.00%">${CURRENT_LANG === 'tr' ? 'Yüzde (12,34%)' : 'Percentage (12.34%)'}</option>
+                                        <option value="₺#,##0.00">${CURRENT_LANG === 'tr' ? 'Para Birimi (₺)' : 'Currency (₺)'}</option>
+                                    </select>
+                                </div>
                             </div>
                         `;
                         } else if (type === 'merge') {
@@ -3330,6 +3358,9 @@ function renderDynamicForm(scenarioId, params) {
                                         <option value="bottom_n">${T.cf_bottom_n || 'En Düşük N'}</option>
                                         <option value="duplicate">${T.cf_duplicate || 'Tekrarlananlar'}</option>
                                         <option value="unique">${T.cf_unique || 'Benzersizler'}</option>
+                                        <option value="text_contains">${T.cf_text_contains || 'Metin İçerir'}</option>
+                                        <option value="blanks">${T.cf_blanks || 'Boş Hücreler'}</option>
+                                        <option value="no_blanks">${T.cf_no_blanks || 'Dolu Hücreler'}</option>
                                     </select>
                                 </div>
                             </div>
@@ -3354,6 +3385,13 @@ function renderDynamicForm(scenarioId, params) {
                                     <div style="flex:1;">
                                         <label style="font-size:0.7rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Değer (Eşik veya N)' : 'Value (Threshold or N)'}</label>
                                         <input type="number" class="pro-cf-threshold" value="10" style="width:100%;">
+                                    </div>
+                                </div>
+                                <!-- Text Contains için -->
+                                <div class="cf-text-fields" style="display:none; gap:8px; margin-top:8px;">
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.7rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Aranacak Metin' : 'Search Text'}</label>
+                                        <input type="text" class="pro-cf-text" placeholder="${CURRENT_LANG === 'tr' ? 'Örn: Hata' : 'e.g. Error'}" style="width:100%;">
                                     </div>
                                 </div>
                             </div>
@@ -3383,6 +3421,11 @@ function renderDynamicForm(scenarioId, params) {
                                     if (thresholdFields) {
                                         thresholdFields.style.display = ['threshold', 'top_n', 'bottom_n'].includes(cfType) ? 'flex' : 'none';
                                     }
+                                    // Text alanı: text_contains
+                                    const textFields = container?.querySelector('.cf-text-fields');
+                                    if (textFields) {
+                                        textFields.style.display = cfType === 'text_contains' ? 'flex' : 'none';
+                                    }
                                 };
 
                                 if (typeSelect) {
@@ -3404,6 +3447,7 @@ function renderDynamicForm(scenarioId, params) {
                                         <option value="pie">${T.chart_pie || 'Pasta Grafik'}</option>
                                         <option value="doughnut">${T.chart_doughnut || 'Halka Grafik'}</option>
                                         <option value="scatter">${T.chart_scatter || 'Dağılım Grafiği'}</option>
+                                        <option value="radar">${T.chart_radar || 'Radar Grafik'}</option>
                                     </select>
                                 </div>
                                 <div style="flex:1; min-width:120px;">
@@ -3832,6 +3876,63 @@ function renderDynamicForm(scenarioId, params) {
                                             columns: body.querySelector('.pro-comp-cols').value.split(',').map(c => c.trim()),
                                             separator: body.querySelector('.pro-comp-sep')?.value || ' '
                                         });
+                                    } else if (ctype === 'if_else') {
+                                        // EĞER-İSE-DEĞİLSE
+                                        const condCol = body.querySelector('.pro-cond-col')?.value.trim();
+                                        if (condCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'if_else',
+                                                condition_column: condCol,
+                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
+                                                condition_value: body.querySelector('.pro-cond-val')?.value || '',
+                                                true_value: body.querySelector('.pro-if-true')?.value || '',
+                                                false_value: body.querySelector('.pro-if-false')?.value || ''
+                                            });
+                                        }
+                                    } else if (ctype === 'date_diff') {
+                                        // TARİH FARKI
+                                        const date1 = body.querySelector('.pro-date-col1')?.value.trim();
+                                        const date2 = body.querySelector('.pro-date-col2')?.value.trim();
+                                        if (date1 && date2) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'date_diff',
+                                                date1_column: date1,
+                                                date2_column: date2,
+                                                unit: body.querySelector('.pro-date-unit')?.value || 'days'
+                                            });
+                                        }
+                                    } else if (ctype === 'countif') {
+                                        // EĞERSAY (COUNTIF)
+                                        const rangeCol = body.querySelector('.pro-range-col')?.value.trim();
+                                        if (rangeCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'countif',
+                                                range_column: rangeCol,
+                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
+                                                criteria: body.querySelector('.pro-cond-val')?.value || ''
+                                            });
+                                        }
+                                    } else if (ctype === 'sumif') {
+                                        // EĞERTOPLA (SUMIF)
+                                        const rangeCol = body.querySelector('.pro-range-col')?.value.trim();
+                                        const sumCol = body.querySelector('.pro-sum-col')?.value.trim();
+                                        if (rangeCol) {
+                                            actions.push({
+                                                type: 'computed',
+                                                name: name,
+                                                ctype: 'sumif',
+                                                range_column: rangeCol,
+                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
+                                                criteria: body.querySelector('.pro-cond-val')?.value || '',
+                                                sum_column: sumCol || rangeCol
+                                            });
+                                        }
                                     } else if (ctype === 'text_transform') {
                                         const sourceCol = body.querySelector('.pro-tt-source')?.value.trim();
                                         const transformType = body.querySelector('.pro-tt-type')?.value || 'remove_parentheses';
@@ -4013,7 +4114,12 @@ function renderDynamicForm(scenarioId, params) {
                                     group_by_sheet: body.querySelector('.pro-out-grp-col').value.trim(),
                                     summary_sheet: body.querySelector('.pro-out-summary').checked,
                                     slicers: slicers.length > 0 ? slicers : null,
-                                    column_descriptions: Object.keys(colDescriptions).length > 0 ? colDescriptions : null
+                                    column_descriptions: Object.keys(colDescriptions).length > 0 ? colDescriptions : null,
+                                    // Excel Format Options (YENİ)
+                                    freeze_header: body.querySelector('.pro-out-freeze')?.checked ?? true,
+                                    auto_fit_columns: body.querySelector('.pro-out-autofit')?.checked ?? true,
+                                    header_style: body.querySelector('.pro-out-header-style')?.checked ?? true,
+                                    number_format: body.querySelector('.pro-out-numformat')?.value || null
                                 });
                             } else if (type === 'merge') {
                                 // İKİNCİ DOSYA - BİRLEŞTİR (VLOOKUP/JOIN)
@@ -4089,6 +4195,10 @@ function renderDynamicForm(scenarioId, params) {
                                         cfAction.threshold = parseInt(body.querySelector('.pro-cf-threshold')?.value || '10');
                                         cfAction.n = cfAction.threshold; // Alias
                                     }
+                                    // text_contains için aranacak metin (YENİ)
+                                    if (cfType === 'text_contains') {
+                                        cfAction.text = body.querySelector('.pro-cf-text')?.value || '';
+                                    }
                                     actions.push(cfAction);
                                 }
                             } else if (type === 'chart') {
@@ -4100,7 +4210,7 @@ function renderDynamicForm(scenarioId, params) {
                                         type: 'chart',
                                         chart_type: body.querySelector('.pro-chart-type')?.value || 'column',
                                         x_column: xCol,
-                                        y_column: yCol,
+                                        y_columns: yCol ? [yCol] : [],
                                         title: body.querySelector('.pro-chart-title')?.value.trim() || ''
                                     });
                                 }
@@ -4970,11 +5080,15 @@ async function runScenario(scenarioId) {
             }
 
             // OYUN HAMURU PRO: Builder Serialization
+            // FIX: Only serialize if pro_actions container exists (Linear Builder only, not VisualBuilder)
             if (el.type === 'hidden' && el.id && el.id.startsWith('pro_config_')) {
                 const configName = el.name;
-                if (window.serializeProConfig) {
+                const proActionsContainer = document.getElementById(`pro_actions_${configName}`);
+                // Guard: Only override if Linear Builder's action list exists AND serializeProConfig is defined
+                if (proActionsContainer && window.serializeProConfig) {
                     el.value = JSON.stringify(window.serializeProConfig(configName));
                 }
+                // If VisualBuilder already set the value, don't override it
             }
 
             // JSON Textarea ise parse etmeye çalış

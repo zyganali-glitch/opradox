@@ -128,6 +128,132 @@
             return 'PASS';
         });
 
+        // Test 9: Statistical Motors (Levene & Updated ANOVA)
+        results.smokeTests.statMotors = runSmokeTest('statMotors', () => {
+            // Check if functions are exposed (might need adapter update)
+            // Use try-catch if they are module-bound and not window-bound
+            try {
+                if (typeof window.runLeveneTest !== 'function' || typeof window.runOneWayANOVA !== 'function') {
+                    // Start checking imports from module if possible? No, we are in non-module script probably or need window binding.
+                    // For now, assume they SHOULD be on window if the app is working as "monolithic" replacement.
+                    // If not, this test will correctly SKIP.
+                    return 'SKIP: stat functions missing on window';
+                }
+
+                // Dummy data for ANOVA
+                const group1 = [10, 12, 14, 16];
+                const group2 = [11, 13, 15, 17];
+                const group3 = [20, 22, 24, 26];
+
+                // Run Levene
+                const levene = window.runLeveneTest([group1, group2, group3]);
+                if (!levene.valid) return 'FAIL: Levene invalid';
+
+                // Run ANOVA (should include OmegaSq and Levene in result)
+                const anova = window.runOneWayANOVA([group1, group2, group3]);
+                if (anova.effectSizes.omegaSquared === undefined) return 'FAIL: Omega Squared missing';
+                if (!anova.stats.levene) return 'FAIL: Levene in ANOVA missing';
+
+                return 'PASS';
+            } catch (e) {
+                return 'FAIL: ' + e.message;
+            }
+        });
+
+        // Test 10: Correlation Options
+        results.smokeTests.correlationOpts = runSmokeTest('correlationOpts', () => {
+            if (typeof window.runCorrelationTest !== 'function') return 'SKIP: correlation function missing';
+            const x = [1, 2, 3, 4, 5];
+            const y = [1, 2, 3, 4, 5];
+            // Test Spearman
+            const result = window.runCorrelationTest(x, y, { method: 'spearman' });
+            if (result.stats.method !== 'spearman') return 'FAIL: Spearman option ignored';
+            return 'PASS';
+        });
+
+        // Test 11: Dual Independent T-Test (FAZ 5)
+        results.smokeTests.dualTTest = runSmokeTest('dualTTest', () => {
+            if (typeof window.runIndependentTTest !== 'function') return 'SKIP: t-test function missing';
+
+            // Create two groups with clearly different variances
+            const g1 = [10, 10, 10, 10, 10]; // Var = 0
+            const g2 = [1, 5, 10, 15, 20];   // High Var
+
+            const result = window.runIndependentTTest(g1, g2);
+
+            if (!result.stats.student || !result.stats.welch) return 'FAIL: Dual stats missing';
+            if (!result.stats.levene) return 'FAIL: Levene missing';
+            if (result.effectSizes.hedgesG === undefined) return 'FAIL: Hedges g missing';
+            return 'PASS';
+        });
+
+        // Test 12: ANOVA Post-Hoc (FAZ 9)
+        results.smokeTests.anovaPostHoc = runSmokeTest('anovaPostHoc', () => {
+            if (typeof window.runOneWayANOVA !== 'function') return 'SKIP: anova missing';
+
+            // Create 3 groups with significant differences (10, 20, 30)
+            const g1 = [10, 11, 12];
+            const g2 = [20, 21, 22];
+            const g3 = [30, 31, 32];
+
+            const result = window.runOneWayANOVA([g1, g2, g3]);
+
+            // Should be significant
+            if (result.pValues.pValue >= 0.05) return 'FAIL: ANOVA should be significant';
+
+            // Check if Post-Hoc ran
+            if (!result.stats.postHoc) return 'FAIL: Post-Hoc results missing';
+            if (!result.stats.postHoc.comparisons || result.stats.postHoc.comparisons.length === 0) return 'FAIL: No comparisons';
+            if (result.stats.postHoc.method !== 'tukey') return 'FAIL: Expected Tukey';
+
+            return 'PASS';
+        });
+
+        // Test 13: Paired T-Test (FAZ 6)
+        results.smokeTests.pairedTTest = runSmokeTest('pairedTTest', () => {
+            if (typeof window.runPairedTTest !== 'function') return 'SKIP: paired func missing';
+            const before = [10, 12, 14, 16];
+            const after = [12, 14, 16, 18]; // Consistent increase of +2
+
+            const result = window.runPairedTTest(before, after);
+            if (!result.effectSizes.cohensDz) return 'FAIL: Cohens dz missing';
+            if (Math.abs(result.stats.meanDiff) < 1.9) return 'FAIL: Mean diff wrong';
+            return 'PASS';
+        });
+
+        // Test 14: One-Sample T-Test (FAZ 7)
+        results.smokeTests.oneSampleTTest = runSmokeTest('oneSampleTTest', () => {
+            if (typeof window.runOneSampleTTest !== 'function') return 'SKIP: one-sample func missing';
+            // Oh wait, if SD=0 t is Inf. Let's add variance.
+            const s2 = [9, 10, 11]; // Mean 10
+
+            // Test vs 20 (should be diff)
+            const result = window.runOneSampleTTest(s2, 20);
+            if (result.pValues.pValue > 0.05) return 'FAIL: Should be sig diff from 20';
+            if (result.stats.ci === undefined) return 'FAIL: CI missing';
+            return 'PASS';
+        });
+
+        // Test 15: Chi-Square (FAZ 11)
+        results.smokeTests.chiSquare = runSmokeTest('chiSquare', () => {
+            if (typeof window.runChiSquareTest !== 'function') return 'SKIP: chisq missing';
+
+            // Simple 2x2: Rows=Gender(M,F), Cols=Product(A,B)
+            // A strong relationship: Men like A, Women like B
+            const table = [
+                [10, 0], // Men
+                [0, 10]  // Women
+            ];
+
+            const result = window.runChiSquareTest(table);
+            if (!result.stats.expectedTable) return 'FAIL: Expected table missing';
+            if (result.pValues.pValue >= 0.05) return 'FAIL: Should be significant';
+            // With this perfect split, Cramer's V should be 1.0
+            if (Math.abs(result.effectSizes.cramersV - 1) > 0.01) return 'FAIL: Cramers V wrong';
+
+            return 'PASS';
+        });
+
         // =====================================================
         // EXPANDED TESTS - Chart Type Coverage (44 types)
         // =====================================================

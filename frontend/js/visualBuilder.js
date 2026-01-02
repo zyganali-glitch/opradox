@@ -22,7 +22,7 @@ const VisualBuilder = {
     blockTypes: {
         // ===== VERİ KAYNAĞI BLOKLARI =====
         data_source: {
-            name: { tr: "📁 Veri Kaynağı", en: "📁 Data Source" },
+            name: { tr: "Veri Kaynağı", en: "Data Source" },
             icon: "fa-database",
             color: "#3b82f6",
             description: { tr: "Dosya ve sayfa seçimi", en: "File and sheet selection" },
@@ -56,7 +56,7 @@ const VisualBuilder = {
 
         // ===== LOOKUP & JOIN BLOKLARI (İKİNCİ DOSYA DESTEĞİ) =====
         lookup_join: {
-            name: { tr: "🔗 VLOOKUP / Birleştir", en: "🔗 VLOOKUP / Join" },
+            name: { tr: "VLOOKUP / Birleştir", en: "VLOOKUP / Join" },
             icon: "fa-link",
             color: "#4a90d9",
             description: { tr: "İki tabloyu birleştir (VLOOKUP/Merge)", en: "Join two tables" },
@@ -83,7 +83,7 @@ const VisualBuilder = {
                 { value: "multiply", label: { tr: "Çarp (×)", en: "Multiply (×)" } },
                 { value: "divide", label: { tr: "Böl (÷)", en: "Divide (÷)" } },
                 { value: "percent", label: { tr: "Yüzde (%)", en: "Percent (%)" } },
-                { value: "multiply_var", label: { tr: "📊 Değişkenle Çarp (What-If)", en: "📊 Multiply by Variable (What-If)" } },
+                { value: "multiply_var", label: { tr: "Değişkenle Çarp (What-If)", en: "Multiply by Variable (What-If)" } },
                 { value: "divide_multiply", label: { tr: "Böl ve Çarp (÷×)", en: "Divide & Multiply" } },
                 { value: "concat", label: { tr: "Metin Birleştir", en: "Concatenate" } },
                 { value: "date_diff", label: { tr: "Tarih Farkı (Gün)", en: "Date Diff (Days)" } },
@@ -95,7 +95,7 @@ const VisualBuilder = {
 
         // ===== ZAMAN SERİSİ BLOKLARI =====
         time_series: {
-            name: { tr: "📅 Zaman Serisi", en: "📅 Time Series" },
+            name: { tr: "Zaman Serisi", en: "Time Series" },
             icon: "fa-calendar-days",
             color: "#9a3050",
             description: { tr: "Tarih bazlı analiz (YTD, YoY, QoQ)", en: "Date-based analysis" },
@@ -111,7 +111,7 @@ const VisualBuilder = {
 
         // ===== WINDOW FONKSİYONLARI =====
         window_function: {
-            name: { tr: "🏆 Sıralama/Rank", en: "🏆 Ranking" },
+            name: { tr: "Sıralama/Rank", en: "Ranking" },
             icon: "fa-trophy",
             color: "#f97316",
             description: { tr: "RANK, Dense Rank, Lead/Lag", en: "RANK, Dense Rank, Lead/Lag" },
@@ -206,7 +206,7 @@ const VisualBuilder = {
 
         // ===== ÇIKTI AYARLARI =====
         output_settings: {
-            name: { tr: "⚙️ Çıktı Ayarları", en: "⚙️ Output Settings" },
+            name: { tr: "Çıktı Ayarları", en: "Output Settings" },
             icon: "fa-cog",
             color: "#64748b",
             description: { tr: "Excel çıktı seçenekleri", en: "Excel output options" },
@@ -215,7 +215,7 @@ const VisualBuilder = {
 
         // ===== YENİ: UNION (Alt Alta Birleştir) =====
         union: {
-            name: { tr: "📋 Alt Alta Birleştir", en: "📋 Union (Append)" },
+            name: { tr: "Alt Alta Birleştir", en: "Union (Append)" },
             icon: "fa-layer-group",
             color: "#0ea5e9",
             description: { tr: "İki tabloyu alt alta ekle", en: "Append two tables" },
@@ -224,7 +224,7 @@ const VisualBuilder = {
 
         // ===== YENİ: DIFF (Fark Bul) =====
         diff: {
-            name: { tr: "🔍 Fark Bul", en: "🔍 Find Difference" },
+            name: { tr: "Fark Bul", en: "Find Difference" },
             icon: "fa-not-equal",
             color: "#ef4444",
             description: { tr: "Ana dosyada olup ikincide olmayan", en: "Records only in main file" },
@@ -233,7 +233,7 @@ const VisualBuilder = {
 
         // ===== YENİ: VALIDATE (Doğrula) =====
         validate: {
-            name: { tr: "✅ Doğrula", en: "✅ Validate" },
+            name: { tr: "Doğrula", en: "Validate" },
             icon: "fa-check-double",
             color: "#22c55e",
             description: { tr: "Referans listeden doğrula", en: "Validate against reference" },
@@ -242,7 +242,7 @@ const VisualBuilder = {
 
         // ===== YENİ: GROUPING (Gruplama ve Toplama) =====
         grouping: {
-            name: { tr: "📊 Grupla ve Topla", en: "📊 Group & Aggregate" },
+            name: { tr: "Grupla ve Topla", en: "Group & Aggregate" },
             icon: "fa-object-group",
             color: "#6366f1",
             description: { tr: "Gruplama ve toplama işlemleri", en: "Group by and aggregate" },
@@ -264,7 +264,7 @@ const VisualBuilder = {
 
         // ===== YENİ: TEXT TRANSFORM (Metin Dönüştürme) =====
         text_transform: {
-            name: { tr: "📝 Metin Dönüştür", en: "📝 Text Transform" },
+            name: { tr: "Metin Dönüştür", en: "Text Transform" },
             icon: "fa-font",
             color: "#84cc16",
             description: { tr: "Metin işlemleri (trim, upper, parantez çıkar)", en: "Text operations" },
@@ -283,7 +283,7 @@ const VisualBuilder = {
 
         // ===== YENİ: ADVANCED COMPUTED (İleri Hesaplamalar) =====
         advanced_computed: {
-            name: { tr: "🧮 İleri Hesaplama", en: "🧮 Advanced Calculation" },
+            name: { tr: "İleri Hesaplama", en: "Advanced Calculation" },
             icon: "fa-square-root-variable",
             color: "#d946ef",
             description: { tr: "Z-Score, Percentile, Yaş, vs.", en: "Z-Score, Percentile, Age, etc." },
@@ -307,7 +307,7 @@ const VisualBuilder = {
 
         // ===== YENİ: IF-ELSE (Koşullu Değer) =====
         if_else: {
-            name: { tr: "🔀 Koşullu Değer", en: "🔀 If-Else" },
+            name: { tr: "Koşullu Değer", en: "If-Else" },
             icon: "fa-code-branch",
             color: "#f43f5e",
             description: { tr: "Koşula göre değer ata", en: "Assign value by condition" },
@@ -326,7 +326,7 @@ const VisualBuilder = {
 
         // ===== YENİ: FORMULA (Serbest Formül) =====
         formula: {
-            name: { tr: "📐 Formül", en: "📐 Formula" },
+            name: { tr: "Formül", en: "Formula" },
             icon: "fa-superscript",
             color: "#0891b2",
             description: { tr: "Serbest formül yazın (ör: A/B*100)", en: "Write free formula" },
@@ -335,7 +335,7 @@ const VisualBuilder = {
 
         // ===== YENİ: WHAT-IF VARIABLE (Senaryo Değişkeni) =====
         what_if_variable: {
-            name: { tr: "🎯 Senaryo Değişkeni", en: "🎯 What-If Variable" },
+            name: { tr: "Senaryo Değişkeni", en: "What-If Variable" },
             icon: "fa-sliders",
             color: "#7c3aed",
             description: { tr: "What-If analizi için değişken tanımla", en: "Define variable for What-If" },
