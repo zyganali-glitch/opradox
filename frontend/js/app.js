@@ -4425,6 +4425,11 @@ function renderDynamicForm(scenarioId, params) {
                 if (colKeywords.some(kw => pName.includes(kw))) shouldShowCols = true;
                 if (excludeKeywords.some(kw => pName.includes(kw))) shouldShowCols = false;
 
+                // FIX: 'value_column' should be a column selector despite having 'value' in name
+                if (pName.includes('value_column') || pName.includes('değer_sütunu') || pName.includes('value_columns') || pName === 'values' || pName === 'columns') {
+                    shouldShowCols = true;
+                }
+
                 let listId = null;
                 if (scenarioNeedsSecondFile && isSecondFileParam) {
                     if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference') || pName.includes('key') || pName.includes('right_on')) {
@@ -4437,6 +4442,34 @@ function renderDynamicForm(scenarioId, params) {
                 }
 
                 // --- PRO STYLE COLUMN SELECTOR INTEGRATION ---
+                // 3. Özel Durum: Hedef Sütun / Yeni Sütun Adı (Manuel giriş ama şık stil)
+                if (p.name === 'target_column' || p.name === 'result_column' || p.name === 'new_column_name') {
+                    const inp = document.createElement("input");
+                    inp.type = "text";
+                    inp.name = p.name;
+                    inp.placeholder = ph || (CURRENT_LANG === 'tr' ? 'Yeni Sütun Adı...' : 'New Column Name...');
+                    // .vb-select sınıfını ekleyerek dropdown gibi görünmesini sağlıyoruz
+                    inp.className = "vb-select";
+                    inp.style.width = "100%";
+                    // Normal input border/bg stillerini ezip vb-select stilini alması için
+                    inp.style.border = "1px solid var(--gm-card-border, #444)";
+                    inp.style.backgroundColor = "var(--gm-card-bg, #222)";
+                    inp.style.color = "var(--gm-text, #eee)";
+
+                    if (p.required === true) inp.required = true;
+
+                    // Hafif focus efekti
+                    inp.onfocus = function () { this.style.borderColor = "var(--gm-primary, #4a90d9)"; };
+                    inp.onblur = function () { this.style.borderColor = "var(--gm-card-border, #444)"; };
+
+                    row.appendChild(inp);
+                    form.appendChild(row);
+                    return; // Diğer koşullara girmesin
+                }
+
+                // 4. Varsayılan: Liste Bazlı Seçim (ProColumnSelector) veya Normal Input
+                // listId yukarıda keyword analizi ile belirlenmişti. Onu kullanıyoruz.
+
                 if (listId === 'colOptions' || listId === 'file2-columns') {
                     // Sütun listesini belirle
                     const columns = (listId === 'colOptions')

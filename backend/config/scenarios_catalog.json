@@ -925,7 +925,8 @@
         "description_tr": "Bu alana, ortalamasını almak istediğiniz sayıları içeren sütunun başlığını yazın. Yanlış yazarsanız, hesaplama yapılamaz ve hata alırsınız. Örneğin: 'Tutar'.",
         "description_en": "Enter the header of the column that contains the numbers you want to average. If you write it incorrectly, the calculation cannot be performed and you will receive an error. For example: 'Amount'.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "criteria_columns",
@@ -1092,6 +1093,17 @@
       "func": "run"
     },
     "params": [
+      {
+        "name": "date_column",
+        "type": "text",
+        "label_tr": "Tarih Sütunu",
+        "label_en": "Date Column",
+        "description_tr": "Periyot için kullanılacak tarih sütunu.",
+        "description_en": "Date column for period.",
+        "placeholder_tr": "Örn: Tarih...",
+        "placeholder_en": "e.g. Date...",
+        "required": true
+      },
       {
         "name": "period_type",
         "type": "select",
@@ -1291,7 +1303,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Bölge' veya 'Ürün Kategorisi' gibi. Eğer bu alanı boş bırakırsanız, tüm veriler için eksik değer sayısını alırsınız. Yanlış bir sütun adı yazarsanız, hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Region' or 'Product Category'. If you leave this field empty, you will get the missing value count for all data. If you enter an incorrect column name, you will receive an error.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1365,8 +1378,8 @@
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Gruplama Sütunu (Opsiyonel)",
-        "label_en": "Grouping Column (Optional)",
+        "label_tr": "Gruplama Sütunu",
+        "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun adını yazın. Örneğin, 'Kategori' gibi. Eğer bu alanı boş bırakırsanız, veriler doğrudan işlenecektir.",
         "description_en": "If you want to group your data by a specific criterion, enter the name of that column in this field, such as 'Category'. If you leave this field empty, the data will be processed directly.",
         "placeholder_tr": "Örn: Kategori...",
@@ -1446,7 +1459,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Kategori' yazabilirsiniz. Eğer bu sütun adını yanlış yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, you can write 'Category'. If you write this column name incorrectly, the operation will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Kategori...",
-        "placeholder_en": "e.g. Category..."
+        "placeholder_en": "e.g. Category...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -1669,7 +1683,8 @@
         "description_tr": "Bu alana, iki sayısal sütun arasındaki korelasyonu ölçmek istediğiniz birinci sütunun başlığını yazmalısınız. Örneğin, 'Satış Tutarı' yazabilirsiniz. Eğer bu sütun adını yanlış yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "In this field, you should write the header of the first column whose correlation you want to measure. For example, you can write 'Sales Amount'. If you misspell this column name, the operation will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "column2",
@@ -1679,7 +1694,8 @@
         "description_tr": "Bu alana, korelasyonunu ölçmek istediğiniz ikinci sayısal sütunun başlığını yazmalısınız. Örneğin, 'Maliyet' yazabilirsiniz. Eğer bu sütun adını yanlış yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "In this field, you should write the header of the second column whose correlation you want to measure. For example, you can write 'Cost'. If you misspell this column name, the operation will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Maliyet...",
-        "placeholder_en": "e.g. Cost..."
+        "placeholder_en": "e.g. Cost...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -2000,8 +2016,8 @@
       {
         "name": "return_mode",
         "type": "select",
-        "label_tr": "Dönüş Tipi (Opsiyonel)",
-        "label_en": "Return Type (Optional)",
+        "label_tr": "Dönüş Tipi",
+        "label_en": "Return Type",
         "description_tr": "Bu alanda, sonuçların nasıl döneceğini seçmelisiniz. 'summary' seçerseniz, sadece özet bilgileri alırsınız. 'summary_and_rows' seçerseniz, hem özet bilgileri hem de filtrelenmiş satırları Excel dosyası olarak alırsınız.",
         "description_en": "In this field, you should choose how you want the results to be returned. If you select 'summary', you will receive only summary information. If you select 'summary_and_rows', you will receive both summary information and the filtered rows as an Excel file.",
         "placeholder_tr": "",
@@ -2392,8 +2408,8 @@
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Grup Sütunu (Opsiyonel)",
-        "label_en": "Group Column (Optional)",
+        "label_tr": "Grup Sütunu",
+        "label_en": "Group Column",
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazın. Örneğin, 'Kategori' yazabilirsiniz. Bu alanı boş bırakabilirsiniz.",
         "description_en": "If you want to group your data by a specific criterion, enter the header of that column here. For example, you can write 'Category'. You can leave this field blank.",
         "placeholder_tr": "Örn: Kategori...",
@@ -2503,7 +2519,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Bölge' veya 'Ürün Kategorisi' gibi. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmeyecek ve hata alacaksınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Region' or 'Product Category'. If you enter an incorrect column name, the process will not execute, and you will receive an error.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       },
       {
         "name": "distinct_column",
@@ -2513,7 +2530,8 @@
         "description_tr": "Bu alana, tekil kayıt sayısını bulmak istediğiniz sütunun adını yazın. Örneğin, 'Müşteri Adı' veya 'Ürün Kodu' gibi. Eğer bu sütun adı yanlışsa, yine hata alacaksınız.",
         "description_en": "Enter the name of the column for which you want to count distinct records. For example, 'Customer Name' or 'Product Code'. If this column name is incorrect, you will receive an error.",
         "placeholder_tr": "Örn: Müşteri Adı...",
-        "placeholder_en": "e.g. Customer Name..."
+        "placeholder_en": "e.g. Customer Name...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -2794,8 +2812,8 @@
       {
         "name": "result_column",
         "type": "text",
-        "label_tr": "Sonuç Sütunu Adı (Opsiyonel)",
-        "label_en": "Result Column Name (Optional)",
+        "label_tr": "Sonuç Sütunu Adı",
+        "label_en": "Result Column Name",
         "description_tr": "Bu alana, sonuçların hangi sütunda gösterileceğini belirlemek için bir isim yazmalısınız. Örneğin, 'Sonuç'. Eğer boş bırakırsanız, otomatik olarak 'Fiyat_lookup' olarak adlandırılır.",
         "description_en": "Here, you should enter a name for the column where the results will be displayed. For example, 'Result'. If you leave it blank, it will be automatically named 'Price_lookup'.",
         "placeholder_tr": "Örn: Sonuç...",
@@ -2816,8 +2834,8 @@
       {
         "name": "return_column",
         "type": "text",
-        "label_tr": "Dönüş Sütunu (Opsiyonel)",
-        "label_en": "Return Column (Optional)",
+        "label_tr": "Dönüş Sütunu",
+        "label_en": "Return Column",
         "default": "Sonuç"
       }
     ],
@@ -2925,8 +2943,8 @@
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Gruplama Sütunu (Opsiyonel)",
-        "label_en": "Group Column (Optional)",
+        "label_tr": "Gruplama Sütunu",
+        "label_en": "Group Column",
         "description_tr": "Eğer verilerinizi gruplamak istiyorsanız, bu alana gruplama yapmak istediğiniz sütunun başlığını yazın. Örneğin: 'Ürün'. Eğer bu alanı boş bırakırsanız, veriler tek bir grup olarak işlenecektir.",
         "description_en": "If you want to group your data, enter the header of the column you want to group by. For example: 'Product'. If you leave this field empty, the data will be processed as a single group.",
         "placeholder_tr": "Örn: Ürün...",
@@ -2935,8 +2953,8 @@
       {
         "name": "value_column",
         "type": "text",
-        "label_tr": "Değer Sütunu (Opsiyonel)",
-        "label_en": "Value Column (Optional)",
+        "label_tr": "Değer Sütunu",
+        "label_en": "Value Column",
         "description_tr": "Eğer tarihlerinize karşılık gelen değerlerin bulunduğu sütunun başlığını yazın. Örneğin: 'Satış Tutarı'. Eğer bu alanı boş bırakırsanız, sadece tarihler listelenecektir.",
         "description_en": "Enter the header of the column where the values corresponding to your dates are located. For example: 'Sales Amount'. If you leave this field empty, only the dates will be listed.",
         "placeholder_tr": "Örn: Satış Tutarı...",
@@ -2959,7 +2977,8 @@
         "option_labels_tr": {
           "sum": "Toplam",
           "mean": "Ortalama"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3512,7 +3531,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Müşteri Adı' veya 'Ürün Kodu' gibi. Eğer yanlış bir isim yazarsanız, hata alırsınız ve işlem gerçekleşmez.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Customer Name' or 'Product Code'. If you enter an incorrect name, you will receive an error and the process will not proceed.",
         "placeholder_tr": "Örn: Müşteri Adı...",
-        "placeholder_en": "e.g. Customer Name..."
+        "placeholder_en": "e.g. Customer Name...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -3614,8 +3634,8 @@
       {
         "name": "flag_column",
         "type": "text",
-        "label_tr": "Bayrak Sütunu Adı (Opsiyonel)",
-        "label_en": "Flag Column Name (Optional)",
+        "label_tr": "Bayrak Sütunu Adı",
+        "label_en": "Flag Column Name",
         "description_tr": "Bu alana, sonuçlarınızda hangi sütunun 'EVET' veya 'HAYIR' olarak işaretleneceğini belirten başlığı yazmalısınız. Örneğin, 'Durum' yazabilirsiniz. Eğer bu alanı boş bırakırsanız, işlem gerçekleşmeyecektir.",
         "description_en": "In this field, you should write the header that indicates which column will be marked as 'YES' or 'NO' in your results. For example, you can write 'Status'. If you leave this field empty, the process will not proceed.",
         "placeholder_tr": "Örn: Durum...",
@@ -3630,7 +3650,8 @@
         "description_tr": "Bu alana, hangi sütundaki verilere göre 'EVET' veya 'HAYIR' bayrağı koymak istediğinizi belirtin. Örneğin, 'Satış' yazabilirsiniz. Eğer bu sütun mevcut değilse, işlem gerçekleşmeyecektir.",
         "description_en": "In this field, specify which column's values you want to use to determine the 'YES' or 'NO' flag. For example, you can write 'Sales'. If this column does not exist, the process will not proceed.",
         "placeholder_tr": "Örn: Satış...",
-        "placeholder_en": "e.g. Sales..."
+        "placeholder_en": "e.g. Sales...",
+        "required": true
       },
       {
         "name": "condition_operator",
@@ -3660,7 +3681,8 @@
           "<=": "Küçük Eşit",
           "in": "İçinde",
           "not in": "İçinde Değil"
-        }
+        },
+        "required": true
       },
       {
         "name": "condition_value",
@@ -3981,7 +4003,8 @@
           "month": "Ay",
           "product": "Ürün",
           "region": "Bölge"
-        }
+        },
+        "required": true
       },
       {
         "name": "column_field",
@@ -4021,7 +4044,8 @@
         "option_labels_tr": {
           "count": "Say",
           "sum": "Topla"
-        }
+        },
+        "required": true
       },
       {
         "name": "value_column",
@@ -4257,7 +4281,8 @@
         "description_tr": "Bu alana, renklendirmek istediğiniz en yüksek veya en düşük kaç değeri seçeceğinizi yazmalısınız. Örneğin, '5' yazarsanız, en yüksek veya en düşük 5 değeri renklendirilir. Negatif veya sıfır yazarsanız hata alırsınız.",
         "description_en": "In this field, you should write how many of the highest or lowest values you want to highlight. For example, if you write '5', the top or bottom 5 values will be highlighted. If you write a negative number or zero, you will receive an error.",
         "placeholder_tr": "Örn: 5...",
-        "placeholder_en": "e.g. 5..."
+        "placeholder_en": "e.g. 5...",
+        "required": true
       },
       {
         "name": "mode",
@@ -4275,13 +4300,14 @@
         "option_labels_tr": {
           "top": "En Yüksek",
           "bottom": "En Düşük"
-        }
+        },
+        "required": true
       },
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Gruplama Sütunu (Opsiyonel)",
-        "label_en": "Grouping Column (Optional)",
+        "label_tr": "Gruplama Sütunu",
+        "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi bir gruba göre renklendirmek istiyorsanız, bu alana gruplamak istediğiniz sütunun başlığını yazın. Örneğin, 'Kategori'. Eğer bu alanı boş bırakırsanız, tüm veriler tek bir grup olarak işlenecektir.",
         "description_en": "If you want to highlight your data based on a group, write the header of the column you want to group by in this field. For example, 'Category'. If you leave this field blank, all data will be processed as a single group.",
         "placeholder_tr": "Örn: Kategori...",
@@ -4396,8 +4422,8 @@
       {
         "name": "lower_threshold",
         "type": "text",
-        "label_tr": "Alt Eşik Değeri (Opsiyonel)",
-        "label_en": "Lower Threshold Value (Optional)",
+        "label_tr": "Alt Eşik Değeri",
+        "label_en": "Lower Threshold Value",
         "description_tr": "Alt eşik değeri. Boş bırakılırsa otomatik hesaplanır (Q1 - 1.5*IQR).",
         "description_en": "Lower threshold. If empty, calculated automatically (Q1 - 1.5*IQR).",
         "placeholder_tr": "Örn: 100...",
@@ -4406,8 +4432,8 @@
       {
         "name": "upper_threshold",
         "type": "text",
-        "label_tr": "Üst Eşik Değeri (Opsiyonel)",
-        "label_en": "Upper Threshold Value (Optional)",
+        "label_tr": "Üst Eşik Değeri",
+        "label_en": "Upper Threshold Value",
         "description_tr": "Üst eşik değeri. Boş bırakılırsa otomatik hesaplanır (Q3 + 1.5*IQR).",
         "description_en": "Upper threshold. If empty, calculated automatically (Q3 + 1.5*IQR).",
         "placeholder_tr": "Örn: 200...",
@@ -4416,8 +4442,8 @@
       {
         "name": "lower_color",
         "type": "text",
-        "label_tr": "Alt Eşik Rengi (Opsiyonel)",
-        "label_en": "Lower Threshold Color (Optional)",
+        "label_tr": "Alt Eşik Rengi",
+        "label_en": "Lower Threshold Color",
         "description_tr": "Bu alana, alt eşik değerinin altında kalan hücrelerin renklendirilmesi için istediğiniz rengi belirtin. Renk kodunu 'FFFF0000' gibi yazabilirsiniz. Eğer bir renk girmezseniz, varsayılan olarak kırmızı kullanılacaktır.",
         "description_en": "Enter the color you want for highlighting cells below the lower threshold. You can write the color code like 'FFFF0000'. If you do not enter a color, red will be used by default.",
         "placeholder_tr": "Örn: FFFF0000...",
@@ -4427,8 +4453,8 @@
       {
         "name": "upper_color",
         "type": "text",
-        "label_tr": "Üst Eşik Rengi (Opsiyonel)",
-        "label_en": "Upper Threshold Color (Optional)",
+        "label_tr": "Üst Eşik Rengi",
+        "label_en": "Upper Threshold Color",
         "description_tr": "Bu alana, üst eşik değerinin üstünde kalan hücrelerin renklendirilmesi için istediğiniz rengi belirtin. Renk kodunu 'FF00FF00' gibi yazabilirsiniz. Eğer bir renk girmezseniz, varsayılan olarak yeşil kullanılacaktır.",
         "description_en": "Enter the color you want for highlighting cells above the upper threshold. You can write the color code like 'FF00FF00'. If you do not enter a color, green will be used by default.",
         "placeholder_tr": "Örn: FF00FF00...",
@@ -4737,7 +4763,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre filtreleyecekseniz o sütunun adını yazın. Örneğin, 'Ürün Kategorisi' veya 'Bölge' gibi. Eğer yanlış bir ad yazarsanız, işlem yapılamaz ve hata alırsınız.",
         "description_en": "Enter the name of the column you want to filter your data by. For example, 'Product Category' or 'Region'. If you enter an incorrect name, the operation cannot be performed and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Kategorisi...",
-        "placeholder_en": "e.g. Product Category..."
+        "placeholder_en": "e.g. Product Category...",
+        "required": true
       },
       {
         "name": "condition_value",
@@ -4774,7 +4801,8 @@
         "option_labels_tr": {
           "max": "Maksimum",
           "min": "Minimum"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -4888,7 +4916,8 @@
         "description_tr": "Bu alana, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın. Örneğin, 'Ürün Adı', 'Müşteri ID' gibi. Eğer bu alanı yanlış yazarsanız, arama işlemi gerçekleşmez ve hata alırsınız.",
         "description_en": "In this field, write the names of the columns you want to search your data by. For example, 'Product Name', 'Customer ID', etc. If you write this field incorrectly, the search will not work and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "lookup_values",
@@ -5018,7 +5047,8 @@
         "description_tr": "Bu alana, oluşturulacak yeni etiket sütununun adını yazmalısınız. Eğer bu alanı boş bırakırsanız, işlem gerçekleşmeyecek. Örneğin, 'Yaş Grupları' gibi bir isim verebilirsiniz.",
         "description_en": "In this field, you should enter the name of the new label column that will be created. If you leave this field blank, the process will not proceed. For example, you can name it 'Age Groups'.",
         "placeholder_tr": "Örn: Yaş Grupları...",
-        "placeholder_en": "e.g. Age Groups..."
+        "placeholder_en": "e.g. Age Groups...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -5379,7 +5409,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Bölüm' ya da 'Ürün Adı' gibi. Eğer yanlış bir isim yazarsanız, analiz çalışmaz ve hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Department' or 'Product Name'. If you enter an incorrect name, the analysis will not work and you will receive an error.",
         "placeholder_tr": "Örn: Bölüm...",
-        "placeholder_en": "e.g. Department..."
+        "placeholder_en": "e.g. Department...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -5512,7 +5543,8 @@
         "description_tr": "Bu alana, hesaplamak istediğiniz yüzdelik değerlerini yazmalısınız. Örneğin, '25, 50, 75' gibi. Eğer yanlış bir değer girerseniz veya değerler 0 ile 100 arasında değilse, hata alacaksınız.",
         "description_en": "In this field, you should write the percentiles you want to calculate. For example, '25, 50, 75'. If you enter an incorrect value or if the values are not between 0 and 100, you will receive an error.",
         "placeholder_tr": "Örn: 25, 50, 75...",
-        "placeholder_en": "e.g. 25, 50, 75..."
+        "placeholder_en": "e.g. 25, 50, 75...",
+        "required": true
       },
       {
         "name": "group_column",
@@ -5522,7 +5554,8 @@
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazmalısınız. Örneğin, 'Bölge' veya 'Ürün Kategorisi'. Eğer bu sütun adını yanlış yazarsanız, hata mesajı alacaksınız.",
         "description_en": "If you want to group your data by a specific criterion, you should write the header of that column in this field. For example, 'Region' or 'Product Category'. If you write this column name incorrectly, you will receive an error message.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -5621,7 +5654,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kriterlere göre gruplayacaksanız o sütunların adlarını yazın. Örneğin, şehir ve ürün gibi. En az iki sütun girmelisiniz. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "In this field, enter the names of the columns by which you want to group your data. For instance, city and product. You must enter at least two columns. If you enter an incorrect column name, the operation will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Şehir, Ürün...",
-        "placeholder_en": "e.g. City, Product..."
+        "placeholder_en": "e.g. City, Product...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -5656,7 +5690,8 @@
           "min": "Minimum",
           "max": "Maksimum",
           "median": "Medyan"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -5768,13 +5803,14 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre satırlara yerleştirecekseniz o sütunun adını yazın. Örneğin, 'Kategori' yazarsanız, her bir kategori için ayrı bir satır oluşturulur. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmez ve hata mesajı alırsınız.",
         "description_en": "In this field, enter the name of the column by which you want to organize your data into rows. For example, if you write 'Category', a separate row will be created for each category. If you enter an incorrect column name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Kategori...",
-        "placeholder_en": "e.g. Category..."
+        "placeholder_en": "e.g. Category...",
+        "required": true
       },
       {
         "name": "column_field",
         "type": "text",
-        "label_tr": "Sütun Kriteri (Opsiyonel)",
-        "label_en": "Column Criteria (Optional)",
+        "label_tr": "Sütun Kriteri",
+        "label_en": "Column Criteria",
         "description_tr": "Bu alana, verilerinizi hangi kritere göre sütunlara yerleştirecekseniz o sütunun adını yazın. Örneğin, 'Ürün' yazarsanız, her bir ürün için ayrı bir sütun oluşturulur. Eğer bu alanı boş bırakırsanız, sadece satır bazında toplamlar gösterilecektir.",
         "description_en": "In this field, enter the name of the column by which you want to organize your data into columns. For example, if you write 'Product', a separate column will be created for each product. If you leave this field blank, only row-based totals will be shown.",
         "placeholder_tr": "Örn: Ürün...",
@@ -5815,7 +5851,8 @@
           "min": "En Küçük",
           "max": "En Büyük",
           "median": "Medyan"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -5931,7 +5968,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, satışları bölgelere göre gruplamak istiyorsanız, buraya 'Bölge' yazmalısınız. Eğer bu alanı yanlış yazarsanız veya boş bırakırsanız, işlem gerçekleşmeyecek.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, if you want to group sales by regions, you should write 'Region' here. If this field is written incorrectly or left empty, the process will not proceed.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -5947,18 +5985,19 @@
       {
         "name": "row_field",
         "type": "text",
-        "label_tr": "Satır Sütunu (Opsiyonel)",
-        "label_en": "Row Field (Optional)",
+        "label_tr": "Satır Kriteri",
+        "label_en": "Row Criterion",
         "description_tr": "Eğer verilerinizi daha detaylı bir şekilde görmek istiyorsanız, bu alana ek bir satır sütununun adını yazabilirsiniz. Örneğin, 'Ürün' yazarsanız, her bir ürün için ayrı satırlar oluşturulur. Bu alanı boş bırakabilirsiniz.",
         "description_en": "If you want to see your data in more detail, you can enter the name of an additional row column here. For example, if you write 'Product', separate rows will be created for each product. You can leave this field empty.",
         "placeholder_tr": "Örn: Ürün...",
-        "placeholder_en": "e.g. Product..."
+        "placeholder_en": "e.g. Product...",
+        "required": true
       },
       {
         "name": "column_field",
         "type": "text",
-        "label_tr": "Sütun Sütunu (Opsiyonel)",
-        "label_en": "Column Field (Optional)",
+        "label_tr": "Sütun Kriteri",
+        "label_en": "Column Criterion",
         "description_tr": "Verilerinizi sütunlara ayırmak isterseniz, bu alana bir sütun sütununun adını yazabilirsiniz. Örneğin, 'Yıl' yazarsanız, veriler yıllara göre sütunlara ayrılır. Bu alanı boş bırakabilirsiniz.",
         "description_en": "If you want to separate your data into columns, you can enter the name of a column field here. For example, if you write 'Year', the data will be divided into columns by year. You can leave this field empty.",
         "placeholder_tr": "Örn: Yıl...",
@@ -5973,6 +6012,7 @@
         "description_en": "In this field, select which function you want to use to aggregate your data. For example, if you choose 'sum', you will get the total of the values. If you choose 'mean', you will get the average. If you select a function that is not supported here, the process will not proceed.",
         "placeholder_tr": "",
         "placeholder_en": "",
+        "required": true,
         "options": [
           "sum",
           "mean",
@@ -6104,7 +6144,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Ürün Kategorisi' gibi. Eğer yanlış bir ad yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Product Category'. If you enter an incorrect name, the process will fail and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Kategorisi...",
-        "placeholder_en": "e.g. Product Category..."
+        "placeholder_en": "e.g. Product Category...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -6143,7 +6184,8 @@
           "max": "Maksimum",
           "median": "Medyan",
           "std": "Standart Sapma"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -6413,7 +6455,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Müşteri Adı' yazarsanız, aynı müşteri adına sahip olan tüm kayıtlar bir grup olarak değerlendirilir. Eğer burada yanlış bir isim yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "In this field, enter the name of the column by which you want to group your data. For example, if you write 'Customer Name', all records with the same customer name will be considered as one group. If you write an incorrect name here, the process will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Müşteri Adı...",
-        "placeholder_en": "e.g. Customer Name..."
+        "placeholder_en": "e.g. Customer Name...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -6512,7 +6555,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Ürün', 'Bölge' gibi. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Product', 'Region', etc. If you enter an incorrect column name, the process will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Ürün...",
-        "placeholder_en": "e.g. Product..."
+        "placeholder_en": "e.g. Product...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -6528,8 +6572,8 @@
       {
         "name": "aggfunc",
         "type": "select",
-        "label_tr": "Toplama Fonksiyonu (Opsiyonel)",
-        "label_en": "Aggregation Function (Optional)",
+        "label_tr": "Toplama Fonksiyonu",
+        "label_en": "Aggregation Function",
         "description_tr": "Gruplama sonrası hangi fonksiyon uygulanacak? Boş bırakırsanız sadece filtreleme yapılır.",
         "description_en": "Which function to apply after grouping? Leave empty for filtering only.",
         "placeholder_tr": "Seçin...",
@@ -6658,7 +6702,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Ürün Kategorisi' gibi. Eğer yanlış bir isim yazarsanız, hata alırsınız ve işlem gerçekleştirilmez.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Product Category'. If you enter an incorrect name, you will receive an error and the process will not be completed.",
         "placeholder_tr": "Örn: Ürün Kategorisi...",
-        "placeholder_en": "e.g. Product Category..."
+        "placeholder_en": "e.g. Product Category...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -6769,7 +6814,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Bölge' veya 'Ürün Kategorisi' gibi. Eğer yanlış bir isim yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Region' or 'Product Category'. If you enter an incorrect name, the process will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -6891,7 +6937,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kriterlere göre satırlara yerleştirmek istiyorsanız o sütunun adını yazın. Örneğin, 'Ürün Adı' veya 'Müşteri Adı' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, write the name of the column by which you want to organize your data into rows. For example, 'Product Name' or 'Customer Name'. If you write an incorrect name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "column_field",
@@ -6901,7 +6948,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kriterlere göre sütunlara yerleştirmek istiyorsanız o sütunun adını yazın. Örneğin, 'Satış Tarihi' veya 'Bölge' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, write the name of the column by which you want to organize your data into columns. For example, 'Sales Date' or 'Region'. If you write an incorrect name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Satış Tarihi...",
-        "placeholder_en": "e.g. Sales Date..."
+        "placeholder_en": "e.g. Sales Date...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -6992,7 +7040,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre satırlara yerleştirecekseniz o sütunun adını yazın. Örneğin, 'Ürün Adı' yazarsanız, her bir ürün için ayrı bir satır oluşturulur. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to organize your data into rows. For example, if you write 'Product Name', a separate row will be created for each product. If you write an incorrect name, the process will fail and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "column_field",
@@ -7002,7 +7051,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre sütunlara yerleştirecekseniz o sütunun adını yazın. Örneğin, 'Bölge' yazarsanız, her bir bölge için ayrı bir sütun oluşturulur. Yanlış bir isim yazarsanız, hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to organize your data into columns. For example, if you write 'Region', a separate column will be created for each region. If you write an incorrect name, you will receive an error.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -7024,6 +7074,7 @@
         "description_en": "Select how you want to calculate your values. You can choose from 'Sum', 'Mean', 'Count', 'Min', or 'Max'. If you make an incorrect selection, you will receive an error.",
         "placeholder_tr": "Seçin...",
         "placeholder_en": "Select...",
+        "required": true,
         "options": [
           "sum",
           "mean",
@@ -7272,7 +7323,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Bölge' veya 'Ürün Kategorisi' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Region' or 'Product Category'. If you enter an incorrect name, the operation will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -7408,12 +7460,13 @@
       {
         "name": "id_column",
         "type": "text",
-        "label_tr": "Kimlik Sütunu (Opsiyonel)",
-        "label_en": "ID Column (Optional)",
+        "label_tr": "Kimlik Sütunu",
+        "label_en": "ID Column",
         "description_tr": "Eğer verilerinizde her satırı tanımlamak için özel bir sütun varsa, bu alana o sütunun adını yazabilirsiniz. Örneğin, 'ID' gibi. Eğer bu alanı boş bırakırsanız, sistem tüm satırları sırayla değerlendirir. Yanlış bir sütun adı yazarsanız, hata alabilirsiniz.",
         "description_en": "If you have a specific column to identify each row, you can write the name of that column here, like 'ID'. If you leave this field blank, the system will evaluate all rows sequentially. If you write an incorrect column name, you may receive an error.",
         "placeholder_tr": "Örn: ID...",
-        "placeholder_en": "e.g. ID..."
+        "placeholder_en": "e.g. ID...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -7518,8 +7571,8 @@
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Gruplama Sütunu (Opsiyonel)",
-        "label_en": "Grouping Column (Optional)",
+        "label_tr": "Gruplama Sütunu",
+        "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazın. Örneğin, 'Bölge' veya 'Ürün'. Eğer bu alanı boş bırakırsanız, veriler tarihe göre gruplandırılacaktır.",
         "description_en": "If you want to group your data by a specific criterion, write the header of that column in this field. For example, 'Region' or 'Product'. If you leave this field empty, the data will be grouped by date.",
         "placeholder_tr": "Örn: Bölge...",
@@ -7549,7 +7602,8 @@
           "max": "Maksimum",
           "min": "Minimum",
           "median": "Medyan"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -7659,7 +7713,8 @@
         "description_tr": "Bu alana, verilerinizi hangi sütunlara göre sıralamak istiyorsanız o sütunların adlarını yazın. Örneğin, 'Tarih' ve 'Tutar' gibi. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, write the names of the columns you want to sort your data by. For example, 'Date' and 'Amount'. If you enter an incorrect column name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Tarih, Tutar...",
-        "placeholder_en": "e.g. Date, Amount..."
+        "placeholder_en": "e.g. Date, Amount...",
+        "required": true
       },
       {
         "name": "ascending",
@@ -7669,7 +7724,8 @@
         "description_tr": "Bu alanda, sıralama işleminin hangi sütunlar için artan (true) veya azalan (false) olarak yapılacağını belirtin. Örneğin, 'true' yazarsanız artan, 'false' yazarsanız azalan sıralama yapar. Eğer yanlış bir değer yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, specify whether the sorting operation should be in ascending (true) or descending (false) order for the specified columns. For example, if you write 'true', it will sort in ascending order, and if you write 'false', it will sort in descending order. If you enter an incorrect value, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: true, false...",
-        "placeholder_en": "e.g. true, false..."
+        "placeholder_en": "e.g. true, false...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -7918,7 +7974,8 @@
           "min": "En Küçük",
           "max": "En Büyük",
           "median": "Medyan"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -8022,7 +8079,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre filtreleyecekseniz o sütunun adını yazın. Örneğin, 'Durum' gibi bir başlık yazabilirsiniz. Eğer yanlış bir başlık yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the column you want to filter your data by. For example, you can write a header like 'Status'. If you write an incorrect header, the operation will fail, and you will receive an error message.",
         "placeholder_tr": "Örn: Durum...",
-        "placeholder_en": "e.g. Status..."
+        "placeholder_en": "e.g. Status...",
+        "required": true
       },
       {
         "name": "condition_value",
@@ -8310,7 +8368,8 @@
         "option_labels_tr": {
           "sum": "Toplam",
           "count": "Sayım"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -8426,7 +8485,8 @@
         "description_tr": "Bu alana, verilerinizi hangi kritere göre gruplayacaksanız o sütunun adını yazın. Örneğin, 'Ürün Adı' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column by which you want to group your data. For example, 'Product Name'. If you enter an incorrect name, the operation will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "tag_column",
@@ -8527,7 +8587,8 @@
         "description_tr": "Bu alana, temizlemek istediğiniz metinlerin bulunduğu sütunların başlıklarını yazmalısınız. Örneğin, 'Açıklama', 'Notlar' gibi. Eğer yanlış bir sütun adı yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "In this field, you should write the headers of the columns containing the text you want to clean. For example, 'Description', 'Notes', etc. If you write an incorrect column name, the process will fail and you will receive an error message.",
         "placeholder_tr": "Örn: Açıklama, Notlar...",
-        "placeholder_en": "e.g. Description, Notes..."
+        "placeholder_en": "e.g. Description, Notes...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -8731,8 +8792,8 @@
       {
         "name": "group_column",
         "type": "text",
-        "label_tr": "Gruplandırma Sütunu (Opsiyonel)",
-        "label_en": "Grouping Column (Optional)",
+        "label_tr": "Gruplandırma Sütunu",
+        "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazın. Bu alan opsiyoneldir, yani boş bırakabilirsiniz.",
         "description_en": "If you want to group your data by a specific criterion, enter the header of that column here. This field is optional, so you can leave it empty.",
         "placeholder_tr": "Örn: Bölüm...",
@@ -8890,8 +8951,8 @@
       {
         "name": "lookup_value_column",
         "type": "text",
-        "label_tr": "Lookup Değer Sütun Adı (Opsiyonel)",
-        "label_en": "Lookup Value Column Name (Optional)",
+        "label_tr": "Lookup Değer Sütun Adı",
+        "label_en": "Lookup Value Column Name",
         "description_tr": "Getirilecek sütun. Boş bırakılırsa tüm eşleşen satır getirilir.",
         "description_en": "Column to return. If empty, returns entire matching row.",
         "placeholder_tr": "Örn: Fiyat...",
@@ -9038,8 +9099,8 @@
       {
         "name": "default_value",
         "type": "text",
-        "label_tr": "Varsayılan Değer (Opsiyonel)",
-        "label_en": "Default Value (Optional)",
+        "label_tr": "Varsayılan Değer",
+        "label_en": "Default Value",
         "description_tr": "Eşleşme bulunamazsa döndürülecek değer. Boş bırakılabilir.",
         "description_en": "Value to return if no match found. Can be left empty.",
         "placeholder_tr": "Örn: Bulunamadı...",
@@ -9049,8 +9110,8 @@
       {
         "name": "search_mode",
         "type": "select",
-        "label_tr": "Arama Yöntemi (Opsiyonel)",
-        "label_en": "Search Mode (Optional)",
+        "label_tr": "Arama Yöntemi",
+        "label_en": "Search Mode",
         "description_tr": "Bu alanda, arama işleminin hangi yönde yapılacağını seçin. 'Soldan Sağa' veya 'Sağdan Sola' seçeneklerinden birini tercih edebilirsiniz. Yanlış bir seçim yaparsanız, arama işlemi gerçekleşmez.",
         "description_en": "In this field, choose the direction in which the search operation will be performed. You can choose either 'Left to Right' or 'Right to Left'. If you make a wrong selection, the search operation will not occur.",
         "placeholder_tr": "",
@@ -9068,8 +9129,8 @@
       {
         "name": "case_sensitive",
         "type": "select",
-        "label_tr": "Büyük/Küçük Harf Duyarlılığı (Opsiyonel)",
-        "label_en": "Case Sensitivity (Optional)",
+        "label_tr": "Büyük/Küçük Harf Duyarlılığı",
+        "label_en": "Case Sensitivity",
         "description_tr": "Bu alanda, aramanızın büyük/küçük harf duyarlı olup olmayacağını seçin. Eğer 'Evet' seçerseniz, 'Elma' ile 'elma' farklı değerler olarak kabul edilir. Yanlış bir seçim yaparsanız, arama sonuçlarınızı etkileyebilir.",
         "description_en": "In this field, choose whether your search will be case sensitive or not. If you select 'Yes', 'Apple' and 'apple' will be considered different values. A wrong selection may affect your search results.",
         "placeholder_tr": "",
@@ -9213,7 +9274,8 @@
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazın. Örneğin, 'Bölge'. Eğer yanlış bir başlık yazarsanız, hata alırsınız.",
         "description_en": "If you want to group your data by a specific criterion, enter the header of that column here. For example, 'Region'. If you enter an incorrect header, you will receive an error.",
         "placeholder_tr": "Örn: Bölge...",
-        "placeholder_en": "e.g. Region..."
+        "placeholder_en": "e.g. Region...",
+        "required": true
       }
     ],
     "tags_tr": [

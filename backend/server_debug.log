@@ -1313,3 +1313,153 @@ Header Row: 0
 Params Raw: {"config":"[{\"type\":\"sort\",\"column\":\"Üniversite Adı\",\"direction\":\"asc\"},{\"type\":\"output\",\"output_type\":\"sheet_per_group\",\"summary_sheet\":true,\"drill_down_index\":true,\"freeze_h...
 Calling runner for custom-report-builder-pro...
 Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:28:28.724126
+Scenario ID: basic-summary-stats-column
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:29:15.491592
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"Katip","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:30:44.235153
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"çelebi","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:36:26.779720
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"Kontenjan","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:44:38.476856
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"column":"Üniversite Adı","value":"katip","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:47:48.996641
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"katip","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:48:25.300727
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"is_preview":true,"column":"Üniversite Adı","value":"katip","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:50:48.509954
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"Katip","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:54:00.534105
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"Katip","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:54:41.749935
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"İzmir Katip Çelebi Üniversitesi","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:55:07.565788
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Program Adı","value":"Tıp","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 10:55:54.909565
+Scenario ID: count-value
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa 2","column":"Üniversite Adı","value":"İZMİR KATİP ÇELEBİ ÜNİVERSİTESİ","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 11:31:48.557756
+Scenario ID: count-value
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","column":"Üniversite Adı","value":"izmir katip çelebi üniversitesi","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 11:32:13.779628
+Scenario ID: count-value
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","column":"Üniversite Adı","value":"İZMİR KATİP ÇELEBİ ÜNİVERSİTESİ","return_mode":"summary_and_rows"}...
+Calling runner for count-value...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-03 11:32:24.899829
+Scenario ID: count-value
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","column":"Üniversite Adı","value":"İZMİR KATİP ÇELEBİ ÜNİVERSİTESİ","return_mode":"summary"}...
+Calling runner for count-value...
+Runner finished successfully.
