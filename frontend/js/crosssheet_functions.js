@@ -68,10 +68,32 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Bilgi Mesajı -->
-        <div class="sf-warning" style="color:var(--gm-primary); font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
-            <i class="fas fa-info-circle"></i> ${T.lbl_second_file_required || 'Aynı veya farklı dosyadan seçim yapabilirsiniz'}
-        </div>
+        <!-- İkinci Dosya Bilgi Mesajı - Conditional Visibility -->
+        ${(() => {
+            // Use global functions from app.js (they're loaded before this file)
+            const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : (hasSecondFile ? 'success' : (hasMultipleSheets ? 'info' : 'hidden'));
+            const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : (hasSecondFile || hasMultipleSheets);
+
+            if (!shouldShow || mode === 'hidden') {
+                return `<div class="gm-source-hint" style="display:none;"></div>`;
+            }
+
+            let icon, text, cssClass;
+            if (mode === 'success') {
+                icon = 'fa-check-circle';
+                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                cssClass = 'gm-source-hint--success';
+            } else if (mode === 'info') {
+                icon = 'fa-info-circle';
+                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+                cssClass = 'gm-source-hint--info';
+            } else {
+                icon = 'fa-exclamation-triangle';
+                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+                cssClass = 'gm-source-hint--warning';
+            }
+            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
+        })()}
     </div>
     `;
 }
@@ -175,21 +197,43 @@ async function onCrossSheetChange(selectElement) {
  * İkinci dosya yüklendiğinde veya kaldırıldığında çağrılır
  */
 function updateAllCrossSheetWarnings() {
-    const hasSecondFile = FILE2_COLUMNS && FILE2_COLUMNS.length > 0;
+    // Use global helper functions from app.js if available
+    const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : 'hidden';
+    const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : false;
+    const T = typeof EXTRA_TEXTS !== 'undefined' ? EXTRA_TEXTS[CURRENT_LANG] : {};
 
     document.querySelectorAll('.gm-crosssheet-source').forEach(container => {
         const checkbox = container.querySelector('.use-crosssheet');
-        const warning = container.querySelector('.sf-warning');
+        const warning = container.querySelector('.sf-warning, .gm-source-hint');
 
         if (warning) {
-            // Eğer checkbox işaretliyse veya ikinci dosya varsa uyarıyı gizle
-            if ((checkbox && checkbox.checked) || hasSecondFile) {
+            // Cross-sheet aktif ise uyarıyı gizle
+            if (checkbox && checkbox.checked) {
                 warning.style.display = 'none';
-            } else {
-                warning.style.display = 'block';
+                return;
+            }
+
+            // Gate: Gizle veya moduna göre göster
+            if (!shouldShow || mode === 'hidden') {
+                warning.style.display = 'none';
+                return;
+            }
+
+            // Update content and styling based on mode
+            warning.style.display = 'flex';
+            warning.className = 'gm-source-hint gm-source-hint--' + mode;
+
+            if (mode === 'success') {
+                const successText = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                warning.innerHTML = `<i class="fas fa-check-circle"></i> ${successText}`;
+            } else if (mode === 'info') {
+                warning.innerHTML = `<i class="fas fa-info-circle"></i> ${T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.'}`;
+            } else { // warning
+                warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.'}`;
             }
         }
     });
+    console.log(`[updateAllCrossSheetWarnings] mode: ${mode}, shouldShow: ${shouldShow}`);
 }
 
 // ============================================================================

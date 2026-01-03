@@ -13612,3 +13612,60 @@ body.day-mode .gm-feature-icon {
 body.day-mode .gm-feature-card:hover {
     box-shadow: 0 8px 24px rgba(74, 144, 217, 0.12);
 }
+
+/* ===== SECOND SOURCE HINT STYLES ===== */
+/* Modern, theme-aware hint for second file/sheet selection */
+.gm-source-hint {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+
+.gm-source-hint i {
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+/* Success Mode - Green (second file loaded) */
+.gm-source-hint--success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: var(--gm-success, #22c55e);
+}
+
+body.day-mode .gm-source-hint--success {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Info Mode - Blue/Muted (multi-sheet available) */
+.gm-source-hint--info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.25);
+    color: var(--gm-text-muted, #94a3b8);
+}
+
+body.day-mode .gm-source-hint--info {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.2);
+    color: var(--gm-text-muted, #4c5d73);
+}
+
+/* Warning Mode - Red (second source required) */
+.gm-source-hint--warning {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+body.day-mode .gm-source-hint--warning {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #dc2626;
+}

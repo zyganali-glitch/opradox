@@ -457,6 +457,9 @@ const EXTRA_TEXTS = {
         "block_validate": "Doğrula",
         "block_window": "Rank / Pencere",
         "lbl_second_file_required": "Aynı veya farklı dosyadan seçim yapabilirsiniz",
+        "lbl_second_source_success": "Kaynak: {filename}",
+        "lbl_second_source_info": "İstersen aynı dosyadan farklı sayfa da seçebilirsin.",
+        "lbl_second_source_warning": "Bu senaryo ikinci kaynak gerektirir: 2. dosya yükle veya sayfa seç.",
         "lbl_second_file_ref": "İkinci dosyadan referans liste seçebilirsiniz",
         "lbl_main_file_col": "Ana Dosya Sütunu:",
         "lbl_second_file_col": "İkinci Dosya Sütunu:",
@@ -473,6 +476,13 @@ const EXTRA_TEXTS = {
         "validate_result": "📌 Sonuç: Yeni sütun eklenir → Geçerli / Geçersiz",
         "recommend_site": "Siteyi Tavsiye Et",
         "share_result": "Sonuç Paylaş",
+
+        // === Veri Kaynağı Seçici ===
+        "lbl_data_source": "Veri Kaynağı",
+        "data_source_primary": "Ana Dosya",
+        "data_source_secondary": "İkinci Dosya",
+        "data_source_crosssheet": "Aynı Dosyadan Farklı Sayfa",
+        "data_source_hint": "İkinci dosya yükleyin veya aynı dosyadan farklı sayfa seçin",
 
         // === YENİ ÖZELLİKLER (2024) ===
         // Koşullu Biçimlendirme
@@ -802,6 +812,9 @@ const EXTRA_TEXTS = {
         "block_validate": "Validate",
         "block_window": "Rank / Window",
         "lbl_second_file_required": "You can select from the same or a different file",
+        "lbl_second_source_success": "Source: {filename}",
+        "lbl_second_source_info": "You can also pick another sheet from the same workbook.",
+        "lbl_second_source_warning": "This scenario requires a second source: upload a 2nd file or select a sheet.",
         "lbl_second_file_ref": "You can select a reference list from second file",
         "lbl_main_file_col": "Main File Column:",
         "lbl_second_file_col": "Second File Column:",
@@ -818,6 +831,13 @@ const EXTRA_TEXTS = {
         "validate_result": "📌 Result: New column added → Valid / Invalid",
         "recommend_site": "Recommend Site",
         "share_result": "Share Result",
+
+        // === Data Source Selector ===
+        "lbl_data_source": "Data Source",
+        "data_source_primary": "Main File",
+        "data_source_secondary": "Second File",
+        "data_source_crosssheet": "Different Sheet from Same File",
+        "data_source_hint": "Upload a second file or select a different sheet from the same file",
 
         // === NEW FEATURES (2024) ===
         // Conditional Formatting
@@ -1263,6 +1283,119 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
 
             showFileInfo(data, 1, skipDropdownRebuild);
 
+            // DYNAMIC REFRESH: Ana dosya yüklendiğinde aktif senaryo formunu güncelle
+            // Bu sayede kullanıcı önce senaryo seçip sonra dosya yüklerse sütunlar anında yansır
+            document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="primary"]').forEach(widget => {
+                const selectEl = widget.querySelector('select');
+                if (selectEl) {
+                    const currentVal = selectEl.value;
+                    selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
+                        data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
+                }
+            });
+            console.log('✓ Primary column selectors refreshed with new main file columns');
+
+            // DYNAMIC ENABLE: Crosssheet option enable et (if multiple sheets)
+            if (data.sheet_names && data.sheet_names.length > 1) {
+                const otherSheets = data.sheet_names.filter(s => s !== data.active_sheet);
+                const T = EXTRA_TEXTS[CURRENT_LANG] || EXTRA_TEXTS['tr'];
+
+                document.querySelectorAll('.gm-data-source-select').forEach(select => {
+                    // Enable crosssheet option
+                    const crosssheetOpt = select.querySelector('option[value="crosssheet"]');
+                    if (crosssheetOpt) {
+                        crosssheetOpt.disabled = false;
+                        crosssheetOpt.style.display = '';
+                        console.log('✓ Crosssheet option enabled in data_source dropdown');
+                    }
+
+                    // Get or create crosssheet-area
+                    const paramName = select.name || select.id.replace('data_source_', '');
+                    let csArea = document.getElementById(`crosssheet_area_${paramName}`);
+
+                    if (!csArea && otherSheets.length > 0) {
+                        // CREATE crosssheet-area dynamically (wasn't created at render time)
+                        csArea = document.createElement('div');
+                        csArea.id = `crosssheet_area_${paramName}`;
+                        csArea.className = 'crosssheet-area';
+                        csArea.style.cssText = 'display: none; gap: 10px; align-items: center; margin-top: 8px;';
+                        csArea.innerHTML = `
+                            <span style="font-size:0.85rem; color:var(--gm-text-muted);">${T.lbl_sheet || 'Sayfa'}:</span>
+                            <select class="crosssheet-select" style="flex:1; padding:6px 10px; border:1px solid var(--gm-border); border-radius:6px; background:var(--gm-bg); color:var(--gm-text);">
+                                ${otherSheets.map(s => `<option value="${s}">${s}</option>`).join('')}
+                            </select>
+                        `;
+
+                        // Insert after the dropdown row in the wrapper
+                        const wrapper = select.closest('.gm-data-source-block');
+                        if (wrapper) {
+                            wrapper.appendChild(csArea);
+                        }
+
+                        // Add change handler for the new crosssheet-select
+                        const csSelect = csArea.querySelector('.crosssheet-select');
+                        if (csSelect) {
+                            csSelect.onchange = async function () {
+                                const sheetName = this.value;
+                                const fileInput = document.getElementById('fileInput');
+                                if (!fileInput || !fileInput.files[0]) return;
+
+                                try {
+                                    const formData = new FormData();
+                                    formData.append('file', fileInput.files[0]);
+                                    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
+                                    const res = await fetch(url, { method: 'POST', body: formData });
+                                    const fetchData = await res.json();
+
+                                    if (fetchData.columns && Array.isArray(fetchData.columns)) {
+                                        if (typeof updateFile2ColumnDatalist === 'function') {
+                                            updateFile2ColumnDatalist(fetchData.columns);
+                                        }
+
+                                        // Update ProColumnSelector widgets
+                                        document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
+                                            const selectEl = widget.querySelector('select');
+                                            if (selectEl) {
+                                                const currentVal = selectEl.value;
+                                                selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
+                                                    fetchData.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
+                                            }
+                                        });
+
+                                        console.log(`✓ Cross-sheet: "${sheetName}" - ${fetchData.columns.length} sütun yüklendi`);
+                                    }
+                                } catch (err) {
+                                    console.error('Cross-sheet column fetch error:', err);
+                                }
+                            };
+                        }
+
+                        console.log('✓ Crosssheet area CREATED dynamically:', csArea.id);
+                    } else if (csArea) {
+                        // Update existing crosssheet-select options
+                        const csSelect = csArea.querySelector('.crosssheet-select');
+                        if (csSelect && otherSheets.length > 0) {
+                            csSelect.innerHTML = otherSheets.map(s => `<option value="${s}">${s}</option>`).join('');
+                            console.log('✓ Crosssheet sheet options updated:', otherSheets);
+                        }
+                    }
+
+                    // Auto-select crosssheet if no second file loaded
+                    if (!FILE2_COLUMNS || FILE2_COLUMNS.length === 0) {
+                        select.value = 'crosssheet';
+                        if (csArea) {
+                            csArea.style.display = 'flex';
+                            // Trigger fetch for first sheet
+                            const csSelect = csArea.querySelector('.crosssheet-select');
+                            if (csSelect && csSelect.value) {
+                                csSelect.dispatchEvent(new Event('change'));
+                            }
+                        }
+                        console.log('✓ Crosssheet auto-selected (no second file loaded)');
+                    }
+                });
+            }
+
             // YENİ (BUG 2 FIX): Cross-sheet dropdown'ları senkronize et
             // Sol panelden sayfa değişirse, cross-sheet UI'daki dropdown'lar da güncellenmeli
             document.querySelectorAll('.crosssheet-select').forEach(select => {
@@ -1365,6 +1498,32 @@ async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false,
             // YENİ (PHASE 1): İkinci dosya sütunlarını datalist'e ekle
             updateFile2ColumnDatalist(data.columns);
             console.log('✓ updateFile2ColumnDatalist called with', data.columns.length, 'columns');
+
+            // DYNAMIC REFRESH: İkinci dosya yüklendiğinde aktif senaryo formunu güncelle
+            // Bu sayede kullanıcı önce senaryo seçip sonra dosya yüklerse sütunlar anında yansır
+            document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
+                const selectEl = widget.querySelector('select');
+                if (selectEl) {
+                    const currentVal = selectEl.value;
+                    selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
+                        data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
+                }
+            });
+            console.log('✓ Secondary column selectors refreshed with new file2 columns');
+
+            // data_source dropdown'ını "secondary" olarak seç ve crosssheet area'yı gizle
+            document.querySelectorAll('.gm-data-source-select').forEach(select => {
+                if (select.value === '' || select.value === 'crosssheet') {
+                    select.value = 'secondary';
+                    // Hide crosssheet area
+                    const paramName = select.name || select.id.replace('data_source_', '');
+                    const csArea = document.getElementById(`crosssheet_area_${paramName}`);
+                    if (csArea) {
+                        csArea.style.display = 'none';
+                    }
+                    console.log('✓ data_source set to secondary after file2 upload');
+                }
+            });
 
             // YENİ (PHASE 1): Tüm cross-sheet uyarılarını güncelle
             updateAllCrossSheetWarnings();
@@ -1914,14 +2073,101 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
 
-                            <!-- İkinci Dosya Durum Mesajı -->
-                            <div class="gm-sf-warning" style="color:${hasSecondFile ? 'var(--gm-success)' : '#ef4444'}; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
-                                ${hasSecondFile
-            ? `<i class="fas fa-check-circle"></i> ${FILE2_NAME}`
-            : `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}`
-        }
-                            </div>
+                            <!-- İkinci Dosya Durum Mesajı - Conditional Visibility -->
+                            ${(() => {
+            const mode = getSecondSourceHintMode();
+            const shouldShow = shouldShowSecondSourceHint();
+            if (!shouldShow || mode === 'hidden') {
+                return `<div class="gm-source-hint" style="display:none;"></div>`;
+            }
+            const T = EXTRA_TEXTS[CURRENT_LANG];
+            let icon, text, cssClass;
+            if (mode === 'success') {
+                icon = 'fa-check-circle';
+                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                cssClass = 'gm-source-hint--success';
+            } else if (mode === 'info') {
+                icon = 'fa-info-circle';
+                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+                cssClass = 'gm-source-hint--info';
+            } else {
+                icon = 'fa-exclamation-triangle';
+                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+                cssClass = 'gm-source-hint--warning';
+            }
+            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
+        })()}
                         </div>`;
+}
+
+// ===== SECOND SOURCE HINT HELPERS =====
+// Scenarios that truly require a second file source
+const SECOND_FILE_SCENARIOS_GLOBAL = [
+    'join-two-tables-key',
+    'vlookup-single-match',
+    'xlookup-single-match',
+    'pq-append-tables',
+    'validate-values-against-list',
+    'fallback-lookup',
+    'multi-column-lookup',
+    'reverse-lookup-last-match'
+];
+
+// Determine if second source hint should be visible
+function shouldShowSecondSourceHint() {
+    // Check if active scenario requires second file
+    const required = SECOND_FILE_SCENARIOS_GLOBAL.includes(ACTIVE_SCENARIO_ID);
+
+    // Check if second file is loaded
+    const hasSecondFile = !!FILE2_NAME || (FILE2_COLUMNS && FILE2_COLUMNS.length > 0);
+
+    // Check if main file has multiple sheets
+    const hasMultiSheet = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
+
+    // Check if user opened second file panel
+    const userOpened = document.getElementById("secondFileWrapper")?.style?.display === "block";
+
+    return required || hasSecondFile || hasMultiSheet || userOpened;
+}
+
+// Get the mode for second source hint: 'success' | 'info' | 'warning' | 'hidden'
+function getSecondSourceHintMode() {
+    const required = SECOND_FILE_SCENARIOS_GLOBAL.includes(ACTIVE_SCENARIO_ID);
+    const hasSecondFile = !!FILE2_NAME || (FILE2_COLUMNS && FILE2_COLUMNS.length > 0);
+    const hasMultiSheet = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
+
+    if (hasSecondFile) return 'success';   // ✅ Green status
+    if (required) return 'warning';         // ⚠️ Red requirement
+    if (hasMultiSheet) return 'info';       // ℹ️ Neutral info
+    return 'hidden';
+}
+
+
+// Render the second source hint HTML based on mode
+function renderSecondSourceHint(mode, containerClass = '') {
+    const T = EXTRA_TEXTS[CURRENT_LANG];
+
+    if (mode === 'hidden' || !shouldShowSecondSourceHint()) {
+        return `<div class="gm-source-hint ${containerClass}" style="display:none;"></div>`;
+    }
+
+    let icon, text, cssClass;
+
+    if (mode === 'success') {
+        icon = 'fa-check-circle';
+        text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+        cssClass = 'gm-source-hint--success';
+    } else if (mode === 'info') {
+        icon = 'fa-info-circle';
+        text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+        cssClass = 'gm-source-hint--info';
+    } else { // warning
+        icon = 'fa-exclamation-triangle';
+        text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+        cssClass = 'gm-source-hint--warning';
+    }
+
+    return `<div class="gm-source-hint ${cssClass} ${containerClass}"><i class="fas ${icon}"></i> ${text}</div>`;
 }
 
 
@@ -1995,24 +2241,38 @@ window.toggleProMergeSource = function (checkbox) {
 // YENİ: İkinci dosya yüklendiğinde tüm PRO bloklarındaki uyarıları güncelle
 window.updateProBlockWarnings = function () {
     const T = EXTRA_TEXTS[CURRENT_LANG];
+    const mode = getSecondSourceHintMode();
+    const shouldShow = shouldShowSecondSourceHint();
+
     document.querySelectorAll('.gm-pro-merge-source').forEach(container => {
         const checkbox = container.querySelector('.pro-use-crosssheet');
-        const warning = container.querySelector('.gm-sf-warning');
+        const warning = container.querySelector('.gm-sf-warning, .gm-source-hint');
 
         // Cross-sheet aktif değilse uyarıyı kontrol et
         if (!checkbox || !checkbox.checked) {
             if (warning) {
-                if (FILE2_NAME) {
-                    warning.innerHTML = `< i class="fas fa-check-circle" ></i > ${FILE2_NAME} `;
-                    warning.style.color = 'var(--gm-success)';
-                } else {
-                    warning.innerHTML = `< i class="fas fa-exclamation-triangle" ></i > ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'} `;
-                    warning.style.color = '#ef4444';
+                // Gate: Gizle veya moduna göre göster
+                if (!shouldShow || mode === 'hidden') {
+                    warning.style.display = 'none';
+                    return;
+                }
+
+                // Update content and styling based on mode
+                warning.style.display = 'flex';
+                warning.className = 'gm-source-hint gm-source-hint--' + mode;
+
+                if (mode === 'success') {
+                    const successText = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                    warning.innerHTML = `<i class="fas fa-check-circle"></i> ${successText}`;
+                } else if (mode === 'info') {
+                    warning.innerHTML = `<i class="fas fa-info-circle"></i> ${T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.'}`;
+                } else { // warning
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.'}`;
                 }
             }
         }
     });
-    console.log(`[updateProBlockWarnings] FILE2_NAME: ${FILE2_NAME} `);
+    console.log(`[updateProBlockWarnings] mode: ${mode}, shouldShow: ${shouldShow}, FILE2_NAME: ${FILE2_NAME}`);
 };
 
 // YENİ: Cross-sheet sütunlarını getir ve arayüzü güncelle
@@ -2563,100 +2823,32 @@ function renderDynamicForm(scenarioId, params) {
         // PHASE 3: İkinci dosya gerektiren senaryolar için CROSS-SHEET UI bloğu ekle
         // ============================================================================
         const SECOND_FILE_SCENARIOS = [
-            // Gerçek catalog ID'ler (verified from scenarios_catalog.json)
+            // Only scenarios that TRULY REQUIRE a second file source
             'join-two-tables-key',
             'vlookup-single-match',
             'xlookup-single-match',
             'pq-append-tables',
             'validate-values-against-list',
-            'concatenate-columns',
             'fallback-lookup',
-            // Multi-column scenarios that benefit from cross-sheet
-            'correlation-two-columns',
-            'days-between-dates',
-            'sum-between-dates',
-            'pivot-multi-level',
-            'percentiles-and-quartiles',
-            'compute-age-from-dob',
-            'find-inconsistent-casing',
-            'highlight-top-bottom-n',
-            'multi-condition-label-if',
-            'outlier-flagging',
-            'running-total-by-group',
-            'score-cards-weighted-points',
-            'filter-rows-by-condition'
+            'multi-column-lookup',
+            'reverse-lookup-last-match'
         ];
 
         const needsCrossSheet = SECOND_FILE_SCENARIOS.includes(scenarioId);
 
         // BUG 4 FIX: İkinci dosya sütunları datalist'ini önceden hazırla
         // Form render edilmeden önce datalist hazır olmalı ki autocomplete çalışsın
+        // NOTE: Initially use FILE2_COLUMNS if available, otherwise empty
         if (FILE2_COLUMNS && FILE2_COLUMNS.length > 0) {
             updateFile2ColumnDatalist(FILE2_COLUMNS);
             console.log('✓ BUG 4 FIX: file2-columns datalist rendered before form');
+        } else {
+            // No second file loaded - file2-columns will be empty initially
+            updateFile2ColumnDatalist([]);
         }
 
-        // TEMPORARY DEBUG: Force render for testing
-        if (true) { // Was: if (needsCrossSheet)
-            // Cross-sheet UI bloğunu formun başına ekle
-            const csBlock = document.createElement('div');
-            csBlock.className = 'gm-form-row';
-            csBlock.innerHTML = getInlineCrossSheetHTML(`scenario_${scenarioId}`);
-            form.appendChild(csBlock);
-        }
+        // OLD CROSSSHEET UI REMOVED - Now using data_source parameter instead
         // ============================================================================
-
-        // YENİ: Inline Cross-Sheet UI (Oyun Hamuru PRO tarzı)
-        // Eğer senaryo ikinci dosya gerektiriyorsa, formun başına ekle
-        const scenario = SCENARIO_LIST.find(s => s.id === scenarioId);
-        if (scenario && scenario.requiresSecondFile) {
-
-            const inlineCS = document.createElement('div');
-            inlineCS.className = "gm-form-row";
-            inlineCS.style.marginBottom = "20px";
-            inlineCS.style.padding = "10px";
-            inlineCS.style.border = "1px solid var(--gm-border)";
-            inlineCS.style.borderRadius = "8px";
-            inlineCS.style.backgroundColor = "var(--gm-bg-secondary)";
-
-            // Başlık
-            inlineCS.innerHTML = `<label style="color:var(--gm-primary); margin-bottom:10px; display:block;"><i class="fas fa-link"></i> İkinci Dosya / Cross-Sheet Kaynağı</label>`;
-
-            // getInlineCrossSheetHTML fonksiyonunu kullan (PRO Builder ile aynı yapı)
-            // ID çakışmasını önlemek için prefix kullanabiliriz veya direct DOM verip listener ekleyebiliriz.
-            // Ancak getInlineCrossSheetHTML string dönüyor. Biz bunu 'dynamic-form' ID'si ile çağıralım.
-            const csHTML = getInlineCrossSheetHTML("dynamic_form_cross_sheet");
-            const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = csHTML;
-            inlineCS.appendChild(contentDiv);
-
-            form.appendChild(inlineCS);
-
-            // Listenerları bağla (Inputlar DOM'a eklendikten sonra çalışacak, ama burada tanımlı olsun)
-            setTimeout(() => {
-                const toggle = document.querySelector(`input[name="cross_sheet_dynamic_form_cross_sheet"]`);
-                if (toggle) {
-                    toggle.onchange = (e) => {
-                        toggleProMergeSource('dynamic_form_cross_sheet', e.target.checked);
-                        // Sol paneli de güncelle (Senkronizasyon)
-                        const globalOption = document.getElementById("crossSheetOption");
-                        if (globalOption && globalOption.checked !== e.target.checked) {
-                            globalOption.click();
-                        }
-                    };
-
-                    // Başlangıç durumu (Global state ile senkronize et)
-                    const globalOption = document.getElementById("crossSheetOption");
-                    if (globalOption && globalOption.checked) {
-                        toggle.checked = true;
-                        toggleProMergeSource('dynamic_form_cross_sheet', true);
-                    } else {
-                        // Default olarak false ise uyarısını göster
-                        updateProBlockWarnings();
-                    }
-                }
-            }, 100);
-        }
 
         params.forEach(p => {
             const row = document.createElement("div");
@@ -2719,7 +2911,7 @@ function renderDynamicForm(scenarioId, params) {
 
                     // CORRECT LOGIC: İkinci dosya senaryolarında file2-columns VARSAYILAN
                     // Cross-sheet aktifse ona göre değişir
-                    if (true) { // TEMP DEBUG: was needsCrossSheet
+                    if (needsCrossSheet) {
                         inp.setAttribute('list', 'file2-columns'); // Default: ikinci dosya
                         inp.classList.add('crosssheet-aware-input'); // Marker for toggle updates
                     } else {
@@ -2745,6 +2937,207 @@ function renderDynamicForm(scenarioId, params) {
                 listWrap.appendChild(addBtn);
                 addItem(); // İlk satır
                 row.appendChild(listWrap);
+            } else if (p.type === 'data_source') {
+                // ============================================================================
+                // VERİ KAYNAĞI SEÇİCİ (PRO Data Source Block)
+                // Ana Dosya | İkinci Dosya | Aynı Dosyadan Farklı Sayfa
+                // ============================================================================
+                const hasMultipleSheets = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
+                const hasSecondFile = !!FILE2_NAME;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'gm-data-source-block';
+                wrapper.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    padding: 12px;
+                    background: rgba(59,130,246,0.08);
+                    border: 1px solid rgba(59,130,246,0.3);
+                    border-radius: 8px;
+                    margin-top: 4px;
+                `;
+
+                // Dropdown row
+                const dropdownRow = document.createElement('div');
+                dropdownRow.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;';
+
+                // Icon
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-database';
+                icon.style.cssText = 'color: var(--gm-primary); font-size: 1rem;';
+                dropdownRow.appendChild(icon);
+
+                // Select dropdown
+                const select = document.createElement('select');
+                select.name = p.name;
+                select.id = `data_source_${p.name}`;
+                select.className = 'gm-data-source-select';
+                select.style.cssText = `
+                    flex: 1;
+                    min-width: 180px;
+                    padding: 8px 12px;
+                    border: 1px solid var(--gm-border);
+                    border-radius: 6px;
+                    background: var(--gm-bg);
+                    color: var(--gm-text);
+                    font-size: 0.9rem;
+                `;
+
+                // Options - İkinci Dosya OR Aynı Dosyadan Farklı Sayfa
+                // Crosssheet option ALWAYS added (may be disabled if no sheets yet)
+                const optSecondary = document.createElement('option');
+                optSecondary.value = 'secondary';
+                optSecondary.textContent = T.data_source_secondary || 'İkinci Dosya';
+                select.appendChild(optSecondary);
+
+                // Always add crosssheet option - enable/disable based on sheet availability
+                const optCrosssheet = document.createElement('option');
+                optCrosssheet.value = 'crosssheet';
+                optCrosssheet.textContent = T.data_source_crosssheet || 'Aynı Dosyadan Farklı Sayfa';
+                optCrosssheet.disabled = !hasMultipleSheets;
+                if (!hasMultipleSheets) {
+                    optCrosssheet.style.display = 'none'; // Hide if no sheets
+                }
+                select.appendChild(optCrosssheet);
+
+                console.log(`[data_source] hasMultipleSheets=${hasMultipleSheets}, FILE_SHEET_NAMES=`, FILE_SHEET_NAMES);
+
+                // Auto-select best default:
+                // 1. If second file is loaded → select "İkinci Dosya"
+                // 2. If only main file with multiple sheets → select "Farklı Sayfa"
+                // 3. Otherwise → select "İkinci Dosya" (user will need to load a file)
+                if (FILE2_COLUMNS && FILE2_COLUMNS.length > 0) {
+                    select.value = 'secondary';
+                } else if (hasMultipleSheets) {
+                    select.value = 'crosssheet';
+                } else {
+                    select.value = 'secondary';
+                }
+
+                dropdownRow.appendChild(select);
+                wrapper.appendChild(dropdownRow);
+
+                // Cross-sheet selector (hidden by default, shown when crosssheet selected)
+                if (hasMultipleSheets) {
+                    const crossSheetOptions = (FILE_SHEET_NAMES || [])
+                        .filter(s => s !== FILE_SELECTED_SHEET)
+                        .map(s => `<option value="${s}">${s}</option>`)
+                        .join('');
+
+                    const csArea = document.createElement('div');
+                    csArea.id = `crosssheet_area_${p.name}`;
+                    csArea.className = 'crosssheet-area';
+                    csArea.style.cssText = 'display: none; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--gm-border);';
+                    csArea.innerHTML = `
+                        <i class="fas fa-layer-group" style="color:var(--gm-primary); font-size:0.85rem;"></i>
+                        <select class="crosssheet-select" style="flex:1; padding:6px 10px; border:1px solid var(--gm-border); border-radius:6px; background:var(--gm-bg); color:var(--gm-text);">
+                            ${crossSheetOptions}
+                        </select>
+                    `;
+                    wrapper.appendChild(csArea);
+
+                    // Crosssheet select change handler - fetch columns from selected sheet
+                    const csSelect = csArea.querySelector('.crosssheet-select');
+                    if (csSelect) {
+                        csSelect.onchange = async function () {
+                            const sheetName = this.value;
+                            const fileInput = document.getElementById('fileInput');
+                            if (!fileInput || !fileInput.files[0]) return;
+
+                            try {
+                                const formData = new FormData();
+                                formData.append('file', fileInput.files[0]);
+                                const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
+                                const res = await fetch(url, { method: 'POST', body: formData });
+                                const data = await res.json();
+
+                                if (data.columns && Array.isArray(data.columns)) {
+                                    if (typeof updateFile2ColumnDatalist === 'function') {
+                                        updateFile2ColumnDatalist(data.columns);
+                                    }
+
+                                    // CRITICAL: Also update ProColumnSelector widgets with column_source="secondary"
+                                    document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
+                                        const selectEl = widget.querySelector('select');
+                                        if (selectEl) {
+                                            const currentVal = selectEl.value;
+                                            selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
+                                                data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
+                                        }
+                                    });
+
+                                    console.log(`✓ Cross-sheet: "${sheetName}" - ${data.columns.length} sütun yüklendi`);
+                                }
+                            } catch (err) {
+                                console.error('Cross-sheet column fetch error:', err);
+                            }
+                        };
+
+                        // Trigger initial fetch if crosssheet-select has a value
+                        if (csSelect.value) {
+                            csSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
+                }
+
+                // Toggle crosssheet area and update columns based on selection
+                select.onchange = async function () {
+                    const csArea = document.getElementById(`crosssheet_area_${p.name}`);
+                    if (csArea) {
+                        csArea.style.display = this.value === 'crosssheet' ? 'flex' : 'none';
+                    }
+
+                    // Determine new columns based on selection (only secondary sources)
+                    let newColumns = [];
+                    if (this.value === 'secondary') {
+                        newColumns = FILE2_COLUMNS || [];
+                    } else if (this.value === 'crosssheet' && csArea) {
+                        // Cross-sheet: fetch columns from selected sheet
+                        const csSelect = csArea.querySelector('.crosssheet-select');
+                        if (csSelect && csSelect.value) {
+                            const fileInput = document.getElementById('fileInput');
+                            if (fileInput && fileInput.files[0]) {
+                                try {
+                                    const formData = new FormData();
+                                    formData.append('file', fileInput.files[0]);
+                                    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(csSelect.value)}`;
+                                    const res = await fetch(url, { method: 'POST', body: formData });
+                                    const data = await res.json();
+                                    if (data.columns && Array.isArray(data.columns)) {
+                                        newColumns = data.columns;
+                                    }
+                                } catch (err) {
+                                    console.error('Cross-sheet column fetch error:', err);
+                                }
+                            }
+                        }
+                    }
+
+                    // Update file2-columns datalist (for secondary columns)
+                    if (typeof updateFile2ColumnDatalist === 'function') {
+                        updateFile2ColumnDatalist(newColumns);
+                    }
+
+                    // Update all ProColumnSelector widgets with column_source="secondary"
+                    document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
+                        const selectEl = widget.querySelector('select');
+                        if (selectEl) {
+                            const currentVal = selectEl.value;
+                            selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
+                                newColumns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
+                        }
+                    });
+
+                    console.log(`[data_source] Changed to ${this.value}, ${newColumns.length} secondary columns available`);
+                };
+
+                // Trigger initial column load based on current selection
+                setTimeout(() => {
+                    select.dispatchEvent(new Event('change'));
+                }, 100);
+
+                row.appendChild(wrapper);
             } else if (p.type === 'json_builder') {
                 const builderContainer = document.createElement('div');
                 builderContainer.className = 'gm-builder-container';
@@ -3404,10 +3797,29 @@ function renderDynamicForm(scenarioId, params) {
                                 </div>
                                 ` : ''}
                                 
-                                <!-- İkinci Dosya Gerekli Uyarısı -->
-                                <div class="gm-sf-warning" style="color:#ef4444; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
-                                    <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
-                                </div>
+                                <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
+                                ${(() => {
+                                    const mode = getSecondSourceHintMode();
+                                    const shouldShow = shouldShowSecondSourceHint();
+                                    if (!shouldShow || mode === 'hidden') {
+                                        return `<div class="gm-source-hint" style="display:none;"></div>`;
+                                    }
+                                    let icon, text, cssClass;
+                                    if (mode === 'success') {
+                                        icon = 'fa-check-circle';
+                                        text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                                        cssClass = 'gm-source-hint--success';
+                                    } else if (mode === 'info') {
+                                        icon = 'fa-info-circle';
+                                        text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+                                        cssClass = 'gm-source-hint--info';
+                                    } else {
+                                        icon = 'fa-exclamation-triangle';
+                                        text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+                                        cssClass = 'gm-source-hint--warning';
+                                    }
+                                    return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
+                                })()}
                             </div>
                             
                             <!-- Birleştirme Parametreleri -->
@@ -4417,28 +4829,39 @@ function renderDynamicForm(scenarioId, params) {
                 }
 
                 // 3. Conditional Column Datalist Assignment
-                // Only show column suggestions if the parameter name implies it requires a column.
-                const colKeywords = ['column', 'col', 'sütun', 'key', 'anahtar', 'field', 'alan', 'target', 'source', 'hedef', 'kaynak', 'rows', 'satırlar', 'group', 'grup', 'date', 'tarih'];
-                const excludeKeywords = ['value', 'değer', 'limit', 'threshold', 'eşik', 'count', 'sayı', 'name', 'isim', 'title', 'başlık', 'separator', 'ayraç'];
-
-                let shouldShowCols = false;
-                if (colKeywords.some(kw => pName.includes(kw))) shouldShowCols = true;
-                if (excludeKeywords.some(kw => pName.includes(kw))) shouldShowCols = false;
-
-                // FIX: 'value_column' should be a column selector despite having 'value' in name
-                if (pName.includes('value_column') || pName.includes('değer_sütunu') || pName.includes('value_columns') || pName === 'values' || pName === 'columns') {
-                    shouldShowCols = true;
-                }
-
+                // First check explicit column_source property from catalog
                 let listId = null;
-                if (scenarioNeedsSecondFile && isSecondFileParam) {
-                    if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference') || pName.includes('key') || pName.includes('right_on')) {
-                        listId = 'file2-columns';
-                    } else {
+
+                if (p.column_source === 'primary') {
+                    // Ana dosya sütunları (colOptions)
+                    listId = 'colOptions';
+                } else if (p.column_source === 'secondary') {
+                    // İkinci dosya / cross-sheet sütunları (file2-columns)
+                    listId = 'file2-columns';
+                } else {
+                    // Fallback: Use heuristic logic for backward compatibility
+                    // Only show column suggestions if the parameter name implies it requires a column.
+                    const colKeywords = ['column', 'col', 'sütun', 'key', 'anahtar', 'field', 'alan', 'target', 'source', 'hedef', 'kaynak', 'rows', 'satırlar', 'group', 'grup', 'date', 'tarih'];
+                    const excludeKeywords = ['value', 'değer', 'limit', 'threshold', 'eşik', 'count', 'sayı', 'name', 'isim', 'title', 'başlık', 'separator', 'ayraç'];
+
+                    let shouldShowCols = false;
+                    if (colKeywords.some(kw => pName.includes(kw))) shouldShowCols = true;
+                    if (excludeKeywords.some(kw => pName.includes(kw))) shouldShowCols = false;
+
+                    // FIX: 'value_column' should be a column selector despite having 'value' in name
+                    if (pName.includes('value_column') || pName.includes('değer_sütunu') || pName.includes('value_columns') || pName === 'values' || pName === 'columns') {
+                        shouldShowCols = true;
+                    }
+
+                    if (scenarioNeedsSecondFile && isSecondFileParam) {
+                        if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference') || pName.includes('key') || pName.includes('right_on')) {
+                            listId = 'file2-columns';
+                        } else {
+                            listId = 'colOptions';
+                        }
+                    } else if (shouldShowCols) {
                         listId = 'colOptions';
                     }
-                } else if (shouldShowCols) {
-                    listId = 'colOptions';
                 }
 
                 // --- PRO STYLE COLUMN SELECTOR INTEGRATION ---
@@ -4476,6 +4899,9 @@ function renderDynamicForm(scenarioId, params) {
                         ? (typeof FILE_COLUMNS !== 'undefined' ? FILE_COLUMNS : [])
                         : (typeof FILE2_COLUMNS !== 'undefined' ? FILE2_COLUMNS : []);
 
+                    // column_source attribute for dynamic updates
+                    const columnSource = p.column_source || (listId === 'file2-columns' ? 'secondary' : 'primary');
+
                     if (typeof ProColumnSelector !== 'undefined') {
                         const proHtml = ProColumnSelector.render(p.name, p.default || "", columns, "", p.multiple || false);
                         const tempDiv = document.createElement('div');
@@ -4484,6 +4910,7 @@ function renderDynamicForm(scenarioId, params) {
                         widget.style.margin = "0";
                         widget.style.padding = "0";
                         widget.style.border = "none";
+                        widget.setAttribute('data-column-source', columnSource);
                         const internalLabel = widget.querySelector('label');
                         if (internalLabel) internalLabel.style.display = 'none';
 
@@ -4499,6 +4926,7 @@ function renderDynamicForm(scenarioId, params) {
                         inp.name = p.name;
                         inp.placeholder = ph;
                         inp.setAttribute('list', listId);
+                        inp.setAttribute('data-column-source', columnSource);
                         if (p.required === true) inp.required = true;
                         row.appendChild(inp);
                     }
@@ -6459,10 +6887,29 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Gerekli Uyarısı -->
-        <div class="sf-warning" style="color:#ef4444; font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
-            <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
-        </div>
+        <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
+        ${(() => {
+            const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : 'hidden';
+            const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : false;
+            if (!shouldShow || mode === 'hidden') {
+                return `<div class="gm-source-hint" style="display:none;"></div>`;
+            }
+            let icon, text, cssClass;
+            if (mode === 'success') {
+                icon = 'fa-check-circle';
+                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                cssClass = 'gm-source-hint--success';
+            } else if (mode === 'info') {
+                icon = 'fa-info-circle';
+                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+                cssClass = 'gm-source-hint--info';
+            } else {
+                icon = 'fa-exclamation-triangle';
+                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+                cssClass = 'gm-source-hint--warning';
+            }
+            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
+        })()}
     </div>
     `;
 }
@@ -6538,10 +6985,29 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Gerekli Uyarısı -->
-        <div class="sf-warning" style="color:#ef4444; font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
-            <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
-        </div>
+        <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
+        ${(() => {
+            const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : 'hidden';
+            const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : false;
+            if (!shouldShow || mode === 'hidden') {
+                return `<div class="gm-source-hint" style="display:none;"></div>`;
+            }
+            let icon, text, cssClass;
+            if (mode === 'success') {
+                icon = 'fa-check-circle';
+                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
+                cssClass = 'gm-source-hint--success';
+            } else if (mode === 'info') {
+                icon = 'fa-info-circle';
+                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
+                cssClass = 'gm-source-hint--info';
+            } else {
+                icon = 'fa-exclamation-triangle';
+                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
+                cssClass = 'gm-source-hint--warning';
+            }
+            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
+        })()}
     </div>
     `;
 }

@@ -2774,6 +2774,14 @@
         "description_en": "You should enter the name of the column in your main table that you want to search. For example, 'Product Code'. If you enter an incorrect name, the process will not work and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Kodu...",
         "placeholder_en": "e.g. Product Code...",
+        "required": true,
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
         "required": true
       },
       {
@@ -2785,7 +2793,8 @@
         "description_en": "Here, you should enter the name of the column in your main table that you will be searching. For example, 'Product Name'. If you write it incorrectly, the search will not happen.",
         "placeholder_tr": "Örn: Ürün Adı...",
         "placeholder_en": "e.g. Product Name...",
-        "required": true
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "fallback_column",
@@ -2796,7 +2805,8 @@
         "description_en": "You should enter the name of the column in your fallback table that you want to search. For example, 'Backup Product Code'. If you write it incorrectly, the search in the fallback table will not work.",
         "placeholder_tr": "Örn: Yedek Ürün Kodu...",
         "placeholder_en": "e.g. Backup Product Code...",
-        "required": true
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "value_column",
@@ -2807,7 +2817,8 @@
         "description_en": "Here, you should enter the name of the column in your main and fallback tables that contains the values you want to retrieve. For example, 'Price'. If you write it incorrectly, you will not get any results.",
         "placeholder_tr": "Örn: Fiyat...",
         "placeholder_en": "e.g. Price...",
-        "required": true
+        "required": true,
+        "column_source": "primary"
       },
       {
         "name": "result_column",
@@ -2825,18 +2836,20 @@
         "type": "file",
         "label_tr": "İkinci Dosya",
         "label_en": "Second File",
-        "description_tr": "Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin. Bu dosya, ana tablonuzda bulunmayan verileri yedek olarak kullanmak için gereklidir.",
+        "description_tr": "'İkinci Dosya' alanına diğer Excel'i yükleyin. Bu dosya, ana tablonuzda bulunmayan verileri yedek olarak kullanmak için gereklidir.",
         "description_en": "Upload the other Excel file in the 'Second File' area on the left panel. This file is necessary to use as a backup for data not found in your main table.",
         "placeholder_tr": "",
         "placeholder_en": "",
-        "required": true
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "return_column",
         "type": "text",
         "label_tr": "Dönüş Sütunu",
         "label_en": "Return Column",
-        "default": "Sonuç"
+        "default": "Sonuç",
+        "column_source": "secondary"
       }
     ],
     "tags_tr": [
@@ -2865,7 +2878,7 @@
         "Yedek tablonuzda arama yapacağınız sütunun adını 'Yedek Sütun' alanına yazın.",
         "Arama sonucunda almak istediğiniz değerlerin bulunduğu sütunun adını 'Değer Sütunu' alanına yazın.",
         "Sonuçların hangi sütunda gösterileceğini belirlemek için 'Sonuç Sütunu Adı' alanına bir isim yazın ya da boş bırakın.",
-        "Sol paneldeki 'İkinci Dosya' alanına diğer Excel dosyasını yükleyin.",
+        "'İkinci Dosya' alanına diğer Excel dosyasını yükleyin.",
         "İşlemi başlatın ve sonuçları inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adlarını doğru yazdığınızdan emin olun.",
@@ -2899,7 +2912,7 @@
         "3. Yedek tablonuzda arama yapacağınız sütunun adını 'Yedek Sütun' alanına yazın.",
         "4. Arama sonucunda almak istediğiniz değerlerin bulunduğu sütunun adını 'Değer Sütunu' alanına yazın.",
         "5. Sonuçların hangi sütunda gösterileceğini belirlemek için 'Sonuç Sütunu Adı' alanına bir isim yazın ya da boş bırakın.",
-        "6. Sol paneldeki 'İkinci Dosya' alanına diğer Excel dosyasını yükleyin.",
+        "6. 'İkinci Dosya' alanına diğer Excel dosyasını yükleyin.",
         "7. İşlemi başlatın ve sonuçları inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adlarını doğru yazdığınızdan emin olun.",
@@ -3824,7 +3837,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, birden fazla sütuna göre verilerinizi gruplamanızı ve her grubun kaç kez tekrarlandığını bulmanızı sağlar. Örneğin, bir şehirdeki farklı durumların sayısını görmek istiyorsanız bu senaryo tam size göre!",
       "how_to_tr": [
-        "Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "Gruplamak istediğiniz sütunların adlarını yazın. Örneğin: 'Şehir, Durum'.",
         "Sonuçları görmek için işlemi başlatın.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -3850,7 +3863,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, birden fazla sütuna göre verilerinizi gruplamanızı ve her grubun kaç kez tekrarlandığını bulmanızı sağlar. Örneğin, bir şehirdeki farklı durumların sayısını görmek istiyorsanız bu senaryo tam size göre!",
       "how_to_tr": [
-        "1. Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "1. 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "2. Gruplamak istediğiniz sütunların adlarını yazın. Örneğin: 'Şehir, Durum'.",
         "3. Sonuçları görmek için işlemi başlatın.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -3921,7 +3934,7 @@
       "what_is_tr": "Bu senaryo, belirli bir sütundaki verilerin kaç kez tekrarlandığını gösteren bir frekans tablosu oluşturur. Örneğin, bir satış verisi dosyasında hangi ürünlerin ne kadar satıldığını görmek için kullanışlıdır.",
       "how_to_tr": [
         "Excel dosyanızı yükleyin.",
-        "Sol paneldeki 'Sütun Adı' alanına, frekans tablosunu oluşturmak istediğiniz sütunun başlığını yazın. Örneğin: 'Tutar'.",
+        "'Sütun Adı' alanına, frekans tablosunu oluşturmak istediğiniz sütunun başlığını yazın. Örneğin: 'Tutar'.",
         "'Çalıştır' butonuna basın ve sonuçlarınızı bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adını tam olarak yazdığınızdan emin olun, büyük-küçük harf duyarlılığına dikkat edin.",
@@ -3947,7 +3960,7 @@
       "what_is_tr": "Bu senaryo, belirli bir sütundaki verilerin kaç kez tekrarlandığını gösteren bir frekans tablosu oluşturur. Örneğin, bir satış verisi dosyasında hangi ürünlerin ne kadar satıldığını görmek için kullanışlıdır.",
       "how_to_tr": [
         "1. Excel dosyanızı yükleyin.",
-        "2. Sol paneldeki 'Sütun Adı' alanına, frekans tablosunu oluşturmak istediğiniz sütunun başlığını yazın. Örneğin: 'Tutar'.",
+        "2. 'Sütun Adı' alanına, frekans tablosunu oluşturmak istediğiniz sütunun başlığını yazın. Örneğin: 'Tutar'.",
         "3. 'Çalıştır' butonuna basın ve sonuçlarınızı bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adını tam olarak yazdığınızdan emin olun, büyük-küçük harf duyarlılığına dikkat edin.",
@@ -4200,7 +4213,7 @@
       "what_is_tr": "Bu senaryo, Excel dosyanızdaki belirli sütunlarda tekrar eden değerleri bulup, bunları renklendirmenize yardımcı olur. Böylece hangi değerlerin birden fazla kez yer aldığını kolayca görebilirsiniz. Özellikle büyük veri setlerinde, tekrar eden kayıtları tespit etmek oldukça önemlidir.",
       "how_to_tr": [
         "Excel dosyanızı yükleyin.",
-        "Sol paneldeki 'Kontrol Edilecek Sütunlar' alanına, tekrar eden değerleri kontrol etmek istediğiniz sütunların başlıklarını yazın. Örneğin: 'Ürün Adı'.",
+        "'Kontrol Edilecek Sütunlar' alanına, tekrar eden değerleri kontrol etmek istediğiniz sütunların başlıklarını yazın. Örneğin: 'Ürün Adı'.",
         "İşlemi başlatın ve sonuçları bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sadece mevcut sütun başlıklarını yazın.",
@@ -4226,7 +4239,7 @@
       "what_is_tr": "Bu senaryo, Excel dosyanızdaki belirli sütunlarda tekrar eden değerleri bulup, bunları renklendirmenize yardımcı olur. Böylece hangi değerlerin birden fazla kez yer aldığını kolayca görebilirsiniz. Özellikle büyük veri setlerinde, tekrar eden kayıtları tespit etmek oldukça önemlidir.",
       "how_to_tr": [
         "1. Excel dosyanızı yükleyin.",
-        "2. Sol paneldeki 'Kontrol Edilecek Sütunlar' alanına, tekrar eden değerleri kontrol etmek istediğiniz sütunların başlıklarını yazın. Örneğin: 'Ürün Adı'.",
+        "2. 'Kontrol Edilecek Sütunlar' alanına, tekrar eden değerleri kontrol etmek istediğiniz sütunların başlıklarını yazın. Örneğin: 'Ürün Adı'.",
         "3. İşlemi başlatın ve sonuçları bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sadece mevcut sütun başlıklarını yazın.",
@@ -4553,7 +4566,15 @@
         "description_tr": "Buraya, her iki dosyada da bulunan ve birleştirme işlemi için kullanılacak sütunun başlığını yazın. Örneğin: 'ID', 'Müşteri No'. Eğer bu alanı yanlış yazarsanız, birleştirme işlemi gerçekleşmez.",
         "description_en": "Enter the name of the column that exists in both files and will be used for the merging operation. For example: 'ID', 'Customer No'. If you write this incorrectly, the merging will not occur.",
         "placeholder_tr": "Örn: ID...",
-        "placeholder_en": "e.g. ID..."
+        "placeholder_en": "e.g. ID...",
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "required": true
       },
       {
         "name": "how",
@@ -4598,7 +4619,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, iki farklı Excel dosyasındaki verileri birleştirerek daha anlamlı bir tablo oluşturmanıza yardımcı olur. Örneğin, bir dosyada müşteri bilgileri, diğer dosyada ise satış bilgileri varsa, bu iki dosyayı birleştirerek her müşterinin satışlarını görebilirsiniz.",
       "how_to_tr": [
-        "Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "Anahtar sütun adını yazın. Bu sütun, her iki dosyada da bulunmalı ve birleştirme işlemi için kullanılacak.",
         "Birleştirme türünü seçin. Varsayılan olarak 'İç' seçeneği seçilir.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -4624,7 +4645,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, iki farklı Excel dosyasındaki verileri birleştirerek daha anlamlı bir tablo oluşturmanıza yardımcı olur. Örneğin, bir dosyada müşteri bilgileri, diğer dosyada ise satış bilgileri varsa, bu iki dosyayı birleştirerek her müşterinin satışlarını görebilirsiniz.",
       "how_to_tr": [
-        "1. Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "1. 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "2. Anahtar sütun adını yazın. Bu sütun, her iki dosyada da bulunmalı ve birleştirme işlemi için kullanılacak.",
         "3. Birleştirme türünü seçin. Varsayılan olarak 'İç' seçeneği seçilir.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -4917,6 +4938,14 @@
         "description_en": "In this field, write the names of the columns you want to search your data by. For example, 'Product Name', 'Customer ID', etc. If you write this field incorrectly, the search will not work and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Adı...",
         "placeholder_en": "e.g. Product Name...",
+        "required": true,
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
         "required": true
       },
       {
@@ -4927,7 +4956,8 @@
         "description_tr": "Bu alana, yukarıda belirttiğiniz sütunlara karşılık gelen değerleri yazın. Örneğin, 'Elma', '123' gibi. Eğer bu değerler, arama sütunlarındaki değerlerle eşleşmezse sonuç alamazsınız.",
         "description_en": "In this field, write the values corresponding to the columns you specified above. For example, 'Apple', '123', etc. If these values do not match the values in the lookup columns, you will not get any results.",
         "placeholder_tr": "Örn: Elma...",
-        "placeholder_en": "e.g. Apple..."
+        "placeholder_en": "e.g. Apple...",
+        "column_source": "secondary"
       },
       {
         "name": "return_column",
@@ -4937,7 +4967,8 @@
         "description_tr": "Bu alana, arama sonuçlarında hangi sütunun değerini almak istediğinizi yazın. Örneğin, 'Fiyat' ya da 'Stok Miktarı'. Eğer bu sütun mevcut değilse, sonuç alamazsınız.",
         "description_en": "In this field, write the name of the column whose value you want to retrieve in the search results. For example, 'Price' or 'Stock Quantity'. If this column does not exist, you will not get any results.",
         "placeholder_tr": "Örn: Fiyat...",
-        "placeholder_en": "e.g. Price..."
+        "placeholder_en": "e.g. Price...",
+        "column_source": "secondary"
       }
     ],
     "tags_tr": [
@@ -4961,7 +4992,7 @@
       "what_is_tr": "Bu senaryo, belirli kriterlere göre verilerinizi aramanıza ve eşleşen değerleri bulmanıza yardımcı olur. Örneğin, bir ürünün fiyatını bulmak için ürün adını ve müşteri ID'sini kullanabilirsiniz.",
       "how_to_tr": [
         "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
-        "Sol paneldeki 'Arama Sütunları' alanına, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın.",
+        "'Arama Sütunları' alanına, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın.",
         "'Arama Değerleri' alanına, yukarıda belirttiğiniz sütunlara karşılık gelen değerleri yazın.",
         "'Getirilecek Sütun' alanına, arama sonuçlarında hangi sütunun değerini almak istediğinizi yazın.",
         "İşlemi tamamladıktan sonra sonuçları görmek için butona tıklayın.",
@@ -4989,7 +5020,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, belirli kriterlere göre verilerinizi aramanıza ve eşleşen değerleri bulmanıza yardımcı olur. Örneğin, bir ürünün fiyatını bulmak için ürün adını ve müşteri ID'sini kullanabilirsiniz.",
       "how_to_tr": [
-        "1. Sol paneldeki 'Arama Sütunları' alanına, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın.",
+        "1. 'Arama Sütunları' alanına, verilerinizi hangi sütunlara göre arayacaksanız o sütunların adlarını yazın.",
         "2. 'Arama Değerleri' alanına, yukarıda belirttiğiniz sütunlara karşılık gelen değerleri yazın.",
         "3. 'Getirilecek Sütun' alanına, arama sonuçlarında hangi sütunun değerini almak istediğinizi yazın.",
         "4. İşlemi tamamladıktan sonra sonuçları görmek için butona tıklayın.",
@@ -6278,7 +6309,15 @@
       "module": "app.scenarios.pq_append_tables",
       "func": "run"
     },
-    "params": [],
+    "params": [
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "required": true
+      }
+    ],
     "tags_tr": [
       "birleştirme",
       "append",
@@ -6481,7 +6520,7 @@
       "what_is_tr": "Bu senaryo, verilerinizdeki tekrar eden kayıtları temizlemek için tasarlanmıştır. Örneğin, bir müşteri listesinde aynı müşteri birden fazla kez yer alıyorsa, bu araç sayesinde sadece ilk kaydı koruyarak diğer tekrarları silebilirsiniz. Böylece daha düzenli ve kullanışlı bir veri setine sahip olursunuz.",
       "how_to_tr": [
         "Excel dosyanızı yükleyin.",
-        "Sol paneldeki 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Müşteri Adı'.",
+        "'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Müşteri Adı'.",
         "İşlemi başlatmak için 'Çalıştır' butonuna tıklayın.",
         "Sonuç dosyanızı indirin ve inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -6509,7 +6548,7 @@
       "what_is_tr": "Bu senaryo, verilerinizdeki tekrar eden kayıtları temizlemek için tasarlanmıştır. Örneğin, bir müşteri listesinde aynı müşteri birden fazla kez yer alıyorsa, bu araç sayesinde sadece ilk kaydı koruyarak diğer tekrarları silebilirsiniz. Böylece daha düzenli ve kullanışlı bir veri setine sahip olursunuz.",
       "how_to_tr": [
         "1. Excel dosyanızı yükleyin.",
-        "2. Sol paneldeki 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Müşteri Adı'.",
+        "2. 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Müşteri Adı'.",
         "3. İşlemi başlatmak için 'Çalıştır' butonuna tıklayın.",
         "4. Sonuç dosyanızı indirin ve inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -7196,19 +7235,29 @@
         "type": "text",
         "label_tr": "Arama Sütunu",
         "label_en": "Lookup Column",
+        "required": true,
+        "column_source": "secondary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
         "required": true
       },
       {
         "name": "lookup_value",
         "type": "text",
         "label_tr": "Aranacak Değer",
-        "label_en": "Lookup Value"
+        "label_en": "Lookup Value",
+        "column_source": "primary"
       },
       {
         "name": "return_column",
         "type": "text",
         "label_tr": "Dönüş Sütunu",
-        "label_en": "Return Column"
+        "label_en": "Return Column",
+        "column_source": "secondary"
       }
     ],
     "tags_tr": [
@@ -7490,7 +7539,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, belirli koşullara göre puanlama yaparak verilerinizi daha anlamlı hale getirmenizi sağlar. Örneğin, satış performansını değerlendirmek için farklı kriterlere göre puan vererek, hangi satışların daha başarılı olduğunu belirleyebilirsiniz.",
       "how_to_tr": [
-        "Excel dosyanızı yükleyin ve sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "Excel dosyanızı yükleyin ve 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "Kurallarınızı tanımlamak için 'Kurallar' alanına gerekli bilgileri yazın. Örneğin: [{'column': 'Tutar', 'operator': '>', 'value': 100, 'points': 10}].",
         "Eğer bir kimlik sütunu kullanıyorsanız, 'Kimlik Sütunu' alanına o sütunun adını yazın.",
         "İşlemi başlatmak için gerekli bilgileri kontrol edin ve devam edin.",
@@ -7518,7 +7567,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, belirli koşullara göre puanlama yaparak verilerinizi daha anlamlı hale getirmenizi sağlar. Örneğin, satış performansını değerlendirmek için farklı kriterlere göre puan vererek, hangi satışların daha başarılı olduğunu belirleyebilirsiniz.",
       "how_to_tr": [
-        "1. Excel dosyanızı yükleyin ve sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
+        "1. Excel dosyanızı yükleyin ve 'İkinci Dosya' alanına diğer Excel'i yükleyin.",
         "2. Kurallarınızı tanımlamak için 'Kurallar' alanına gerekli bilgileri yazın. Örneğin: [{'column': 'Tutar', 'operator': '>', 'value': 100, 'points': 10}].",
         "3. Eğer bir kimlik sütunu kullanıyorsanız, 'Kimlik Sütunu' alanına o sütunun adını yazın.",
         "4. İşlemi başlatmak için gerekli bilgileri kontrol edin ve devam edin.",
@@ -7746,7 +7795,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, verilerinizi birden fazla kritere göre sıralamak için kullanılır. Örneğin, bir satış raporundaki verileri önce tarihe, sonra da tutara göre sıralamak isteyebilirsiniz. Bu sayede verilerinizi daha düzenli ve anlaşılır bir şekilde görüntüleyebilirsiniz.",
       "how_to_tr": [
-        "Sol paneldeki 'Sıralama Sütunları' alanına, sıralamak istediğiniz sütunların adlarını yazın.",
+        "'Sıralama Sütunları' alanına, sıralamak istediğiniz sütunların adlarını yazın.",
         "'Sıralama Yöntemi' alanında, her bir sütun için sıralamanın artan mı yoksa azalan mı olacağını belirtin. 'true' artan, 'false' azalan anlamına gelir.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sıralamak istediğiniz sütunların adlarını tam olarak yazdığınızdan emin olun.",
@@ -7770,7 +7819,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, verilerinizi birden fazla kritere göre sıralamak için kullanılır. Örneğin, bir satış raporundaki verileri önce tarihe, sonra da tutara göre sıralamak isteyebilirsiniz. Bu sayede verilerinizi daha düzenli ve anlaşılır bir şekilde görüntüleyebilirsiniz.",
       "how_to_tr": [
-        "1. Sol paneldeki 'Sıralama Sütunları' alanına, sıralamak istediğiniz sütunların adlarını yazın.",
+        "1. 'Sıralama Sütunları' alanına, sıralamak istediğiniz sütunların adlarını yazın.",
         "2. 'Sıralama Yöntemi' alanında, her bir sütun için sıralamanın artan mı yoksa azalan mı olacağını belirtin. 'true' artan, 'false' azalan anlamına gelir.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sıralamak istediğiniz sütunların adlarını tam olarak yazdığınızdan emin olun.",
@@ -8516,7 +8565,7 @@
     "help_tr": {
       "what_is_tr": "Bu senaryo, verilerinizdeki tekrar eden grupların ilk kayıtlarını işaretlemenize yardımcı olur. Örneğin, bir ürünün her satışında yalnızca ilk kaydı işaretlemek istiyorsanız, bu aracı kullanabilirsiniz.",
       "how_to_tr": [
-        "Sol paneldeki 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Ürün Adı'.",
+        "'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Ürün Adı'.",
         "'İşaretleme Sütunu' alanına, ilk kayıtları işaretlemek için kullanmak istediğiniz sütunun başlığını yazın. Eğer varsayılan ismi kullanmak istiyorsanız bu alanı boş bırakabilirsiniz.",
         "İşlemi başlatmak için 'Çalıştır' butonuna tıklayın.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -8542,7 +8591,7 @@
     "help_en": {
       "what_is_tr": "Bu senaryo, verilerinizdeki tekrar eden grupların ilk kayıtlarını işaretlemenize yardımcı olur. Örneğin, bir ürünün her satışında yalnızca ilk kaydı işaretlemek istiyorsanız, bu aracı kullanabilirsiniz.",
       "how_to_tr": [
-        "1. Sol paneldeki 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Ürün Adı'.",
+        "1. 'Gruplama Sütunu' alanına, verilerinizi hangi kritere göre gruplayacaksanız o sütunun başlığını yazın. Örneğin: 'Ürün Adı'.",
         "2. 'İşaretleme Sütunu' alanına, ilk kayıtları işaretlemek için kullanmak istediğiniz sütunun başlığını yazın. Eğer varsayılan ismi kullanmak istiyorsanız bu alanı boş bırakabilirsiniz.",
         "3. İşlemi başlatmak için 'Çalıştır' butonuna tıklayın.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -8705,7 +8754,7 @@
       "what_is_tr": "Bu senaryo, belirli bir sütundaki benzersiz değerleri ve bu değerlerin sayısını bulmanıza yardımcı olur. Örneğin, bir satış raporundaki farklı ürünlerin sayısını görmek istiyorsanız, bu aracı kullanarak hangi ürünlerin ne kadar satıldığını kolayca görebilirsiniz.",
       "how_to_tr": [
         "Excel dosyanızı yükleyin.",
-        "Sol paneldeki 'Sütun Adı' alanına, benzersiz değerlerini almak istediğiniz sütunun başlığını yazın. Örneğin: 'Ürün'.",
+        "'Sütun Adı' alanına, benzersiz değerlerini almak istediğiniz sütunun başlığını yazın. Örneğin: 'Ürün'.",
         "İşlemi başlatın ve sonuçları bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adını tam olarak yazdığınızdan emin olun, büyük/küçük harf duyarlılığına dikkat edin.",
@@ -8731,7 +8780,7 @@
       "what_is_tr": "Bu senaryo, belirli bir sütundaki benzersiz değerleri ve bu değerlerin sayısını bulmanıza yardımcı olur. Örneğin, bir satış raporundaki farklı ürünlerin sayısını görmek istiyorsanız, bu aracı kullanarak hangi ürünlerin ne kadar satıldığını kolayca görebilirsiniz.",
       "how_to_tr": [
         "1. Excel dosyanızı yükleyin.",
-        "2. Sol paneldeki 'Sütun Adı' alanına, benzersiz değerlerini almak istediğiniz sütunun başlığını yazın. Örneğin: 'Ürün'.",
+        "2. 'Sütun Adı' alanına, benzersiz değerlerini almak istediğiniz sütunun başlığını yazın. Örneğin: 'Ürün'.",
         "3. İşlemi başlatın ve sonuçları bekleyin.",
         "--- <b>💡 İpuçları:</b> ---",
         "İpucu: Sütun adını tam olarak yazdığınızdan emin olun, büyük/küçük harf duyarlılığına dikkat edin.",
@@ -8777,6 +8826,14 @@
         "description_en": "Enter the header of the column that contains the values you want to validate. If you write it incorrectly, the program won't be able to find this column and will throw an error.",
         "placeholder_tr": "Örn: Ürün Kodu...",
         "placeholder_en": "e.g. Product Code...",
+        "required": true,
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
         "required": true
       },
       {
@@ -8787,7 +8844,8 @@
         "description_tr": "Bu alana, değerlerinizi kontrol edeceğiniz referans listesinin yolunu yazın. Bu bir dosya yolu (örneğin: 'referans.xlsx') veya bir liste (örneğin: ['değer1', 'değer2']) olabilir. Yanlış bir yol yazarsanız, program dosyayı bulamaz ve hata verir.",
         "description_en": "Enter the path to the reference list you want to validate your values against. This can be a file path (e.g., 'reference.xlsx') or a list (e.g., ['value1', 'value2']). If you write an incorrect path, the program won't be able to find the file and will throw an error.",
         "placeholder_tr": "Örn: referans.xlsx veya ['değer1', 'değer2']...",
-        "placeholder_en": "e.g. reference.xlsx or ['value1', 'value2']..."
+        "placeholder_en": "e.g. reference.xlsx or ['value1', 'value2']...",
+        "column_source": "secondary"
       },
       {
         "name": "group_column",
@@ -8926,17 +8984,15 @@
         "description_en": "In this field, you should write the name of the column in your main table that will be used to find information in the other table. For example, 'Customer ID' or 'Product Code'. If you write an incorrect column name, the system may not find the correct information and may return an error.",
         "placeholder_tr": "Örn: Müşteri ID...",
         "placeholder_en": "e.g. Customer ID...",
-        "required": true
+        "required": true,
+        "column_source": "primary"
       },
       {
-        "name": "lookup_df",
-        "type": "dynamic_list",
-        "label_tr": "İkinci Dosya",
-        "label_en": "Second File",
-        "description_tr": "Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin. Bu dosya, ana tablonuzdaki anahtar sütununa göre bilgi çekeceğiniz tablodur. Eğer yüklemezseniz, sistem çalışmaz.",
-        "description_en": "Upload the other Excel in the 'Second File' section on the left panel. This file is the table from which you will pull information based on the key column in your main table. If you do not upload it, the system will not work.",
-        "placeholder_tr": "Excel dosyasını yükleyin...",
-        "placeholder_en": "Upload the Excel file..."
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "required": true
       },
       {
         "name": "lookup_key_column",
@@ -8946,7 +9002,8 @@
         "description_tr": "Bu alana, ikinci dosyanızdaki hangi sütunun ana tablodaki anahtar sütun ile eşleşeceğini yazmalısınız. Örneğin, 'Müşteri ID' veya 'Ürün Kodu'. Yanlış yazarsanız, eşleşme sağlanamaz.",
         "description_en": "In this field, you should write the name of the column in your second file that will match with the key column in the main table. For example, 'Customer ID' or 'Product Code'. If you write it incorrectly, matching cannot be achieved.",
         "placeholder_tr": "Örn: Ürün Kodu...",
-        "placeholder_en": "e.g. Product Code..."
+        "placeholder_en": "e.g. Product Code...",
+        "column_source": "secondary"
       },
       {
         "name": "lookup_value_column",
@@ -8956,20 +9013,23 @@
         "description_tr": "Getirilecek sütun. Boş bırakılırsa tüm eşleşen satır getirilir.",
         "description_en": "Column to return. If empty, returns entire matching row.",
         "placeholder_tr": "Örn: Fiyat...",
-        "placeholder_en": "e.g. Price..."
+        "placeholder_en": "e.g. Price...",
+        "column_source": "secondary"
       },
       {
         "name": "lookup_column",
         "type": "text",
         "label_tr": "Arama Sütunu",
         "label_en": "Lookup Column",
-        "required": true
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "return_column",
         "type": "text",
         "label_tr": "Dönüş Sütunu",
-        "label_en": "Return Column"
+        "label_en": "Return Column",
+        "column_source": "secondary"
       }
     ],
     "tags_tr": [
@@ -8997,7 +9057,7 @@
       "how_to_tr": [
         "💡 **İpucu:** Bu senaryo için aynı dosyadan farklı bir sayfa seçebilir veya ikinci bir dosya yükleyebilirsiniz. Tek dosyadan da çalışabilir.",
         "Ana tablonuzdaki hangi sütunun anahtar olduğunu belirleyin ve 'Anahtar Sütun Adı' alanına yazın.",
-        "Sol paneldeki 'İkinci Dosya' alanına diğer Excel dosyanızı yükleyin.",
+        "'İkinci Dosya' alanına diğer Excel dosyanızı yükleyin.",
         "İkinci dosyanızdaki anahtar sütunu ve almak istediğiniz değer sütununu belirleyin ve ilgili alanlara yazın.",
         "Tüm bilgileri doğru girdiyseniz, işlemi başlatın ve sonuçları inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -9025,7 +9085,7 @@
       "what_is_tr": "Bu senaryo, ana tablonuzdaki belirli bir anahtara göre başka bir tablodan bilgi çekmenizi sağlar. Örneğin, müşteri bilgilerini çekmek için kullanabilirsiniz. Böylece, verilerinizi daha düzenli ve anlamlı hale getirebilirsiniz.",
       "how_to_tr": [
         "1. Ana tablonuzdaki hangi sütunun anahtar olduğunu belirleyin ve 'Anahtar Sütun Adı' alanına yazın.",
-        "2. Sol paneldeki 'İkinci Dosya' alanına diğer Excel dosyanızı yükleyin.",
+        "2. 'İkinci Dosya' alanına diğer Excel dosyanızı yükleyin.",
         "3. İkinci dosyanızdaki anahtar sütunu ve almak istediğiniz değer sütununu belirleyin ve ilgili alanlara yazın.",
         "4. Tüm bilgileri doğru girdiyseniz, işlemi başlatın ve sonuçları inceleyin.",
         "--- <b>💡 İpuçları:</b> ---",
@@ -9073,7 +9133,15 @@
         "description_tr": "Bu alana, aramak istediğiniz değeri yazın. Örneğin, bir ürünün adını veya ID'sini girebilirsiniz. Eğer bu alanı yanlış yazarsanız veya değeri bulamazsanız, sonuç olarak 'bulunamadı' mesajı alırsınız.",
         "description_en": "Enter the value you want to search for. For example, you can enter a product name or ID. If you write this field incorrectly or cannot find the value, you will receive a 'not found' message.",
         "placeholder_tr": "Örn: Elma...",
-        "placeholder_en": "e.g. Apple..."
+        "placeholder_en": "e.g. Apple...",
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "required": true
       },
       {
         "name": "lookup_column",
@@ -9084,7 +9152,8 @@
         "description_en": "Enter the header of the column you want to search in. For example, 'Product Name' or 'Product ID'. If you write this field incorrectly, the search operation will not occur.",
         "placeholder_tr": "Örn: Ürün Adı...",
         "placeholder_en": "e.g. Product Name...",
-        "required": true
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "return_column",
@@ -9094,7 +9163,8 @@
         "description_tr": "Bu alana, arama sonucunda hangi sütunun değerini almak istediğinizi yazın. Örneğin, 'Fiyat' veya 'Stok Miktarı'. Eğer bu alanı yanlış yazarsanız, sonuç alamazsınız.",
         "description_en": "Enter the column from which you want to retrieve the value after the search. For example, 'Price' or 'Stock Quantity'. If you write this field incorrectly, you will not be able to get a result.",
         "placeholder_tr": "Örn: Fiyat...",
-        "placeholder_en": "e.g. Price..."
+        "placeholder_en": "e.g. Price...",
+        "column_source": "secondary"
       },
       {
         "name": "default_value",
