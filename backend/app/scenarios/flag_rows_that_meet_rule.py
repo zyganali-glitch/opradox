@@ -4,27 +4,30 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    flag_column = params.get("flag_column")
+    flag_column = params.get("flag_column", "Flag")  # default='Flag'
     condition_column = params.get("condition_column")
     # Support both 'operator' and 'condition_operator' parameter names
-    condition_operator = params.get("condition_operator") or params.get("operator")
+    condition_operator = params.get("condition_operator") or params.get("operator", "==")  # default='=='
     # Support both 'value' and 'condition_value' parameter names
     condition_value = params.get("condition_value") if params.get("condition_value") is not None else params.get("value")
 
-    if not flag_column:
-        raise HTTPException(status_code=400, detail="flag_column parametresi eksik")
+    # condition_column boşsa ilk sütunu kullan
     if not condition_column:
-        raise HTTPException(status_code=400, detail="condition_column parametresi eksik")
-    if not condition_operator:
-        raise HTTPException(status_code=400, detail="condition_operator parametresi eksik")
-    if condition_value is None:
-        raise HTTPException(status_code=400, detail="condition_value parametresi eksik")
+        if len(df.columns) > 0:
+            condition_column = df.columns[0]
+        else:
+            raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen condition_column belirtin.")
 
     if condition_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"{condition_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}"
+            detail=f"{condition_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}"
         )
+    
+    # condition_value boşsa NaN/boş değerleri işaretle
+    if condition_value is None or condition_value == "":
+        condition_value = ""
+        # Boş değer kontrolü için özel işlem
 
     # Operatör fonksiyonları
     ops = {

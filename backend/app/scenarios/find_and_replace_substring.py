@@ -6,29 +6,35 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Gerekli parametreler: columns (list), find_str (str), replace_str (str)
     # Support both 'column' (singular) and 'columns' (plural) parameter names
-    if "columns" not in params and "column" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: columns")
+    columns = params.get("columns") or params.get("column")
+    find_str = params.get("find_str")
+    replace_str = params.get("replace_str", "")  # default='' (silme)
     
-    # Convert singular 'column' to 'columns' list if needed
-    if "columns" not in params and "column" in params:
-        params["columns"] = [params["column"]] if isinstance(params["column"], str) else params["column"]
-    if "find_str" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: find_str")
-    if "replace_str" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: replace_str")
-
-    columns = params["columns"]
-    find_str = params["find_str"]
-    replace_str = params["replace_str"]
-
-    if not isinstance(columns, list) or not all(isinstance(c, str) for c in columns):
+    # find_str zorunlu
+    if find_str is None:
+        raise HTTPException(status_code=400, detail="find_str parametresi zorunludur.")
+    
+    # columns boşsa tüm metin sütunlarına uygula
+    if not columns:
+        text_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if text_cols:
+            columns = text_cols
+        else:
+            raise HTTPException(status_code=400, detail="Metin sütunu bulunamadı. Lütfen columns belirtin.")
+    
+    # Tekil değer geldiyse listeye çevir
+    if isinstance(columns, str):
+        columns = [columns]
+    
+    if not isinstance(columns, list):
         raise HTTPException(status_code=400, detail="columns parametresi string listesi olmalı")
-    if not isinstance(find_str, str) or not isinstance(replace_str, str):
-        raise HTTPException(status_code=400, detail="find_str ve replace_str string olmalı")
+    
+    if not isinstance(find_str, str):
+        raise HTTPException(status_code=400, detail="find_str string olmalı")
 
     missing_cols = [c for c in columns if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Belirtilen sütunlar bulunamadı: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Belirtilen sütunlar bulunamadı: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     df_copy = df.copy()
     total_replacements = 0

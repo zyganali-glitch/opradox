@@ -15,6 +15,30 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         if lookup_df is None:
             lookup_df = params.get("df2")
 
+        # Auto-select: key_column (main df)
+        if not key_column:
+             if len(df.columns) > 0:
+                 key_column = df.columns[0]
+             else:
+                 raise HTTPException(status_code=400, detail="Main df boş. key_column belirtin.")
+
+        if lookup_df is not None and isinstance(lookup_df, pd.DataFrame):
+            # Auto-select: lookup_key_column (lookup df ilk sütun)
+            if not lookup_key_column:
+                 if len(lookup_df.columns) > 0:
+                     lookup_key_column = lookup_df.columns[0]
+                 else:
+                     raise HTTPException(status_code=400, detail="Lookup df boş. lookup_key_column belirtin.")
+                     
+            # Auto-select: lookup_value_column (lookup df ikinci sütun, yoksa ilk)
+            if not lookup_value_column:
+                 if len(lookup_df.columns) > 1:
+                     lookup_value_column = lookup_df.columns[1]
+                 elif len(lookup_df.columns) > 0:
+                     lookup_value_column = lookup_df.columns[0] # Fallback to first
+                 else:
+                      raise HTTPException(status_code=400, detail="Lookup df boş. lookup_value_column belirtin.")
+
         if key_column is None:
             raise HTTPException(status_code=400, detail="key_column parametresi eksik")
         if lookup_key_column is None:

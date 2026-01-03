@@ -11,7 +11,18 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     var_name = params.get("var_name", "variable")
     value_name = params.get("value_name", "value")
     
+    # id_vars boşsa ilk sütun auto-select
     if not id_vars:
+        if len(df.columns) > 0:
+            id_vars = [df.columns[0]]
+        else:
+             raise HTTPException(status_code=400, detail="Veri seti boş. Unpivot yapılamaz.")
+             
+    if isinstance(id_vars, str):
+         id_vars = [c.strip() for c in id_vars.split(",") if c.strip()]
+         
+    if not id_vars:
+         # Yukaridaki işlemlerden sonra hala boşsa
         raise HTTPException(status_code=400, detail="id_vars parametresi eksik")
     
     # Unpivot işlemi

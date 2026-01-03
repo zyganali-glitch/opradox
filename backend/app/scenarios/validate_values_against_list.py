@@ -12,7 +12,15 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     group_column = params.get("group_column")
     ignore_case = params.get("ignore_case", False)
 
+    # value_column boşsa ilk sütun auto-select
+    if not value_column:
+        if len(df.columns) > 0:
+            value_column = df.columns[0]
+        else:
+            raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen value_column belirtin.")
+
     if value_column is None:
+        # Yukaridaki islemden sonra hala None ise
         raise HTTPException(status_code=400, detail="value_column parametresi eksik")
     if reference_list is None:
         raise HTTPException(status_code=400, detail="reference_list parametresi eksik")

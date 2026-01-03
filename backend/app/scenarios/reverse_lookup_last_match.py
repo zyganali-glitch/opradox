@@ -12,10 +12,24 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     start_date = params.get("start_date")
     end_date = params.get("end_date")
 
+    # lookup_col boşsa ilk kategorik auto-select
     if not lookup_col:
-        raise HTTPException(status_code=400, detail="'lookup_column' veya 'group_column' parametresi eksik")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            lookup_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen lookup_column belirtin.")
+    
+    # value_col boşsa lookup_col olmayan ilk sütun (tercihen numeric ama object de olabilir)
     if not value_col:
-        raise HTTPException(status_code=400, detail="'value_column' veya 'return_column' parametresi eksik")
+        possible_cols = [c for c in df.columns if c != lookup_col]
+        if possible_cols:
+            value_col = possible_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Değer sütunu bulunamadı. Lütfen value_column belirtin.")
+
+    # Opsiyonel exception atılmıyor çünkü auto-select yaptık. Ama if kontrolü kalabilir
+    # (Yukarıda zaten atadık veya hata fırlattık)
 
     missing_cols = [c for c in [lookup_col, value_col] if c not in df.columns]
     if date_col and date_col not in df.columns:

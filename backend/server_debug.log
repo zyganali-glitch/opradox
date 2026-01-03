@@ -1050,3 +1050,266 @@ Sheet: None
 Header Row: 0
 Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
 Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 11:14:03.625655
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 11:14:11.559373
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 11:14:18.046748
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 11:41:05.515501
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"data_source","source_type":"main","sheet_name":""},{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 11:46:36.284239
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"data_source","source_type":"main","sheet_name":""},{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Excel Read Error: 'dict' object has no attribute 'empty'
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 12:14:47.736769
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ (2).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"TÜGVA MENEMEN VAKIF OKULU\n2025-2026 EĞİTİM-ÖĞRETİM YILI\nHÜNERHANE KURSLARI HAFTALIK DERS PROGRAMI BİLGİLERİ TABLOSU","operator":"is_not_null","value":""}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 12:45:28.356019
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ (2).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"TÜGVA MENEMEN VAKIF OKULU\n2025-2026 EĞİTİM-ÖĞRETİM YILI\nHÜNERHANE KURSLARI HAFTALIK DERS PROGRAMI BİLGİLERİ TABLOSU","operator":"is_not_null","value":""}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:25:25.747443
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ (2).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"TÜGVA MENEMEN VAKIF OKULU\n2025-2026 EĞİTİM-ÖĞRETİM YILI\nHÜNERHANE KURSLARI HAFTALIK DERS PROGRAMI BİLGİLERİ TABLOSU","operator":"is_not_null","value":""}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:25:59.987184
+Scenario ID: custom-report-builder-pro
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ (2).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"chart","chart_type":"column","x_column":"","y_columns":"TÜGVA MENEMEN VAKIF OKULU\n2025-2026 EĞİTİM-ÖĞRETİM YILI\nHÜNERHANE KURSLARI HAFTALIK DERS PROGRAMI BİLGİLERİ TABLOSU","titl...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:26:20.372740
+Scenario ID: basic-summary-stats-column
+Filename: HALK EĞİTİM YER SAAT BİLDİRİMİ (2).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","column":"TÜGVA MENEMEN VAKIF OKULU2025-2026 EĞİTİM-ÖĞRETİM YILIHÜNERHANE KURSLARI HAFTALIK DERS PROGRAMI BİLGİLERİ TABLOSU"}...
+Calling runner for basic-summary-stats-column...
+Runner ValueError: S�tun bulunamad�: T�GVA MENEMEN VAKIF OKULU2025-2026 E��T�M-��RET�M YILIH�NERHANE KURSLARI HAFTALIK DERS PROGRAMI B�LG�LER� TABLOSU
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:26:57.904140
+Scenario ID: basic-summary-stats-column
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","column":"Program Kodu"}...
+Calling runner for basic-summary-stats-column...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:29:40.319502
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"computed","ctype":"arithmetic","name":"doluluk","columns":"Kontenjan","operation":"add","window_size":3}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:53:19.937898
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 14:55:20.800660
+Scenario ID: report-filter-then-group
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"":"Sayfa2","group_column":"Üniversite Türü","value_column":"Üniversite Adı","aggfunc":"sum"}...
+Calling runner for report-filter-then-group...
+Runner Exception: 400: date_column parametresi eksik
+TRACEBACK:
+Traceback (most recent call last):
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\main.py", line 178, in run_scenario
+    result = runner(df, params_dict)
+  File "C:\Users\MEHMET\.gemini\antigravity\scratch\opradox\backend\app\scenarios\report_filter_then_group.py", line 21, in run
+    raise HTTPException(status_code=400, detail="date_column parametresi eksik")
+fastapi.exceptions.HTTPException: 400: date_column parametresi eksik
+
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 15:11:31.740809
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: None
+Header Row: 0
+Params Raw: {"config":[{"type":"filter","column":"Üniversite Adı","operator":"contains","value":"katip"}]}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 15:53:36.066120
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"filter\",\"column\":\"Üniversite Adı\",\"operator\":\"contains\",\"value\":\"katip\"}]"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 15:59:54.129143
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"computed\",\"ctype\":\"formula\",\"name\":\"doluluk\",\"formula\":\"\"}]"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-01 16:00:24.280387
+Scenario ID: custom-report-builder-pro
+Filename: tablo4_ykd25082025 (1).xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"computed\",\"ctype\":\"formula\",\"name\":\"doluluk\",\"formula\":\"\"}]"}...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:01:47.934145
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"computed\",\"ctype\":\"arithmetic\",\"name\":\"doluluk\",\"columns\":[\"Kontenjan\",\"Yerleşen\"],\"operation\":\"percent\",\"window_size\":3},{\"type\":\"output\",\"output_typ...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:02:34.530469
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"filter\",\"column\":\"Program Adı\",\"operator\":\"is_not_null\",\"value\":\"\"},{\"type\":\"computed\",\"ctype\":\"arithmetic\",\"name\":\"doluluk\",\"columns\":[\"Kontenjan\"...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:03:13.984772
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"filter\",\"column\":\"Program Adı\",\"operator\":\"contains\",\"value\":\"tıp\"},{\"type\":\"computed\",\"ctype\":\"arithmetic\",\"name\":\"doluluk\",\"columns\":[\"Kontenjan\"...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:03:15.610805
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"is_preview":true,"config":"[{\"type\":\"filter\",\"column\":\"Program Adı\",\"operator\":\"contains\",\"value\":\"tıp\"},{\"type\":\"computed\",\"ctype\":\"arithmetic\",\"name\":\"doluluk\",\"column...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:03:30.465484
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"filter\",\"column\":\"Program Adı\",\"operator\":\"contains\",\"value\":\"tıp\"},{\"type\":\"computed\",\"ctype\":\"arithmetic\",\"name\":\"doluluk\",\"columns\":[\"Kontenjan\"...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:04:26.697354
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"sort\",\"column\":\"Üniversite Adı\",\"direction\":\"asc\"},{\"type\":\"output\",\"output_type\":\"sheet_per_group\",\"summary_sheet\":false,\"drill_down_index\":true,\"freeze_...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:04:51.241524
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"sort\",\"column\":\"Üniversite Adı\",\"direction\":\"asc\"},{\"type\":\"output\",\"output_type\":\"multi_sheet\",\"summary_sheet\":true,\"freeze_header\":true,\"auto_fit_column...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.
+
+============================================================
+REQUEST RECEIVED AT 2026-01-02 22:05:29.120796
+Scenario ID: custom-report-builder-pro
+Filename: tablo 4 modifiye.xlsx
+Sheet: Sayfa1
+Header Row: 0
+Params Raw: {"config":"[{\"type\":\"sort\",\"column\":\"Üniversite Adı\",\"direction\":\"asc\"},{\"type\":\"output\",\"output_type\":\"sheet_per_group\",\"summary_sheet\":true,\"drill_down_index\":true,\"freeze_h...
+Calling runner for custom-report-builder-pro...
+Runner finished successfully.

@@ -4,17 +4,38 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    required_params = ["date_column", "value_column"]
-    for p in required_params:
-        if p not in params or not params[p]:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya boş")
-
-    date_col = params["date_column"]
-    value_col = params["value_column"]
+    date_col = params.get("date_column")
+    value_col = params.get("value_column")
     group_col = params.get("group_column", None)
     start_date = params.get("start_date", None)
     end_date = params.get("end_date", None)
     aggfunc = params.get("aggfunc", "sum")
+
+    # date_col boşsa auto-detect
+    if not date_col:
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+             # object columnlardan parse dene
+             for col in df.columns:
+                 if df[col].dtype == 'object':
+                     try:
+                         pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                         date_col = col
+                         break
+                     except:
+                         continue
+        if not date_col:
+             raise HTTPException(status_code=400, detail="Tarih sütunu bulunamadı. Lütfen date_column belirtin.")
+
+    # value_col boşsa auto-detect (ilk numeric)
+    if not value_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
 
     if date_col not in df.columns:
         raise HTTPException(status_code=400, detail=f"'{date_col}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")

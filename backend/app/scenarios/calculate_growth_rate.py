@@ -6,12 +6,35 @@ def run(df: pd.DataFrame, params: dict) -> dict:
 
     date_col = params.get("date_column")
     value_col = params.get("value_column")
-    period = params.get("period", "M") # M, Y, Q
+    period = params.get("period", "M")  # M, Y, Q - default Aylık
 
-    if not date_col or date_col not in df.columns:
-        raise HTTPException(status_code=400, detail="Tarih sütunu seçilmedi.")
-    if not value_col or value_col not in df.columns:
-         raise HTTPException(status_code=400, detail="Değer sütunu seçilmedi.")
+    # date_column auto-detect
+    if not date_col:
+        # Önce datetime sütunlarını ara
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+            # Object sütunlardan tarih parse etmeyi dene
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    try:
+                        pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                        date_col = col
+                        break
+                    except:
+                        continue
+        if not date_col:
+            raise HTTPException(status_code=400, detail="Tarih sütunu otomatik algılanamadı. Lütfen date_column parametresini belirtin.")
+    
+    if date_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"Tarih sütunu '{date_col}' bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
+    
+    # value_column kontrolü - zorunlu ama anlaşılır hata
+    if not value_col:
+        raise HTTPException(status_code=400, detail="Değer sütunu (value_column) zorunludur. Büyüme oranı hesaplanacak sayısal sütunu belirtin.")
+    if value_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"Değer sütunu '{value_col}' bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
 
     try:
         df[date_col] = pd.to_datetime(df[date_col], dayfirst=True)

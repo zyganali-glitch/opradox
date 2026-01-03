@@ -6,27 +6,36 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Gerekli parametreler
     date_col = params.get("date_column")
-    row_field = params.get("row_field")
-    column_field = params.get("column_field")
+    row_field = params.get("row_field", "year")  # default='year'
+    column_field = params.get("column_field", "month")  # default='month'
     aggfunc = params.get("aggfunc", "count").lower()
     value_col = params.get("value_column")
     start_date = params.get("start_date")
     end_date = params.get("end_date")
 
-    # Zorunlu parametre kontrolü
+    # date_column auto-detect
     if not date_col:
-        raise HTTPException(status_code=400, detail="date_column parametresi eksik")
-    if not row_field:
-        row_field = "year"  # Default to year if not specified
-    if not column_field:
-        column_field = "month"  # Default to month if not specified
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    try:
+                        pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                        date_col = col
+                        break
+                    except:
+                        continue
+        if not date_col:
+            raise HTTPException(status_code=400, detail="Tarih sütunu otomatik algılanamadı. Lütfen date_column belirtin.")
+    
     if aggfunc not in ("count", "sum"):
         raise HTTPException(status_code=400, detail="aggfunc parametresi 'count' veya 'sum' olmalı")
     if aggfunc == "sum" and not value_col:
         raise HTTPException(status_code=400, detail="sum için value_column parametresi gerekli")
 
     # Sütun varlık kontrolü
-    # Not: row_field veya column_field "year" veya "month" ise bunlar sanal sütunlardır, df'de olması gerekmez.
     check_cols = [date_col]
     if row_field.lower() not in ["year", "month"]:
         check_cols.append(row_field)
@@ -37,7 +46,7 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     if aggfunc == "sum" and value_col and value_col not in df.columns:
         missing_cols.append(value_col)
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Sütunlar eksik: {missing_cols}. Mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"Sütunlar eksik: {missing_cols}. Mevcut sütunlar: {list(df.columns)[:10]}")
 
     # Tarih sütununu datetime yap
     df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")

@@ -7,12 +7,26 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     col1 = params.get("column1")
     col2 = params.get("column2")
 
-    if not col1 or not col2:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'column1' ve 'column2' gereklidir.")
+    # column1/column2 boşsa ilk iki numeric sütunu auto-seç
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    
+    if not col1:
+        if len(numeric_cols) >= 1:
+            col1 = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen column1 belirtin.")
+    
+    if not col2:
+        if len(numeric_cols) >= 2:
+            col2 = numeric_cols[1]
+        elif len(numeric_cols) == 1:
+            raise HTTPException(status_code=400, detail="Korelasyon için en az 2 sayısal sütun gerekli. Yalnızca 1 tane bulundu.")
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen column2 belirtin.")
 
     missing_cols = [c for c in [col1, col2] if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Veride bulunmayan sütunlar: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Veride bulunmayan sütunlar: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     # Sayısal hale getir
     s1 = pd.to_numeric(df[col1], errors="coerce")

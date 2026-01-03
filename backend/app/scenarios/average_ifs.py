@@ -8,33 +8,47 @@ def run(df: pd.DataFrame, params: dict) -> dict:
     crit_cols = params.get("criteria_columns", [])
     crit_vals = params.get("criteria_values", [])
 
-    if not avg_col or avg_col not in df.columns:
-        raise HTTPException(status_code=400, detail=f"Ortalama sütunu '{avg_col}' bulunamadı.")
+    # average_column zorunlu
+    if not avg_col:
+        raise HTTPException(status_code=400, detail="Ortalama alınacak sütun (average_column) zorunludur.")
+    if avg_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"Ortalama sütunu '{avg_col}' bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
     
     # Ensure lists
-    if isinstance(crit_cols, str): crit_cols = [c.strip() for c in crit_cols.split(",")]
-    if isinstance(crit_vals, str): crit_vals = [v.strip() for v in crit_vals.split(",")]
-
-    if len(crit_cols) != len(crit_vals):
-         raise HTTPException(status_code=400, detail="Koşul sütun sayısı ile değer sayısı eşit olmalı.")
+    if isinstance(crit_cols, str): 
+        crit_cols = [c.strip() for c in crit_cols.split(",") if c.strip()]
+    if isinstance(crit_vals, str): 
+        crit_vals = [v.strip() for v in crit_vals.split(",") if v.strip()]
+    
+    # Boş listeler [] olarak gelebilir - bu durumda tüm satırlar kullanılır
+    no_criteria = len(crit_cols) == 0 and len(crit_vals) == 0
+    
+    if not no_criteria and len(crit_cols) != len(crit_vals):
+        raise HTTPException(status_code=400, detail="Koşul sütun sayısı ile değer sayısı eşit olmalı.")
 
     # Filter
     filtered_df = df.copy()
+    applied_filters = []
+    
     for col, val in zip(crit_cols, crit_vals):
         if col not in df.columns:
-            raise HTTPException(status_code=400, detail=f"Koşul sütunu '{col}' bulunamadı.")
+            raise HTTPException(status_code=400, detail=f"Koşul sütunu '{col}' bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
         
         # Try to match type (numeric vs string)
         if pd.api.types.is_numeric_dtype(df[col]):
             try:
                 val = float(val)
             except:
-                pass # keep as string
+                pass  # keep as string
         
         filtered_df = filtered_df[filtered_df[col] == val]
+        applied_filters.append(f"{col}={val}")
+
+    # Koşul yoksa bilgilendirme mesajı
+    filter_info = " | ".join(applied_filters) if applied_filters else "Koşul uygulanmadı → tüm satırlar"
 
     if filtered_df.empty:
-         raise HTTPException(status_code=400, detail="Belirtilen kriterlere uygun veri bulunamadı.")
+        raise HTTPException(status_code=400, detail=f"Belirtilen kriterlere ({', '.join(applied_filters)}) uygun veri bulunamadı.")
 
     try:
         result = filtered_df[avg_col].mean()

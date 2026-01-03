@@ -12,10 +12,22 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     date_col = params.get("date_column")
 
+    # group_column boşsa ilk kategorik auto-select
     if not group_col:
-        raise HTTPException(status_code=400, detail="group_column parametresi eksik")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+
+    # value_col boşsa ilk numeric auto-select
     if not value_col:
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+
 
     # Sütun kontrolü
     missing_cols = [c for c in [group_col, value_col] if c not in df.columns]

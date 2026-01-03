@@ -4,17 +4,37 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    required_params = ["group_columns", "value_column", "aggfunc"]
-    for p in required_params:
-        if p not in params:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik")
+    group_columns = params.get("group_columns")
+    value_column = params.get("value_column")
+    aggfunc = params.get("aggfunc", "sum")  # default='sum'
 
-    group_columns = params["group_columns"]
-    if not isinstance(group_columns, list) or len(group_columns) < 2:
-        raise HTTPException(status_code=400, detail="'group_columns' en az iki elemanlı liste olmalı")
+    # group_columns boşsa ilk 2 kategorik auto-seç
+    if not group_columns:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if len(object_cols) >= 2:
+            group_columns = object_cols[:2]
+        else:
+             # Yeterli kategorik yoksa exception
+            raise HTTPException(status_code=400, detail="En az iki kategorik sütun gereklidir. Lütfen group_columns belirtin.")
+    
+    # value_column boşsa ilk numeric auto-seç
+    if not value_column:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
 
-    value_column = params["value_column"]
-    aggfunc = params["aggfunc"]
+    if not isinstance(group_columns, list):
+        if isinstance(group_columns, str):
+             group_columns = [c.strip() for c in group_columns.split(",") if c.strip()]
+        else:
+             group_columns = [str(group_columns)]
+
+    if len(group_columns) < 2:
+         # Fallback: eğer 1 tane varsa 2. olarak value_column'u string yapıp kullanabiliriz ama saçma olur.
+         # Kullanıcıya hata dönmek daha doğru.
+         raise HTTPException(status_code=400, detail="'group_columns' en az iki elemanlı liste olmalı")
 
     # Optional date filtering
     date_column = params.get("date_column")

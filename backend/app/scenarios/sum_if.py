@@ -25,18 +25,16 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     target_column = params.get("target_column")
     return_mode = params.get("return_mode", "summary")
 
-    missing = []
+    # Zorunlu parametreler kontrolü
     if not condition_column:
-        missing.append("condition_column")
-    if condition_value is None:
-        missing.append("condition_value")
-    if not target_column:
-        missing.append("target_column")
-
-    if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"Zorunlu parametre(ler) eksik: {missing}",
+            detail="Zorunlu alanlar eksik: condition_column parametresi gerekli."
+        )
+    if not target_column:
+        raise HTTPException(
+            status_code=400,
+            detail="Zorunlu alanlar eksik: target_column parametresi gerekli."
         )
 
     missing_cols = [
@@ -47,11 +45,18 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
             status_code=400,
             detail=(
                 f"Aşağıdaki sütun(lar) bulunamadı: {missing_cols}. "
-                f"Mevcut sütunlar: {list(df.columns)}"
+                f"Mevcut sütunlar: {list(df.columns)[:10]}"
             ),
         )
 
-    mask = df[condition_column].astype(str) == str(condition_value)
+    # condition_value boşsa boş/NaN değerleri filtrele
+    if condition_value is None or condition_value == "":
+        mask = df[condition_column].isna() | (df[condition_column].astype(str).str.strip() == "")
+        filter_desc = "boş/NaN değerler"
+    else:
+        mask = df[condition_column].astype(str) == str(condition_value)
+        filter_desc = str(condition_value)
+    
     filtered_df = df[mask].copy()
     match_count = int(mask.sum())
     total_rows = int(len(df))

@@ -4,22 +4,54 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    # Gerekli parametreler
-    required_params = ["date_column", "category_column", "value_column", "aggfunc", "start_date", "end_date"]
-    for p in required_params:
-        if p not in params or params[p] is None or str(params[p]).strip() == "":
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya boş")
+    # Parametreleri al (get ile, böylece eksikse None gelir)
+    date_col = params.get("date_column")
+    cat_col = params.get("category_column")
+    val_col = params.get("value_column")
+    aggfunc = params.get("aggfunc", "sum").lower()
+    start_date = params.get("start_date")
+    end_date = params.get("end_date")
 
-    date_col = params["date_column"]
-    cat_col = params["category_column"]
-    val_col = params["value_column"]
-    aggfunc = params["aggfunc"].lower()
-    start_date = params["start_date"]
-    end_date = params["end_date"]
+    # date_col auto-detect
+    if not date_col:
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+             # object columnlardan parse dene
+             for col in df.columns:
+                 if df[col].dtype == 'object':
+                     try:
+                         pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                         date_col = col
+                         break
+                     except:
+                         continue
+        if not date_col:
+             raise HTTPException(status_code=400, detail="Tarih sütunu bulunamadı. Lütfen date_column belirtin.")
 
-    # Sütun kontrolü
+    # category_column auto-detect
+    if not cat_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        # date_col olmamalı
+        object_cols = [c for c in object_cols if c != date_col]
+        if object_cols:
+            cat_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategori sütunu bulunamadı. Lütfen category_column belirtin.")
+
+    # value_column auto-detect
+    if not val_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            val_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+
+    # Sütun kontrolü - auto detect sonrası tekrar kontrol (zaten yukarıda bulduk ama emin olmak için)
     missing_cols = [c for c in [date_col, cat_col, val_col] if c not in df.columns]
     if missing_cols:
+         # Auto detect çalışmış ama sütun yok olmuş olamaz ama yine de bırakalım
         raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}")
 
     # Tarih kolonunu datetime yap

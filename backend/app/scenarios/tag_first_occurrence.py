@@ -7,8 +7,18 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     group_column = params.get("group_column")
     tag_column = params.get("tag_column", "is_first")
 
+    # group_column boşsa ilk kategorik/object auto-select
     if not group_column:
-        raise HTTPException(status_code=400, detail="group_column parametresi gerekli")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_column = object_cols[0]
+        else:
+             # Kategorik yoksa ilk sütunu al
+             if len(df.columns) > 0:
+                 group_column = df.columns[0]
+             else:
+                 raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen group_column belirtin.")
+
     if group_column not in df.columns:
         raise HTTPException(
             status_code=400,

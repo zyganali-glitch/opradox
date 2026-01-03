@@ -7,11 +7,19 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     column = params.get("column")
 
-    if not column or not isinstance(column, str):
-        raise HTTPException(status_code=400, detail="Sütun adı (column) gerekli.")
+    # column boşsa ilk kategorik/object sütunu auto-seç
+    if not column:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            column = object_cols[0]
+        else:
+            # Kategorik yoksa ilk sütunu al
+            column = df.columns[0] if len(df.columns) > 0 else None
+            if not column:
+                raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen column parametresini belirtin.")
 
     if column not in df.columns:
-        raise HTTPException(status_code=400, detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
 
     # Frekans tablosu oluştur
     # value_counts() her değerden kaç tane olduğunu sayar

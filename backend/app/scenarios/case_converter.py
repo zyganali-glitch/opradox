@@ -5,10 +5,19 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: dict) -> dict:
 
     col = params.get("column")
-    mode = params.get("mode", "upper") # upper, lower, title, capitalize
+    mode = params.get("mode", "upper")  # upper, lower, title, capitalize
 
-    if not col or col not in df.columns:
-        raise HTTPException(status_code=400, detail="Sütun bulunamadı.")
+    # column boşsa tüm metin sütunlarına uygula
+    if not col:
+        text_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if text_cols:
+            cols_to_process = text_cols
+        else:
+            raise HTTPException(status_code=400, detail="Metin sütunu bulunamadı. Lütfen column belirtin.")
+    else:
+        if col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"'{col}' sütunu bulunamadı. Mevcut: {list(df.columns)[:10]}")
+        cols_to_process = [col]
 
     try:
         s = df[col].astype(str)

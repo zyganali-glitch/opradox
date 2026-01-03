@@ -6,13 +6,29 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     start_col = params.get("start_date_column")
     end_col = params.get("end_date_column")
+    output_col = params.get("output_column", "DaysDiff")  # default='DaysDiff'
 
-    if not start_col or not end_col:
-        raise HTTPException(status_code=400, detail="start_date_column ve end_date_column parametreleri zorunludur")
+    # start_date_column zorunlu
+    if not start_col:
+        raise HTTPException(status_code=400, detail="start_date_column parametresi zorunludur.")
+    
+    if start_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"'{start_col}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
 
-    missing_cols = [c for c in [start_col, end_col] if c not in df.columns]
-    if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Eksik sütunlar: {missing_cols}. Mevcut sütunlar: {list(df.columns)}")
+    start_dates = pd.to_datetime(df[start_col], dayfirst=True, errors="coerce")
+    
+    # end_date_column boşsa bugünün tarihini kullan
+    if not end_col:
+        end_dates = pd.Series([pd.Timestamp.today().normalize()] * len(df))
+        end_col_info = "Bugün"
+    else:
+        if end_col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"'{end_col}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
+        end_dates = pd.to_datetime(df[end_col], dayfirst=True, errors="coerce")
+        end_col_info = end_col
+
+    if start_dates.isna().all():
+        raise HTTPException(status_code=400, detail=f"{start_col} sütunundaki tüm değerler geçersiz tarih")
 
     start_dates = pd.to_datetime(df[start_col], dayfirst=True, errors="coerce")
     end_dates = pd.to_datetime(df[end_col], dayfirst=True, errors="coerce")

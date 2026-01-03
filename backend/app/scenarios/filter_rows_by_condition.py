@@ -6,25 +6,25 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Beklenen parametreler: filter_column, operator, filter_value
     # operator: eq, neq, lt, lte, gt, gte, contains
+    filter_column = params.get("filter_column")
+    operator = params.get("operator", "eq")  # default='eq'
     # Support both 'filter_value' and 'value' parameter names
-    required_params = ["filter_column", "operator"]
-    for p in required_params:
-        if p not in params:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik")
-    
-    # Check for filter_value or value
-    if "filter_value" not in params and "value" not in params:
-        raise HTTPException(status_code=400, detail="'filter_value' parametresi eksik")
-
-    filter_column = params["filter_column"]
-    operator = params["operator"]
     filter_value = params.get("filter_value") if params.get("filter_value") is not None else params.get("value")
+    
+    # filter_column zorunlu
+    if not filter_column:
+        raise HTTPException(status_code=400, detail="filter_column parametresi zorunludur.")
 
     if filter_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"'{filter_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}"
+            detail=f"'{filter_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}"
         )
+    
+    # filter_value None ise NaN değerleri filtrele modu
+    if filter_value is None:
+        filter_value = ""
+        # Boş/NaN değerlere sahip satırları bul
 
     # Filtreleme için desteklenen operatörler
     operators = {"eq", "neq", "lt", "lte", "gt", "gte", "contains"}

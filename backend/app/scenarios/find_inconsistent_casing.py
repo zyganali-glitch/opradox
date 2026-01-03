@@ -7,14 +7,26 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     group_col = params.get("group_column")
     value_col = params.get("value_column")
 
-    if not group_col or not isinstance(group_col, str):
-        raise HTTPException(status_code=400, detail="group_column parametresi eksik veya geçersiz")
-    if not value_col or not isinstance(value_col, str):
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik veya geçersiz")
+    # group_column boşsa ilk kategorik auto-seç
+    if not group_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+    
+    # value_column boşsa group_column'dan farklı ilk kategorik auto-seç
+    if not value_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        available = [c for c in object_cols if c != group_col]
+        if available:
+            value_col = available[0]
+        else:
+            raise HTTPException(status_code=400, detail="İkinci kategorik sütun bulunamadı. Lütfen value_column belirtin.")
 
     missing_cols = [c for c in [group_col, value_col] if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     df_subset = df[[group_col, value_col]].copy()
     df_subset[value_col] = df_subset[value_col].astype(str).str.strip()

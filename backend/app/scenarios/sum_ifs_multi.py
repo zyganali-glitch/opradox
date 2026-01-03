@@ -8,7 +8,15 @@ def run(df: pd.DataFrame, params: dict) -> dict:
     crit_cols = params.get("criteria_columns", [])
     crit_vals = params.get("criteria_values", [])
 
-    if not sum_col or sum_col not in df.columns:
+    # sum_col boşsa ilk numeric auto-select
+    if not sum_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            sum_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen sum_column belirtin.")
+
+    if sum_col not in df.columns:
         raise HTTPException(status_code=400, detail=f"Toplama sütunu '{sum_col}' bulunamadı.")
     
     # Ensure lists (handle string input from frontend if not serialized as list)

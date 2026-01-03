@@ -23,27 +23,32 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     search_value = params.get("value") or params.get("search_value")
     return_mode = params.get("return_mode", "summary")
 
+    # column_name boşsa ilk sütunu kullan
     if not column_name:
-        raise HTTPException(
-            status_code=400,
-            detail="column (veya column_name) parametresi zorunludur.",
-        )
-    if search_value is None:
-        raise HTTPException(
-            status_code=400,
-            detail="value (veya search_value) parametresi zorunludur.",
-        )
-
+        if len(df.columns) > 0:
+            column_name = df.columns[0]
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Veri seti boş. Lütfen column parametresi belirtin.",
+            )
+    
     if column_name not in df.columns:
         raise HTTPException(
             status_code=400,
             detail=(
                 f"'{column_name}' adlı sütun bulunamadı. "
-                f"Mevcut sütunlar: {list(df.columns)}"
+                f"Mevcut sütunlar: {list(df.columns)[:10]}"
             ),
         )
-
-    mask = df[column_name].astype(str) == str(search_value)
+    
+    # search_value boşsa NaN/boş değerleri say
+    if search_value is None or search_value == "":
+        mask = df[column_name].isna() | (df[column_name].astype(str).str.strip() == "")
+        search_desc = "boş/NaN değerler"
+    else:
+        mask = df[column_name].astype(str) == str(search_value)
+        search_desc = str(search_value)
     match_count = int(mask.sum())
     total_rows = int(len(df))
 

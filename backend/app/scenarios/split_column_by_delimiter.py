@@ -6,23 +6,34 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     column = params.get("column")
-    delimiter = params.get("delimiter")
+    delimiter = params.get("delimiter", ",")  # default virgül
     new_columns = params.get("new_columns")
 
+    # column zorunlu
     if column is None:
         raise HTTPException(status_code=400, detail="Eksik parametre: 'column' gereklidir.")
-    if delimiter is None:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'delimiter' gereklidir.")
-    if new_columns is None:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'new_columns' gereklidir.")
-    if not isinstance(new_columns, list) or not all(isinstance(c, str) for c in new_columns):
-        raise HTTPException(status_code=400, detail="'new_columns' list of strings olmalıdır.")
-
+    
     if column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)}"
+            detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}"
         )
+    
+    # new_columns boşsa otomatik isim ver
+    if new_columns is None or new_columns == [] or new_columns == "":
+        # Örnek veriden parça sayısını tahmin et
+        sample = df[column].dropna().head(10).astype(str)
+        if len(sample) > 0:
+            max_parts = max(len(str(s).split(delimiter)) for s in sample)
+            new_columns = [f"{column}_part{i+1}" for i in range(max_parts)]
+        else:
+            new_columns = [f"{column}_part1", f"{column}_part2"]
+    
+    if isinstance(new_columns, str):
+        new_columns = [c.strip() for c in new_columns.split(",") if c.strip()]
+    
+    if not isinstance(new_columns, list):
+        raise HTTPException(status_code=400, detail="'new_columns' list of strings olmalıdır.")
 
     # Bölme işlemi
     split_df = df[column].astype(str).str.split(delimiter, n=len(new_columns)-1, expand=True)

@@ -9,11 +9,20 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Beklenen parametreler: columns (list of str) - kontrol edilecek sütunlar
     columns = params.get("columns")
-    if not columns or not isinstance(columns, list):
-        raise HTTPException(status_code=400, detail="Eksik veya hatalı 'columns' parametresi. Liste olmalı.")
+    
+    # columns boşsa tüm sütunlara bak
+    if not columns:
+        columns = df.columns.tolist()
+    
+    if isinstance(columns, str):
+        columns = [c.strip() for c in columns.split(",") if c.strip()]
+    
+    if not isinstance(columns, list):
+        raise HTTPException(status_code=400, detail="columns parametresi liste olmalı")
+    
     missing_cols = [col for col in columns if col not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"DataFrame'de bulunmayan sütunlar: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"DataFrame'de bulunmayan sütunlar: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     # Sadece seçilen sütunları içeren alt df
     sub_df = df[columns].copy()

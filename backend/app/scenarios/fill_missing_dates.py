@@ -4,18 +4,32 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    required_params = ["date_column", "start_date", "end_date"]
-    for p in required_params:
-        if p not in params or not params[p]:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya boş")
-    date_col = params["date_column"]
-    start_date = params["start_date"]
-    end_date = params["end_date"]
+    date_col = params.get("date_column")
+    start_date = params.get("start_date")
+    end_date = params.get("end_date")
     group_col = params.get("group_column")
     value_col = params.get("value_column")
     aggfunc = params.get("aggfunc", "sum")
+    
+    # date_column auto-detect
+    if not date_col:
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    try:
+                        pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                        date_col = col
+                        break
+                    except:
+                        continue
+        if not date_col:
+            raise HTTPException(status_code=400, detail="Tarih sütunu otomatik algılanamadı. Lütfen date_column belirtin.")
+    
     if date_col not in df.columns:
-        raise HTTPException(status_code=400, detail=f"'{date_col}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"'{date_col}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}")
     if group_col and group_col not in df.columns:
         raise HTTPException(status_code=400, detail=f"'{group_col}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
     if value_col and value_col not in df.columns:

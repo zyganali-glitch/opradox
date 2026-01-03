@@ -5,7 +5,20 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     col = params.get("column")
+    # col boşsa ilk object/categorical auto-select
     if not col:
+         object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+         if object_cols:
+             col = object_cols[0]
+         else:
+             # Yoksa ilk sütun
+             if len(df.columns) > 0:
+                 col = df.columns[0]
+             else:
+                 raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen column belirtin.")
+    
+    if not col:
+        # Yukaridaki işlemlerden sonra hala boşsa
         raise HTTPException(status_code=400, detail="Eksik parametre: 'column' gereklidir.")
     if col not in df.columns:
         raise HTTPException(

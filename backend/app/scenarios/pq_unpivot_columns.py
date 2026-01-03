@@ -11,17 +11,24 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # opsiyonel: start_date, end_date (str, YYYY-MM-DD formatında) - var_name sütunundaki tarihleri filtrelemek için
     
     id_vars = params.get("id_vars")
-    value_name = params.get("value_name")
-    var_name = params.get("var_name")
+    value_name = params.get("value_name", "Value") # default='Value'
+    var_name = params.get("var_name", "Variable")  # default='Variable'
     start_date = params.get("start_date")
     end_date = params.get("end_date")
+
+    # id_vars boşsa ilk sütunu id_var olarak al
+    if not id_vars:
+        if len(df.columns) > 0:
+            id_vars = [df.columns[0]]
+        else:
+            raise HTTPException(status_code=400, detail="Veri seti boş. Unpivot yapılamaz.")
+
+    if isinstance(id_vars, str):
+        id_vars = [c.strip() for c in id_vars.split(",") if c.strip()]
     
-    if id_vars is None or not isinstance(id_vars, list) or not all(isinstance(x, str) for x in id_vars):
-        raise HTTPException(status_code=400, detail="id_vars parametresi eksik veya liste değil")
-    if value_name is None or not isinstance(value_name, str) or value_name.strip() == "":
-        raise HTTPException(status_code=400, detail="value_name parametresi eksik veya boş")
-    if var_name is None or not isinstance(var_name, str) or var_name.strip() == "":
-        raise HTTPException(status_code=400, detail="var_name parametresi eksik veya boş")
+    if id_vars is None or not isinstance(id_vars, list):
+         # Yukaridaki auto-detect calismazsa diye extra catch
+         raise HTTPException(status_code=400, detail="id_vars parametresi eksik veya liste değil")
     
     missing_cols = [col for col in id_vars if col not in df.columns]
     if missing_cols:

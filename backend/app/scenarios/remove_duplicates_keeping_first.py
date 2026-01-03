@@ -5,14 +5,18 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     group_column = params.get("group_column")
-    if not group_column:
-        raise HTTPException(status_code=400, detail="group_column parametresi eksik")
-    if group_column not in df.columns:
-        raise HTTPException(status_code=400, detail=f"{group_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
-
+    
+    # group_column boşsa tüm satırın unique olup olmadığına bak (subset=None)
+    # pandas drop_duplicates varsayılanı subset=None olunca tüm sütunlara bakar.
+    subset = None
+    if group_column:
+        if group_column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"{group_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
+        subset = [group_column]
+    
     # Keep first occurrence of each duplicate group based on group_column
     before_count = len(df)
-    df_cleaned = df.drop_duplicates(subset=[group_column], keep="first").reset_index(drop=True)
+    df_cleaned = df.drop_duplicates(subset=subset, keep="first").reset_index(drop=True)
     after_count = len(df_cleaned)
     removed_count = before_count - after_count
 

@@ -13,11 +13,22 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     start_date = params.get("start_date")
     end_date = params.get("end_date")
 
-    # Parametre kontrolü
+    # row_field boşsa ilk kategorik auto-seç
     if not row_field:
-        raise HTTPException(status_code=400, detail="row_field parametresi eksik")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            row_field = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen row_field belirtin.")
+    
+    # value_column boşsa ilk numeric auto-seç
     if not value_column:
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+    
     if aggfunc not in ["sum", "mean", "count", "min", "max", "median"]:
         raise HTTPException(status_code=400, detail="aggfunc parametresi geçersiz, sum, mean, count, min, max, median olabilir")
 
@@ -29,7 +40,7 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         required_cols.add(date_column)
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     # Tarih filtresi varsa uygula
     if date_column:

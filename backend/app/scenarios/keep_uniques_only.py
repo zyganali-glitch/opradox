@@ -5,10 +5,22 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     key_column = params.get("key_column")
+    
+    # key_column boşsa tüm sütunlara göre benzersizlik kontrolü
     if not key_column:
-        raise HTTPException(status_code=400, detail="key_column parametresi eksik")
-    if key_column not in df.columns:
-        raise HTTPException(status_code=400, detail=f"{key_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
+        key_column = df.columns.tolist()
+    elif isinstance(key_column, str):
+        key_column = [key_column]
+    
+    # key_column tek sütunsa string döndür
+    if isinstance(key_column, list) and len(key_column) == 1:
+        subset = key_column
+    else:
+        subset = key_column if isinstance(key_column, list) else [key_column]
+    
+    missing = [c for c in subset if c not in df.columns]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"{missing} sütunları bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}")
 
     # Benzersiz kayıtları tut
     unique_df = df.drop_duplicates(subset=[key_column], keep=False)

@@ -14,13 +14,14 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # ]
     # label_column: str, yeni etiket sütunu adı
 
-    if "conditions" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: conditions")
-    if "label_column" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: label_column")
+    conditions = params.get("conditions")
+    label_column = params.get("label_column", "Label")  # default='Label'
+    
+    if not conditions:
+        raise HTTPException(status_code=400, detail="conditions parametresi zorunludur. Örnek: [{column, operator, value, label}, ...]")
 
-    conditions = params["conditions"]
-    label_column = params["label_column"]
+    if not isinstance(conditions, list) or len(conditions) == 0:
+        raise HTTPException(status_code=400, detail="conditions parametresi boş veya liste değil")
 
     if not isinstance(conditions, list) or len(conditions) == 0:
         raise HTTPException(status_code=400, detail="conditions parametresi boş veya liste değil")

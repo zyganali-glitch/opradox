@@ -18,10 +18,25 @@ def clean_text(s: Any) -> Any:
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     text_columns = params.get("text_columns")
-    if text_columns is None:
-        raise HTTPException(status_code=400, detail="text_columns parametresi gerekli")
+
+    # text_columns boşsa tüm string kolonları bul
+    if not text_columns:
+         object_cols = df.select_dtypes(include=['object']).columns.tolist()
+         if object_cols:
+             text_columns = object_cols
+         else:
+             raise HTTPException(status_code=400, detail="Metin sütunu bulunamadı ve text_columns parametresi belirtilmedi.")
+
+    if not isinstance(text_columns, list):
+         # tek string gelirse
+         if isinstance(text_columns, str):
+             text_columns = [c.strip() for c in text_columns.split(",") if c.strip()]
+         else:
+             raise HTTPException(status_code=400, detail="text_columns list of strings olmalı")
+             
     if not isinstance(text_columns, list) or not all(isinstance(c, str) for c in text_columns):
-        raise HTTPException(status_code=400, detail="text_columns list of strings olmalı")
+         # Yukarıdaki işlemden sonra tekrar kontrol
+         raise HTTPException(status_code=400, detail="text_columns list of strings olmalı")
     missing_cols = [c for c in text_columns if c not in df.columns]
     if missing_cols:
         raise HTTPException(status_code=400, detail=f"Metin sütunları eksik: {missing_cols} mevcut sütunlar: {list(df.columns)}")

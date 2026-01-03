@@ -2667,8 +2667,11 @@ function renderDynamicForm(scenarioId, params) {
             const desc = (CURRENT_LANG === 'tr' ? p.description_tr : p.description_en) || "";
             const ph = (CURRENT_LANG === 'tr' ? p.placeholder_tr : p.placeholder_en) || "";
 
-            // Açıklamayı label altına küçük not olarak ekle
-            row.innerHTML = `<label>${lbl} <span style="font-weight:400; font-size:0.75rem; color:var(--gm-primary); opacity:0.8; margin-left:5px;">(${desc})</span></label>`;
+            // Açıklamayı label altına küçük not olarak ekle + required/optional indicator
+            const isRequired = p.required === true;
+            const requiredIndicator = isRequired ? '<span style="color:#ef4444; font-weight:bold;"> *</span>' : '';
+            const optionalBadge = !isRequired ? `<span style="font-size:0.65rem; background:rgba(100,116,139,0.2); color:var(--gm-text-muted); padding:1px 6px; border-radius:8px; margin-left:6px;">${CURRENT_LANG === 'tr' ? 'Opsiyonel' : 'Optional'}</span>` : '';
+            row.innerHTML = `<label>${lbl}${requiredIndicator}${optionalBadge} <span style="font-weight:400; font-size:0.75rem; color:var(--gm-primary); opacity:0.8; margin-left:5px;">${desc ? '(' + desc + ')' : ''}</span></label>`;
 
             if (p.type === 'select') {
                 const sel = document.createElement("select");
@@ -4433,7 +4436,8 @@ function renderDynamicForm(scenarioId, params) {
                     inp.setAttribute('list', 'colOptions'); // Varsayılan: 1. dosya
                 }
 
-                if (p.required !== false) inp.required = true;
+                // FIXED: Only set required when explicitly true (default is optional)
+                if (p.required === true) inp.required = true;
                 row.appendChild(inp);
             }
             form.appendChild(row);

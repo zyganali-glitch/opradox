@@ -5,10 +5,20 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: dict) -> dict:
 
     col = params.get("column")
-    if not col or col not in df.columns:
-        # If no column specified, clean all string columns ? No, better be safe.
-        # Or auto-detect string columns
-        raise HTTPException(status_code=400, detail="Lütfen temizlenecek sütunu seçin.")
+    
+    # column boşsa tüm metin sütunlarına uygula
+    if not col:
+        text_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if text_cols:
+            for c in text_cols:
+                df[c] = df[c].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+            cols_processed = text_cols
+        else:
+            raise HTTPException(status_code=400, detail="Metin sütunu bulunamadı. Lütfen column belirtin.")
+    else:
+        if col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"'{col}' sütunu bulunamadı. Mevcut: {list(df.columns)[:10]}")
+        cols_processed = [col]
 
     try:
         # Trim whitespace

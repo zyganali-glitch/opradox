@@ -12,15 +12,31 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     aggfunc = params.get("aggfunc", "sum").lower()
 
-    # Parametre kontrolü
+    # group_column boşsa ilk kategorik auto-select
     if not group_column:
-        raise HTTPException(status_code=400, detail="group_column parametresi eksik")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_column = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+
+    # value_column boşsa ilk numeric auto-select
     if not value_column:
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik")
-    if not date_column:
-        raise HTTPException(status_code=400, detail="date_column parametresi eksik")
-    if not start_date and not end_date:
-        raise HTTPException(status_code=400, detail="start_date veya end_date parametresi gerekli")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+
+    # date_column yoksa filtreleme adımı opsiyonel olsun
+    # Ancak eğer start/end date verildiyse date_column aranmalı
+    if (start_date or end_date) and not date_column:
+         # Auto-detect date column
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_column = datetime_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Tarih filtresi için date_column belirtilmeli veya bulunamadı.")
 
     # Sütun kontrolü
     missing_cols = [col for col in [group_column, value_column, date_column] if col not in df.columns]

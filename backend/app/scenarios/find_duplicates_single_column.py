@@ -5,10 +5,16 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     col = params.get("column")
+    
+    # column boşsa ilk sütunu kullan
     if not col:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'column' gereklidir.")
+        if len(df.columns) > 0:
+            col = df.columns[0]
+        else:
+            raise HTTPException(status_code=400, detail="Veri seti boş. Lütfen column parametresi belirtin.")
+    
     if col not in df.columns:
-        raise HTTPException(status_code=400, detail=f"'{col}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"'{col}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
 
     # Değerleri string yapıp boşları NaN yapalım
     series = df[col].astype(str).replace({"nan": pd.NA, "None": pd.NA, "": pd.NA})

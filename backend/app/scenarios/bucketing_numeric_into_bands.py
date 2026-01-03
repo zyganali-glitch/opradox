@@ -4,24 +4,43 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    # Parametre kontrolü
-    required_params = ["value_column", "buckets", "target_column"]
-    for p in required_params:
-        if p not in params:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik")
-
-    value_col = params["value_column"]
-    target_col = params["target_column"]
-    buckets = params["buckets"]
+    # Parametre kontrolü - value_column zorunlu
+    value_col = params.get("value_column")
+    if not value_col:
+        raise HTTPException(status_code=400, detail="value_column parametresi zorunludur.")
+    
+    # target_column default='Band'
+    target_col = params.get("target_column", "Band")
+    
+    # buckets opsiyonel - boşsa otomatik çeyreklik bantlar oluştur
+    buckets = params.get("buckets")
 
     # Sütun kontrolü
-    missing_cols = [c for c in [value_col] if c not in df.columns]
-    if missing_cols:
-        raise HTTPException(status_code=400, detail=f"'{missing_cols[0]}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
+    if value_col not in df.columns:
+        raise HTTPException(status_code=400, detail=f"'{value_col}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}")
 
     # buckets parametresi liste veya dict olmalı
     # Beklenen format: list of tuples (start, end, label) veya dict {label: (start, end)}
     # Örnek: [(0,100,"0-100"), (101,500,"101-500")]
+    
+    # buckets boşsa otomatik çeyreklik bantlar oluştur
+    if buckets is None or buckets == "" or buckets == []:
+        values_numeric = pd.to_numeric(df[value_col], errors="coerce").dropna()
+        if len(values_numeric) > 0:
+            q1 = values_numeric.quantile(0.25)
+            q2 = values_numeric.quantile(0.50)
+            q3 = values_numeric.quantile(0.75)
+            min_val = values_numeric.min()
+            max_val = values_numeric.max()
+            buckets = [
+                (min_val, q1, "Düşük (Q1)"),
+                (q1 + 0.01, q2, "Orta-Alt (Q2)"),
+                (q2 + 0.01, q3, "Orta-Üst (Q3)"),
+                (q3 + 0.01, max_val, "Yüksek (Q4)")
+            ]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal veri bulunamadı, bantlar oluşturulamadı.")
+    
     if not isinstance(buckets, (list, dict)):
         raise HTTPException(status_code=400, detail="'buckets' parametresi liste veya sözlük olmalı")
 

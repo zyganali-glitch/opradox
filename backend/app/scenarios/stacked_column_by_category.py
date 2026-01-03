@@ -5,15 +5,31 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # aggfunc is optional with default value
-    required_params = ["category_column", "subcategory_column", "value_column"]
-    for p in required_params:
-        if p not in params or not params[p]:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya boş")
-
-    category_col = params["category_column"]
-    subcategory_col = params["subcategory_column"]
-    value_col = params["value_column"]
+    category_col = params.get("category_column")
+    subcategory_col = params.get("subcategory_column")
+    value_col = params.get("value_column")
     aggfunc = params.get("aggfunc", "sum").lower()  # Default to sum if not specified
+
+    # Auto-select logic
+    if not category_col or not subcategory_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if len(object_cols) >= 2:
+            if not category_col:
+                category_col = object_cols[0]
+            if not subcategory_col:
+                subcategory_col = object_cols[1]
+        else:
+             if not category_col:
+                 raise HTTPException(status_code=400, detail="Kategori sütunu (category_column) bulunamadı veya belirtilmedi.")
+             if not subcategory_col:
+                 raise HTTPException(status_code=400, detail="Alt kategori sütunu (subcategory_column) bulunamadı veya belirtilmedi.")
+
+    if not value_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Değer sütunu (value_column) bulunamadı veya belirtilmedi.")
 
     if category_col not in df.columns or subcategory_col not in df.columns or value_col not in df.columns:
         raise HTTPException(

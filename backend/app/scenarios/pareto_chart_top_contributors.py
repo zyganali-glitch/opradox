@@ -10,14 +10,25 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     date_col = params.get("date_column")
 
-    if not group_col or not isinstance(group_col, str):
-        raise HTTPException(status_code=400, detail="group_column parametresi eksik veya hatalı")
-    if not value_col or not isinstance(value_col, str):
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik veya hatalı")
+    # group_column boşsa ilk kategorik auto-seç
+    if not group_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+    
+    # value_column boşsa ilk numeric auto-seç
+    if not value_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
 
     missing_cols = [c for c in [group_col, value_col] if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Veride eksik sütunlar: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     if date_col:
         if date_col not in df.columns:

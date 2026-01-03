@@ -248,6 +248,7 @@
       {
         "name": "rows",
         "type": "text",
+        "required": true,
         "label_tr": "Satır Alanları",
         "label_en": "Row Fields",
         "description_tr": "Gruplama için kullanılacak sütunlar. Virgülle ayırın. (Örn: Üniversite, Program)",
@@ -258,8 +259,8 @@
       {
         "name": "columns",
         "type": "text",
-        "label_tr": "Sütun Alanları (Opsiyonel)",
-        "label_en": "Column Fields (Optional)",
+        "label_tr": "Sütun Alanları",
+        "label_en": "Column Fields",
         "description_tr": "Çapraz tablo için sütun alanları. (Örn: Yıl, Ay)",
         "description_en": "Column fields for cross-tabulation. (e.g. Year, Month)",
         "placeholder_tr": "Yıl, Ay...",
@@ -270,8 +271,8 @@
         "type": "text",
         "label_tr": "Değer Sütunu",
         "label_en": "Value Column",
-        "description_tr": "Toplanacak/hesaplanacak sayısal sütun. (Örn: Tutar, Kontenjan)",
-        "description_en": "Numeric column to aggregate. (e.g. Amount, Quota)",
+        "description_tr": "Toplanacak/hesaplanacak sayısal sütun. Boş bırakılırsa ilk sayısal sütun kullanılır.",
+        "description_en": "Numeric column to aggregate. If empty, first numeric column is used.",
         "placeholder_tr": "Tutar...",
         "placeholder_en": "Amount..."
       },
@@ -282,6 +283,7 @@
         "label_en": "Function",
         "description_tr": "Değer sütununa uygulanacak fonksiyon.",
         "description_en": "Function to apply to value column.",
+        "default": "sum",
         "options": [
           "sum",
           "count",
@@ -306,6 +308,17 @@
           "min": "Minimum",
           "max": "Maximum"
         }
+      },
+      {
+        "name": "fill_value",
+        "type": "text",
+        "label_tr": "Boş Hücre Değeri",
+        "label_en": "Fill Empty Cells",
+        "description_tr": "Boş hücrelere yazılacak değer",
+        "description_en": "Value for empty cells",
+        "placeholder_tr": "0",
+        "placeholder_en": "0",
+        "default": "0"
       },
       {
         "name": "show_totals",
@@ -516,14 +529,24 @@
       {
         "name": "columns",
         "type": "text",
+        "required": true,
         "label_tr": "Sütunlar (Virgülle)",
-        "placeholder_tr": "Ad, Soyad"
+        "label_en": "Columns (Comma-separated)",
+        "description_tr": "Birleştirilecek sütun adları. En az 2 sütun gerekli.",
+        "description_en": "Column names to concatenate. At least 2 columns required.",
+        "placeholder_tr": "Ad, Soyad",
+        "placeholder_en": "FirstName, LastName"
       },
       {
         "name": "separator",
         "type": "text",
         "label_tr": "Ayraç",
-        "placeholder_tr": "Boşluk, - veya ,"
+        "label_en": "Separator",
+        "description_tr": "Sütunlar arasındaki ayraç karakteri",
+        "description_en": "Character between columns",
+        "placeholder_tr": "Boşluk, - veya ,",
+        "placeholder_en": "Space, - or ,",
+        "default": " "
       }
     ],
     "tags_tr": [
@@ -570,13 +593,30 @@
       {
         "name": "value_column",
         "type": "text",
+        "required": true,
         "label_tr": "Değer Sütunu",
-        "placeholder_tr": "Tutar..."
+        "label_en": "Value Column",
+        "description_tr": "Büyüme oranı hesaplanacak sayısal sütun",
+        "description_en": "Numeric column to calculate growth rate",
+        "placeholder_tr": "Tutar...",
+        "placeholder_en": "Amount..."
+      },
+      {
+        "name": "date_column",
+        "type": "text",
+        "label_tr": "Tarih Sütunu",
+        "label_en": "Date Column",
+        "description_tr": "Periyot için kullanılacak tarih sütunu. Boş bırakılırsa otomatik algılanır.",
+        "description_en": "Date column for period. Auto-detected if empty.",
+        "placeholder_tr": "Tarih...",
+        "placeholder_en": "Date..."
       },
       {
         "name": "period",
         "type": "select",
         "label_tr": "Periyot",
+        "label_en": "Period",
+        "default": "M",
         "options": [
           "M",
           "Y",
@@ -586,6 +626,11 @@
           "M": "Aylık",
           "Y": "Yıllık",
           "Q": "Çeyreklik"
+        },
+        "option_labels_en": {
+          "M": "Monthly",
+          "Y": "Yearly",
+          "Q": "Quarterly"
         }
       }
     ],
@@ -639,6 +684,7 @@
       {
         "name": "condition_column",
         "type": "text",
+        "required": true,
         "label_tr": "Koşul Sütunu",
         "label_en": "Condition Column",
         "description_tr": "Filtreleme yapılacak sütunun adı. (Örn: Departman)",
@@ -651,14 +697,15 @@
         "type": "text",
         "label_tr": "Koşul Değeri",
         "label_en": "Condition Value",
-        "description_tr": "O sütunda aradığınız değer. (Örn: IT)",
-        "description_en": "The value you are looking for in that column. (e.g. IT)",
+        "description_tr": "O sütunda aradığınız değer. Boş bırakılırsa boş/NaN değerler filtrelenir.",
+        "description_en": "The value you are looking for. If empty, blank/NaN values are filtered.",
         "placeholder_tr": "Örn: IT...",
         "placeholder_en": "e.g. IT..."
       },
       {
         "name": "target_column",
         "type": "text",
+        "required": true,
         "label_tr": "Hedef Sütun",
         "label_en": "Target Column",
         "description_tr": "Ortalaması alınacak sayısal sütun. (Örn: Maaş)",
@@ -673,6 +720,7 @@
         "label_en": "Return Mode",
         "description_tr": "Sonucu nasıl görmek istersiniz?",
         "description_en": "How would you like to see the result?",
+        "default": "summary",
         "options": [
           "summary",
           "excel"
@@ -744,8 +792,9 @@
     },
     "params": [
       {
-        "name": "value_column",
+        "name": "target_column",
         "type": "text",
+        "required": true,
         "label_tr": "Değer Sütunu (Toplanacak)",
         "label_en": "Value Column (To Sum)",
         "description_tr": "Toplanacak sayısal sütun. (Örn: Tutar)",
@@ -754,22 +803,53 @@
         "placeholder_en": "e.g. Amount..."
       },
       {
-        "name": "target_column",
+        "name": "date_column",
         "type": "text",
-        "label_tr": "Hedef Sütun",
-        "label_en": "Target Column",
-        "placeholder_tr": "Sütun Adı...",
-        "placeholder_en": "Column Name..."
+        "label_tr": "Tarih Sütunu",
+        "label_en": "Date Column",
+        "description_tr": "Tarihlerin bulunduğu sütun. Boş bırakılırsa otomatik algılanır.",
+        "description_en": "Column containing dates. Auto-detected if empty.",
+        "placeholder_tr": "Örn: Tarih...",
+        "placeholder_en": "e.g. Date..."
+      },
+      {
+        "name": "start_date",
+        "type": "text",
+        "label_tr": "Başlangıç Tarihi",
+        "label_en": "Start Date",
+        "description_tr": "Aralığın başlangıcı. Boş bırakılırsa en eski kayıttan başlar.",
+        "description_en": "Start of range. Starts from oldest record if empty.",
+        "placeholder_tr": "YYYY-MM-DD veya DD.MM.YYYY",
+        "placeholder_en": "YYYY-MM-DD or DD.MM.YYYY"
+      },
+      {
+        "name": "end_date",
+        "type": "text",
+        "label_tr": "Bitiş Tarihi",
+        "label_en": "End Date",
+        "description_tr": "Aralığın sonu. Boş bırakılırsa bugüne kadar alır.",
+        "description_en": "End of range. Includes up to today if empty.",
+        "placeholder_tr": "YYYY-MM-DD veya DD.MM.YYYY",
+        "placeholder_en": "YYYY-MM-DD or DD.MM.YYYY"
       },
       {
         "name": "return_mode",
         "type": "select",
         "label_tr": "Dönüş Modu",
         "label_en": "Return Mode",
+        "default": "summary",
         "options": [
           "summary",
           "excel"
-        ]
+        ],
+        "option_labels_tr": {
+          "summary": "Özet (Ekranda)",
+          "excel": "Excel Dosyası (İndir)"
+        },
+        "option_labels_en": {
+          "summary": "Summary (On Screen)",
+          "excel": "Excel File (Download)"
+        }
       }
     ],
     "tags_tr": [

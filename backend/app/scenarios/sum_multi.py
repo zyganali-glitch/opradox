@@ -52,11 +52,16 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     target_column = params.get("target_column")
     return_mode = params.get("return_mode", "summary")
 
+    # target_column boşsa ilk numeric auto-select
     if not target_column:
-        raise HTTPException(
-            status_code=400,
-            detail="target_column parametresi zorunludur.",
-        )
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            target_column = numeric_cols[0]
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="target_column parametresi zorunludur ve sayısal sütun bulunamadı.",
+            )
 
     if not (len(columns) == len(operators) == len(values)):
         raise HTTPException(

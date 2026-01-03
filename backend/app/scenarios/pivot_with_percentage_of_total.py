@@ -4,13 +4,25 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    required_params = ["group_column", "value_column"]
-    for p in required_params:
-        if p not in params or not params[p]:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik veya boş")
+    group_col = params.get("group_column")
+    value_col = params.get("value_column")
 
-    group_col = params["group_column"]
-    value_col = params["value_column"]
+    # group_col boşsa ilk kategorik sütunu seç
+    if not group_col:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+
+    # value_col boşsa ilk numeric sütunu seç
+    if not value_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+
     row_field = params.get("row_field")
     column_field = params.get("column_field")
     aggfunc = params.get("aggfunc", "sum")

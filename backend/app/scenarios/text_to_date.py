@@ -5,6 +5,15 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: dict) -> dict:
 
     col = params.get("column")
+    # col boşsa ilk object/string column auto-select
+    if not col:
+         object_cols = df.select_dtypes(include=['object']).columns.tolist()
+         if object_cols:
+             col = object_cols[0]
+         else:
+             # Eğer object yoksa ilk sütunu al (belki integer tarih vardır)
+             col = df.columns[0] if len(df.columns) > 0 else None
+    
     if not col or col not in df.columns:
         raise HTTPException(status_code=400, detail=f"'{col}' sütunu bulunamadı.")
 

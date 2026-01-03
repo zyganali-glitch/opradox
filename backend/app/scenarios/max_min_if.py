@@ -15,11 +15,9 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
 
     # Parametre kontrolü
     if not condition_column:
-        raise HTTPException(status_code=400, detail="condition_column parametresi eksik")
-    if condition_value is None:
-        raise HTTPException(status_code=400, detail="condition_value parametresi eksik")
+        raise HTTPException(status_code=400, detail="condition_column parametresi zorunludur.")
     if not value_column:
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik")
+        raise HTTPException(status_code=400, detail="value_column parametresi zorunludur.")
     if aggfunc not in ("max", "min"):
         raise HTTPException(status_code=400, detail="aggfunc parametresi 'max' veya 'min' olmalı")
 
@@ -28,7 +26,7 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     if date_column:
         missing_cols += [date_column] if date_column not in df.columns else []
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Sütunlar eksik: {missing_cols}")
+        raise HTTPException(status_code=400, detail=f"Sütunlar eksik: {missing_cols}. Mevcut: {list(df.columns)[:10]}")
 
     # Tarih filtresi
     if date_column:

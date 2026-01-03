@@ -5,12 +5,29 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     date_col = params.get("date_column")
-    new_col = params.get("age_column", "age")
+    new_col = params.get("age_column", "Age")  # default='Age'
 
+    # date_column auto-detect
     if not date_col:
-        raise HTTPException(status_code=400, detail="date_column parametresi gerekli")
+        # Önce datetime sütunlarını ara
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_col = datetime_cols[0]
+        else:
+            # Object sütunlardan tarih parse etmeyi dene
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    try:
+                        pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                        date_col = col
+                        break
+                    except:
+                        continue
+        if not date_col:
+            raise HTTPException(status_code=400, detail="Tarih sütunu otomatik algılanamadı. Lütfen date_column parametresini belirtin.")
+    
     if date_col not in df.columns:
-        raise HTTPException(status_code=400, detail=f"{date_col} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"{date_col} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}")
 
     dob_series = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")
     if dob_series.isna().all():

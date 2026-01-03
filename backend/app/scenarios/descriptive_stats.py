@@ -27,13 +27,18 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         or params.get("column")
     )
 
+    # cols_param boşsa tüm numeric sütunları kullan
     if cols_param is None:
-        raise HTTPException(
-            status_code=400,
-            detail="numeric_columns (veya columns/column) parametresi zorunludur.",
-        )
-
-    columns = _ensure_list(cols_param)
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            columns = numeric_cols
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Sayısal sütun bulunamadı. Lütfen numeric_columns belirtin.",
+            )
+    else:
+        columns = _ensure_list(cols_param)
 
     missing_cols = [c for c in columns if c not in df.columns]
     if missing_cols:
@@ -41,7 +46,7 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
             status_code=400,
             detail=(
                 f"Aşağıdaki sütun(lar) bulunamadı: {missing_cols}. "
-                f"Mevcut sütunlar: {list(df.columns)}"
+                f"Mevcut sütunlar: {list(df.columns)[:10]}"
             ),
         )
 

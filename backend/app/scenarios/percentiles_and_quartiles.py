@@ -8,17 +8,23 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     percentiles = params.get("percentiles", [25, 50, 75])
     group_column = params.get("group_column")
 
-    if value_column is None:
-        raise HTTPException(status_code=400, detail="value_column parametresi gerekli")
+    # value_column boşsa ilk numeric auto-seç
+    if not value_column:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+    
     if value_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"{value_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}"
+            detail=f"{value_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}"
         )
     if group_column is not None and group_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"{group_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}"
+            detail=f"{group_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}"
         )
     # Validate percentiles param
     if not isinstance(percentiles, (list, tuple)):

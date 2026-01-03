@@ -6,29 +6,40 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Gerekli parametreler
     value_column = params.get("value_column")
-    target_column = params.get("target_column")
+    target_column = params.get("target_column", "Segment")  # default="Segment"
     thresholds = params.get("thresholds")  # Örn: [1000, 5000]
     labels = params.get("labels")          # Örn: ["Düşük", "Orta", "Yüksek"]
 
-    # Parametre kontrolü
+    # value_column boşsa ilk numeric auto-seç
     if not value_column:
-        raise HTTPException(status_code=400, detail="value_column parametresi eksik")
-    if not target_column:
-        raise HTTPException(status_code=400, detail="target_column parametresi eksik")
-    if thresholds is None:
-        raise HTTPException(status_code=400, detail="thresholds parametresi eksik")
-    if labels is None:
-        raise HTTPException(status_code=400, detail="labels parametresi eksik")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+    
+    # Sütun kontrolü
+    if value_column not in df.columns:
+        raise HTTPException(status_code=400, detail=f"'{value_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}")
+    
+    # thresholds ve labels boşsa otomatik çeyreklik oluştur
+    if thresholds is None or thresholds == []:
+        values = pd.to_numeric(df[value_column], errors="coerce").dropna()
+        if len(values) > 0:
+            q1 = values.quantile(0.33)
+            q2 = values.quantile(0.66)
+            thresholds = [float(q1), float(q2)]
+            labels = ["Düşük", "Orta", "Yüksek"]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal veri bulunamadı, thresholds oluşturulamadı.")
+    
+    if labels is None or labels == []:
+        labels = [f"Segment {i+1}" for i in range(len(thresholds) + 1)]
 
     if not isinstance(thresholds, list) or not all(isinstance(x, (int, float)) for x in thresholds):
         raise HTTPException(status_code=400, detail="thresholds listesi sayısal değerler içermeli")
     if not isinstance(labels, list) or not all(isinstance(x, str) for x in labels):
         raise HTTPException(status_code=400, detail="labels listesi string değerler içermeli")
-
-    # Sütun kontrolü
-    missing_cols = [col for col in [value_column] if col not in df.columns]
-    if missing_cols:
-        raise HTTPException(status_code=400, detail=f"'{missing_cols[0]}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}")
 
     # Sayısal değerleri al, NaN olanları çıkar
     values = pd.to_numeric(df[value_column], errors="coerce")

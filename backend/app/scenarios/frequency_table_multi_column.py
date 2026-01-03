@@ -6,14 +6,19 @@ def run(df: pd.DataFrame, params: dict) -> dict:
 
     cols = params.get("columns")
     if isinstance(cols, str):
-        cols = [c.strip() for c in cols.split(",")]
+        cols = [c.strip() for c in cols.split(",") if c.strip()]
     
+    # columns boşsa tüm kategorik sütunları kullan (max 3)
     if not cols:
-        raise HTTPException(status_code=400, detail="Lütfen en az bir sütun adı girin.")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            cols = object_cols[:3]  # En fazla ilk 3 kategorik sütun
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen columns belirtin.")
     
     missing = [c for c in cols if c not in df.columns]
     if missing:
-        raise HTTPException(status_code=400, detail=f"Bulunamayan sütunlar: {missing}")
+        raise HTTPException(status_code=400, detail=f"Bulunamayan sütunlar: {missing}. Mevcut: {list(df.columns)[:10]}")
 
     try:
         # Value counts for combination

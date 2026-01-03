@@ -6,13 +6,13 @@ from fastapi import HTTPException
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Gerekli parametreler: source_column, marker, part ('before' veya 'after')
     source_column = params.get("source_column")
-    marker = params.get("marker")
-    part = params.get("part")
-
+    marker = params.get("marker", "-")  # default='-'
+    part = params.get("part", "after")  # default='after'
+    
+    # source_column zorunlu
     if source_column is None:
-        raise HTTPException(status_code=400, detail="source_column parametresi eksik")
-    if marker is None:
-        raise HTTPException(status_code=400, detail="marker parametresi eksik")
+        raise HTTPException(status_code=400, detail="source_column parametresi zorunludur.")
+    
     if part not in ("before", "after"):
         raise HTTPException(status_code=400, detail="part parametresi 'before' veya 'after' olmalı")
 

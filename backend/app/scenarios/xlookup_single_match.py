@@ -15,6 +15,23 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Parametre kontrolü
     if lookup_value is None:
         raise HTTPException(status_code=400, detail="lookup_value parametresi eksik")
+
+    # lookup_column boşsa ilk sütun auto-select
+    if not lookup_column:
+         if len(df.columns) > 0:
+             lookup_column = df.columns[0]
+         else:
+             raise HTTPException(status_code=400, detail="Veri seti boş. lookup_column belirtin.")
+
+    # return_column boşsa ikinci sütun (veya ilk) auto-select
+    if not return_column:
+         if len(df.columns) > 1:
+             return_column = df.columns[1]
+         elif len(df.columns) > 0:
+             return_column = df.columns[0]
+         else:
+              raise HTTPException(status_code=400, detail="Veri seti boş. return_column belirtin.")
+
     if not lookup_column:
         raise HTTPException(status_code=400, detail="lookup_column parametresi eksik")
     if not return_column:

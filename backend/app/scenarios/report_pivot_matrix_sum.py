@@ -15,13 +15,27 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     date_column = params.get("date_column")
 
-    # Parametre kontrolü
-    if not row_field:
-        raise HTTPException(status_code=400, detail="Eksik parametre: row_field")
-    if not column_field:
-        raise HTTPException(status_code=400, detail="Eksik parametre: column_field")
+    # row_field ve column_field boşsa ilk 2 kategorik sütunu seç
+    if not row_field or not column_field:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if len(object_cols) >= 2:
+            if not row_field:
+                row_field = object_cols[0]
+            if not column_field:
+                column_field = object_cols[1]
+        else:
+             if not row_field:
+                 raise HTTPException(status_code=400, detail="Satır alanı (row_field) için kategorik sütun bulunamadı.")
+             if not column_field:
+                 raise HTTPException(status_code=400, detail="Sütun alanı (column_field) için ikinci bir kategorik sütun bulunamadı.")
+    
+    # value_column boşsa ilk numeric auto-seç
     if not value_column:
-        raise HTTPException(status_code=400, detail="Eksik parametre: value_column")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
 
     # Sütun kontrolü
     missing_cols = [col for col in [row_field, column_field, value_column] if col not in df.columns]

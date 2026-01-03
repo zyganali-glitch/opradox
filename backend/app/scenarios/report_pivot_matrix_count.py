@@ -7,10 +7,32 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     row_field = params.get("row_field")
     column_field = params.get("column_field")
 
-    if not row_field or not isinstance(row_field, str):
-        raise HTTPException(status_code=400, detail="Eksik veya hatalı parametre: row_field")
-    if not column_field or not isinstance(column_field, str):
-        raise HTTPException(status_code=400, detail="Eksik veya hatalı parametre: column_field")
+    # row_field ve column_field boşsa ilk 2 kategorik sütunu seç
+    if not row_field or not column_field:
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if len(object_cols) >= 2:
+            if not row_field:
+                row_field = object_cols[0]
+            if not column_field:
+                column_field = object_cols[1]
+        else:
+             if not row_field:
+                 raise HTTPException(status_code=400, detail="Satır alanı (row_field) için kategorik sütun bulunamadı.")
+             if not column_field:
+                 raise HTTPException(status_code=400, detail="Sütun alanı (column_field) için ikinci bir kategorik sütun bulunamadı.")
+
+    if not isinstance(row_field, str):
+         # list gelirse str yap
+         if isinstance(row_field, list) and len(row_field) > 0:
+             row_field = row_field[0]
+         else:
+             raise HTTPException(status_code=400, detail="Eksik veya hatalı parametre: row_field")
+
+    if not isinstance(column_field, str):
+         if isinstance(column_field, list) and len(column_field) > 0:
+             column_field = column_field[0]
+         else:
+             raise HTTPException(status_code=400, detail="Eksik veya hatalı parametre: column_field")
 
     missing_cols = [col for col in [row_field, column_field] if col not in df.columns]
     if missing_cols:

@@ -5,19 +5,29 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Parametre kontrolü
-    if "column" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'column' gereklidir.")
-    if "case" not in params:
-        raise HTTPException(status_code=400, detail="Eksik parametre: 'case' gereklidir.")
+    column = params.get("column")
+    case = params.get("case", "proper")  # default='proper'
     
-    column = params["column"]
-    case = params["case"].lower()
+    # case doğrulama
     valid_cases = {"upper", "lower", "proper"}
+    if isinstance(case, str):
+        case = case.lower()
     if case not in valid_cases:
         raise HTTPException(status_code=400, detail=f"Geçersiz 'case' parametresi. Beklenen: {valid_cases}")
     
-    if column not in df.columns:
-        raise HTTPException(status_code=400, detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)}")
+    # Orijinal sütun tipini korumak için kopya al
+    df_copy = df.copy()
+    
+    # column boşsa tüm metin sütunlarına uygula
+    if not column:
+        text_cols = df.select_dtypes(include=['object']).columns.tolist()
+        if not text_cols:
+            raise HTTPException(status_code=400, detail="Metin sütunu bulunamadı. Lütfen column belirtin.")
+        columns_to_process = text_cols
+    else:
+        if column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"'{column}' sütunu bulunamadı. Mevcut sütunlar: {list(df.columns)[:10]}")
+        columns_to_process = [column]
     
     # Orijinal sütun tipini korumak için kopya al
     df_copy = df.copy()

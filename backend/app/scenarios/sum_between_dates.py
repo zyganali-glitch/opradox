@@ -22,28 +22,41 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     target_column = params.get("target_column") or params.get("value_column")
     return_mode = params.get("return_mode", "summary")
 
-    missing = []
+    # date_column auto-detect
     if not date_column:
-        missing.append("date_column")
-    # start_date ve end_date artık opsiyonel
+        # Önce datetime sütunlarını ara
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        if datetime_cols:
+            date_column = datetime_cols[0]
+        else:
+            # Object sütunlardan tarih parse etmeyi dene
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    try:
+                        pd.to_datetime(df[col].dropna().head(10), dayfirst=True)
+                        date_column = col
+                        break
+                    except:
+                        continue
+        if not date_column:
+            raise HTTPException(status_code=400, detail="Tarih sütunu otomatik algılanamadı. Lütfen date_column parametresini belirtin.")
+    
+    # start_date ve end_date opsiyonel - zaten Timestamp.min/max ile çalışıyor
+    
+    # target_column zorunlu
     if not target_column:
-        missing.append("target_column")
-
-    if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"Zorunlu parametre(ler) eksik: {missing}",
+            detail="Değer sütunu (target_column) zorunludur. Toplanacak sayısal sütunu belirtin.",
         )
 
-    if date_column not in df.columns or target_column not in df.columns:
-        missing_cols = [
-            col for col in [date_column, target_column] if col not in df.columns
-        ]
+    missing_cols = [col for col in [date_column, target_column] if col not in df.columns]
+    if missing_cols:
         raise HTTPException(
             status_code=400,
             detail=(
                 f"Aşağıdaki sütun(lar) bulunamadı: {missing_cols}. "
-                f"Mevcut sütunlar: {list(df.columns)}"
+                f"Mevcut sütunlar: {list(df.columns)[:10]}"
             ),
         )
 

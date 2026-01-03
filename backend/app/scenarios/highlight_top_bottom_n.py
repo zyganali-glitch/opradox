@@ -9,27 +9,40 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Parametre kontrolü
-    required_params = ["value_column", "n", "mode"]
-    for p in required_params:
-        if p not in params:
-            raise HTTPException(status_code=400, detail=f"'{p}' parametresi eksik")
-
-    value_column = params["value_column"]
-    n = params["n"]
-    mode = params["mode"].lower()
+    value_column = params.get("value_column")
+    n = params.get("n", 5)  # default=5
+    mode = params.get("mode", "top").lower()  # default='top'
     group_column = params.get("group_column", None)
+
+    # value_column boşsa ilk numeric auto-seç
+    if not value_column:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
 
     if value_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"'{value_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}",
+            detail=f"'{value_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}",
         )
 
     if group_column is not None and group_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"'{group_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}",
+            detail=f"'{group_column}' sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}",
         )
+
+    try:
+        n = int(n)
+        if n <= 0:
+            raise ValueError()
+    except Exception:
+        raise HTTPException(status_code=400, detail="'n' pozitif tam sayı olmalı")
+
+    if mode not in ("top", "bottom"):
+        raise HTTPException(status_code=400, detail="'mode' parametresi 'top' veya 'bottom' olmalı")
 
     try:
         n = int(n)

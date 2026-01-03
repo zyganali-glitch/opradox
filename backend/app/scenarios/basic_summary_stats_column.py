@@ -5,15 +5,20 @@ from io import BytesIO
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     column = params.get("column")
     
+    # column boşsa ilk numeric sütunu auto-seç
     if not column:
-        raise ValueError("Lütfen 'Sütun' parametresini giriniz.")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            column = numeric_cols[0]
+        else:
+            raise ValueError("Sayısal sütun bulunamadı. Lütfen 'column' parametresini belirtin.")
     
     if column not in df.columns:
-        raise ValueError(f"Sütun bulunamadı: {column}")
+        raise ValueError(f"Sütun bulunamadı: {column}. Mevcut sütunlar: {list(df.columns)[:10]}")
     
     # Check if column is numeric
     if not pd.api.types.is_numeric_dtype(df[column]):
-         raise ValueError(f"Seçilen sütun ('{column}') sayısal değil.")
+        raise ValueError(f"Seçilen sütun ('{column}') sayısal değil. Sayısal bir sütun seçin.")
 
     stats = df[column].describe().to_dict()
     

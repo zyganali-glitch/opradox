@@ -5,13 +5,20 @@ from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     cols = params.get("columns")
+    
+    # columns boşsa tüm sütunlara bak
     if not cols:
-        raise HTTPException(status_code=400, detail="columns parametresi eksik veya boş")
+        cols = df.columns.tolist()
+    
+    if isinstance(cols, str):
+        cols = [c.strip() for c in cols.split(",") if c.strip()]
+    
     if not isinstance(cols, list):
         raise HTTPException(status_code=400, detail="columns parametresi liste olmalı")
+    
     missing_cols = [c for c in cols if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Eksik sütunlar: {missing_cols}. Mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"Eksik sütunlar: {missing_cols}. Mevcut sütunlar: {list(df.columns)[:10]}")
 
     # Tüm sütunları string yaparak karşılaştırma yapabiliriz (opsiyonel)
     # Ancak burada orijinal haliyle bırakıyoruz.

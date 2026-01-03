@@ -13,12 +13,29 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     start_date = params.get("start_date")      # opsiyonel
     end_date = params.get("end_date")          # opsiyonel
 
-    if value_column is None:
-        raise HTTPException(status_code=400, detail="value_column parametresi gerekli")
+    # value_column boşsa ilk numeric sütunu auto-seç
+    if not value_column:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+    
+    if value_column not in df.columns:
+        raise HTTPException(status_code=400, detail=f"'{value_column}' sütunu bulunamadı. Mevcut: {list(df.columns)[:10]}")
+    
+    # Sayısal değerleri al
+    numeric_series = pd.to_numeric(df[value_column], errors="coerce").dropna()
+    
+    # min_limit ve max_limit boşsa IQR yöntemiyle otomatik hesapla
     if min_limit is None:
-        raise HTTPException(status_code=400, detail="min_limit parametresi gerekli")
+        q1 = numeric_series.quantile(0.25)
+        iqr = numeric_series.quantile(0.75) - q1
+        min_limit = q1 - 1.5 * iqr
     if max_limit is None:
-        raise HTTPException(status_code=400, detail="max_limit parametresi gerekli")
+        q3 = numeric_series.quantile(0.75)
+        iqr = q3 - numeric_series.quantile(0.25)
+        max_limit = q3 + 1.5 * iqr
 
     # min_limit ve max_limit sayısal olmalı
     try:

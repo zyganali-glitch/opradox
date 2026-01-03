@@ -14,15 +14,25 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     lower_color = params.get("lower_color", "FFFF0000")  # default kırmızı (ARGB)
     upper_color = params.get("upper_color", "FF00FF00")  # default yeşil (ARGB)
 
-    if value_column is None:
-        raise HTTPException(status_code=400, detail="value_column parametresi gerekli")
+    # value_column boşsa ilk numeric auto-seç
+    if not value_column:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+    
     if lower_threshold is None and upper_threshold is None:
-        raise HTTPException(status_code=400, detail="En az bir eşik değeri (lower_threshold veya upper_threshold) gerekli")
+        # En az bir eşik gerekli - ya da default olarak Q1/Q3 kullan
+        numeric_series = pd.to_numeric(df[value_column], errors="coerce").dropna()
+        if len(numeric_series) > 0:
+            lower_threshold = numeric_series.quantile(0.25)
+            upper_threshold = numeric_series.quantile(0.75)
 
     if value_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"{value_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)}"
+            detail=f"{value_column} sütunu bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}"
         )
 
     # Sayısal dönüşüm

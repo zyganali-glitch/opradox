@@ -11,12 +11,19 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     # Parametre kontrolü
     value_column = params.get("value_column")
+    
+    # value_column boşsa ilk numeric sütunu auto-seç
     if not value_column:
-        raise HTTPException(status_code=400, detail="value_column parametresi gerekli")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_column = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column parametresini belirtin.")
+    
     if value_column not in df.columns:
         raise HTTPException(
             status_code=400,
-            detail=f"value_column '{value_column}' bulunamadı, mevcut sütunlar: {list(df.columns)}",
+            detail=f"value_column '{value_column}' bulunamadı, mevcut sütunlar: {list(df.columns)[:10]}",
         )
 
     # İsteğe bağlı group_column

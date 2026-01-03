@@ -10,14 +10,26 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     date_col = params.get("date_column")
 
+    # group_column boşsa ilk kategorik sütunu auto-seç
     if not group_col:
-        raise HTTPException(status_code=400, detail="group_column parametresi gerekli")
+        object_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if object_cols:
+            group_col = object_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Kategorik sütun bulunamadı. Lütfen group_column belirtin.")
+    
+    # distinct_column boşsa farklı bir sütun seç
     if not distinct_col:
-        raise HTTPException(status_code=400, detail="distinct_column parametresi gerekli")
+        # group_col dışındaki ilk sütun
+        other_cols = [c for c in df.columns if c != group_col]
+        if other_cols:
+            distinct_col = other_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Benzersiz sayılacak sütun bulunamadı. Lütfen distinct_column belirtin.")
 
     missing_cols = [c for c in [group_col, distinct_col] if c not in df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"'{', '.join(missing_cols)}' sütunu(ları) eksik, mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"'{', '.join(missing_cols)}' sütunu(ları) eksik, mevcut sütunlar: {list(df.columns)[:10]}")
 
     if date_col:
         if date_col not in df.columns:

@@ -13,8 +13,13 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
     date_col = params.get("date_column")
 
+    # value_column boşsa ilk numeric auto-seç
     if not value_col:
-        raise HTTPException(status_code=400, detail="value_column parametresi gerekli")
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
     if group_col is not None and not isinstance(group_col, str):
         raise HTTPException(status_code=400, detail="group_column parametresi string olmalı")
     if not (0 <= lower_quantile < upper_quantile <= 1):

@@ -12,7 +12,20 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     start_date = params.get("start_date")
     end_date = params.get("end_date")
 
+    # value_col boşsa ilk numeric auto-select
+    if not value_col:
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        if numeric_cols:
+            value_col = numeric_cols[0]
+        else:
+            raise HTTPException(status_code=400, detail="Sayısal sütun bulunamadı. Lütfen value_column belirtin.")
+
+    # target_col boşsa default isim ver
+    if not target_col:
+        target_col = f"zscore_{value_col}"
+        
     if not value_col or not target_col:
+        # Zaten yukarıda set ettik ama garanti olsun
         raise HTTPException(status_code=400, detail="value_column ve target_column parametreleri zorunludur")
 
     # Only check value_col exists (target_col is a new column to be created)
