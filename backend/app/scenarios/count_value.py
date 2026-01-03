@@ -47,8 +47,10 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         mask = df[column_name].isna() | (df[column_name].astype(str).str.strip() == "")
         search_desc = "boş/NaN değerler"
     else:
-        mask = df[column_name].astype(str) == str(search_value)
-        search_desc = str(search_value)
+        # Case-insensitive ve whitespace-insensitive eşleştirme
+        clean_search_val = str(search_value).strip().lower()
+        mask = df[column_name].astype(str).str.strip().str.lower() == clean_search_val
+        search_desc = f"'{clean_search_val}' (büyük/küçük harf duyarsız)"
     match_count = int(mask.sum())
     total_rows = int(len(df))
 

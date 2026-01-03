@@ -47,7 +47,7 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
 
     if operator == "contains":
         # contains sadece string sütunlarda anlamlı
-        mask = series.astype(str).str.contains(str(filter_value), na=False)
+        mask = series.astype(str).str.contains(str(filter_value), case=False, na=False)
     else:
         # Sayısal karşılaştırma varsa sayısal kullan, değilse string karşılaştırması yap
         if filter_value_numeric is not None and series_numeric.notna().all():

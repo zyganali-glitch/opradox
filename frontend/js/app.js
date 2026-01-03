@@ -4416,29 +4416,67 @@ function renderDynamicForm(scenarioId, params) {
                     return;
                 }
 
-                const inp = document.createElement("input");
-                inp.type = "text"; // Default to text input
-                inp.name = p.name;
-                inp.placeholder = ph;
+                // 3. Conditional Column Datalist Assignment
+                // Only show column suggestions if the parameter name implies it requires a column.
+                const colKeywords = ['column', 'col', 'sütun', 'key', 'anahtar', 'field', 'alan', 'target', 'source', 'hedef', 'kaynak', 'rows', 'satırlar', 'group', 'grup', 'date', 'tarih'];
+                const excludeKeywords = ['value', 'değer', 'limit', 'threshold', 'eşik', 'count', 'sayı', 'name', 'isim', 'title', 'başlık', 'separator', 'ayraç'];
 
-                // 2. Sütun Datalist Kaynağı Seçimi
-                if (scenarioNeedsSecondFile && isSecondFileParam && !pName.includes('key_column') && !pName.includes('anahtar')) { // Anahtar sütun bazen 1. dosyadır, dikkat.
-                    // Genellikle 'key_column' 1. dosya, 'lookup_key_column' 2. dosyadır.
-                    if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference')) {
-                        inp.setAttribute('list', 'file2-columns');
+                let shouldShowCols = false;
+                if (colKeywords.some(kw => pName.includes(kw))) shouldShowCols = true;
+                if (excludeKeywords.some(kw => pName.includes(kw))) shouldShowCols = false;
+
+                let listId = null;
+                if (scenarioNeedsSecondFile && isSecondFileParam) {
+                    if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference') || pName.includes('key') || pName.includes('right_on')) {
+                        listId = 'file2-columns';
                     } else {
-                        inp.setAttribute('list', 'colOptions');
+                        listId = 'colOptions';
                     }
-                } else if (scenarioNeedsSecondFile && isSecondFileParam && (pName.includes('lookup_key') || pName.includes('right_on'))) {
-                    // Explicit 2. dosya anahtar isimleri
-                    inp.setAttribute('list', 'file2-columns');
-                } else {
-                    inp.setAttribute('list', 'colOptions'); // Varsayılan: 1. dosya
+                } else if (shouldShowCols) {
+                    listId = 'colOptions';
                 }
 
-                // FIXED: Only set required when explicitly true (default is optional)
-                if (p.required === true) inp.required = true;
-                row.appendChild(inp);
+                // --- PRO STYLE COLUMN SELECTOR INTEGRATION ---
+                if (listId === 'colOptions' || listId === 'file2-columns') {
+                    // Sütun listesini belirle
+                    const columns = (listId === 'colOptions')
+                        ? (typeof FILE_COLUMNS !== 'undefined' ? FILE_COLUMNS : [])
+                        : (typeof FILE2_COLUMNS !== 'undefined' ? FILE2_COLUMNS : []);
+
+                    if (typeof ProColumnSelector !== 'undefined') {
+                        const proHtml = ProColumnSelector.render(p.name, p.default || "", columns, "", p.multiple || false);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = proHtml;
+                        const widget = tempDiv.firstElementChild;
+                        widget.style.margin = "0";
+                        widget.style.padding = "0";
+                        widget.style.border = "none";
+                        const internalLabel = widget.querySelector('label');
+                        if (internalLabel) internalLabel.style.display = 'none';
+
+                        row.appendChild(widget);
+
+                        if (p.required === true) {
+                            const hiddenInput = widget.querySelector(`input[name="${p.name}"]`);
+                            if (hiddenInput) hiddenInput.required = true;
+                        }
+                    } else {
+                        const inp = document.createElement("input");
+                        inp.type = "text";
+                        inp.name = p.name;
+                        inp.placeholder = ph;
+                        inp.setAttribute('list', listId);
+                        if (p.required === true) inp.required = true;
+                        row.appendChild(inp);
+                    }
+                } else {
+                    const inp = document.createElement("input");
+                    inp.type = "text";
+                    inp.name = p.name;
+                    inp.placeholder = ph;
+                    if (p.required === true) inp.required = true;
+                    row.appendChild(inp);
+                }
             }
             form.appendChild(row);
         });
@@ -5326,7 +5364,12 @@ async function runScenario(scenarioId) {
         } else { throw new Error(data.detail); }
     } catch (e) {
         if (statusDiv) statusDiv.textContent = ""; // Clear loading on error
-        alert("Hata: " + e.message);
+        // alert("Hata: " + e.message);
+        if (typeof showToast === 'function') {
+            showToast("❌ " + e.message, 'error', 5000);
+        } else {
+            alert("Hata: " + e.message);
+        }
     }
 }
 

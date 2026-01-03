@@ -274,7 +274,8 @@
         "description_tr": "Toplanacak/hesaplanacak sayısal sütun. Boş bırakılırsa ilk sayısal sütun kullanılır.",
         "description_en": "Numeric column to aggregate. If empty, first numeric column is used.",
         "placeholder_tr": "Tutar...",
-        "placeholder_en": "Amount..."
+        "placeholder_en": "Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -482,7 +483,8 @@
         "name": "column",
         "type": "text",
         "label_tr": "Sütun",
-        "placeholder_tr": "Tarih Sütunu..."
+        "placeholder_tr": "Tarih Sütunu...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -609,7 +611,8 @@
         "description_tr": "Periyot için kullanılacak tarih sütunu. Boş bırakılırsa otomatik algılanır.",
         "description_en": "Date column for period. Auto-detected if empty.",
         "placeholder_tr": "Tarih...",
-        "placeholder_en": "Date..."
+        "placeholder_en": "Date...",
+        "required": true
       },
       {
         "name": "period",
@@ -810,7 +813,8 @@
         "description_tr": "Tarihlerin bulunduğu sütun. Boş bırakılırsa otomatik algılanır.",
         "description_en": "Column containing dates. Auto-detected if empty.",
         "placeholder_tr": "Örn: Tarih...",
-        "placeholder_en": "e.g. Date..."
+        "placeholder_en": "e.g. Date...",
+        "required": true
       },
       {
         "name": "start_date",
@@ -1020,7 +1024,8 @@
         "description_tr": "Bu alana, istatistik özetini almak istediğiniz sütunun başlığını yazmalısınız. Örneğin, 'Tutar' yazabilirsiniz. Eğer yanlış bir başlık yazarsanız, sistem verileri bulamayacak ve bir hata mesajı alacaksınız.",
         "description_en": "In this field, you should write the header of the column for which you want to get the summary statistics. For example, you can write 'Amount'. If you write an incorrect header, the system will not be able to find the data and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1103,7 +1108,8 @@
           "week": "Hafta",
           "month": "Ay",
           "quarter": "Çeyrek"
-        }
+        },
+        "required": true
       },
       {
         "name": "target_column",
@@ -1113,7 +1119,8 @@
         "description_tr": "Bu alana, oluşturulacak yeni sütunun adını yazmalısınız. Örneğin, 'Dönem' veya 'Zaman Dilimi'. Eğer bu alanı boş bırakırsanız, sistem varsayılan 'period_label' adını kullanacaktır.",
         "description_en": "In this field, you should write the name of the new column that will be created. For example, 'Period' or 'Time Frame'. If you leave this field empty, the system will use the default name 'period_label'.",
         "placeholder_tr": "Örn: Dönem...",
-        "placeholder_en": "e.g. Period..."
+        "placeholder_en": "e.g. Period...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1191,7 +1198,8 @@
         "description_tr": "Bu alana, sayısal değerlerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, eğer satış tutarları 'Tutar' başlıklı sütunda yer alıyorsa, buraya 'Tutar' yazın. Eğer yanlış bir başlık yazarsanız, program bu sütunu bulamaz ve hata verebilir.",
         "description_en": "In this field, you should write the header of the column that contains the numerical values. For example, if the sales amounts are in a column titled 'Amount', write 'Amount' here. If you write an incorrect header, the program will not be able to find this column and will throw an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "buckets",
@@ -1211,7 +1219,8 @@
         "description_tr": "Bu alana, aralıkların etiketlerinin yer alacağı yeni sütunun başlığını yazmalısınız. Örneğin, 'Aralık' yazabilirsiniz. Eğer bu alanı boş bırakırsanız veya yanlış bir başlık yazarsanız, program hata verebilir.",
         "description_en": "In this field, you should write the header of the new column where the labels of the ranges will be placed. For example, you can write 'Range'. If you leave this field empty or write an incorrect header, the program may throw an error.",
         "placeholder_tr": "Örn: Aralık...",
-        "placeholder_en": "e.g. Range..."
+        "placeholder_en": "e.g. Range...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1350,7 +1359,8 @@
         "description_tr": "Bu alana, renk skalasının uygulanacağı sayısal verilerin bulunduğu sütunun adını yazmalısınız. Eğer yanlış bir ad yazarsanız, işlem gerçekleştirilemeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, you should enter the name of the column containing the numerical data to which the color scale will be applied. If you enter an incorrect name, the operation will not be executed and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "group_column",
@@ -1446,7 +1456,8 @@
         "description_tr": "Bu alana, hangi sütunun değerlerini toplamak istiyorsanız onun adını yazın. Örneğin, 'Satış Tutarı' yazabilirsiniz. Yanlış bir ad yazarsanız, işlem başarısız olur.",
         "description_en": "Enter the name of the column whose values you want to sum. For example, you can write 'Sales Amount'. If you write an incorrect name, the operation will fail.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1763,7 +1774,8 @@
         "description_tr": "Bu alana, boş olmayan hücre sayısını bulmak istediğiniz sütunun başlığını yazmalısınız. Örneğin, 'Tutar' veya 'Ürün Adı' gibi. Eğer yanlış bir başlık yazarsanız, sonuç alamazsınız.",
         "description_en": "You should write the title of the column for which you want to count non-blank cells. For example, 'Amount' or 'Product Name'. If you write an incorrect title, you won't get any results.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -1971,7 +1983,8 @@
         "description_tr": "Bu alana, verilerinizde arama yapmak istediğiniz sütunun adını yazmalısınız. Örneğin, 'Durum' gibi. Eğer yanlış bir sütun adı yazarsanız, sistem bu sütunu bulamaz ve hata verecektir.",
         "description_en": "In this field, you should enter the name of the column where you want to search in your data. For example, 'Status'. If you enter an incorrect column name, the system will not be able to find this column and will return an error.",
         "placeholder_tr": "Örn: Durum...",
-        "placeholder_en": "e.g. Status..."
+        "placeholder_en": "e.g. Status...",
+        "required": true
       },
       {
         "name": "value",
@@ -1981,7 +1994,8 @@
         "description_tr": "Bu alana, aramak istediğiniz değeri yazmalısınız. Örneğin, 'Onaylandı' gibi. Eğer bu değeri yazmazsanız, sistem işlem yapamaz ve hata verir.",
         "description_en": "In this field, you should enter the value you want to search for. For example, 'Approved'. If you do not enter this value, the system cannot proceed and will return an error.",
         "placeholder_tr": "Örn: Onaylandı...",
-        "placeholder_en": "e.g. Approved..."
+        "placeholder_en": "e.g. Approved...",
+        "required": true
       },
       {
         "name": "return_mode",
@@ -2000,7 +2014,7 @@
           "summary": "Sadece Özet",
           "summary_and_rows": "Özet ve Satırlar"
         },
-        "default": "summary"
+        "default": "summary_and_rows"
       }
     ],
     "tags_tr": [
@@ -2105,7 +2119,8 @@
         "description_tr": "Bu alana, sayısal değerlerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Tutar' gibi. Eğer yanlış bir başlık yazarsanız, işlem gerçekleşmez ve hata mesajı alırsınız.",
         "description_en": "In this field, you should write the header of the column containing the numerical values. For example, 'Amount'. If you write an incorrect header, the process will not work, and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "target_column",
@@ -2115,7 +2130,8 @@
         "description_tr": "Bu alana, oluşturulacak yeni segment sütununun başlığını yazmalısınız. Örneğin, 'Segment'. Eğer bu alanı boş bırakırsanız, işlem gerçekleşmez.",
         "description_en": "In this field, you should write the header for the new segment column that will be created. For example, 'Segment'. If you leave this field empty, the process will not work.",
         "placeholder_tr": "Örn: Segment...",
-        "placeholder_en": "e.g. Segment..."
+        "placeholder_en": "e.g. Segment...",
+        "required": true
       },
       {
         "name": "thresholds",
@@ -2125,7 +2141,8 @@
         "description_tr": "Bu alana, sayısal değerlerin hangi aralıklara ayrılacağını belirten eşik değerlerini yazmalısınız. Örneğin, [1000, 5000] gibi. Eğer bu değerleri yanlış yazarsanız, segmentler oluşturulamaz.",
         "description_en": "In this field, you should write the threshold values that determine how the numerical values will be divided into segments. For example, [1000, 5000]. If you write these values incorrectly, segments cannot be created.",
         "placeholder_tr": "Örn: [1000, 5000]...",
-        "placeholder_en": "e.g. [1000, 5000]..."
+        "placeholder_en": "e.g. [1000, 5000]...",
+        "required": true
       },
       {
         "name": "labels",
@@ -2135,7 +2152,8 @@
         "description_tr": "Bu alana, her bir segment için kullanılacak etiketleri yazmalısınız. Örneğin, ['Düşük', 'Orta', 'Yüksek'] gibi. Eğer etiket sayısı eşik değerlerinden bir fazla olmazsa, işlem gerçekleşmez.",
         "description_en": "In this field, you should write the labels to be used for each segment. For example, ['Low', 'Medium', 'High']. If the number of labels is not one more than the number of thresholds, the process will not work.",
         "placeholder_tr": "Örn: ['Düşük', 'Orta', 'Yüksek']...",
-        "placeholder_en": "e.g. ['Low', 'Medium', 'High']..."
+        "placeholder_en": "e.g. ['Low', 'Medium', 'High']...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -2238,7 +2256,8 @@
         "description_tr": "Bu alana, tarihlerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Başlangıç Tarihi'. Eğer yanlış bir başlık yazarsanız, işleminiz gerçekleşmeyecek ve hata alacaksınız.",
         "description_en": "You should enter the header of the column containing the dates here, for example, 'Start Date'. If you enter an incorrect header, your operation will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Başlangıç Tarihi...",
-        "placeholder_en": "e.g. Start Date..."
+        "placeholder_en": "e.g. Start Date...",
+        "required": true
       },
       {
         "name": "end_date_column",
@@ -2248,7 +2267,8 @@
         "description_tr": "Bu alana, bitiş tarihinin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Bitiş Tarihi'. Eğer yanlış bir başlık yazarsanız, işleminiz gerçekleşmeyecek ve hata alacaksınız.",
         "description_en": "You should enter the header of the column containing the end date here, for example, 'End Date'. If you enter an incorrect header, your operation will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Bitiş Tarihi...",
-        "placeholder_en": "e.g. End Date..."
+        "placeholder_en": "e.g. End Date...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -2344,7 +2364,8 @@
         "description_tr": "Bu alana, sınırların dışında kalan değerleri kontrol etmek istediğiniz sütunun başlığını yazın. Örneğin, 'Tutar' yazabilirsiniz. Eğer yanlış bir başlık yazarsanız, işlem gerçekleştirilmez ve hata alırsınız.",
         "description_en": "Enter the header of the column you want to check for out of range values. For example, you can write 'Amount'. If you enter an incorrect header, the process will not be executed and you will receive an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "min_limit",
@@ -2354,7 +2375,8 @@
         "description_tr": "Bu alana, kontrol etmek istediğiniz değerlerin alt sınırını yazın. Örneğin, 100 yazabilirsiniz. Eğer sayısal bir değer girmezseniz hata alırsınız.",
         "description_en": "Enter the minimum limit for the values you want to check. For example, you can write 100. If you do not enter a numeric value, you will receive an error.",
         "placeholder_tr": "Örn: 100...",
-        "placeholder_en": "e.g. 100..."
+        "placeholder_en": "e.g. 100...",
+        "required": true
       },
       {
         "name": "max_limit",
@@ -2364,7 +2386,8 @@
         "description_tr": "Bu alana, kontrol etmek istediğiniz değerlerin üst sınırını yazın. Örneğin, 1000 yazabilirsiniz. Eğer sayısal bir değer girmezseniz hata alırsınız.",
         "description_en": "Enter the maximum limit for the values you want to check. For example, you can write 1000. If you do not enter a numeric value, you will receive an error.",
         "placeholder_tr": "Örn: 1000...",
-        "placeholder_en": "e.g. 1000..."
+        "placeholder_en": "e.g. 1000...",
+        "required": true
       },
       {
         "name": "group_column",
@@ -2599,7 +2622,8 @@
         "description_tr": "Buraya, üzerinde işlem yapmak istediğiniz metinlerin bulunduğu sütunun başlığını yazın. Örneğin: 'Açıklama'. Eğer yanlış bir başlık yazarsanız, işlem yapılamaz ve hata alırsınız.",
         "description_en": "Enter the header of the column containing the text you want to process. For example: 'Description'. If you enter an incorrect header, the process cannot be completed and you will receive an error.",
         "placeholder_tr": "Örn: Açıklama...",
-        "placeholder_en": "e.g. Description..."
+        "placeholder_en": "e.g. Description...",
+        "required": true
       },
       {
         "name": "marker",
@@ -2609,7 +2633,8 @@
         "description_tr": "Buraya, metinlerinizde aramak istediğiniz işareti yazın. Örneğin: ' - '. Eğer bu işaret metinlerde yoksa, sonuç alamazsınız.",
         "description_en": "Enter the marker you want to search for in your texts. For example: ' - '. If this marker does not exist in the texts, you will not get any results.",
         "placeholder_tr": "Örn: - ...",
-        "placeholder_en": "e.g. - ..."
+        "placeholder_en": "e.g. - ...",
+        "required": true
       },
       {
         "name": "part",
@@ -2625,7 +2650,8 @@
         "option_labels_tr": {
           "before": "Önce",
           "after": "Sonra"
-        }
+        },
+        "required": true
       }
     ],
     "tags_tr": [
@@ -2729,7 +2755,8 @@
         "description_tr": "Bu alana, ana tablonuzda arama yapacağınız sütunun adını yazmalısınız. Örneğin, 'Ürün Kodu' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "You should enter the name of the column in your main table that you want to search. For example, 'Product Code'. If you enter an incorrect name, the process will not work and you will receive an error.",
         "placeholder_tr": "Örn: Ürün Kodu...",
-        "placeholder_en": "e.g. Product Code..."
+        "placeholder_en": "e.g. Product Code...",
+        "required": true
       },
       {
         "name": "lookup_column",
@@ -2739,7 +2766,8 @@
         "description_tr": "Buraya, ana tablonuzda arama yapacağınız sütunun adını yazmalısınız. Örneğin, 'Ürün Adı'. Yanlış yazarsanız, arama işlemi gerçekleşmez.",
         "description_en": "Here, you should enter the name of the column in your main table that you will be searching. For example, 'Product Name'. If you write it incorrectly, the search will not happen.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "fallback_column",
@@ -2749,7 +2777,8 @@
         "description_tr": "Bu alana, yedek tablonuzda arama yapacağınız sütunun adını yazmalısınız. Örneğin, 'Yedek Ürün Kodu'. Yanlış yazarsanız, yedek tablodan arama yapılamaz.",
         "description_en": "You should enter the name of the column in your fallback table that you want to search. For example, 'Backup Product Code'. If you write it incorrectly, the search in the fallback table will not work.",
         "placeholder_tr": "Örn: Yedek Ürün Kodu...",
-        "placeholder_en": "e.g. Backup Product Code..."
+        "placeholder_en": "e.g. Backup Product Code...",
+        "required": true
       },
       {
         "name": "value_column",
@@ -2759,7 +2788,8 @@
         "description_tr": "Buraya, ana ve yedek tablonuzda arama sonucunda almak istediğiniz değerlerin bulunduğu sütunun adını yazmalısınız. Örneğin, 'Fiyat'. Yanlış yazarsanız, sonuç alamazsınız.",
         "description_en": "Here, you should enter the name of the column in your main and fallback tables that contains the values you want to retrieve. For example, 'Price'. If you write it incorrectly, you will not get any results.",
         "placeholder_tr": "Örn: Fiyat...",
-        "placeholder_en": "e.g. Price..."
+        "placeholder_en": "e.g. Price...",
+        "required": true
       },
       {
         "name": "result_column",
@@ -2780,7 +2810,8 @@
         "description_tr": "Sol paneldeki 'İkinci Dosya' alanına diğer Excel'i yükleyin. Bu dosya, ana tablonuzda bulunmayan verileri yedek olarak kullanmak için gereklidir.",
         "description_en": "Upload the other Excel file in the 'Second File' area on the left panel. This file is necessary to use as a backup for data not found in your main table.",
         "placeholder_tr": "",
-        "placeholder_en": ""
+        "placeholder_en": "",
+        "required": true
       },
       {
         "name": "return_column",
@@ -2909,7 +2940,8 @@
         "description_tr": "Eğer tarihlerinize karşılık gelen değerlerin bulunduğu sütunun başlığını yazın. Örneğin: 'Satış Tutarı'. Eğer bu alanı boş bırakırsanız, sadece tarihler listelenecektir.",
         "description_en": "Enter the header of the column where the values corresponding to your dates are located. For example: 'Sales Amount'. If you leave this field empty, only the dates will be listed.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -3041,7 +3073,8 @@
         "description_tr": "Bu alana, filtrelemek istediğiniz verilerin bulunduğu sütunun adını yazın. Örneğin, 'Tutar' ya da 'Ürün Adı' gibi. Eğer yanlış bir isim yazarsanız, sistem bu sütunu bulamayacak ve hata verecektir.",
         "description_en": "Enter the name of the column that contains the data you want to filter. For example, 'Amount' or 'Product Name'. If you write an incorrect name, the system will not be able to find this column and will give an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "operator",
@@ -3067,7 +3100,8 @@
           "gt": "Büyük",
           "gte": "Büyük Eşit",
           "contains": "İçeriyor"
-        }
+        },
+        "required": true
       },
       {
         "name": "filter_value",
@@ -3077,7 +3111,8 @@
         "description_tr": "Bu alana, seçtiğiniz sütundaki verilerle karşılaştırmak istediğiniz değeri yazın. Örneğin, '100' ya da 'Elma' gibi. Eğer yanlış bir değer yazarsanız, filtreleme işlemi düzgün çalışmayabilir.",
         "description_en": "Enter the value you want to compare with the data in the selected column. For example, '100' or 'Apple'. If you write an incorrect value, the filtering process may not work properly.",
         "placeholder_tr": "Örn: 100...",
-        "placeholder_en": "e.g. 100..."
+        "placeholder_en": "e.g. 100...",
+        "required": true
       },
       {
         "name": "value",
@@ -3179,7 +3214,8 @@
         "description_tr": "Bu alana, metin içinde değiştirmek istediğiniz kelimeyi içeren sütunların başlıklarını yazın. Örneğin, 'Açıklama' veya 'Notlar' gibi. Eğer yanlış bir isim yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "In this field, write the titles of the columns that contain the words you want to replace. For example, 'Description' or 'Notes'. If you write an incorrect name, the operation will not occur and you will receive an error.",
         "placeholder_tr": "Örn: Açıklama...",
-        "placeholder_en": "e.g. Description..."
+        "placeholder_en": "e.g. Description...",
+        "required": true
       },
       {
         "name": "find_str",
@@ -3189,7 +3225,8 @@
         "description_tr": "Bu alana, metin içinde değiştirmek istediğiniz kelimeyi yazın. Örneğin, 'eski' kelimesini yazarsanız, metinlerdeki 'eski' kelimeleri yeni kelime ile değiştirilecektir. Yanlış yazarsanız, değişiklik yapılmaz.",
         "description_en": "In this field, write the word you want to find and replace in the text. For example, if you write 'old', all occurrences of 'old' in the text will be replaced with the new word. If you write it incorrectly, no changes will be made.",
         "placeholder_tr": "Örn: eski...",
-        "placeholder_en": "e.g. old..."
+        "placeholder_en": "e.g. old...",
+        "required": true
       },
       {
         "name": "replace_str",
@@ -3199,13 +3236,15 @@
         "description_tr": "Bu alana, bulduğunuz kelimenin yerine geçecek yeni kelimeyi yazın. Örneğin, 'yeni' yazarsanız, metinlerdeki 'eski' kelimeleri 'yeni' ile değiştirilecektir. Yanlış yazarsanız, beklediğiniz değişiklik olmayabilir.",
         "description_en": "In this field, write the new word that will replace the found word. For example, if you write 'new', all occurrences of 'old' in the text will be replaced with 'new'. If you write it incorrectly, you may not see the expected changes.",
         "placeholder_tr": "Örn: yeni...",
-        "placeholder_en": "e.g. new..."
+        "placeholder_en": "e.g. new...",
+        "required": true
       },
       {
         "name": "column",
         "type": "text",
         "label_tr": "Column",
-        "label_en": "Column"
+        "label_en": "Column",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3306,7 +3345,8 @@
         "description_tr": "Bu alana, tekrar eden satırları kontrol etmek istediğiniz sütunların başlıklarını yazın. Örneğin, 'Ürün Adı', 'Müşteri Adı' gibi. Eğer bu başlıkları yanlış yazarsanız veya sütunlar mevcut değilse, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, write the headers of the columns you want to check for duplicate rows. For example, 'Product Name', 'Customer Name'. If you write these headers incorrectly or if the columns do not exist, the process will not proceed, and you will receive an error message.",
         "placeholder_tr": "Örn: Ürün Adı, Müşteri Adı...",
-        "placeholder_en": "e.g. Product Name, Customer Name..."
+        "placeholder_en": "e.g. Product Name, Customer Name...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3396,7 +3436,8 @@
         "label_tr": "Hedef Sütun",
         "label_en": "Target Column",
         "placeholder_tr": "Sütun Adı...",
-        "placeholder_en": "Column Name..."
+        "placeholder_en": "Column Name...",
+        "required": true
       },
       {
         "name": "return_mode",
@@ -3481,7 +3522,8 @@
         "description_tr": "Bu alana, büyük/küçük harf tutarsızlıklarını kontrol etmek istediğiniz sütunun adını yazın. Örneğin, 'Ürün Adı' veya 'Şehir'. Yanlış bir isim yazarsanız, hata alırsınız ve işlem gerçekleşmez.",
         "description_en": "Enter the name of the column where you want to check for case inconsistencies. For example, 'Product Name' or 'City'. If you enter an incorrect name, you will receive an error and the process will not proceed.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3737,7 +3779,8 @@
         "placeholder_tr": "Örn: Şehir, Durum...",
         "placeholder_en": "e.g. City, State...",
         "options": [],
-        "option_labels_tr": {}
+        "option_labels_tr": {},
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3830,7 +3873,8 @@
         "description_tr": "Bu alana, frekans tablosunu oluşturmak istediğiniz verilerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, eğer satış tutarlarını analiz etmek istiyorsanız, 'Tutar' yazmalısınız. Yanlış bir başlık yazarsanız, sistem verileri bulamayacak ve hata verecektir.",
         "description_en": "In this field, you should write the header of the column where your data for the frequency table is located. For example, if you want to analyze sales amounts, you should write 'Amount'. If you write an incorrect header, the system will not be able to find the data and will return an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -3987,7 +4031,8 @@
         "description_tr": "Eğer 'sum' seçtiyseniz, bu alana toplamak istediğiniz sayısal verilerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Tutar'. Eğer bu alanı boş bırakırsanız ve 'sum' seçerseniz, hata alırsınız.",
         "description_en": "If you selected 'sum', you need to enter the header of the column that contains the numerical data you want to sum in this field. For example, 'Amount'. If you leave this field empty and select 'sum', you will receive an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -4107,7 +4152,8 @@
         "description_tr": "Bu alana, tekrar eden değerleri kontrol etmek istediğiniz sütunların başlıklarını yazmalısınız. Örneğin, 'Ürün Adı' veya 'Müşteri ID' gibi. Eğer bu sütunlardan biri mevcut değilse, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, you should enter the headers of the columns you want to check for duplicate values. For example, 'Product Name' or 'Customer ID'. If any of these columns do not exist, the operation will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Ürün Adı, Müşteri ID...",
-        "placeholder_en": "e.g. Product Name, Customer ID..."
+        "placeholder_en": "e.g. Product Name, Customer ID...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -4200,7 +4246,8 @@
         "description_tr": "Bu alana, renklendirmek istediğiniz sayısal verilerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Tutar' veya 'Satış Miktarı'. Yanlış bir başlık yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "In this field, you should write the header of the column that contains the numerical values you want to highlight. For example, 'Amount' or 'Sales Quantity'. If you write an incorrect header, the process will not occur, and you will receive an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "n",
@@ -4343,7 +4390,8 @@
         "description_tr": "Bu alana, hücrelerdeki değerleri kontrol etmek istediğiniz sütunun başlığını yazın. Örneğin, 'Tutar' gibi. Eğer yanlış bir başlık yazarsanız, işlem gerçekleşmez ve hata mesajı alırsınız.",
         "description_en": "Enter the header of the column that contains the values you want to check. For example, 'Amount'. If you enter an incorrect header, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "lower_threshold",
@@ -4595,7 +4643,8 @@
         "description_tr": "Bu alana, benzersiz kayıtları belirlemek için kullanmak istediğiniz sütunun adını yazın. Örneğin, 'Müşteri ID' veya 'Ürün Kodu' gibi. Eğer bu alanı yanlış yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the column you want to use to identify unique records. For example, 'Customer ID' or 'Product Code'. If you misspell this, the operation will fail and you'll receive an error message.",
         "placeholder_tr": "Örn: Müşteri ID...",
-        "placeholder_en": "e.g. Customer ID..."
+        "placeholder_en": "e.g. Customer ID...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -4708,7 +4757,8 @@
         "description_tr": "Bu alana, maksimum veya minimum değerini bulmak istediğiniz sütunun adını yazın. Örneğin, 'Satış Tutarı' gibi. Yanlış bir ad girerseniz, işlem yapılamaz.",
         "description_en": "Enter the name of the column from which you want to find the maximum or minimum value. For example, 'Sales Amount'. If you enter an incorrect name, the operation cannot be performed.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -5061,7 +5111,8 @@
         "description_tr": "Bu alana, metinlerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'İsim' veya 'Açıklama' gibi. Eğer yanlış bir sütun adı yazarsanız, sistem bu sütunu bulamaz ve hata verir.",
         "description_en": "In this field, you should write the header of the column that contains the text. For example, 'Name' or 'Description'. If you write an incorrect column name, the system will not be able to find this column and will return an error.",
         "placeholder_tr": "Örn: İsim...",
-        "placeholder_en": "e.g. Name..."
+        "placeholder_en": "e.g. Name...",
+        "required": true
       },
       {
         "name": "case",
@@ -5184,7 +5235,8 @@
         "description_tr": "Bu alana, aykırı değerleri kontrol etmek istediğiniz sayısal verilerin bulunduğu sütunun başlığını yazın. Örneğin, 'Satış Tutarı' veya 'Miktar'. Bu alan zorunludur, boş bırakmayın.",
         "description_en": "Enter the header of the column that contains the numerical data you want to check for outliers. For example, 'Sales Amount' or 'Quantity'. This field is mandatory, do not leave it blank.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "lower_quantile",
@@ -5337,7 +5389,8 @@
         "description_tr": "Bu alana, analiz etmek istediğiniz değerlerin bulunduğu sütunun adını yazın. Örneğin, 'Satış Tutarı' veya 'Miktar'. Yanlış bir isim yazarsanız, analiz çalışmaz.",
         "description_en": "Enter the name of the column that contains the values you want to analyze. For example, 'Sales Amount' or 'Quantity'. If you enter an incorrect name, the analysis will not work.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -5448,7 +5501,8 @@
         "description_tr": "Bu alana, yüzdelik ve çeyreklik değerlerini hesaplamak istediğiniz sütunun başlığını yazmalısınız. Örneğin, 'Tutar' veya 'Satış Miktarı' gibi. Eğer bu sütun adını yanlış yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "In this field, you should write the header of the column for which you want to calculate percentiles and quartiles. For example, 'Amount' or 'Sales Quantity'. If you write this column name incorrectly, the process will not proceed, and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "percentiles",
@@ -5577,7 +5631,8 @@
         "description_tr": "Bu alana, özetini almak istediğiniz sayısal verilerin bulunduğu sütunun adını yazın. Örneğin, satış tutarı. Yanlış bir sütun adı yazarsanız, işlem gerçekleşmez.",
         "description_en": "In this field, enter the name of the column that contains the numerical data you want to summarize. For example, sales amount. If you enter an incorrect column name, the operation will not proceed.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -5733,7 +5788,8 @@
         "description_tr": "Bu alana, toplamını almak istediğiniz sayısal değerlerin bulunduğu sütunun adını yazın. Örneğin, 'Tutar' yazarsanız, her bir kategori için toplam tutar hesaplanır. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmez ve hata mesajı alırsınız.",
         "description_en": "In this field, enter the name of the column that contains the numerical values you want to sum. For example, if you write 'Amount', the total amount will be calculated for each category. If you enter an incorrect column name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -5885,7 +5941,8 @@
         "description_tr": "Bu alana, toplamını almak istediğiniz sayısal değerlerin bulunduğu sütunun adını yazın. Örneğin, satış tutarlarını almak istiyorsanız, buraya 'Tutar' yazmalısınız. Yanlış yazarsanız veya boş bırakırsanız, işlem gerçekleşmeyecek.",
         "description_en": "Enter the name of the column that contains the numerical values you want to sum. For example, if you want to sum sales amounts, you should write 'Amount' here. If you write this incorrectly or leave it empty, the process will not proceed.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "row_field",
@@ -6057,7 +6114,8 @@
         "description_tr": "Bu alana, toplamak istediğiniz sayısal değerlerin bulunduğu sütunun adını yazın. Örneğin, 'Satış Tutarı'. Yanlış bir ad yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column that contains the numerical values you want to aggregate. For example, 'Sales Amount'. If you enter an incorrect name, the process will fail and you will receive an error.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -6464,7 +6522,8 @@
         "description_tr": "Bu alana, gruplama sonucunda hangi sütundaki değerlerin toplanacağını veya hesaplanacağını yazın. Örneğin, 'Satış Tutarı'. Eğer yanlış bir sütun adı yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the name of the column that contains the values to be summed or calculated in the grouping result. For example, 'Sales Amount'. If you enter an incorrect column name, the process will not proceed and you will receive an error.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -6609,7 +6668,8 @@
         "description_tr": "Bu alana, grupladığınız verilerin toplamını almak istediğiniz sütunun adını yazın. Örneğin, 'Satış Tutarı' gibi. Yanlış bir isim yazarsanız, hata alırsınız ve işlem gerçekleşmez.",
         "description_en": "Enter the name of the column from which you want to calculate the total for the grouped data. For example, 'Sales Amount'. If you enter an incorrect name, you will receive an error and the process will not be completed.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -6719,7 +6779,8 @@
         "description_tr": "Bu alana, özetlemek istediğiniz sayıların bulunduğu sütunun adını yazın. Örneğin, 'Satış Tutarı' veya 'Miktar' gibi. Yanlış bir isim girerseniz, işlem gerçekleşmez ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the column that contains the numbers you want to summarize. For example, 'Sales Amount' or 'Quantity'. If you enter an incorrect name, the process will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "value_columns",
@@ -6951,7 +7012,8 @@
         "description_tr": "Bu alana, hesaplamak istediğiniz değerlerin bulunduğu sütunun adını yazın. Örneğin, 'Satış Tutarı' yazarsanız, bu sütundaki sayılar toplanır veya ortalaması alınır. Yanlış bir isim yazarsanız, işlem başarısız olur.",
         "description_en": "Enter the name of the column that contains the values you want to calculate. For example, if you write 'Sales Amount', the numbers in this column will be summed or averaged. If you write an incorrect name, the process will fail.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -7082,7 +7144,8 @@
         "name": "lookup_column",
         "type": "text",
         "label_tr": "Arama Sütunu",
-        "label_en": "Lookup Column"
+        "label_en": "Lookup Column",
+        "required": true
       },
       {
         "name": "lookup_value",
@@ -7219,7 +7282,8 @@
         "description_tr": "Bu alana, kümülatif toplamını almak istediğiniz sayısal verilerin bulunduğu sütunun adını yazmalısınız. Örneğin, 'Satış Tutarı' gibi. Yanlış bir isim yazarsanız, işlem gerçekleşmeyecek ve hata mesajı alacaksınız.",
         "description_en": "Enter the name of the column that contains the numerical data for which you want to calculate the cumulative total. For example, 'Sales Amount'. If you enter an incorrect name, the operation will not proceed and you will receive an error message.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "target_column",
@@ -7229,7 +7293,8 @@
         "description_tr": "Bu alana, kümülatif toplamların yazılacağı yeni sütunun adını yazabilirsiniz. Varsayılan olarak 'running_total' olarak ayarlanmıştır. İsterseniz farklı bir isim verebilirsiniz.",
         "description_en": "Enter the name of the new column where the cumulative totals will be written. It is set to 'running_total' by default, but you can give it a different name if you wish.",
         "placeholder_tr": "Örn: Kümülatif Toplam...",
-        "placeholder_en": "e.g. Cumulative Total..."
+        "placeholder_en": "e.g. Cumulative Total...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -7447,7 +7512,8 @@
         "description_tr": "Bu alana, analiz etmek istediğiniz değerlerin bulunduğu sütunun başlığını yazmalısınız. Örneğin, 'Tutar' veya 'Miktar'. Yanlış bir başlık yazarsanız, sistem bu sütunu bulamaz ve hata verebilir.",
         "description_en": "In this field, you should write the header of the column that contains the values you want to analyze. For example, 'Amount' or 'Quantity'. If you write an incorrect header, the system won't be able to find this column and may throw an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "group_column",
@@ -7691,7 +7757,8 @@
         "description_tr": "Bu alana, ayırmak istediğiniz sütunun adını yazın. Örneğin, 'Adres' yazabilirsiniz. Eğer yanlış bir isim yazarsanız, sistem bu sütunu bulamaz ve hata verir.",
         "description_en": "Enter the name of the column you want to split. For example, you can write 'Address'. If you write an incorrect name, the system will not find this column and will return an error.",
         "placeholder_tr": "Örn: Adres...",
-        "placeholder_en": "e.g. Address..."
+        "placeholder_en": "e.g. Address...",
+        "required": true
       },
       {
         "name": "delimiter",
@@ -7824,7 +7891,8 @@
         "description_tr": "Bu alana, yığılmış sütun grafiğinde kullanmak istediğiniz sayısal verilerin bulunduğu sütunun adını yazın. Örneğin, 'Satış Tutarı' gibi. Eğer yanlış bir isim yazarsanız, sistem bu sütunu bulamaz ve hata verebilir.",
         "description_en": "Enter the name of the column that contains the numerical values you want to use in the stacked column chart. For example, 'Sales Amount'. If you enter an incorrect name, the system will not be able to find this column and may return an error.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -7974,7 +8042,8 @@
         "description_tr": "Bu alana, toplamını almak istediğiniz sayısal sütunun adını yazın. Örneğin, 'Tutar' gibi bir başlık yazabilirsiniz. Eğer yanlış bir başlık yazarsanız, işlem başarısız olur ve hata mesajı alırsınız.",
         "description_en": "Enter the name of the numeric column you want to sum. For example, you can write a header like 'Amount'. If you write an incorrect header, the operation will fail, and you will receive an error message.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "return_mode",
@@ -8224,7 +8293,8 @@
         "description_tr": "Bu alana, verilerinizde sayısal değerlerin bulunduğu sütunun başlığını yazın. Örneğin: 'Tutar'. Yanlış bir başlık yazarsanız, program bu sütunu bulamaz ve hata verir.",
         "description_en": "Enter the header of the column in your data that contains the numerical values. For example: 'Amount'. If you enter an incorrect header, the program will not find this column and will raise an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       },
       {
         "name": "aggfunc",
@@ -8551,7 +8621,8 @@
         "description_tr": "Bu alana, benzersiz değerlerini ve sayımlarını almak istediğiniz sütunun başlığını yazmalısınız. Örneğin, 'Tutar' yazabilirsiniz. Eğer yanlış bir isim yazarsanız, sistem bu sütunu bulamayacak ve hata verecektir.",
         "description_en": "In this field, you should enter the header of the column from which you want to get unique values and their counts. For example, you can write 'Amount'. If you enter an incorrect name, the system will not find this column and will raise an error.",
         "placeholder_tr": "Örn: Tutar...",
-        "placeholder_en": "e.g. Amount..."
+        "placeholder_en": "e.g. Amount...",
+        "required": true
       }
     ],
     "tags_tr": [
@@ -8644,7 +8715,8 @@
         "description_tr": "Bu alana, kontrol etmek istediğiniz değerlerin bulunduğu sütunun başlığını yazın. Yanlış yazarsanız, program bu sütunu bulamaz ve hata verebilir.",
         "description_en": "Enter the header of the column that contains the values you want to validate. If you write it incorrectly, the program won't be able to find this column and will throw an error.",
         "placeholder_tr": "Örn: Ürün Kodu...",
-        "placeholder_en": "e.g. Product Code..."
+        "placeholder_en": "e.g. Product Code...",
+        "required": true
       },
       {
         "name": "reference_list",
@@ -8792,7 +8864,8 @@
         "description_tr": "Bu alana, ana tablonuzdaki hangi sütunun diğer tablodaki bilgileri bulmak için kullanılacağını yazmalısınız. Örneğin, 'Müşteri ID' veya 'Ürün Kodu' gibi. Eğer yanlış bir sütun adı yazarsanız, sistem doğru bilgiyi bulamaz ve hata verebilir.",
         "description_en": "In this field, you should write the name of the column in your main table that will be used to find information in the other table. For example, 'Customer ID' or 'Product Code'. If you write an incorrect column name, the system may not find the correct information and may return an error.",
         "placeholder_tr": "Örn: Müşteri ID...",
-        "placeholder_en": "e.g. Customer ID..."
+        "placeholder_en": "e.g. Customer ID...",
+        "required": true
       },
       {
         "name": "lookup_df",
@@ -8828,7 +8901,8 @@
         "name": "lookup_column",
         "type": "text",
         "label_tr": "Arama Sütunu",
-        "label_en": "Lookup Column"
+        "label_en": "Lookup Column",
+        "required": true
       },
       {
         "name": "return_column",
@@ -8948,7 +9022,8 @@
         "description_tr": "Bu alana, arama yapmak istediğiniz sütunun başlığını yazın. Örneğin, 'Ürün Adı' veya 'Ürün ID'si' gibi. Eğer bu alanı yanlış yazarsanız, arama işlemi gerçekleşmez.",
         "description_en": "Enter the header of the column you want to search in. For example, 'Product Name' or 'Product ID'. If you write this field incorrectly, the search operation will not occur.",
         "placeholder_tr": "Örn: Ürün Adı...",
-        "placeholder_en": "e.g. Product Name..."
+        "placeholder_en": "e.g. Product Name...",
+        "required": true
       },
       {
         "name": "return_column",
@@ -9116,7 +9191,8 @@
         "description_tr": "Bu alana, değerlerinizi standartlaştırmak istediğiniz sütunun başlığını yazın. Örneğin, 'Satış Tutarı' gibi. Eğer yanlış bir başlık yazarsanız, işlem gerçekleşmez ve hata alırsınız.",
         "description_en": "Enter the header of the column that contains the values you want to standardize. For example, 'Sales Amount'. If you enter an incorrect header, the process will not work and you will receive an error.",
         "placeholder_tr": "Örn: Satış Tutarı...",
-        "placeholder_en": "e.g. Sales Amount..."
+        "placeholder_en": "e.g. Sales Amount...",
+        "required": true
       },
       {
         "name": "target_column",
@@ -9126,7 +9202,8 @@
         "description_tr": "Bu alana, hesaplanan Z-skorlarının yer alacağı yeni sütunun başlığını yazın. Örneğin, 'Z-Skoru'. Eğer bu alana bir başlık yazmazsanız, işlem tamamlanmaz.",
         "description_en": "Enter the header for the new column where the calculated Z-scores will be placed. For example, 'Z-Score'. If you do not provide a header here, the process will not complete.",
         "placeholder_tr": "Örn: Z-Skoru...",
-        "placeholder_en": "e.g. Z-Score..."
+        "placeholder_en": "e.g. Z-Score...",
+        "required": true
       },
       {
         "name": "group_column",

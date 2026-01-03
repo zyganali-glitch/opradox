@@ -55,12 +55,14 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
             return series <= val
         elif op == "in":
             if not isinstance(val, (list, set, tuple)):
-                raise HTTPException(status_code=400, detail="'in' operator value must be list/set/tuple")
-            return series.isin(val)
+                 raise HTTPException(status_code=400, detail="'in' operator value must be list/set/tuple")
+            norm_val = [str(x).strip().lower() for x in val]
+            return series.astype(str).str.strip().str.lower().isin(norm_val)
         elif op == "not in":
             if not isinstance(val, (list, set, tuple)):
                 raise HTTPException(status_code=400, detail="'not in' operator value must be list/set/tuple")
-            return ~series.isin(val)
+            norm_val = [str(x).strip().lower() for x in val]
+            return ~series.astype(str).str.strip().str.lower().isin(norm_val)
         else:
             raise HTTPException(status_code=400, detail=f"Desteklenmeyen operator: {op}")
 

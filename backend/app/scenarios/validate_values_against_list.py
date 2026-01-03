@@ -58,10 +58,20 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         ref_set = set(x.lower() for x in ref_values)
         df_check = df_values.str.lower()
     else:
-        ref_set = set(ref_values)
-        df_check = df_values
+        # Normalize reference set: string, strip, lower
+        ref_set = set(str(x).strip().lower() for x in ref_values)
+        # Normalize check values
+        df_check = df_values.str.strip().str.lower()
 
-    is_valid = df_check.isin(ref_set)
+    # Normalize for robust comparison
+    if df_check.dtype == 'object':
+        df_check = df_check.astype(str).str.strip().str.lower()
+        
+    ref_set_normalized = set()
+    for v in ref_set:
+        ref_set_normalized.add(str(v).strip().lower())
+        
+    is_valid = df_check.isin(ref_set_normalized)
 
     invalid_rows = df.loc[~is_valid, :].copy()
     invalid_count = len(invalid_rows)
@@ -89,7 +99,10 @@ df = pd.read_excel('dosya.xlsx')
 
 # Değerleri listeyle doğrula
 valid_values = {list(ref_set)[:5]}  # ilk 5 değer
-is_valid = df['{value_column}'].isin(valid_values)
+    # Normalize helper
+    col_series = df['{value_column}'].astype(str).str.strip().str.lower()
+    valid_vals_norm = [str(x).strip().lower() for x in valid_values]
+    is_valid = col_series.isin(valid_vals_norm)
 invalid_df = df[~is_valid]
 
 # {invalid_count} geçersiz değer bulundu

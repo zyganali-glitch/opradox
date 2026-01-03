@@ -92,7 +92,9 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     conditions_detail = []
 
     for col, op, val in zip(columns, operators, values):
-        cond_mask = build_condition_mask(df, col, op, val)
+        # Helper for safer string conversion and case-insensitive check
+        # Use na=False to handle missing values gracefully
+        cond_mask = df[col].astype(str).str.contains(str(val), case=False, na=False)
         mask &= cond_mask
 
         conditions_detail.append(
@@ -133,7 +135,7 @@ df = pd.read_excel('dosya.xlsx')
 # Çoklu koşullu toplam (SUMIFS)
 mask = pd.Series([True] * len(df))
 for col, op, val in conditions:
-    mask &= df[col].astype(str).str.contains(val)  # Basit örnek
+    mask &= df[col].astype(str).str.contains(val, case=False, na=False)  # Robusted
     
 result = df.loc[mask, '{target_column}'].sum()
 
