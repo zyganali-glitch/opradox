@@ -683,11 +683,20 @@ const VisualBuilder = {
         // Crosssheet için dinamik sütunlar (sayfa seçildiğinde güncellenir)
         const crosssheetColumns = typeof CROSSSHEET_COLUMNS !== 'undefined' ? CROSSSHEET_COLUMNS : [];
 
-        // Pipeline'daki data_source bloğuna bak - crosssheet seçilmişse o sütunları kullan
+        // Pipeline'daki data_source bloğuna bak ve doğru sütun kaynağını belirle
         let columns = baseColumns;
         const dataSourceBlock = this.blocks.find(b => b.type === 'data_source');
-        if (dataSourceBlock && dataSourceBlock.config.source_type === 'cross_sheet' && crosssheetColumns.length > 0) {
-            columns = crosssheetColumns;
+        if (dataSourceBlock) {
+            const sourceType = dataSourceBlock.config.source_type;
+            if (sourceType === 'second' && columns2.length > 0) {
+                // İkinci dosya seçilmişse FILE2_COLUMNS kullan
+                columns = columns2;
+                console.log('📊 Using FILE2_COLUMNS for subsequent blocks:', columns2.length, 'columns');
+            } else if (sourceType === 'cross_sheet' && crosssheetColumns.length > 0) {
+                // Cross-sheet seçilmişse CROSSSHEET_COLUMNS kullan
+                columns = crosssheetColumns;
+                console.log('📊 Using CROSSSHEET_COLUMNS for subsequent blocks:', crosssheetColumns.length, 'columns');
+            }
         }
 
         let html = '';
