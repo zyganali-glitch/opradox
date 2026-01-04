@@ -13733,3 +13733,444 @@ body.day-mode .gm-source-hint--warning {
     color: #dc2626;
 }
 
+
+/* =====================================================
+   OPRADOX MODAL SYSTEM (Hub Page)
+   Modern, responsive modals with URL hash support
+   ===================================================== */
+
+/* Modal Base */
+.opx-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.opx-modal.opx-modal-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.opx-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.opx-modal-container {
+    position: relative;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    background: var(--gm-card-bg, #1e293b);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px) scale(0.95);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+    border: 1px solid var(--gm-card-border, #334155);
+}
+
+.opx-modal.opx-modal-open .opx-modal-container {
+    transform: translateY(0) scale(1);
+}
+
+.opx-modal-container.opx-modal-small {
+    max-width: 480px;
+}
+
+/* Modal Header */
+.opx-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--gm-divider, #334155);
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+}
+
+.opx-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gm-text, #e2e8f0);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.opx-modal-header h2 i {
+    color: var(--gm-primary, #4a90d9);
+    font-size: 1.1rem;
+}
+
+.opx-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--gm-text-muted, #94a3b8);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.opx-modal-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Modal Body */
+.opx-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    color: var(--gm-text, #e2e8f0);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.opx-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.opx-modal-body::-webkit-scrollbar-track {
+    background: var(--gm-bg, #0f172a);
+    border-radius: 4px;
+}
+
+.opx-modal-body::-webkit-scrollbar-thumb {
+    background: var(--gm-divider, #334155);
+    border-radius: 4px;
+}
+
+.opx-modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--gm-primary, #4a90d9);
+}
+
+/* Modal Sections */
+.opx-modal-section {
+    margin-bottom: 24px;
+}
+
+.opx-modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.opx-modal-section h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--gm-primary, #4a90d9);
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(74, 144, 217, 0.2);
+}
+
+.opx-modal-section h3 i {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.opx-modal-section p {
+    margin: 0 0 12px 0;
+}
+
+.opx-modal-section p:last-child {
+    margin-bottom: 0;
+}
+
+.opx-modal-section ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.opx-modal-section ul li {
+    margin-bottom: 8px;
+}
+
+.opx-modal-lead {
+    font-size: 1.1rem;
+    color: var(--gm-text, #e2e8f0);
+}
+
+/* Modal Highlight Box */
+.opx-modal-highlight {
+    background: linear-gradient(135deg, rgba(74, 144, 217, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border: 1px solid rgba(74, 144, 217, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 24px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.opx-modal-highlight > i {
+    color: var(--gm-primary, #4a90d9);
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.opx-modal-highlight p {
+    margin: 0;
+}
+
+/* FAQ Section */
+.opx-modal-faq h3 {
+    margin-bottom: 20px;
+}
+
+.opx-faq-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--gm-divider, #334155);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.opx-faq-item:last-child {
+    margin-bottom: 0;
+}
+
+.opx-faq-item h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gm-text, #e2e8f0);
+    margin: 0 0 10px 0;
+}
+
+.opx-faq-item p {
+    margin: 0;
+    color: var(--gm-text-muted, #94a3b8);
+    font-size: 0.9rem;
+}
+
+/* Modules List */
+.opx-modal-modules ul {
+    list-style: none;
+    padding: 0;
+}
+
+.opx-modal-modules ul li {
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--gm-divider, #334155);
+}
+
+.opx-modal-modules ul li strong {
+    color: var(--gm-primary, #4a90d9);
+}
+
+.opx-modal-modules ul li strong i {
+    margin-right: 6px;
+}
+
+/* CTA Section */
+.opx-modal-cta {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+}
+
+.opx-modal-cta i {
+    color: #ef4444;
+    margin-right: 6px;
+}
+
+/* Contact Modal Specific */
+.opx-contact-content {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.opx-contact-tagline {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--gm-primary, #4a90d9);
+    margin-bottom: 30px;
+}
+
+.opx-contact-tagline i {
+    margin-right: 10px;
+}
+
+.opx-contact-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.opx-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    min-width: 220px;
+    justify-content: center;
+}
+
+.opx-contact-btn-primary {
+    background: linear-gradient(135deg, #4a90d9 0%, #7c3aed 100%);
+    color: #fff;
+    border: none;
+}
+
+.opx-contact-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 144, 217, 0.4);
+}
+
+.opx-contact-note {
+    font-size: 0.85rem;
+    color: var(--gm-text-muted, #94a3b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.opx-contact-note i {
+    color: #22c55e;
+}
+
+/* Body scroll lock */
+body.opx-modal-active {
+    overflow: hidden;
+}
+
+/* Day Mode */
+body.day-mode .opx-modal-container {
+    background: #fff;
+    border-color: #e2e8f0;
+}
+
+body.day-mode .opx-modal-header {
+    border-color: #e2e8f0;
+}
+
+body.day-mode .opx-modal-header h2 {
+    color: #1e293b;
+}
+
+body.day-mode .opx-modal-body {
+    color: #1e293b;
+}
+
+body.day-mode .opx-modal-section h3 {
+    color: #4a90d9;
+}
+
+body.day-mode .opx-faq-item {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: #e2e8f0;
+}
+
+body.day-mode .opx-faq-item p {
+    color: #64748b;
+}
+
+body.day-mode .opx-modal-modules ul li {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: #e2e8f0;
+}
+
+body.day-mode .opx-modal-lead {
+    color: #1e293b;
+}
+
+/* Mobile Responsive - Bottom Sheet Style */
+@media (max-width: 768px) {
+    .opx-modal {
+        align-items: flex-end;
+    }
+    
+    .opx-modal-container {
+        width: 100%;
+        max-width: 100%;
+        max-height: 95vh;
+        border-radius: 24px 24px 0 0;
+        transform: translateY(100%);
+    }
+    
+    .opx-modal.opx-modal-open .opx-modal-container {
+        transform: translateY(0);
+    }
+    
+    .opx-modal-header {
+        padding: 20px;
+        position: relative;
+    }
+    
+    .opx-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: var(--gm-divider, #334155);
+        border-radius: 2px;
+    }
+    
+    .opx-modal-body {
+        padding: 20px;
+    }
+    
+    .opx-contact-btn {
+        width: 100%;
+    }
+}
+
+/* Footer Logo Styles */
+.footer-logo {
+    vertical-align: middle;
+    transition: opacity 0.3s ease;
+}
+
+body.dark-mode .footer-logo-dark {
+    display: inline;
+}
+
+body.dark-mode .footer-logo-light {
+    display: none;
+}
+
+body.day-mode .footer-logo-dark {
+    display: none;
+}
+
+body.day-mode .footer-logo-light {
+    display: inline;
+}
