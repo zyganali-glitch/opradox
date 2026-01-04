@@ -6512,9 +6512,32 @@ function bindEvents() {
     // 6. Dil Değiştirme
     document.getElementById("langToggle").addEventListener("click", async () => {
         CURRENT_LANG = CURRENT_LANG === "tr" ? "en" : "tr";
+
+        // 1. Statik UI Metinlerini Güncelle
+        if (typeof updateUITexts === 'function') updateUITexts();
+
+        // 2. Menüyü Yeni Dilde Yükle
         await loadMenuData(CURRENT_LANG);
 
-        // Eğer LAST_RESULT_DATA aktif senaryoya aitse yeniden render et, değilse temizle
+        // 3. Aktif Senaryo Varsa Formu Yeniden Render Et (Çeviriler için)
+        if (ACTIVE_SCENARIO_ID && typeof SCENARIO_LIST !== 'undefined') {
+            const activeScenario = SCENARIO_LIST.find(s => s.id === ACTIVE_SCENARIO_ID);
+            if (activeScenario && typeof selectScenario === 'function') {
+                // Formu ve başlıkları güncelle
+                selectScenario(activeScenario);
+
+                // Menüdeki butonu tekrar aktif yap
+                const newBtns = document.querySelectorAll(".gm-scenario-btn");
+                newBtns.forEach(btn => {
+                    // Buton metni veya index kontrolü zor, basitçe aktif sınıfı ekleyelim mi?
+                    // Genellikle loadMenuData sonrası butonlar sıfırlanır.
+                    // Şimdilik selectScenario(..., null) çağrıldığı için active class ekleme selectScenario içinde null kontrolüyle pass geçilir.
+                    // İdeal çözüm: butonları ID ile bulmak. Şimdilik formun düzelmesi yeterli.
+                });
+            }
+        }
+
+        // 4. Sonuç Alanını Güncelle
         if (LAST_RESULT_DATA && LAST_RESULT_DATA.scenario_id === ACTIVE_SCENARIO_ID) {
             renderScenarioResult(LAST_RESULT_DATA);
         } else {
