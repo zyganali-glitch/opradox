@@ -851,6 +851,26 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
 
     const significant = F > fCritical;
 
+    // Generate simple post-hoc pairwise comparisons (Tukey HSD simplified)
+    const postHocComparisons = [];
+    for (let i = 0; i < validGroups.length; i++) {
+        for (let j = i + 1; j < validGroups.length; j++) {
+            const meanDiff = groupStats[i].mean - groupStats[j].mean;
+            const se = Math.sqrt(msWithin * (1 / groupStats[i].n + 1 / groupStats[j].n));
+            const t = meanDiff / se;
+            const pVal = approximateTTestPValue(Math.abs(t), dfWithin);
+            postHocComparisons.push({
+                group1: i,
+                group2: j,
+                meanDiff: meanDiff,
+                se: se,
+                t: t,
+                pValue: pVal,
+                significant: pVal < alpha
+            });
+        }
+    }
+
     return {
         valid: true,
         testName: 'Tek Yönlü ANOVA',
@@ -868,9 +888,332 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
         significant: significant,
         etaSquared: etaSquared,
         effectSizeInterpretation: interpretEtaSquared(etaSquared),
+        postHoc: {
+            method: 'Pairwise t-test',
+            comparisons: postHocComparisons
+        },
         interpretation: significant
             ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
             : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+    };
+}
+
+/**
+ * Two-Way Factorial ANOVA
+ * Calculates main effects (Factor A, Factor B) and interaction (A×B)
+ * @param {Array} data - Array of objects with factor columns and value column
+ * @param {string} factorAColumn - Name of Factor A column
+ * @param {string} factorBColumn - Name of Factor B column
+ * @param {string} valueColumn - Name of dependent variable column
+ * @param {number} alpha - Significance level (default: 0.05)
+ * @returns {object} ANOVA results with SPSS-compatible format
+ */
+export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, alpha = 0.05) {
+    // 1. Validate inputs
+    if (!data || data.length < 4) {
+        return { error: 'En az 4 gözlem gereklidir', valid: false };
+    }
+    if (!factorAColumn || !factorBColumn || !valueColumn) {
+        return { error: 'Faktör A, Faktör B ve bağımlı değişken belirtilmelidir', valid: false };
+    }
+
+    // 2. Extract and validate data
+    const validData = [];
+    data.forEach(row => {
+        const a = row[factorAColumn];
+        const b = row[factorBColumn];
+        const v = parseFloat(row[valueColumn]);
+        if (a !== null && a !== undefined && a !== '' &&
+            b !== null && b !== undefined && b !== '' &&
+            !isNaN(v)) {
+            validData.push({ a: String(a), b: String(b), value: v });
+        }
+    });
+
+    if (validData.length < 4) {
+        return { error: 'Yeterli geçerli veri yok (min 4)', valid: false };
+    }
+
+    // 3. Get unique levels
+    const levelsA = [...new Set(validData.map(d => d.a))].sort();
+    const levelsB = [...new Set(validData.map(d => d.b))].sort();
+    const a = levelsA.length;
+    const b = levelsB.length;
+
+    if (a < 2 || b < 2) {
+        return { error: 'Her faktör en az 2 seviyeye sahip olmalı', valid: false };
+    }
+
+    // 4. Build cell structure: cells[levelA][levelB] = [values]
+    const cells = {};
+    levelsA.forEach(la => {
+        cells[la] = {};
+        levelsB.forEach(lb => {
+            cells[la][lb] = [];
+        });
+    });
+
+    validData.forEach(d => {
+        cells[d.a][d.b].push(d.value);
+    });
+
+    // Check for empty cells
+    let hasEmptyCell = false;
+    levelsA.forEach(la => {
+        levelsB.forEach(lb => {
+            if (cells[la][lb].length === 0) hasEmptyCell = true;
+        });
+    });
+    if (hasEmptyCell) {
+        return { error: 'Tüm hücrelerde en az 1 gözlem olmalı (boş hücre var)', valid: false };
+    }
+
+    // 5. Calculate means
+    const N = validData.length;
+    const grandMean = validData.reduce((s, d) => s + d.value, 0) / N;
+
+    // Cell means: Ȳij
+    const cellMeans = {};
+    const cellN = {};
+    levelsA.forEach(la => {
+        cellMeans[la] = {};
+        cellN[la] = {};
+        levelsB.forEach(lb => {
+            const vals = cells[la][lb];
+            cellMeans[la][lb] = vals.reduce((s, v) => s + v, 0) / vals.length;
+            cellN[la][lb] = vals.length;
+        });
+    });
+
+    // Marginal means for Factor A: Ȳi.
+    const marginalA = {};
+    levelsA.forEach(la => {
+        let sum = 0, n = 0;
+        levelsB.forEach(lb => {
+            sum += cells[la][lb].reduce((s, v) => s + v, 0);
+            n += cells[la][lb].length;
+        });
+        marginalA[la] = { mean: sum / n, n: n };
+    });
+
+    // Marginal means for Factor B: Ȳ.j
+    const marginalB = {};
+    levelsB.forEach(lb => {
+        let sum = 0, n = 0;
+        levelsA.forEach(la => {
+            sum += cells[la][lb].reduce((s, v) => s + v, 0);
+            n += cells[la][lb].length;
+        });
+        marginalB[lb] = { mean: sum / n, n: n };
+    });
+
+    // 6. Calculate Sum of Squares
+    // SS_A = Σ ni. × (Ȳi. - Ȳ..)²
+    let SS_A = 0;
+    levelsA.forEach(la => {
+        SS_A += marginalA[la].n * Math.pow(marginalA[la].mean - grandMean, 2);
+    });
+
+    // SS_B = Σ n.j × (Ȳ.j - Ȳ..)²
+    let SS_B = 0;
+    levelsB.forEach(lb => {
+        SS_B += marginalB[lb].n * Math.pow(marginalB[lb].mean - grandMean, 2);
+    });
+
+    // SS_AB (Interaction) = Σ nij × (Ȳij - Ȳi. - Ȳ.j + Ȳ..)²
+    let SS_AB = 0;
+    levelsA.forEach(la => {
+        levelsB.forEach(lb => {
+            const n_ij = cellN[la][lb];
+            const deviation = cellMeans[la][lb] - marginalA[la].mean - marginalB[lb].mean + grandMean;
+            SS_AB += n_ij * Math.pow(deviation, 2);
+        });
+    });
+
+    // SS_Error = Σ (Yijk - Ȳij)²
+    let SS_Error = 0;
+    levelsA.forEach(la => {
+        levelsB.forEach(lb => {
+            const mean_ij = cellMeans[la][lb];
+            cells[la][lb].forEach(v => {
+                SS_Error += Math.pow(v - mean_ij, 2);
+            });
+        });
+    });
+
+    // SS_Total = Σ (Yijk - Ȳ..)²
+    const SS_Total = validData.reduce((s, d) => s + Math.pow(d.value - grandMean, 2), 0);
+
+    // Corrected Model SS = SS_A + SS_B + SS_AB
+    const SS_Model = SS_A + SS_B + SS_AB;
+
+    // 7. Degrees of Freedom
+    const df_A = a - 1;
+    const df_B = b - 1;
+    const df_AB = (a - 1) * (b - 1);
+    const df_Error = N - (a * b);
+    const df_Total = N - 1;
+    const df_Model = df_A + df_B + df_AB;
+
+    if (df_Error <= 0) {
+        return { error: 'Hata serbestlik derecesi ≤ 0 (hücre başına daha fazla gözlem gerekli)', valid: false };
+    }
+
+    // 8. Mean Squares
+    const MS_A = SS_A / df_A;
+    const MS_B = SS_B / df_B;
+    const MS_AB = SS_AB / df_AB;
+    const MS_Error = SS_Error / df_Error;
+    const MS_Model = SS_Model / df_Model;
+
+    // 9. F-statistics
+    const F_A = MS_A / MS_Error;
+    const F_B = MS_B / MS_Error;
+    const F_AB = MS_AB / MS_Error;
+    const F_Model = MS_Model / MS_Error;
+
+    // 10. P-values
+    const p_A = approximateFTestPValue(F_A, df_A, df_Error);
+    const p_B = approximateFTestPValue(F_B, df_B, df_Error);
+    const p_AB = approximateFTestPValue(F_AB, df_AB, df_Error);
+    const p_Model = approximateFTestPValue(F_Model, df_Model, df_Error);
+
+    // 11. Partial Eta-Squared
+    const partialEtaSq_A = SS_A / (SS_A + SS_Error);
+    const partialEtaSq_B = SS_B / (SS_B + SS_Error);
+    const partialEtaSq_AB = SS_AB / (SS_AB + SS_Error);
+    const partialEtaSq_Model = SS_Model / (SS_Model + SS_Error);
+
+    // 12. Build SPSS-style output
+    const anovaTable = [
+        {
+            source: 'Corrected Model',
+            ss: SS_Model,
+            df: df_Model,
+            ms: MS_Model,
+            F: F_Model,
+            pValue: p_Model,
+            partialEtaSq: partialEtaSq_Model
+        },
+        {
+            source: factorAColumn,
+            ss: SS_A,
+            df: df_A,
+            ms: MS_A,
+            F: F_A,
+            pValue: p_A,
+            partialEtaSq: partialEtaSq_A,
+            significant: p_A < alpha
+        },
+        {
+            source: factorBColumn,
+            ss: SS_B,
+            df: df_B,
+            ms: MS_B,
+            F: F_B,
+            pValue: p_B,
+            partialEtaSq: partialEtaSq_B,
+            significant: p_B < alpha
+        },
+        {
+            source: `${factorAColumn} * ${factorBColumn}`,
+            ss: SS_AB,
+            df: df_AB,
+            ms: MS_AB,
+            F: F_AB,
+            pValue: p_AB,
+            partialEtaSq: partialEtaSq_AB,
+            significant: p_AB < alpha
+        },
+        {
+            source: 'Error',
+            ss: SS_Error,
+            df: df_Error,
+            ms: MS_Error,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        },
+        {
+            source: 'Total',
+            ss: SS_Total + N * Math.pow(grandMean, 2), // Uncorrected total
+            df: N,
+            ms: null,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        },
+        {
+            source: 'Corrected Total',
+            ss: SS_Total,
+            df: df_Total,
+            ms: null,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        }
+    ];
+
+    // 13. Build interpretation
+    const significantEffects = [];
+    if (p_A < alpha) significantEffects.push(`${factorAColumn} ana etkisi`);
+    if (p_B < alpha) significantEffects.push(`${factorBColumn} ana etkisi`);
+    if (p_AB < alpha) significantEffects.push(`${factorAColumn}×${factorBColumn} etkileşimi`);
+
+    const interpretation = significantEffects.length > 0
+        ? `Anlamlı etkiler: ${significantEffects.join(', ')} (p < ${alpha})`
+        : `Hiçbir etki istatistiksel olarak anlamlı değil (p >= ${alpha})`;
+
+    return {
+        valid: true,
+        testType: 'twoWayANOVA',
+        testName: 'İki Yönlü ANOVA (Faktöriyel)',
+        alpha: alpha,
+        N: N,
+        grandMean: grandMean,
+        factors: {
+            A: { name: factorAColumn, levels: levelsA, k: a },
+            B: { name: factorBColumn, levels: levelsB, k: b }
+        },
+        cellMeans: cellMeans,
+        cellN: cellN,
+        marginalMeans: {
+            factorA: marginalA,
+            factorB: marginalB
+        },
+        sumOfSquares: {
+            model: SS_Model,
+            factorA: SS_A,
+            factorB: SS_B,
+            interaction: SS_AB,
+            error: SS_Error,
+            total: SS_Total
+        },
+        degreesOfFreedom: {
+            model: df_Model,
+            factorA: df_A,
+            factorB: df_B,
+            interaction: df_AB,
+            error: df_Error,
+            total: df_Total
+        },
+        meanSquares: {
+            model: MS_Model,
+            factorA: MS_A,
+            factorB: MS_B,
+            interaction: MS_AB,
+            error: MS_Error
+        },
+        effects: {
+            factorA: { F: F_A, pValue: p_A, partialEtaSq: partialEtaSq_A, significant: p_A < alpha },
+            factorB: { F: F_B, pValue: p_B, partialEtaSq: partialEtaSq_B, significant: p_B < alpha },
+            interaction: { F: F_AB, pValue: p_AB, partialEtaSq: partialEtaSq_AB, significant: p_AB < alpha }
+        },
+        anovaTable: anovaTable,
+        interpretation: interpretation,
+        interpretationEN: significantEffects.length > 0
+            ? `Significant effects: ${significantEffects.join(', ').replace('ana etkisi', 'main effect').replace('etkileşimi', 'interaction')} (p < ${alpha})`
+            : `No statistically significant effects (p >= ${alpha})`
     };
 }
 
@@ -884,11 +1227,436 @@ function approximateFTestPValue(F, df1, df2) {
 }
 
 /**
- * Pearson Correlation Test
+ * Repeated Measures ANOVA (One-Way Within-Subjects)
+ * Tests for differences across repeated measurements on the same subjects
+ * Includes Mauchly's sphericity test and epsilon corrections (GG, HF)
+ * 
+ * @param {Array} data - Array of objects OR 2D array [subjects][measurements]
+ * @param {Array} measureColumns - Array of column names for measurements
+ * @param {number} alpha - Significance level (default: 0.05)
+ * @returns {object} ANOVA results with sphericity tests
  */
-export function runCorrelationTest(x, y, alpha = 0.05) {
+export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
+    // 1. Validate inputs
+    if (!measureColumns || measureColumns.length < 2) {
+        return { error: 'En az 2 ölçüm/koşul gereklidir', valid: false };
+    }
+
+    const k = measureColumns.length; // Number of conditions/measurements
+
+    // 2. Build subject × measurement matrix
+    let matrix = [];
+
+    if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data[0]) && typeof data[0][0] === 'number') {
+            // Already a 2D numeric array
+            matrix = data.filter(row => row.length >= k && row.every(v => !isNaN(v)));
+        } else {
+            // Array of objects
+            data.forEach(row => {
+                const values = measureColumns.map(col => parseFloat(row[col]));
+                if (values.every(v => !isNaN(v))) {
+                    matrix.push(values);
+                }
+            });
+        }
+    }
+
+    const n = matrix.length; // Number of subjects
+    if (n < 3) {
+        return { error: 'En az 3 denek/katılımcı gereklidir', valid: false };
+    }
+
+    // 3. Calculate means
+    // Grand mean
+    let grandSum = 0, grandCount = 0;
+    matrix.forEach(row => {
+        row.forEach(v => { grandSum += v; grandCount++; });
+    });
+    const grandMean = grandSum / grandCount;
+
+    // Subject means (row means)
+    const subjectMeans = matrix.map(row => row.reduce((s, v) => s + v, 0) / k);
+
+    // Condition/Treatment means (column means)
+    const conditionMeans = [];
+    for (let j = 0; j < k; j++) {
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+            sum += matrix[i][j];
+        }
+        conditionMeans.push(sum / n);
+    }
+
+    // 4. Calculate Sum of Squares
+    // SS_Total = Σ (Yij - Ȳ..)²
+    let SS_Total = 0;
+    matrix.forEach(row => {
+        row.forEach(v => {
+            SS_Total += Math.pow(v - grandMean, 2);
+        });
+    });
+
+    // SS_Subjects = k × Σ (Ȳi. - Ȳ..)²
+    let SS_Subjects = 0;
+    subjectMeans.forEach(sm => {
+        SS_Subjects += Math.pow(sm - grandMean, 2);
+    });
+    SS_Subjects *= k;
+
+    // SS_Treatment = n × Σ (Ȳ.j - Ȳ..)²
+    let SS_Treatment = 0;
+    conditionMeans.forEach(cm => {
+        SS_Treatment += Math.pow(cm - grandMean, 2);
+    });
+    SS_Treatment *= n;
+
+    // SS_Error = SS_Total - SS_Subjects - SS_Treatment
+    const SS_Error = SS_Total - SS_Subjects - SS_Treatment;
+
+    // 5. Degrees of Freedom
+    const df_Subjects = n - 1;
+    const df_Treatment = k - 1;
+    const df_Error = (n - 1) * (k - 1);
+    const df_Total = n * k - 1;
+
+    // 6. Mean Squares
+    const MS_Treatment = SS_Treatment / df_Treatment;
+    const MS_Error = SS_Error / df_Error;
+    const MS_Subjects = SS_Subjects / df_Subjects;
+
+    // 7. F-statistic
+    const F = MS_Treatment / MS_Error;
+    const pValue = approximateFTestPValue(F, df_Treatment, df_Error);
+
+    // 8. Effect Size (Partial Eta-Squared)
+    const partialEtaSq = SS_Treatment / (SS_Treatment + SS_Error);
+    // Generalized Eta-Squared 
+    const genEtaSq = SS_Treatment / (SS_Treatment + SS_Error + SS_Subjects);
+
+    // 9. Sphericity Test (Mauchly's W)
+    // Calculate covariance matrix of differences between conditions
+    const covMatrix = calculateCovarianceMatrixRM(matrix, k);
+    const mauchlysW = calculateMauchlysW(covMatrix, n, k);
+    const mauchlyChi = -(n - 1 - (2 * k * k - 3 * k + 3) / (6 * (k - 1))) * Math.log(mauchlysW || 0.0001);
+    const mauchlyDf = k * (k - 1) / 2 - 1;
+    const mauchlyP = mauchlyDf > 0 ? 1 - chiSquareCDF(mauchlyChi, mauchlyDf) : 1;
+
+    // 10. Epsilon corrections
+    const epsilonGG = calculateGreenhouseGeisser(covMatrix, k);
+    const epsilonHF = calculateHuynhFeldt(epsilonGG, k, n);
+    const epsilonLB = 1 / (k - 1); // Lower bound
+
+    // 11. Corrected results
+    const df_Treatment_GG = df_Treatment * epsilonGG;
+    const df_Error_GG = df_Error * epsilonGG;
+    const pValue_GG = approximateFTestPValue(F, df_Treatment_GG, df_Error_GG);
+
+    const df_Treatment_HF = df_Treatment * epsilonHF;
+    const df_Error_HF = df_Error * epsilonHF;
+    const pValue_HF = approximateFTestPValue(F, df_Treatment_HF, df_Error_HF);
+
+    // 12. Build SPSS-style output
+    const sphericityAssumed = mauchlyP > 0.05;
+    const effectivePValue = sphericityAssumed ? pValue : pValue_GG;
+    const significant = effectivePValue < alpha;
+
+    const mauchlysTest = {
+        W: mauchlysW,
+        chiSquare: mauchlyChi,
+        df: mauchlyDf,
+        pValue: mauchlyP,
+        sphericityMet: sphericityAssumed,
+        epsilonGreenhouseGeisser: epsilonGG,
+        epsilonHuynhFeldt: epsilonHF,
+        epsilonLowerBound: epsilonLB
+    };
+
+    const withinSubjectsEffects = [
+        {
+            source: 'Treatment',
+            correction: 'Sphericity Assumed',
+            ss: SS_Treatment,
+            df: df_Treatment,
+            ms: MS_Treatment,
+            F: F,
+            pValue: pValue,
+            partialEtaSq: partialEtaSq
+        },
+        {
+            source: 'Treatment',
+            correction: 'Greenhouse-Geisser',
+            ss: SS_Treatment,
+            df: df_Treatment_GG,
+            ms: MS_Treatment,
+            F: F,
+            pValue: pValue_GG,
+            partialEtaSq: partialEtaSq
+        },
+        {
+            source: 'Treatment',
+            correction: 'Huynh-Feldt',
+            ss: SS_Treatment,
+            df: df_Treatment_HF,
+            ms: MS_Treatment,
+            F: F,
+            pValue: pValue_HF,
+            partialEtaSq: partialEtaSq
+        },
+        {
+            source: 'Error(Treatment)',
+            correction: 'Sphericity Assumed',
+            ss: SS_Error,
+            df: df_Error,
+            ms: MS_Error,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        },
+        {
+            source: 'Error(Treatment)',
+            correction: 'Greenhouse-Geisser',
+            ss: SS_Error,
+            df: df_Error_GG,
+            ms: SS_Error / df_Error_GG,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        },
+        {
+            source: 'Error(Treatment)',
+            correction: 'Huynh-Feldt',
+            ss: SS_Error,
+            df: df_Error_HF,
+            ms: SS_Error / df_Error_HF,
+            F: null,
+            pValue: null,
+            partialEtaSq: null
+        }
+    ];
+
+    // 13. Descriptive statistics for each condition
+    const conditionStats = measureColumns.map((col, j) => {
+        const values = matrix.map(row => row[j]);
+        return {
+            condition: col,
+            mean: conditionMeans[j],
+            sd: calculateStdDev(values, true),
+            n: n
+        };
+    });
+
+    // 14. Build interpretation
+    let interpretation = '';
+    if (sphericityAssumed) {
+        interpretation = significant
+            ? `Mauchly testi sağlandı (p = ${mauchlyP.toFixed(3)}). Koşullar arasında anlamlı fark var, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}, η²p = ${partialEtaSq.toFixed(3)}`
+            : `Mauchly testi sağlandı (p = ${mauchlyP.toFixed(3)}). Koşullar arasında anlamlı fark yok, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}`;
+    } else {
+        interpretation = significant
+            ? `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser düzeltmesi kullanıldı. Koşullar arasında anlamlı fark var, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}, η²p = ${partialEtaSq.toFixed(3)}`
+            : `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser düzeltmesi kullanıldı. Koşullar arasında anlamlı fark yok, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}`;
+    }
+
+    return {
+        valid: true,
+        testType: 'repeatedMeasuresANOVA',
+        testName: 'Tekrarlı Ölçümler ANOVA',
+        alpha: alpha,
+        n: n,
+        k: k,
+        conditions: measureColumns,
+        grandMean: grandMean,
+        conditionStats: conditionStats,
+        subjectMeans: subjectMeans,
+        conditionMeans: conditionMeans,
+        sumOfSquares: {
+            subjects: SS_Subjects,
+            treatment: SS_Treatment,
+            error: SS_Error,
+            total: SS_Total
+        },
+        degreesOfFreedom: {
+            subjects: df_Subjects,
+            treatment: df_Treatment,
+            error: df_Error,
+            total: df_Total
+        },
+        meanSquares: {
+            treatment: MS_Treatment,
+            error: MS_Error,
+            subjects: MS_Subjects
+        },
+        withinSubjects: {
+            F: F,
+            pValue: pValue,
+            pValueGG: pValue_GG,
+            pValueHF: pValue_HF,
+            partialEtaSq: partialEtaSq,
+            genEtaSq: genEtaSq,
+            significant: significant
+        },
+        mauchlysTest: mauchlysTest,
+        withinSubjectsEffects: withinSubjectsEffects,
+        sphericityAssumed: sphericityAssumed,
+        effectivePValue: effectivePValue,
+        interpretation: interpretation,
+        interpretationEN: interpretation.replace('anlamlı fark var', 'significant difference').replace('anlamlı fark yok', 'no significant difference').replace('Mauchly testi sağlandı', 'Sphericity assumed').replace('Mauchly testi ihlal edildi', 'Sphericity violated').replace('düzeltmesi kullanıldı', 'correction applied').replace('Koşullar arasında', 'Between conditions')
+    };
+}
+
+/**
+ * Calculate covariance matrix for repeated measures
+ */
+function calculateCovarianceMatrixRM(matrix, k) {
+    const n = matrix.length;
+    const means = [];
+    for (let j = 0; j < k; j++) {
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+            sum += matrix[i][j];
+        }
+        means.push(sum / n);
+    }
+
+    const cov = [];
+    for (let j1 = 0; j1 < k; j1++) {
+        cov[j1] = [];
+        for (let j2 = 0; j2 < k; j2++) {
+            let sum = 0;
+            for (let i = 0; i < n; i++) {
+                sum += (matrix[i][j1] - means[j1]) * (matrix[i][j2] - means[j2]);
+            }
+            cov[j1][j2] = sum / (n - 1);
+        }
+    }
+    return cov;
+}
+
+/**
+ * Calculate Mauchly's W statistic for sphericity
+ */
+function calculateMauchlysW(covMatrix, n, k) {
+    // Simplified approximation
+    // W = |S| / (trace(S)/k)^k where S is the covariance matrix of orthonormal contrasts
+    // For practical purposes, we use a simpler approach
+
+    const p = covMatrix.length;
+    if (p < 2) return 1;
+
+    // Calculate determinant (simplified for small matrices)
+    let det = 1;
+    if (p === 2) {
+        det = covMatrix[0][0] * covMatrix[1][1] - covMatrix[0][1] * covMatrix[1][0];
+    } else {
+        // Use trace-based approximation for larger matrices
+        let trace = 0;
+        for (let i = 0; i < p; i++) trace += covMatrix[i][i];
+        const avgVar = trace / p;
+        det = Math.pow(avgVar, p);
+
+        // Adjust for correlations
+        for (let i = 0; i < p; i++) {
+            for (let j = i + 1; j < p; j++) {
+                const corr = covMatrix[i][j] / Math.sqrt(covMatrix[i][i] * covMatrix[j][j]);
+                det *= (1 - corr * corr);
+            }
+        }
+    }
+
+    // Calculate trace
+    let trace = 0;
+    for (let i = 0; i < p; i++) trace += covMatrix[i][i];
+
+    const W = det / Math.pow(trace / p, p);
+    return Math.max(0, Math.min(1, W)); // Bound between 0 and 1
+}
+
+/**
+ * Calculate Greenhouse-Geisser epsilon
+ */
+function calculateGreenhouseGeisser(covMatrix, k) {
+    const p = covMatrix.length;
+    if (p < 2) return 1;
+
+    // Calculate trace of S and trace of S²
+    let traceS = 0;
+    let traceS2 = 0;
+
+    for (let i = 0; i < p; i++) {
+        traceS += covMatrix[i][i];
+    }
+
+    for (let i = 0; i < p; i++) {
+        for (let j = 0; j < p; j++) {
+            traceS2 += covMatrix[i][j] * covMatrix[j][i];
+        }
+    }
+
+    const sumAll = covMatrix.reduce((s, row) => s + row.reduce((a, b) => a + b, 0), 0);
+    const meanAll = sumAll / (p * p);
+
+    // Simplified GG epsilon
+    const numerator = Math.pow(traceS / p - meanAll, 2);
+    const denominator = (traceS2 / (p * p) - 2 * Math.pow(traceS / p, 2) / p + Math.pow(meanAll, 2));
+
+    const epsilon = (p * p * numerator) / ((p - 1) * (p - 1) * denominator);
+
+    // Bound epsilon
+    const lowerBound = 1 / (k - 1);
+    return Math.max(lowerBound, Math.min(1, epsilon || lowerBound));
+}
+
+/**
+ * Calculate Huynh-Feldt epsilon
+ */
+function calculateHuynhFeldt(epsilonGG, k, n) {
+    const numerator = n * (k - 1) * epsilonGG - 2;
+    const denominator = (k - 1) * (n - 1 - (k - 1) * epsilonGG);
+    const epsilonHF = numerator / denominator;
+
+    // HF can exceed 1, so we cap it
+    return Math.max(epsilonGG, Math.min(1, epsilonHF));
+}
+
+/**
+ * Chi-square CDF approximation
+ */
+function chiSquareCDF(x, df) {
+    if (x <= 0) return 0;
+    if (df <= 0) return 0;
+
+    // Use normal approximation for large df
+    if (df > 100) {
+        const z = Math.pow(x / df, 1 / 3) - (1 - 2 / (9 * df));
+        const se = Math.sqrt(2 / (9 * df));
+        return normalCDF(z / se);
+    }
+
+    // Use existing lowerIncompleteGamma and gamma functions
+    return lowerIncompleteGamma(df / 2, x / 2) / gamma(df / 2);
+}
+/**
+ * Pearson Correlation Test
+ * Supports both Pearson (default) and Spearman correlation
+ * @param {Array} x - First variable array
+ * @param {Array} y - Second variable array  
+ * @param {number|object} alphaOrOptions - Alpha value or { alpha, method }
+ */
+export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
     if (!x || !y || x.length !== y.length) {
         return { error: 'Eşit uzunlukta iki dizi gereklidir', valid: false };
+    }
+
+    // Parse options
+    let alpha = 0.05;
+    let method = 'pearson';
+
+    if (typeof alphaOrOptions === 'object') {
+        alpha = alphaOrOptions.alpha ?? 0.05;
+        method = alphaOrOptions.method ?? 'pearson';
+    } else {
+        alpha = alphaOrOptions;
     }
 
     const n = x.length;
@@ -896,7 +1664,14 @@ export function runCorrelationTest(x, y, alpha = 0.05) {
         return { error: 'En az 3 gözlem gereklidir', valid: false };
     }
 
-    const r = calculateCorrelation(x, y);
+    // Calculate correlation based on method
+    let r;
+    if (method === 'spearman') {
+        r = calculateSpearmanCorrelation(x, y);
+    } else {
+        r = calculateCorrelation(x, y);
+    }
+
     const rSquared = calculateRSquared(r);
 
     // T-test for correlation significance
@@ -907,9 +1682,13 @@ export function runCorrelationTest(x, y, alpha = 0.05) {
 
     const significant = Math.abs(t) > tCritical;
 
+    const testName = method === 'spearman'
+        ? 'Spearman Sıra Korelasyonu Testi'
+        : 'Pearson Korelasyon Testi';
+
     return {
         valid: true,
-        testName: 'Pearson Korelasyon Testi',
+        testName: testName,
         n: n,
         correlation: r,
         rSquared: rSquared,
@@ -920,6 +1699,7 @@ export function runCorrelationTest(x, y, alpha = 0.05) {
         alpha: alpha,
         significant: significant,
         correlationInterpretation: interpretCorrelation(r),
+        stats: { r: r, method: method }, // For selftest compatibility
         interpretation: significant
             ? `Korelasyon istatistiksel olarak anlamlı (p < ${alpha})`
             : `Korelasyon istatistiksel olarak anlamlı değil (p >= ${alpha})`
@@ -989,6 +1769,7 @@ export function runChiSquareTest(contingencyTable, alpha = 0.05) {
         alpha: alpha,
         significant: significant,
         cramersV: cramersV,
+        effectSizes: { cramersV: cramersV, phi: rows === 2 && cols === 2 ? cramersV : null },
         effectSizeInterpretation: interpretCramersV(cramersV),
         interpretation: significant
             ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki var (p < ${alpha})`
@@ -4594,6 +5375,7 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
     const power = 1 - normalCDF(criticalT - ncp);
 
     return {
+        valid: true,
         testType: 'power',
         testName: 'Güç Analizi',
         effectSize: effectSize,
@@ -5473,6 +6255,31 @@ window.showFriedmanModal = showFriedmanModal;
 
 // Part 6: Embed Functions
 window.embedStatInChart = embedStatInChart;
+
+// FAZ-ST1: Basic Math Functions (selftest compatibility)
+window.calculateMean = calculateMean;
+window.calculateMedian = calculateMedian;
+window.calculateVariance = calculateVariance;
+window.calculateStdDev = calculateStdDev;
+window.calculateCorrelation = calculateCorrelation;
+window.calculateSpearmanCorrelation = calculateSpearmanCorrelation;
+
+// FAZ-ST1: Core Statistical Tests
+window.runIndependentTTest = runIndependentTTest;
+window.runPairedTTest = runPairedTTest;
+window.runOneSampleTTest = runOneSampleTTest;
+window.runOneWayANOVA = runOneWayANOVA;
+window.runCorrelationTest = runCorrelationTest;
+window.runChiSquareTest = runChiSquareTest;
+window.runMannWhitneyU = runMannWhitneyU;
+window.runKruskalWallis = runKruskalWallis;
+window.runWilcoxonSignedRank = runWilcoxonSignedRank;
+window.runFriedmanTest = runFriedmanTest;
+window.runShapiroWilkTest = runShapiroWilkTest;
+
+// FAZ-ST2: Advanced ANOVA Functions
+window.runTwoWayANOVA = runTwoWayANOVA;
+window.runRepeatedMeasuresANOVA = runRepeatedMeasuresANOVA;
 
 // =====================================================
 // RUNSTATTEST - Simple Stat Test Router (viz.html onclick)

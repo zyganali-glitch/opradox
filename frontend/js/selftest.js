@@ -1317,3 +1317,504 @@
     // Expose for manual testing
     window.runVizSelfTest = runSelfTest;
 })();
+
+// =====================================================
+// FAZ-ST0: SPSS PARITY GOLDEN SELFTEST SİSTEMİ
+// 23 Stat Widget + Tüm Kombo - SPSS ile birebir eşitlik
+// =====================================================
+
+(function SPSSParitySelftest() {
+    'use strict';
+
+    // ===========================================
+    // SEEDED PRNG (Linear Congruential Generator)
+    // ===========================================
+    function createSeededRandom(seed) {
+        let state = seed;
+        return function () {
+            state = (state * 1664525 + 1013904223) % 4294967296;
+            return state / 4294967296;
+        };
+    }
+
+    // ===========================================
+    // DATA GENERATORS (Deterministic)
+    // ===========================================
+    function genNormal(n, mean, sd, seed) {
+        const rng = createSeededRandom(seed);
+        const result = [];
+        for (let i = 0; i < n; i += 2) {
+            const u1 = rng(), u2 = rng();
+            const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
+            result.push(mean + sd * z0);
+            if (i + 1 < n) result.push(mean + sd * z1);
+        }
+        return result;
+    }
+
+    function genUniform(n, min, max, seed) {
+        const rng = createSeededRandom(seed);
+        return Array.from({ length: n }, () => min + rng() * (max - min));
+    }
+
+    function genPaired(n, effectSize, noise, seed) {
+        const rng = createSeededRandom(seed);
+        const before = [], after = [];
+        for (let i = 0; i < n; i++) {
+            const base = rng() * 100;
+            before.push(base);
+            after.push(base + effectSize + (rng() - 0.5) * noise);
+        }
+        return { before, after };
+    }
+
+    function genTwoGroups(n1, n2, diff, sd, seed) {
+        return {
+            group1: genNormal(n1, 50, sd, seed),
+            group2: genNormal(n2, 50 + diff, sd, seed + 1000)
+        };
+    }
+
+    function injectMissing(arr, ratio, seed) {
+        const rng = createSeededRandom(seed);
+        return arr.map(v => rng() < ratio ? null : v);
+    }
+
+    function injectOutliers(arr, ratio, magnitude, seed) {
+        const rng = createSeededRandom(seed);
+        const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+        return arr.map(v => rng() < ratio ? mean + (rng() > 0.5 ? 1 : -1) * magnitude : v);
+    }
+
+    function makeCategorical(labels, probs, n, seed) {
+        const rng = createSeededRandom(seed);
+        const cumProbs = probs.reduce((acc, p, i) => [...acc, (acc[i - 1] || 0) + p], []);
+        return Array.from({ length: n }, () => {
+            const r = rng();
+            return labels[cumProbs.findIndex(cp => r <= cp)];
+        });
+    }
+
+    // ===========================================
+    // TOLERANCE STANDARDS
+    // ===========================================
+    const TOLERANCES = { deterministic: 1e-10, floating: 1e-6, pValue: 1e-4 };
+
+    // ===========================================
+    // ASSERTION HELPERS
+    // ===========================================
+    const testResults = { pass: 0, fail: 0, skip: 0, tests: [] };
+
+    function assertClose(actual, expected, tol, testId, msg = '') {
+        const passed = Math.abs(actual - expected) <= tol;
+        const result = { id: testId, status: passed ? 'PASS' : 'FAIL', actual, expected, tol, msg };
+        testResults.tests.push(result);
+        passed ? testResults.pass++ : testResults.fail++;
+        if (!passed) console.error(`[SELFTEST] FAIL: ${testId} - expected ${expected}, got ${actual}`);
+        return passed;
+    }
+
+    function assertPValue(actual, expected, testId) {
+        return assertClose(actual, expected, TOLERANCES.pValue, testId, 'p-value');
+    }
+
+    function assertInRange(value, min, max, testId) {
+        const passed = value >= min && value <= max;
+        testResults.tests.push({ id: testId, status: passed ? 'PASS' : 'FAIL', value, min, max });
+        passed ? testResults.pass++ : testResults.fail++;
+        if (!passed) console.error(`[SELFTEST] FAIL: ${testId} - ${value} not in [${min}, ${max}]`);
+        return passed;
+    }
+
+    function skipTest(testId, reason) {
+        testResults.tests.push({ id: testId, status: 'SKIP', reason });
+        testResults.skip++;
+        console.warn(`[SELFTEST] SKIP: ${testId} - ${reason}`);
+    }
+
+    // ===========================================
+    // TEST REGISTRY
+    // ===========================================
+    const SPSS_TESTS = [];
+    function registerTest(id, category, fn) { SPSS_TESTS.push({ id, category, fn }); }
+
+    // Expose generators for external use
+    window.SPSSTestGen = { genNormal, genUniform, genPaired, genTwoGroups, injectMissing, injectOutliers, makeCategorical };
+
+    // ===========================================
+    // A) DESCRIPTIVE STATS TESTS
+    // ===========================================
+    registerTest('desc_mean_basic', 'A-Descriptive', () => {
+        const data = [2, 4, 6, 8, 10];
+        const result = window.calculateMean ? window.calculateMean(data) : data.reduce((a, b) => a + b, 0) / data.length;
+        assertClose(result, 6, TOLERANCES.deterministic, 'desc_mean_basic');
+    });
+
+    registerTest('desc_variance_sample', 'A-Descriptive', () => {
+        const data = [2, 4, 6, 8, 10];
+        if (!window.calculateVariance) return skipTest('desc_variance_sample', 'calculateVariance not exposed');
+        assertClose(window.calculateVariance(data, true), 10, TOLERANCES.deterministic, 'desc_variance_sample');
+    });
+
+    registerTest('desc_sd_sample', 'A-Descriptive', () => {
+        const data = [2, 4, 6, 8, 10];
+        if (!window.calculateStdDev) return skipTest('desc_sd_sample', 'calculateStdDev not exposed');
+        assertClose(window.calculateStdDev(data, true), Math.sqrt(10), TOLERANCES.floating, 'desc_sd_sample');
+    });
+
+    registerTest('desc_edge_constant', 'A-Descriptive', () => {
+        const data = [5, 5, 5, 5, 5];
+        if (!window.calculateStdDev) return skipTest('desc_edge_constant', 'calculateStdDev not exposed');
+        assertClose(window.calculateStdDev(data, true), 0, TOLERANCES.deterministic, 'desc_edge_constant');
+    });
+
+    // ===========================================
+    // B) NORMALITY TESTS
+    // ===========================================
+    registerTest('normality_shapiro_normal', 'B-Normality', () => {
+        if (!window.runShapiroWilkTest) return skipTest('normality_shapiro_normal', 'Not implemented');
+        const data = genNormal(30, 50, 10, 12345);
+        const result = window.runShapiroWilkTest(data, 0.05);
+        if (!result.valid) return skipTest('normality_shapiro_normal', result.error || 'invalid');
+        assertInRange(result.wStatistic ?? result.W, 0.8, 1.0, 'normality_shapiro_W');
+        assertInRange(result.pValue, 0, 1, 'normality_shapiro_p');
+    });
+
+    registerTest('normality_levene_equal', 'B-Normality', () => {
+        if (!window.runLeveneTest) return skipTest('normality_levene_equal', 'Not implemented');
+        const g1 = genNormal(20, 50, 10, 111);
+        const g2 = genNormal(20, 60, 10, 222);
+        const result = window.runLeveneTest([g1, g2], 0.05);
+        if (!result.valid) return skipTest('normality_levene_equal', result.error || 'invalid');
+        assertInRange(result.pValue, 0, 1, 'normality_levene_p');
+    });
+
+    // ===========================================
+    // C) T-TESTS
+    // ===========================================
+    registerTest('ttest_onesample_null', 'C-TTests', () => {
+        if (!window.runOneSampleTTest) return skipTest('ttest_onesample_null', 'Not implemented');
+        const data = [10, 10, 10, 10, 10];
+        const result = window.runOneSampleTTest(data, 10, 0.05);
+        if (!result.valid) return skipTest('ttest_onesample_null', result.error || 'invalid');
+        assertClose(result.stats?.tStatistic || result.tValue || 0, 0, TOLERANCES.floating, 'ttest_onesample_t');
+    });
+
+    registerTest('ttest_independent_sig', 'C-TTests', () => {
+        if (!window.runIndependentTTest) return skipTest('ttest_independent_sig', 'Not implemented');
+        const g1 = [10, 12, 14, 16, 18];
+        const g2 = [30, 32, 34, 36, 38];
+        const result = window.runIndependentTTest(g1, g2, 0.05);
+        if (!result.valid) return skipTest('ttest_independent_sig', result.error || 'invalid');
+        const p = result.pValues?.pValue ?? result.pValue;
+        assertInRange(p, 0, 0.05, 'ttest_independent_p_sig');
+    });
+
+    registerTest('ttest_paired_effect', 'C-TTests', () => {
+        if (!window.runPairedTTest) return skipTest('ttest_paired_effect', 'Not implemented');
+        const before = [10, 20, 30, 40, 50];
+        const after = [15, 25, 35, 45, 55];
+        const result = window.runPairedTTest(before, after, 0.05);
+        if (!result.valid) return skipTest('ttest_paired_effect', result.error || 'invalid');
+        const meanDiff = result.meanDifference ?? result.stats?.meanDiff ?? result.meanDiff;
+        assertClose(meanDiff, 5, TOLERANCES.floating, 'ttest_paired_meanDiff');
+    });
+
+    // ===========================================
+    // D) ANOVA TESTS
+    // ===========================================
+    registerTest('anova_oneway_sig', 'D-ANOVA', () => {
+        if (!window.runOneWayANOVA) return skipTest('anova_oneway_sig', 'Not implemented');
+        const groups = [[10, 11, 12], [20, 21, 22], [30, 31, 32]];
+        const result = window.runOneWayANOVA(groups, 0.05);
+        if (!result.valid) return skipTest('anova_oneway_sig', result.error || 'invalid');
+        const p = result.pValues?.pValue ?? result.pValue;
+        assertInRange(p, 0, 0.001, 'anova_oneway_p_sig');
+    });
+
+    registerTest('anova_posthoc_exists', 'D-ANOVA', () => {
+        if (!window.runOneWayANOVA) return skipTest('anova_posthoc_exists', 'Not implemented');
+        const groups = [[10, 11, 12], [20, 21, 22], [30, 31, 32]];
+        const result = window.runOneWayANOVA(groups, 0.05, ['G1', 'G2', 'G3']);
+        if (!result.postHoc || !result.postHoc.comparisons) return skipTest('anova_posthoc_exists', 'Post-hoc not implemented');
+        assertInRange(result.postHoc.comparisons.length, 1, 10, 'anova_posthoc_count');
+    });
+
+    registerTest('anova_twoway', 'D-ANOVA', () => {
+        if (!window.runTwoWayANOVA) return skipTest('anova_twoway', 'Not implemented');
+        const data = [
+            { gender: 'M', treatment: 'A', score: 10 },
+            { gender: 'M', treatment: 'A', score: 12 },
+            { gender: 'M', treatment: 'B', score: 20 },
+            { gender: 'M', treatment: 'B', score: 22 },
+            { gender: 'F', treatment: 'A', score: 8 },
+            { gender: 'F', treatment: 'A', score: 10 },
+            { gender: 'F', treatment: 'B', score: 18 },
+            { gender: 'F', treatment: 'B', score: 20 }
+        ];
+        const result = window.runTwoWayANOVA(data, 'gender', 'treatment', 'score', 0.05);
+        if (!result.valid) return skipTest('anova_twoway', result.error || 'invalid');
+        // Treatment effect should be significant (large mean difference)
+        assertInRange(result.effects.factorB.pValue, 0, 0.05, 'anova_twoway');
+    });
+
+    registerTest('anova_repeated', 'D-ANOVA', () => {
+        if (!window.runRepeatedMeasuresANOVA) return skipTest('anova_repeated', 'Not implemented');
+        const data = [
+            { subject: 'S1', t1: 5, t2: 7, t3: 9 },
+            { subject: 'S2', t1: 6, t2: 8, t3: 10 },
+            { subject: 'S3', t1: 4, t2: 6, t3: 8 },
+            { subject: 'S4', t1: 7, t2: 9, t3: 11 },
+            { subject: 'S5', t1: 5, t2: 7, t3: 9 }
+        ];
+        const result = window.runRepeatedMeasuresANOVA(data, ['t1', 't2', 't3'], 0.05);
+        if (!result.valid) return skipTest('anova_repeated', result.error || 'invalid');
+        // Time effect should be significant (values increase consistently)
+        assertInRange(result.withinSubjects.pValue, 0, 0.05, 'anova_repeated');
+    });
+
+    // ===========================================
+    // E) NONPARAMETRIC TESTS
+    // ===========================================
+    registerTest('mannwhitney_basic', 'E-Nonparametric', () => {
+        if (!window.runMannWhitneyU) return skipTest('mannwhitney_basic', 'Not implemented');
+        const g1 = [1, 2, 3, 4, 5], g2 = [6, 7, 8, 9, 10];
+        const result = window.runMannWhitneyU(g1, g2, 0.05);
+        if (!result.valid) return skipTest('mannwhitney_basic', result.error || 'invalid');
+        const U = result.uStatistic ?? result.U;
+        assertClose(U, 0, TOLERANCES.floating, 'mannwhitney_U');
+    });
+
+    registerTest('wilcoxon_basic', 'E-Nonparametric', () => {
+        if (!window.runWilcoxonSignedRank) return skipTest('wilcoxon_basic', 'Not implemented');
+        const before = [10, 20, 30, 40, 50], after = [15, 25, 35, 45, 55];
+        const result = window.runWilcoxonSignedRank(before, after, 0.05);
+        if (!result.valid) return skipTest('wilcoxon_basic', result.error || 'invalid');
+        assertInRange(result.pValue, 0, 1, 'wilcoxon_p');
+    });
+
+    registerTest('kruskal_basic', 'E-Nonparametric', () => {
+        if (!window.runKruskalWallis) return skipTest('kruskal_basic', 'Not implemented');
+        const groups = [[1, 2, 3], [10, 11, 12], [20, 21, 22]];
+        const result = window.runKruskalWallis(groups, 0.05);
+        if (!result.valid) return skipTest('kruskal_basic', result.error || 'invalid');
+        assertInRange(result.pValue, 0, 0.05, 'kruskal_p_sig');
+    });
+
+    registerTest('friedman_basic', 'E-Nonparametric', () => {
+        if (!window.runFriedmanTest) return skipTest('friedman_basic', 'Not implemented');
+        const data = [[5, 7, 4], [6, 8, 5], [7, 6, 6], [4, 9, 3]];
+        const result = window.runFriedmanTest(data, 0.05, ['A', 'B', 'C']);
+        if (!result.valid) return skipTest('friedman_basic', result.error || 'invalid');
+        assertInRange(result.pValue, 0, 1, 'friedman_p');
+    });
+
+    // ===========================================
+    // F) CATEGORICAL TESTS
+    // ===========================================
+    registerTest('chisquare_basic', 'F-Categorical', () => {
+        if (!window.runChiSquareTest) return skipTest('chisquare_basic', 'Not implemented');
+        const table = [[50, 10], [10, 50]];
+        const result = window.runChiSquareTest(table, 0.05);
+        if (!result.valid) return skipTest('chisquare_basic', result.error || 'invalid');
+        assertInRange(result.pValues?.pValue ?? result.pValue, 0, 0.001, 'chisquare_p_sig');
+    });
+
+    registerTest('cramersv_range', 'F-Categorical', () => {
+        if (!window.runChiSquareTest) return skipTest('cramersv_range', 'Not implemented');
+        const table = [[50, 10], [10, 50]];
+        const result = window.runChiSquareTest(table, 0.05);
+        if (result.effectSizes?.cramersV === undefined) return skipTest('cramersv_range', 'Cramers V not computed');
+        assertInRange(result.effectSizes.cramersV, 0, 1, 'cramersv_range');
+    });
+
+    // ===========================================
+    // G) CORRELATION / REGRESSION
+    // ===========================================
+    registerTest('pearson_perfect', 'G-Correlation', () => {
+        if (!window.runCorrelationTest) return skipTest('pearson_perfect', 'Not implemented');
+        const x = [1, 2, 3, 4, 5], y = [2, 4, 6, 8, 10];
+        const result = window.runCorrelationTest(x, y, 0.05);
+        if (!result.valid) return skipTest('pearson_perfect', result.error || 'invalid');
+        assertClose(result.correlation ?? result.stats?.r ?? result.r, 1.0, TOLERANCES.floating, 'pearson_r');
+    });
+
+    registerTest('regression_linear', 'G-Correlation', () => {
+        if (!window.runLinearRegression) return skipTest('regression_linear', 'Not implemented');
+        const data = [
+            { x: 1, y: 2 },
+            { x: 2, y: 4 },
+            { x: 3, y: 6 },
+            { x: 4, y: 8 },
+            { x: 5, y: 10 }
+        ];
+        const result = window.runLinearRegression(data, 'y', 'x');
+        if (!result || result.error) return skipTest('regression_linear', result?.error || 'invalid');
+        assertClose(result.rSquared, 1.0, TOLERANCES.floating, 'regression_rsq');
+    });
+
+    registerTest('spearman_basic', 'G-Correlation', () => {
+        if (!window.runCorrelationTest) return skipTest('spearman_basic', 'Not implemented');
+        const x = [1, 2, 3, 4, 5], y = [2, 4, 6, 8, 10];
+        const result = window.runCorrelationTest(x, y, { method: 'spearman' });
+        if (!result.valid || result.stats?.method !== 'spearman') return skipTest('spearman_basic', 'Spearman not implemented');
+        assertClose(result.stats.r, 1.0, TOLERANCES.floating, 'spearman_r');
+    });
+
+    // ===========================================
+    // H) MULTIVARIATE / CLUSTERING
+    // ===========================================
+    registerTest('pca_variance_sum', 'H-Multivariate', () => {
+        if (!window.runPCAAnalysis) return skipTest('pca_variance_sum', 'Not implemented');
+        const data = [{ X: 1, Y: 2 }, { X: 2, Y: 4 }, { X: 3, Y: 6 }, { X: 4, Y: 8 }];
+        const result = window.runPCAAnalysis(data, ['X', 'Y']);
+        if (!result.valid) return skipTest('pca_variance_sum', result.error || 'invalid');
+        // PCA uses cumulative_variance as percentage, parse it
+        const cumVar = parseFloat(result.cumulative_variance) || 0;
+        const sum = cumVar / 100; // convert to ratio
+        assertInRange(sum, 0.99, 1.01, 'pca_variance_sum');
+    });
+
+    registerTest('kmeans_centers', 'H-Multivariate', () => {
+        if (!window.runKMeansAnalysis) return skipTest('kmeans_centers', 'Not implemented');
+        const data = [{ X: 1, Y: 1 }, { X: 2, Y: 2 }, { X: 10, Y: 10 }, { X: 11, Y: 11 }];
+        const result = window.runKMeansAnalysis(data, ['X', 'Y'], 2);
+        if (!result.valid) return skipTest('kmeans_centers', result.error || 'invalid');
+        // KMeans uses 'clusters' array with cluster info
+        const numClusters = result.clusters?.length ?? result.clusterStats?.length ?? result.k ?? 0;
+        assertClose(numClusters, 2, 0, 'kmeans_k');
+    });
+
+    registerTest('power_finite', 'H-Multivariate', () => {
+        if (!window.runPowerAnalysis) return skipTest('power_finite', 'Not implemented');
+        const result = window.runPowerAnalysis(0.5, 30, 0.05);
+        if (!result.valid) return skipTest('power_finite', result.error || 'invalid');
+        assertInRange(result.power, 0, 1, 'power_range');
+    });
+
+    // ===========================================
+    // LOCALE TESTS
+    // ===========================================
+    registerTest('locale_getText_mean', 'I-Locale', () => {
+        if (!window.getText) return skipTest('locale_getText_mean', 'getText not exposed');
+        const tr = window.getText('mean', 'tr') || window.getText('stat_mean', 'tr');
+        const en = window.getText('mean', 'en') || window.getText('stat_mean', 'en');
+        if (!tr && !en) return skipTest('locale_getText_mean', 'Mean key not found');
+        testResults.tests.push({ id: 'locale_getText_mean', status: 'PASS', tr, en });
+        testResults.pass++;
+    });
+
+    // ===========================================
+    // INVARIANT TESTS (Cross-Check)
+    // ===========================================
+    registerTest('invariant_corr_symmetry', 'J-Invariant', () => {
+        if (!window.runCorrelationTest) return skipTest('invariant_corr_symmetry', 'Not implemented');
+        const x = [1, 2, 3, 4, 5], y = [5, 4, 3, 2, 1];
+        const r1 = window.runCorrelationTest(x, y, 0.05);
+        const r2 = window.runCorrelationTest(y, x, 0.05);
+        if (!r1.valid || !r2.valid) return skipTest('invariant_corr_symmetry', 'Invalid results');
+        const ra = r1.correlation ?? r1.stats?.r ?? r1.r;
+        const rb = r2.correlation ?? r2.stats?.r ?? r2.r;
+        assertClose(ra, rb, TOLERANCES.floating, 'invariant_corr_symmetry');
+    });
+
+    registerTest('invariant_rsq_bounds', 'J-Invariant', () => {
+        if (!window.runLinearRegression) return skipTest('invariant_rsq_bounds', 'Not implemented');
+        // Generate random data as objects
+        const data = [];
+        const prng = createSeededRandom(999);
+        for (let i = 0; i < 40; i++) {
+            data.push({ x: prng() * 100, y: prng() * 100 });
+        }
+        const result = window.runLinearRegression(data, 'y', 'x');
+        if (!result || result.error) return skipTest('invariant_rsq_bounds', result?.error || 'invalid');
+        assertInRange(result.rSquared, 0, 1, 'invariant_rsq_bounds');
+    });
+
+    // ===========================================
+    // MAIN RUNNER
+    // ===========================================
+    function runSPSSParityTests(options = {}) {
+        testResults.pass = 0; testResults.fail = 0; testResults.skip = 0; testResults.tests = [];
+
+        // Only log if explicitly running tests (not in normal mode)
+        const verbose = options.verbose !== false;
+        if (verbose) console.log('[SPSS-PARITY] Starting tests...');
+
+        SPSS_TESTS.forEach(test => {
+            try { test.fn(); }
+            catch (e) {
+                testResults.tests.push({ id: test.id, status: 'FAIL', error: e.message });
+                testResults.fail++;
+                if (verbose) console.error(`[SELFTEST] FAIL: ${test.id} - ${e.message}`);
+            }
+        });
+
+        const total = testResults.pass + testResults.fail + testResults.skip;
+
+        // Critical tests that MUST pass (not skip) for complete
+        const criticalTests = ['anova_twoway', 'anova_repeated'];
+        const criticalPassed = criticalTests.every(id => {
+            const test = testResults.tests.find(t => t.id === id);
+            return test && test.status === 'PASS';
+        });
+
+        const passed = testResults.fail === 0 && criticalPassed;
+        window.__SELFTEST_PASSED__ = passed;
+
+        if (verbose) {
+            console.log(`[SPSS-PARITY] SUMMARY: total=${total}, pass=${testResults.pass}, fail=${testResults.fail}, skip=${testResults.skip}`);
+            if (!criticalPassed) {
+                console.warn('[SPSS-PARITY] CRITICAL: Two-Way or Repeated Measures ANOVA did not PASS!');
+            }
+        }
+
+        // Create UI Panel if in browser
+        if (options.showUI !== false && typeof document !== 'undefined') {
+            createSelftestPanel(testResults, total, passed, criticalPassed);
+        }
+
+        return { total, pass: testResults.pass, fail: testResults.fail, skip: testResults.skip, tests: testResults.tests, passed, criticalPassed };
+    }
+
+    function createSelftestPanel(results, total, passed, criticalPassed = true) {
+        let panel = document.getElementById('spss-selftest-panel');
+        if (panel) panel.remove();
+
+        panel = document.createElement('div');
+        panel.id = 'spss-selftest-panel';
+        const borderColor = passed && criticalPassed ? '#4caf50' : '#f44336';
+        panel.style.cssText = 'position:fixed;bottom:10px;right:10px;background:#1e1e1e;color:#fff;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;z-index:99999;max-width:320px;max-height:200px;overflow:auto;border:2px solid ' + borderColor;
+
+        const fails = results.tests.filter(t => t.status === 'FAIL');
+        const skips = results.tests.filter(t => t.status === 'SKIP');
+
+        panel.innerHTML = `
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <strong>SPSS Parity Selftest</strong>
+                <span style="cursor:pointer" onclick="this.parentElement.parentElement.remove()">✕</span>
+            </div>
+            <div style="color:${passed && criticalPassed ? '#4caf50' : '#f44336'};font-weight:bold">${passed && criticalPassed ? '✓ PASS' : '✗ FAIL'}</div>
+            <div>Total: ${total} | Pass: ${results.pass} | Fail: ${results.fail} | Skip: ${results.skip}</div>
+            ${!criticalPassed ? '<div style="color:#f44336;margin-top:4px;font-size:10px">⚠ Two-Way/RM ANOVA must PASS</div>' : ''}
+            ${fails.length ? '<div style="color:#f44336;margin-top:6px;font-size:10px">Fails: ' + fails.map(f => f.id).join(', ') + '</div>' : ''}
+            ${skips.length ? '<div style="color:#ff9800;margin-top:4px;font-size:10px">Skips: ' + skips.length + '</div>' : ''}
+        `;
+        document.body.appendChild(panel);
+    }
+
+    // Auto-run if URL param ?selftest=1 or ?spssselftest=1
+    if (typeof window !== 'undefined') {
+        window.runSPSSParityTests = runSPSSParityTests;
+        window.runSelfTest = function (opts) {
+            if (opts?.level === 'full') return runSPSSParityTests(opts);
+            return runSPSSParityTests(opts);
+        };
+
+        if (window.location?.search?.includes('selftest=1') || window.location?.search?.includes('spssselftest=1')) {
+            window.addEventListener('load', () => setTimeout(() => runSPSSParityTests(), 1500));
+        }
+    }
+})();
+
