@@ -2,7 +2,13 @@
 // STATS.JS - Opradox Visual Studio Statistics Module
 // Part 1: Mathematical Core & Distribution Tables
 // =====================================================
-console.log('[BUILD_ID]', '20241228-2051', 'stats.js');
+const STATS_BUILD_ID = '2026-01-04_ST_MASTER_01';
+console.log('[BUILD_ID]', STATS_BUILD_ID, 'stats.js');
+console.log('[STATS_MODULE_URL]', import.meta.url);
+
+// FAZ-ST0: STATS_SHA_SHORT - simple signature for cache verification
+const STATS_SHA_SHORT = 'ST_MASTER_01_HASH_7f3c9a2b';
+console.log('[STATS_SHA_SHORT]', STATS_SHA_SHORT);
 
 import { VIZ_STATE, getText } from './core.js';
 import { showToast } from './ui.js';
@@ -2202,24 +2208,39 @@ function normalCDF(z) {
 
 /**
  * Interpret Cohen's d effect size
+ * FAZ-ST4: Returns bilingual interpretation {tr, en}
  */
-function interpretCohensD(d) {
+function interpretCohensD(d, lang = null) {
     const absD = Math.abs(d);
-    if (absD < 0.2) return 'Çok küçük';
-    if (absD < 0.5) return 'Küçük';
-    if (absD < 0.8) return 'Orta';
-    return 'Büyük';
+    let tr, en;
+    if (absD < 0.2) { tr = 'Çok küçük'; en = 'Very small'; }
+    else if (absD < 0.5) { tr = 'Küçük'; en = 'Small'; }
+    else if (absD < 0.8) { tr = 'Orta'; en = 'Medium'; }
+    else { tr = 'Büyük'; en = 'Large'; }
+
+    // If specific language requested, return string; otherwise return object
+    if (lang === 'tr') return tr;
+    if (lang === 'en') return en;
+    return { tr, en };
 }
 
 /**
  * Interpret Eta-squared effect size
+ * FAZ-ST4: Returns bilingual interpretation {tr, en}
  */
-function interpretEtaSquared(eta2) {
-    if (eta2 < 0.01) return 'Çok küçük';
-    if (eta2 < 0.06) return 'Küçük';
-    if (eta2 < 0.14) return 'Orta';
-    return 'Büyük';
+function interpretEtaSquared(eta2, lang = null) {
+    let tr, en;
+    if (eta2 < 0.01) { tr = 'Çok küçük'; en = 'Very small'; }
+    else if (eta2 < 0.06) { tr = 'Küçük'; en = 'Small'; }
+    else if (eta2 < 0.14) { tr = 'Orta'; en = 'Medium'; }
+    else { tr = 'Büyük'; en = 'Large'; }
+
+    // If specific language requested, return string; otherwise return object
+    if (lang === 'tr') return tr;
+    if (lang === 'en') return en;
+    return { tr, en };
 }
+
 
 /**
  * Interpret correlation coefficient
