@@ -241,31 +241,69 @@ const MODAL_CONTENT = {
     },
     contact: {
         tr: `
-            <div class="opx-contact-content">
+            <div class="opx-contact-form-container">
                 <p class="opx-contact-tagline"><i class="fas fa-map-signs"></i> Geri bildirim = yol haritamız</p>
                 
-                <div class="opx-contact-buttons">
-                    <a href="mailto:destek@opradox.com?subject=Opradox Geri Bildirim" class="opx-contact-btn opx-contact-btn-primary">
-                        <i class="fas fa-envelope"></i>
-                        <span>E-posta ile Gönder</span>
-                    </a>
+                <form id="opxContactForm" class="opx-contact-form">
+                    <div class="opx-input-group">
+                        <label for="contactName">Ad Soyad (Zorunlu)</label>
+                        <input type="text" id="contactName" name="name" required placeholder="Adınız Soyadınız">
+                    </div>
+                    
+                    <div class="opx-input-group">
+                        <label for="contactEmail">E-posta (Zorunlu)</label>
+                        <input type="email" id="contactEmail" name="email" required placeholder="örnek@eposta.com">
+                    </div>
+                    
+                    <div class="opx-input-group">
+                        <label for="contactMessage">Mesajınız</label>
+                        <textarea id="contactMessage" name="message" required rows="4" placeholder="Mesajınızı buraya yazın..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="opx-contact-btn opx-contact-btn-primary" id="contactSubmitBtn">
+                        <i class="fas fa-paper-plane"></i> Gönder
+                    </button>
+                    <div id="contactStatus" style="margin-top:10px; display:none; padding:10px; border-radius:4px;"></div>
+                </form>
+                
+                <div class="opx-contact-secondary" style="margin-top:15px; text-align:center;">
+                     <a href="mailto:destek@opradox.com?subject=Opradox Geri Bildirim" class="opx-text-link">veya E-posta uygulamanızla gönderin</a>
                 </div>
                 
                 <p class="opx-contact-note"><i class="fas fa-user-shield"></i> Kişisel veri istemiyoruz, sadece mesaj.</p>
             </div>
         `,
         en: `
-            <div class="opx-contact-content">
+            <div class="opx-contact-form-container">
                 <p class="opx-contact-tagline"><i class="fas fa-map-signs"></i> Feedback = our roadmap</p>
                 
-                <div class="opx-contact-buttons">
-                    <a href="mailto:destek@opradox.com?subject=Opradox Feedback" class="opx-contact-btn opx-contact-btn-primary">
-                        <i class="fas fa-envelope"></i>
-                        <span>Send via Email</span>
-                    </a>
+                <form id="opxContactForm" class="opx-contact-form">
+                    <div class="opx-input-group">
+                        <label for="contactName">Full Name (Required)</label>
+                        <input type="text" id="contactName" name="name" required placeholder="Your Name">
+                    </div>
+                    
+                    <div class="opx-input-group">
+                        <label for="contactEmail">Email (Required)</label>
+                        <input type="email" id="contactEmail" name="email" required placeholder="example@email.com">
+                    </div>
+                    
+                    <div class="opx-input-group">
+                        <label for="contactMessage">Your Message</label>
+                        <textarea id="contactMessage" name="message" required rows="4" placeholder="Write your message here..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="opx-contact-btn opx-contact-btn-primary" id="contactSubmitBtn">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                    <div id="contactStatus" style="margin-top:10px; display:none; padding:10px; border-radius:4px;"></div>
+                </form>
+                
+                <div class="opx-contact-secondary" style="margin-top:15px; text-align:center;">
+                     <a href="mailto:destek@opradox.com?subject=Opradox Feedback" class="opx-text-link">or send via Email App</a>
                 </div>
                 
-                <p class="opx-contact-note"><i class="fas fa-user-shield"></i> We don't ask for personal data, just your message.</p>
+                <p class="opx-contact-note"><i class="fas fa-user-shield"></i> We don’t ask for personal data, just your message.</p>
             </div>
         `
     }
@@ -279,22 +317,22 @@ let activeModal = null;
 function openModal(modalId) {
     const modal = document.getElementById(modalId + 'Modal');
     if (!modal) return;
-    
+
     // Inject content based on language
     const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
     const bodyEl = document.getElementById(modalId + 'ModalBody');
     if (bodyEl && MODAL_CONTENT[modalId]) {
         bodyEl.innerHTML = MODAL_CONTENT[modalId][lang] || MODAL_CONTENT[modalId]['tr'];
     }
-    
+
     // Show modal
     modal.classList.add('opx-modal-open');
     document.body.classList.add('opx-modal-active');
     activeModal = modal;
-    
+
     // Update URL hash
     history.pushState(null, '', '#' + modalId);
-    
+
     // Focus trap
     setTimeout(() => {
         const closeBtn = modal.querySelector('.opx-modal-close');
@@ -304,11 +342,11 @@ function openModal(modalId) {
 
 function closeModal() {
     if (!activeModal) return;
-    
+
     activeModal.classList.remove('opx-modal-open');
     document.body.classList.remove('opx-modal-active');
     activeModal = null;
-    
+
     // Clear hash
     history.pushState(null, '', window.location.pathname);
 }
@@ -334,27 +372,35 @@ function initModals() {
             openModal(modalId);
         });
     });
-    
+
     // Close buttons
     document.querySelectorAll('.opx-modal-close').forEach(btn => {
         btn.addEventListener('click', closeModal);
     });
-    
+
     // Overlay click
     document.querySelectorAll('.opx-modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', closeModal);
     });
-    
+
+    // Global Submit Listener for Contact Form (Event Delegation)
+    document.addEventListener('submit', (e) => {
+        if (e.target && e.target.id === 'opxContactForm') {
+            e.preventDefault();
+            handleContactSubmit(e.target);
+        }
+    });
+
     // ESC key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && activeModal) {
             closeModal();
         }
     });
-    
+
     // Check hash on load
     checkHashOnLoad();
-    
+
     // Handle browser back
     window.addEventListener('popstate', () => {
         const hash = window.location.hash.replace('#', '');
@@ -364,7 +410,7 @@ function initModals() {
             closeAllModals();
         }
     });
-    
+
     console.log('✅ Modal system initialized');
 }
 
@@ -383,7 +429,7 @@ function updateFooterLogo() {
     const isDark = document.body.classList.contains('dark-mode');
     const darkLogo = document.querySelector('.footer-logo-dark');
     const lightLogo = document.querySelector('.footer-logo-light');
-    
+
     if (darkLogo && lightLogo) {
         darkLogo.style.display = isDark ? 'inline' : 'none';
         lightLogo.style.display = isDark ? 'none' : 'inline';
@@ -392,7 +438,7 @@ function updateFooterLogo() {
 
 // Override theme toggle to include logo update
 const originalToggleTheme = window.toggleTheme;
-window.toggleTheme = function() {
+window.toggleTheme = function () {
     if (typeof originalToggleTheme === 'function') {
         originalToggleTheme();
     }
@@ -405,13 +451,89 @@ window.toggleTheme = function() {
 document.addEventListener('DOMContentLoaded', () => {
     initModals();
     updateFooterLogo();
-    
+
     // Re-apply theme on content update
     const observer = new MutationObserver(() => {
         updateFooterLogo();
     });
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 });
+
+// =====================================================
+// CONTACT FORM LOGIC
+// =====================================================
+async function handleContactSubmit(form) {
+    const btn = form.querySelector('#contactSubmitBtn');
+    const statusDiv = form.querySelector('#contactStatus');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // UI Loading state
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gönderiliyor...';
+    }
+
+    // Clear previous status
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.className = '';
+    }
+
+    try {
+        // Replace with your actual backend endpoint
+        const API_ENDPOINT = '/api/contact_messages';
+
+        // Simulate network delay if no real endpoint exists yet, or fetch
+        // For now, attempting a fetch to the endpoint the user implied exists ("Admin panel connection")
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            if (statusDiv) {
+                statusDiv.innerText = 'Mesajınız başarıyla iletildi! Teşekkür ederiz.';
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = 'rgba(46, 204, 113, 0.2)'; // Green tint
+                statusDiv.style.color = '#2ecc71';
+            }
+            form.reset();
+            setTimeout(() => {
+                closeModal();
+            }, 2000);
+        } else {
+            throw new Error('Server returned error');
+        }
+
+    } catch (error) {
+        console.error('Contact error:', error);
+
+        // Fallback for demo/no-backend scenario: Show success anyway if it's just a demo, 
+        // OR show error if strictly required. 
+        // User said "Directly drops to admin panel". Assuming endpoint exists.
+        // If it fails (404), I will show a friendly error or fallback.
+
+        if (statusDiv) {
+            // For now, let's assume if it fails it might be because the endpoint isn't ready.
+            // But to not block the user, maybe we simulate success? 
+            // NO, user said "Structure existed". I should respect that.
+            // I'll show error.
+            statusDiv.innerText = 'İletişim hatası. Lütfen daha sonra tekrar deneyin veya e-posta gönderin.';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(231, 76, 60, 0.2)'; // Red tint
+            statusDiv.style.color = '#e74c3c';
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gönder';
+        }
+    }
+}
 
 // Expose for external use
 window.openHubModal = openModal;

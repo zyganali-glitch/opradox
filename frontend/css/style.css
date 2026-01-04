@@ -14174,3 +14174,34 @@ body.day-mode .footer-logo-dark {
 body.day-mode .footer-logo-light {
     display: inline;
 }
+
+/* UPDATED LOGO ADJUSTMENTS */
+.footer-logo {
+    height: 48px !important; /* Larger size */
+    width: auto !important;
+    margin-left: 15px !important;
+    vertical-align: middle;
+    object-fit: contain;
+}
+.opx-input-group { margin-bottom: 15px; text-align: left; }
+.opx-input-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
+.opx-input-group input, .opx-input-group textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--gm-border, #ccc);
+    background: var(--gm-bg-alt, #fff);
+    color: var(--gm-text, #333);
+}
+.opx-contact-secondary { margin-top: 10px; font-size: 0.9em; opacity: 0.8; }
+.opx-text-link { color: inherit; text-decoration: underline; }
+
+
+/* TIGHT FOOTER OVERRIDE */
+.hub-footer {
+    padding: 0 20px !important;
+    min-height: 50px !important;
+    height: auto !important;
+}
+.footer-copy { line-height: 48px; } /* Center text vertically with the 48px logo */
+
