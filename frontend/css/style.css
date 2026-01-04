@@ -1,4 +1,4 @@
-/* style.css - opradox Ultimate Final v2 */
+﻿/* style.css - opradox Ultimate Final v2 */
 
 /* Google Fonts - Inter & Outfit */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
@@ -181,7 +181,7 @@ body:not(.day-mode) .brand-wordmark {
     transform: translateY(-2px);
 }
 
-/* Renkli İkonlar */
+/* Renkli Ä°konlar */
 .fa-whatsapp {
     color: #25D366;
 }
@@ -238,7 +238,7 @@ body:not(.day-mode) .brand-wordmark {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* 3 SÜTUNLU BAĞIMSIZ SCROLL */
+/* 3 SÃœTUNLU BAÄIMSIZ SCROLL */
 .gm-main {
     flex: 1;
     display: grid;
@@ -251,7 +251,7 @@ body:not(.day-mode) .brand-wordmark {
     height: calc(100vh - var(--header-h));
 }
 
-/* Sadece gerekli paneller kendi içinde scroll etsin */
+/* Sadece gerekli paneller kendi iÃ§inde scroll etsin */
 .gm-middle-pane,
 .gm-right-pane {
     display: flex;
@@ -262,7 +262,7 @@ body:not(.day-mode) .brand-wordmark {
     padding-right: 5px;
 }
 
-/* Kılavuz Toggle için Stiller */
+/* KÄ±lavuz Toggle iÃ§in Stiller */
 .gm-main.help-collapsed {
     grid-template-columns: 320px 1fr 0px;
 }
@@ -271,7 +271,7 @@ body:not(.day-mode) .brand-wordmark {
     display: none;
 }
 
-/* Kılavuz Kapatma Butonu */
+/* KÄ±lavuz Kapatma Butonu */
 .gm-help-card .gm-help-header {
     display: flex;
     justify-content: space-between;
@@ -287,7 +287,7 @@ body:not(.day-mode) .brand-wordmark {
     opacity: 1;
 }
 
-/* Sol Panel - SPLIT LAYOUT: Dosyalar (Üst, Kompakt) + Senaryolar (Alt, Geniş) */
+/* Sol Panel - SPLIT LAYOUT: Dosyalar (Ãœst, Kompakt) + Senaryolar (Alt, GeniÅŸ) */
 .gm-left-pane {
     display: flex;
     flex-direction: column;
@@ -296,21 +296,21 @@ body:not(.day-mode) .brand-wordmark {
     overflow: hidden;
 }
 
-/* DOSYALAR SECTION - Üst Bölge (Kompakt, Scroll) */
+/* DOSYALAR SECTION - Ãœst BÃ¶lge (Kompakt, Scroll) */
 .gm-files-section {
     flex: 0 1 auto;
-    /* Flexile ama büyümez */
+    /* Flexile ama bÃ¼yÃ¼mez */
     max-height: 35vh;
-    /* MAKSIMUM YÜKSEKLİK - Kompakt */
+    /* MAKSIMUM YÃœKSEKLÄ°K - Kompakt */
     overflow-y: auto;
-    /* İçerik taşarsa scroll */
+    /* Ä°Ã§erik taÅŸarsa scroll */
     overflow-x: hidden;
     border-bottom: 2px solid var(--gm-divider);
-    /* Ayırıcı çizgi */
+    /* AyÄ±rÄ±cÄ± Ã§izgi */
     padding-bottom: 8px;
 }
 
-/* Upload Card - Kompaktlaştırılmış */
+/* Upload Card - KompaktlaÅŸtÄ±rÄ±lmÄ±ÅŸ */
 .gm-upload-card {
     flex-shrink: 0;
     padding: 12px;
@@ -319,19 +319,19 @@ body:not(.day-mode) .brand-wordmark {
     /* Minimal margin */
 }
 
-/* SENARYOLAR SECTION - Alt Bölge (Geniş, Sabit) */
+/* SENARYOLAR SECTION - Alt BÃ¶lge (GeniÅŸ, Sabit) */
 .gm-scenarios-section {
     flex: 1 1 auto;
-    /* Kalan alanın HEPSİNİ AL */
+    /* Kalan alanÄ±n HEPSÄ°NÄ° AL */
     min-height: 0;
     /* Flex overflow fix */
     overflow: hidden;
-    /* Taşma yok, içinde scroll */
+    /* TaÅŸma yok, iÃ§inde scroll */
     display: flex;
     flex-direction: column;
 }
 
-/* Senaryo Kartı - Flexible Yükseklik */
+/* Senaryo KartÄ± - Flexible YÃ¼kseklik */
 .gm-scenario-list-card {
     flex: 1;
     display: flex;
@@ -339,7 +339,7 @@ body:not(.day-mode) .brand-wordmark {
     overflow: hidden;
     min-height: 0;
     margin: 0;
-    /* Margin kaldır */
+    /* Margin kaldÄ±r */
     padding: 12px;
     /* Kompakt padding */
 }
@@ -444,7 +444,7 @@ body.day-mode .gm-markdown-result th {
     margin: 0 0 10px 0;
 }
 
-/* DOSYA YÜKLEME */
+/* DOSYA YÃœKLEME */
 .gm-file-label {
     border: 2px dashed var(--gm-card-border);
     border-radius: 8px;
@@ -464,7 +464,7 @@ body.day-mode .gm-markdown-result th {
     /* Kompakt font */
 }
 
-/* Icon Küçültme (inline style override için) */
+/* Icon KÃ¼Ã§Ã¼ltme (inline style override iÃ§in) */
 .gm-file-label i {
     font-size: 1.3rem !important;
     /* 1.8rem -> 1.3rem */
@@ -488,7 +488,7 @@ body.day-mode .gm-markdown-result th {
     text-align: center;
 }
 
-/* FILE INFO PANEL - Kompaktlaştırılmış */
+/* FILE INFO PANEL - KompaktlaÅŸtÄ±rÄ±lmÄ±ÅŸ */
 .gm-file-info {
     margin-top: 10px;
     /* 12px -> 10px */
@@ -703,7 +703,7 @@ body.day-mode .gm-col-chip strong {
 .gm-excel-scenario-info {
     flex: 1;
     min-width: 0;
-    /* Taşma düzeltmesi için kritik */
+    /* TaÅŸma dÃ¼zeltmesi iÃ§in kritik */
     overflow: hidden;
 }
 
@@ -726,7 +726,7 @@ body.day-mode .gm-col-chip strong {
     text-overflow: ellipsis;
 }
 
-/* ===== SÜRÜKLE-BIRAK STİLLERİ ===== */
+/* ===== SÃœRÃœKLE-BIRAK STÄ°LLERÄ° ===== */
 .gm-middle-pane.drag-over {
     background: rgba(74, 144, 217, 0.05);
     border: 2px dashed var(--gm-primary) !important;
@@ -734,7 +734,7 @@ body.day-mode .gm-col-chip strong {
 }
 
 .gm-middle-pane.drag-over::before {
-    content: "\f0a9 Senaryoyu buraya bırak";
+    content: "\f0a9 Senaryoyu buraya bÄ±rak";
     font-family: "Font Awesome 6 Free", sans-serif;
     position: absolute;
     top: 50%;
@@ -947,7 +947,7 @@ body.day-mode .gm-feature-card:hover {
     display: block;
 }
 
-/* SİHİRBAZ */
+/* SÄ°HÄ°RBAZ */
 .gm-form-row {
     margin-bottom: 10px;
 }
@@ -971,7 +971,7 @@ body.day-mode .gm-feature-card:hover {
     outline: none;
 }
 
-/* SONUÇ & PAYLAŞ */
+/* SONUÃ‡ & PAYLAÅ */
 .gm-result-header {
     display: flex;
     justify-content: space-between;
@@ -1038,13 +1038,13 @@ body.day-mode .gm-feature-card:hover {
 }
 
 .gm-help-text li::before {
-    content: "•";
+    content: "â€¢";
     position: absolute;
     left: 0;
     color: var(--gm-primary-color);
 }
 
-/* Kılavuz metninin ekrana sığması */
+/* KÄ±lavuz metninin ekrana sÄ±ÄŸmasÄ± */
 .gm-help-text,
 .gm-help-list {
     word-wrap: break-word;
@@ -1108,7 +1108,7 @@ body.day-mode .gm-feature-card:hover {
 }
 
 /* ============================================
-   FILE PREVIEW MODAL (Başlık satırı seçici)
+   FILE PREVIEW MODAL (BaÅŸlÄ±k satÄ±rÄ± seÃ§ici)
    ============================================ */
 #filePreviewModal .gm-modal-content {
     flex-direction: column;
@@ -1176,7 +1176,7 @@ body.day-mode .gm-feature-card:hover {
     gap: 8px;
 }
 
-/* Header Row Option (her satır) */
+/* Header Row Option (her satÄ±r) */
 .gm-header-row-option {
     display: flex;
     align-items: center;
@@ -1276,7 +1276,7 @@ body.day-mode .gm-feature-card:hover {
     font-weight: 600;
 }
 
-/* Header Row Badge (seçili satır göstergesi) */
+/* Header Row Badge (seÃ§ili satÄ±r gÃ¶stergesi) */
 .gm-header-row-badge {
     background: rgba(255, 255, 255, 0.2);
     padding: 2px 8px;
@@ -1926,7 +1926,7 @@ body.day-mode .gm-pro-row {
     }
 }
 
-/* PRO BUILDER OTO-TAMAMLAMA VE DÜZEN */
+/* PRO BUILDER OTO-TAMAMLAMA VE DÃœZEN */
 .gm-pro-row {
     display: flex;
     gap: 8px;
@@ -1944,13 +1944,13 @@ body.day-mode .gm-pro-row {
     align-items: flex-start;
 }
 
-/* Input genişlik iyileştirmeleri */
+/* Input geniÅŸlik iyileÅŸtirmeleri */
 .gm-pro-row input,
 .gm-pro-row select {
     min-width: 0;
 }
 
-/* Partition/Order inputları */
+/* Partition/Order inputlarÄ± */
 .pro-win-part,
 .pro-win-order {
     min-width: 150px;
@@ -1964,7 +1964,7 @@ body.day-mode .gm-pro-row {
     background: rgba(185, 19, 79, 0.1);
 }
 
-/* Datalist okunu düzeltme */
+/* Datalist okunu dÃ¼zeltme */
 input[list]::-webkit-calendar-picker-indicator {
     opacity: 0.5;
     cursor: pointer;
@@ -2153,9 +2153,9 @@ input[list]:hover::-webkit-calendar-picker-indicator {
 
 .gm-python-code {
     /* GECE MODU */
-    /* Arka plan: Mini kılavuz ile aynı */
+    /* Arka plan: Mini kÄ±lavuz ile aynÄ± */
     background: rgba(255, 255, 255, 0.02) !important;
-    /* Metin Rengi: BEYAZ (Mini kılavuz açıklaması / Muted) */
+    /* Metin Rengi: BEYAZ (Mini kÄ±lavuz aÃ§Ä±klamasÄ± / Muted) */
     color: var(--gm-text-muted) !important;
     padding: 16px;
     border-radius: 0;
@@ -2169,16 +2169,16 @@ input[list]:hover::-webkit-calendar-picker-indicator {
 }
 
 body.day-mode .gm-python-code {
-    /* GÜNDÜZ MODU */
+    /* GÃœNDÃœZ MODU */
     /* Arka plan: BEYAZ (Card BG) */
     background: var(--gm-card-bg) !important;
-    /* Metin Rengi: SİYAH (Mini kılavuz açıklaması / Muted) */
+    /* Metin Rengi: SÄ°YAH (Mini kÄ±lavuz aÃ§Ä±klamasÄ± / Muted) */
     color: var(--gm-text-muted) !important;
     border: none;
     border-top: 1px solid var(--gm-divider);
 }
 
-/* --- 3 RENK KURALI (BORDO, MAVİ, SİYAH/BEYAZ) --- */
+/* --- 3 RENK KURALI (BORDO, MAVÄ°, SÄ°YAH/BEYAZ) --- */
 
 /* 1. RENK: BORDO (Accent) - Keywords, Builtins, Pandas */
 .gm-py-keyword,
@@ -2189,24 +2189,24 @@ body.day-mode .gm-python-code {
     font-weight: normal;
 }
 
-/* 2. RENK: MAVİ (Primary) - Strings, Numbers */
+/* 2. RENK: MAVÄ° (Primary) - Strings, Numbers */
 .gm-py-string,
 .gm-py-fstring,
 .gm-py-number {
     color: var(--gm-primary) !important;
-    /* MAVİ */
+    /* MAVÄ° */
 }
 
-/* 3. RENK: SİYAH/BEYAZ - Base Code Text (Yukarıdaki .gm-python-code color kuralı ile sağlanır) */
+/* 3. RENK: SÄ°YAH/BEYAZ - Base Code Text (YukarÄ±daki .gm-python-code color kuralÄ± ile saÄŸlanÄ±r) */
 
-/* Yorumlar - Yine base renge yakın (muted) */
+/* Yorumlar - Yine base renge yakÄ±n (muted) */
 .gm-py-comment {
     color: var(--gm-text-muted);
     font-style: italic;
     opacity: 0.8;
 }
 
-/* Code Stats Box (Kırmızı Dikdörtgen Alanı) */
+/* Code Stats Box (KÄ±rmÄ±zÄ± DikdÃ¶rtgen AlanÄ±) */
 .gm-code-stats {
     display: flex;
     flex-wrap: wrap;
@@ -2219,7 +2219,7 @@ body.day-mode .gm-python-code {
 }
 
 body.day-mode .gm-code-stats {
-    /* GÜNDÜZ MODU ARKA PLAN - !important ile garanti */
+    /* GÃœNDÃœZ MODU ARKA PLAN - !important ile garanti */
     background: var(--gm-card-bg) !important;
 }
 
@@ -2241,9 +2241,9 @@ body.day-mode .gm-code-stats {
 }
 
 /* ===== PRISM.JS SYNTAX HIGHLIGHTING OVERRIDE ===== */
-/* Renk Şeması: BORDO (accent), BEYAZ/SİYAH (text), MAVİ (primary) */
+/* Renk ÅemasÄ±: BORDO (accent), BEYAZ/SÄ°YAH (text), MAVÄ° (primary) */
 
-/* .gm-python-code içindeki <code> elementi için - Prism.js'in arka planını override et */
+/* .gm-python-code iÃ§indeki <code> elementi iÃ§in - Prism.js'in arka planÄ±nÄ± override et */
 .gm-python-code code[class*="language-"],
 .gm-python-code pre[class*="language-"] {
     background: transparent !important;
@@ -2260,14 +2260,14 @@ body.day-mode .gm-code-stats {
     /* BORDO */
 }
 
-/* 2. BEYAZ - Base text, parantezler, operatörler (mevcut renk devam) */
+/* 2. BEYAZ - Base text, parantezler, operatÃ¶rler (mevcut renk devam) */
 .gm-python-code .token.punctuation,
 .gm-python-code .token.operator {
     color: var(--gm-text) !important;
     /* BEYAZ */
 }
 
-/* 3. MAVİ - Strings, Numbers, Functions */
+/* 3. MAVÄ° - Strings, Numbers, Functions */
 .gm-python-code .token.string,
 .gm-python-code .token.char,
 .gm-python-code .token.number,
@@ -2275,7 +2275,7 @@ body.day-mode .gm-code-stats {
 .gm-python-code .token.class-name,
 .gm-python-code .token.builtin {
     color: var(--gm-primary) !important;
-    /* MAVİ */
+    /* MAVÄ° */
 }
 
 /* Yorumlar - Gri (muted) */
@@ -2287,14 +2287,14 @@ body.day-mode .gm-code-stats {
     font-style: italic;
 }
 
-/* =============== GÜNDÜZ MODU =============== */
-/* 1. BORDO - Keywords (aynı kalıyor, --gm-accent day-mode'da da bordo) */
+/* =============== GÃœNDÃœZ MODU =============== */
+/* 1. BORDO - Keywords (aynÄ± kalÄ±yor, --gm-accent day-mode'da da bordo) */
 
-/* 2. SİYAH - Base text, parantezler, operatörler (--gm-text day-mode'da siyah) */
+/* 2. SÄ°YAH - Base text, parantezler, operatÃ¶rler (--gm-text day-mode'da siyah) */
 
-/* 3. MAVİ - Strings, Numbers, Functions (--gm-primary day-mode'da koyu mavi) */
+/* 3. MAVÄ° - Strings, Numbers, Functions (--gm-primary day-mode'da koyu mavi) */
 
-/* Day mode için extra düzeltme gerekmiyor, CSS variables otomatik adapte oluyor */
+/* Day mode iÃ§in extra dÃ¼zeltme gerekmiyor, CSS variables otomatik adapte oluyor */
 
 /* ============================================
    FILE PREVIEW TABLE STYLES
@@ -2404,13 +2404,13 @@ body.day-mode .gm-preview-table th {
     margin-right: 2px;
 }
 
-/* PREVIEW BUTONU (CHIP STİLİNE UYUARLANMIŞ + ÖZELLEŞTİRİLMİŞ) */
+/* PREVIEW BUTONU (CHIP STÄ°LÄ°NE UYUARLANMIÅ + Ã–ZELLEÅTÄ°RÄ°LMÄ°Å) */
 .gm-btn-preview {
-    /* Chip ile ortak özellikler */
+    /* Chip ile ortak Ã¶zellikler */
     background: var(--gm-card-bg);
     border: 1px solid var(--gm-card-border);
     border-radius: 4px;
-    /* Varsayılan text rengini boşver, aşağıda span ile ezeceğiz */
+    /* VarsayÄ±lan text rengini boÅŸver, aÅŸaÄŸÄ±da span ile ezeceÄŸiz */
     cursor: pointer;
     transition: all 0.2s;
 
@@ -2421,12 +2421,12 @@ body.day-mode .gm-preview-table th {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    /* İkon ile yazı arası */
+    /* Ä°kon ile yazÄ± arasÄ± */
     padding: 8px 12px;
     font-size: 0.85rem;
 }
 
-/* İKON: MAVİ */
+/* Ä°KON: MAVÄ° */
 .gm-btn-preview i {
     color: var(--gm-primary);
     transition: color 0.2s;
@@ -2452,14 +2452,14 @@ body.day-mode .gm-preview-table th {
     /* Hover'da hepsi beyaz olsun ki okunsun */
 }
 
-/* Day Mode Override (Uyumluluk için) */
+/* Day Mode Override (Uyumluluk iÃ§in) */
 body.day-mode .gm-col-chip {
     background: white;
     border-color: #ccc;
     color: #555;
 }
 
-/* Preview butonu override (Renkler zaten variable olduğu için burada sadece bg değişir) */
+/* Preview butonu override (Renkler zaten variable olduÄŸu iÃ§in burada sadece bg deÄŸiÅŸir) */
 body.day-mode .gm-btn-preview {
     background: white;
     border-color: #ccc;
@@ -2616,7 +2616,7 @@ body.day-mode .gm-crosssheet-option {
     color: var(--gm-primary);
 }
 
-/* PRO Cross-sheet Column List Scrollbar - Mini Kılavuz ile aynı stil */
+/* PRO Cross-sheet Column List Scrollbar - Mini KÄ±lavuz ile aynÄ± stil */
 .pro-crosssheet-column-list::-webkit-scrollbar {
     height: 8px;
 }
@@ -2635,14 +2635,14 @@ body.day-mode .gm-crosssheet-option {
     background: var(--gm-accent);
 }
 
-/* Firefox scrollbar + satır yüksekliği */
+/* Firefox scrollbar + satÄ±r yÃ¼ksekliÄŸi */
 .pro-crosssheet-column-list {
     scrollbar-width: thin;
     scrollbar-color: var(--gm-primary) var(--gm-bg);
     min-height: 32px;
 }
 
-/* Pro crosssheet columns container yüksekliği */
+/* Pro crosssheet columns container yÃ¼ksekliÄŸi */
 .pro-crosssheet-columns {
     min-height: 36px !important;
     height: auto !important;
@@ -3211,7 +3211,7 @@ body.day-mode .gm-admin-reply {
 }
 
 /* =====================================================
-   HUB SAYFASI STİLLERİ
+   HUB SAYFASI STÄ°LLERÄ°
    ===================================================== */
 
 /* Hub Root Container */
@@ -3406,7 +3406,7 @@ body.day-mode .gm-admin-reply {
 }
 
 /* =====================================================
-   FILE DOCKER STİLLERİ
+   FILE DOCKER STÄ°LLERÄ°
    ===================================================== */
 
 .file-docker-container {
@@ -3617,7 +3617,7 @@ body.day-mode .gm-admin-reply {
 }
 
 /* =====================================================
-   PAYLAŞIM DROPDOWN
+   PAYLAÅIM DROPDOWN
    ===================================================== */
 
 .share-dropdown-menu {
@@ -3691,7 +3691,7 @@ body.day-mode .share-dropdown-menu {
 }
 
 /* =====================================================
-   EXCEL STUDIO STİLLERİ
+   EXCEL STUDIO STÄ°LLERÄ°
    ===================================================== */
 
 /* Excel Studio Root */
@@ -3769,7 +3769,7 @@ body.day-mode .share-dropdown-menu {
     transition: grid-template-columns 0.3s ease;
 }
 
-/* Kılavuz gizli olduğunda */
+/* KÄ±lavuz gizli olduÄŸunda */
 .excel-main.help-collapsed {
     grid-template-columns: 280px 1fr 0px;
 }
@@ -3805,7 +3805,7 @@ body.day-mode .share-dropdown-menu {
     overflow-y: auto;
 }
 
-/* Orta Panel - Docker + Form + Sonuç */
+/* Orta Panel - Docker + Form + SonuÃ§ */
 .excel-middle-pane {
     display: flex;
     flex-direction: column;
@@ -3950,7 +3950,7 @@ body.day-mode .share-dropdown-menu {
     color: var(--gm-text);
 }
 
-/* Sağ Panel - Kılavuz */
+/* SaÄŸ Panel - KÄ±lavuz */
 .excel-right-pane {
     display: flex;
     flex-direction: column;
@@ -4044,7 +4044,7 @@ body.day-mode .share-dropdown-menu {
    EXCEL STUDIO v2 - MODERN SENARYO KARTLARI
    ===================================================== */
 
-/* Senaryo Kartları - Modern Grid */
+/* Senaryo KartlarÄ± - Modern Grid */
 .gm-scenario-list-card {
     background: var(--gm-card-bg);
     border: 1px solid var(--gm-card-border);
@@ -4395,7 +4395,7 @@ body.day-mode .share-dropdown-menu {
 }
 
 /* =====================================================
-   VISUAL STUDIO STİLLERİ
+   VISUAL STUDIO STÄ°LLERÄ°
    ===================================================== */
 
 /* Viz Studio Root */
@@ -4417,7 +4417,7 @@ body.day-mode .share-dropdown-menu {
     height: calc(100vh - var(--header-h));
 }
 
-/* Sol Panel - Veri Sütunları */
+/* Sol Panel - Veri SÃ¼tunlarÄ± */
 .viz-left-pane {
     display: flex;
     flex-direction: column;
@@ -4525,7 +4525,7 @@ body.day-mode .share-dropdown-menu {
     gap: 6px;
 }
 
-/* TAM VERİ PROFİLİ - Sol Bar */
+/* TAM VERÄ° PROFÄ°LÄ° - Sol Bar */
 .viz-data-profile-full {
     margin-top: 15px;
     padding: 12px;
@@ -4569,7 +4569,7 @@ body.day-mode .share-dropdown-menu {
     color: var(--gm-text-muted);
 }
 
-/* Sütun Tipleri */
+/* SÃ¼tun Tipleri */
 .viz-column-types-left {
     display: flex;
     flex-wrap: wrap;
@@ -4592,7 +4592,7 @@ body.day-mode .share-dropdown-menu {
     font-size: 0.7rem;
 }
 
-/* Eksik Değerler */
+/* Eksik DeÄŸerler */
 .viz-missing-values-left {
     margin-top: 8px;
 }
@@ -4673,7 +4673,7 @@ body.day-mode .share-dropdown-menu {
     color: #ef4444;
 }
 
-/* Sütun Listesi - YÜKSEKLİK ARTIRILDI */
+/* SÃ¼tun Listesi - YÃœKSEKLÄ°K ARTIRILDI */
 .viz-columns-list {
     flex: 1;
     overflow-y: auto;
@@ -4866,7 +4866,7 @@ body.day-mode .share-dropdown-menu {
     border-color: var(--gm-primary);
 }
 
-/* Boş Canvas - DÜZELTME */
+/* BoÅŸ Canvas - DÃœZELTME */
 .viz-empty-canvas {
     grid-column: 1 / -1;
     display: flex;
@@ -4909,11 +4909,11 @@ body.day-mode .share-dropdown-menu {
     cursor: pointer;
     transition: all 0.2s;
     min-height: 250px;
-    /* İlk grafik tam genişlik sorunu düzeltmesi */
+    /* Ä°lk grafik tam geniÅŸlik sorunu dÃ¼zeltmesi */
     max-width: 100%;
 }
 
-/* Dashboard Grid - 2 sütunluk layout */
+/* Dashboard Grid - 2 sÃ¼tunluk layout */
 .viz-dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -4964,7 +4964,7 @@ body.day-mode .share-dropdown-menu {
     padding: 5px;
 }
 
-/* Sağ Panel - Ayarlar */
+/* SaÄŸ Panel - Ayarlar */
 .viz-right-pane {
     display: flex;
     flex-direction: column;
@@ -5114,7 +5114,7 @@ body.day-mode .share-dropdown-menu {
 }
 
 /* =====================================================
-   PDF TOOLS STİLLERİ
+   PDF TOOLS STÄ°LLERÄ°
    ===================================================== */
 
 /* PDF Tools Root */
@@ -5135,7 +5135,7 @@ body.day-mode .share-dropdown-menu {
     overflow: hidden;
 }
 
-/* Araç Çubuğu */
+/* AraÃ§ Ã‡ubuÄŸu */
 .pdf-toolbar {
     display: flex;
     justify-content: center;
@@ -5342,7 +5342,7 @@ body.day-mode .share-dropdown-menu {
     color: #ef4444;
 }
 
-/* Sağ Section - Settings */
+/* SaÄŸ Section - Settings */
 .pdf-right-section {
     display: flex;
     flex-direction: column;
@@ -5501,7 +5501,7 @@ body.day-mode .share-dropdown-menu {
 }
 
 /* =====================================================
-   OCR LAB STİLLERİ
+   OCR LAB STÄ°LLERÄ°
    ===================================================== */
 
 /* OCR Lab Root */
@@ -5522,7 +5522,7 @@ body.day-mode .share-dropdown-menu {
     overflow: hidden;
 }
 
-/* Sol Panel - Görsel */
+/* Sol Panel - GÃ¶rsel */
 .ocr-left-pane {
     display: flex;
     flex-direction: column;
@@ -5700,7 +5700,7 @@ body.day-mode .share-dropdown-menu {
     margin-top: 10px;
 }
 
-/* Sağ Panel - Çıktı */
+/* SaÄŸ Panel - Ã‡Ä±ktÄ± */
 .ocr-right-pane {
     display: flex;
     flex-direction: column;
@@ -7803,7 +7803,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   SPSS SONUÇ STİLLERİ (Sprint 2)
+   SPSS SONUÃ‡ STÄ°LLERÄ° (Sprint 2)
    ===================================================== */
 
 .viz-stats-table {
@@ -7958,7 +7958,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   FİLTRELEME VE SIRALAMA PANELİ (Sprint 4)
+   FÄ°LTRELEME VE SIRALAMA PANELÄ° (Sprint 4)
    ===================================================== */
 
 .viz-filter-panel {
@@ -8106,7 +8106,7 @@ body.day-mode .viz-stat-value {
     border-color: #e74c3c;
 }
 
-/* Export Menü */
+/* Export MenÃ¼ */
 .viz-export-menu {
     position: fixed;
     top: 70px;
@@ -8209,7 +8209,7 @@ body.day-mode .viz-stat-value {
     border: 2px solid var(--gm-card-border);
 }
 
-/* Dashboard Grid Şablonları */
+/* Dashboard Grid ÅablonlarÄ± */
 .viz-dashboard-grid.template-single {
     grid-template-columns: 1fr;
 }
@@ -8222,7 +8222,7 @@ body.day-mode .viz-stat-value {
     grid-template-columns: repeat(3, 1fr);
 }
 
-/* Widget Boyut Göstergesi */
+/* Widget Boyut GÃ¶stergesi */
 .viz-widget-size-indicator {
     position: absolute;
     bottom: 5px;
@@ -8255,7 +8255,7 @@ body.day-mode .viz-stat-value {
     opacity: 1;
 }
 
-/* Renk Paleti Önizleme */
+/* Renk Paleti Ã–nizleme */
 .viz-palette-preview {
     display: flex;
     gap: 3px;
@@ -8268,7 +8268,7 @@ body.day-mode .viz-stat-value {
     border-radius: 3px;
 }
 
-/* Tooltip Format Seçici */
+/* Tooltip Format SeÃ§ici */
 .viz-tooltip-options {
     display: flex;
     gap: 8px;
@@ -8291,7 +8291,7 @@ body.day-mode .viz-stat-value {
     color: #fff;
 }
 
-/* Dashboard Şablon Butonları */
+/* Dashboard Åablon ButonlarÄ± */
 .viz-template-buttons {
     display: flex;
     gap: 8px;
@@ -8323,7 +8323,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   UYARI VE PROGRESS STİLLERİ (Sprint 6)
+   UYARI VE PROGRESS STÄ°LLERÄ° (Sprint 6)
    ===================================================== */
 
 .viz-warnings-container {
@@ -8515,7 +8515,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   İSTATİSTİK VE VERİ YÖNETİMİ BUTONLARI (Sprint 8)
+   Ä°STATÄ°STÄ°K VE VERÄ° YÃ–NETÄ°MÄ° BUTONLARI (Sprint 8)
    ===================================================== */
 
 .viz-stat-buttons,
@@ -8690,7 +8690,7 @@ body.day-mode .viz-stat-value {
     background: var(--gm-primary-hover);
 }
 
-/* Sol Panel Düzeltmeleri */
+/* Sol Panel DÃ¼zeltmeleri */
 .viz-left-pane {
     max-height: calc(100vh - 80px) !important;
     overflow-y: auto !important;
@@ -8710,7 +8710,7 @@ body.day-mode .viz-stat-value {
     border-radius: 3px;
 }
 
-/* Sütun Listesi Tipler İle */
+/* SÃ¼tun Listesi Tipler Ä°le */
 .viz-column-item-full {
     display: flex;
     align-items: center;
@@ -8762,10 +8762,10 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   SPRINT 10: SÜRÜKLE-BIRAK İSTATİSTİK & VERİ YÖNETİMİ STİLLERİ
+   SPRINT 10: SÃœRÃœKLE-BIRAK Ä°STATÄ°STÄ°K & VERÄ° YÃ–NETÄ°MÄ° STÄ°LLERÄ°
    ===================================================== */
 
-/* Sürükle ipucu */
+/* SÃ¼rÃ¼kle ipucu */
 .viz-drag-hint {
     font-size: 0.65rem;
     color: var(--gm-text-muted);
@@ -8773,7 +8773,7 @@ body.day-mode .viz-stat-value {
     opacity: 0.7;
 }
 
-/* Sürüklenebilir stat butonları */
+/* SÃ¼rÃ¼klenebilir stat butonlarÄ± */
 .viz-stat-draggable {
     cursor: grab;
     transition: all 0.2s;
@@ -9050,7 +9050,7 @@ body.day-mode .viz-stat-value {
     padding: 20px;
 }
 
-/* Harita Grafik Butonları */
+/* Harita Grafik ButonlarÄ± */
 .viz-chart-map {
     background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(52, 152, 219, 0.1));
     border: 1px solid rgba(46, 204, 113, 0.3);
@@ -9061,7 +9061,7 @@ body.day-mode .viz-stat-value {
     border-color: #27ae60;
 }
 
-/* Veri Yönetimi Buton Grid */
+/* Veri YÃ¶netimi Buton Grid */
 .viz-data-actions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -9093,7 +9093,7 @@ body.day-mode .viz-stat-value {
     color: var(--gm-primary);
 }
 
-/* İstatistik Buton Grid */
+/* Ä°statistik Buton Grid */
 .viz-stat-buttons {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -9135,7 +9135,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   SPRINT 13: YENİ ÖZELLİK STİLLERİ
+   SPRINT 13: YENÄ° Ã–ZELLÄ°K STÄ°LLERÄ°
    ===================================================== */
 
 /* 5.19 - Watermark Stilleri */
@@ -9180,7 +9180,7 @@ body.day-mode .viz-stat-value {
     object-fit: contain;
 }
 
-/* 8.8 - Video Yardım Stilleri */
+/* 8.8 - Video YardÄ±m Stilleri */
 .viz-video-help {
     display: flex;
     gap: 15px;
@@ -9338,7 +9338,7 @@ body.day-mode .viz-stat-value {
     border-bottom: none;
 }
 
-/* Modal Form içindeki hr */
+/* Modal Form iÃ§indeki hr */
 .viz-modal-form hr {
     border: none;
     border-top: 1px solid var(--gm-divider);
@@ -9369,7 +9369,7 @@ body.day-mode .viz-stat-value {
 }
 
 /* =====================================================
-   OPRADOX VISUAL STUDIO - UX İYİLEŞTİRMELER
+   OPRADOX VISUAL STUDIO - UX Ä°YÄ°LEÅTÄ°RMELER
    ===================================================== */
 
 /* Google Fonts - Modern Font */
@@ -9380,14 +9380,14 @@ body {
     font-family: 'Inter', 'Outfit', var(--gm-font);
 }
 
-/* Sağ Panel Scroll Fix */
+/* SaÄŸ Panel Scroll Fix */
 .viz-right-pane {
     overflow-y: auto !important;
     height: 100%;
     max-height: calc(100vh - var(--header-h) - 40px);
 }
 
-/* Widget Resize Özelliği */
+/* Widget Resize Ã–zelliÄŸi */
 .viz-chart-widget,
 .gm-widget {
     resize: both !important;
@@ -9495,7 +9495,7 @@ body.day-mode .viz-card-glass {
 }
 
 /* =====================================================
-   PDF ÖNİZLEME MODAL STİLLERİ
+   PDF Ã–NÄ°ZLEME MODAL STÄ°LLERÄ°
    ===================================================== */
 
 .viz-pdf-preview-modal {
@@ -9594,7 +9594,7 @@ body.day-mode .viz-card-glass {
 }
 
 /* =====================================================
-   AURORA ARKA PLAN ANİMASYONU (Opsiyonel)
+   AURORA ARKA PLAN ANÄ°MASYONU (Opsiyonel)
    ===================================================== */
 
 .aurora-bg {
@@ -9629,7 +9629,7 @@ body.day-mode .viz-card-glass {
 }
 
 /* =====================================================
-   İSTATİSTİK TEST SONUÇ STİLLERİ
+   Ä°STATÄ°STÄ°K TEST SONUÃ‡ STÄ°LLERÄ°
    ===================================================== */
 
 .viz-stat-modal-overlay {
@@ -9671,7 +9671,7 @@ body.day-mode .viz-card-glass {
     max-height: calc(80vh - 120px);
 }
 
-/* P-Value güzelleştirmesi */
+/* P-Value gÃ¼zelleÅŸtirmesi */
 .viz-p-highlight {
     display: inline-block;
     padding: 4px 12px;
@@ -9693,7 +9693,7 @@ body.day-mode .viz-card-glass {
 }
 
 /* =====================================================
-   DATASET SEÇİCİ STİLLERİ
+   DATASET SEÃ‡Ä°CÄ° STÄ°LLERÄ°
    ===================================================== */
 
 #vizDatasetSelectorWrapper {
@@ -9921,10 +9921,10 @@ body {
 }
 
 /* =====================================================
-   VIZ STUDIO - SAĞ PANEL SCROLL ve STAT WİDGET STİLLERİ
+   VIZ STUDIO - SAÄ PANEL SCROLL ve STAT WÄ°DGET STÄ°LLERÄ°
    ===================================================== */
 
-/* Sağ Panel Scroll */
+/* SaÄŸ Panel Scroll */
 .viz-right-pane {
     height: calc(100vh - 80px) !important;
     max-height: calc(100vh - 80px) !important;
@@ -9934,7 +9934,7 @@ body {
     padding-right: 10px;
 }
 
-/* İçerideki settings card da scroll edilebilir olsun */
+/* Ä°Ã§erideki settings card da scroll edilebilir olsun */
 .viz-right-pane .viz-settings-card {
     height: 100%;
     max-height: calc(100vh - 100px);
@@ -10141,10 +10141,10 @@ body {
 }
 
 /* =====================================================
-   WİDGET AKSIYON MENÜSÜ ve BOYUTLANDIRMA
+   WÄ°DGET AKSIYON MENÃœSÃœ ve BOYUTLANDIRMA
    ===================================================== */
 
-/* Widget Dropdown Menü */
+/* Widget Dropdown MenÃ¼ */
 .viz-widget-menu {
     background: var(--gm-card-bg);
     border: 1px solid var(--gm-card-border);
@@ -10239,7 +10239,7 @@ body {
 }
 
 /* =====================================================
-   GRAFİK WİDGET ESNEK BOYUTLANDIRMA  
+   GRAFÄ°K WÄ°DGET ESNEK BOYUTLANDIRMA  
    ===================================================== */
 
 /* Widget flexbox layout */
@@ -10250,7 +10250,7 @@ body {
     min-height: 150px;
 }
 
-/* Header sabit yükseklik */
+/* Header sabit yÃ¼kseklik */
 .viz-widget-header {
     flex-shrink: 0;
     height: 40px;
@@ -10260,7 +10260,7 @@ body {
     padding: 0 12px;
 }
 
-/* Chart container esnek yükseklik - WIDGET BÜYÜKLÜĞÜNE GÖRE */
+/* Chart container esnek yÃ¼kseklik - WIDGET BÃœYÃœKLÃœÄÃœNE GÃ–RE */
 .viz-widget-chart {
     flex: 1;
     min-height: 100px;
@@ -10269,7 +10269,7 @@ body {
 }
 
 /* =====================================================
-   DASHBOARD UI İYİLEŞTİRMELERİ
+   DASHBOARD UI Ä°YÄ°LEÅTÄ°RMELERÄ°
    ===================================================== */
 
 /* 1. Dashboard Dot Grid Arka Plan */
@@ -10282,7 +10282,7 @@ body {
     overflow-y: auto;
 }
 
-/* 2. Floating Header - Başlık kartın üstünde yüzüyor */
+/* 2. Floating Header - BaÅŸlÄ±k kartÄ±n Ã¼stÃ¼nde yÃ¼zÃ¼yor */
 .viz-chart-widget {
     margin-top: 20px;
     overflow: visible !important;
@@ -10340,7 +10340,7 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* 3. Boş Durum (Empty State) - Sadece arka plan, çerçeve yok */
+/* 3. BoÅŸ Durum (Empty State) - Sadece arka plan, Ã§erÃ§eve yok */
 .viz-empty-canvas {
     display: flex;
     flex-direction: column;
@@ -10378,7 +10378,7 @@ body {
 }
 
 /* =====================================================
-   GÜNDÜZ MODU FLOATING HEADER
+   GÃœNDÃœZ MODU FLOATING HEADER
    ===================================================== */
 
 body.day-mode .viz-chart-widget .viz-widget-header {
@@ -10391,13 +10391,13 @@ body.day-mode .viz-stat-widget .viz-widget-header {
     box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
 }
 
-/* Dashboard grid gündüz modunda */
+/* Dashboard grid gÃ¼ndÃ¼z modunda */
 body.day-mode .viz-dashboard-grid {
     background-image: radial-gradient(circle, rgba(37, 99, 235, 0.12) 1px, transparent 1px);
 }
 
 /* =====================================================
-   VARSAYILAN GRAFİK BOYUTU (Daha Yüksek)
+   VARSAYILAN GRAFÄ°K BOYUTU (Daha YÃ¼ksek)
    ===================================================== */
 
 .viz-chart-widget {
@@ -10412,7 +10412,7 @@ body.day-mode .viz-dashboard-grid {
    STAT WIDGET PARAMETRE KONTROLLER
    ===================================================== */
 
-/* Widget action butonları */
+/* Widget action butonlarÄ± */
 .viz-widget-actions {
     display: flex;
     align-items: center;
@@ -10517,7 +10517,7 @@ body.day-mode .viz-dashboard-grid {
     font-size: 0.75rem;
 }
 
-/* Gündüz modunda stat params */
+/* GÃ¼ndÃ¼z modunda stat params */
 body.day-mode .viz-stat-params {
     background: rgba(0, 0, 0, 0.03);
 }
@@ -10527,7 +10527,7 @@ body.day-mode .viz-param-group select {
 }
 
 /* =====================================================
-   YENİ UI TİPLERİ İÇİN STİLLER (Phase 2)
+   YENÄ° UI TÄ°PLERÄ° Ä°Ã‡Ä°N STÄ°LLER (Phase 2)
    ===================================================== */
 
 /* Multi-select checkbox grid (TYPE_B: Correlation, PCA, etc.) */
@@ -11210,7 +11210,7 @@ body.day-mode .gm-sheet-selector {
 }
 
 /* ===================================================== 
-   EXCEL STUDIO v2 - SENARYO KARTLARI VE PRO KART STİLLERİ 
+   EXCEL STUDIO v2 - SENARYO KARTLARI VE PRO KART STÄ°LLERÄ° 
 ===================================================== */
 
 /* Sol Sidebar */
@@ -11331,7 +11331,7 @@ body.day-mode .gm-sheet-selector {
     padding-top: 0;
 }
 
-/* Senaryo Kartları */
+/* Senaryo KartlarÄ± */
 .gm-excel-scenario-card {
     display: flex;
     align-items: center;
@@ -11519,7 +11519,7 @@ body.day-mode .gm-excel-scenario-card.active {
 }
 
 /* =====================================================
-   EXCEL STUDIO - YATAY DOSYA YÜKLEME DÜZENİ
+   EXCEL STUDIO - YATAY DOSYA YÃœKLEME DÃœZENÄ°
 ===================================================== */
 
 /* Files section - no scroll, flex shrink disabled */
@@ -11535,7 +11535,7 @@ body.day-mode .gm-excel-scenario-card.active {
     overflow: hidden;
 }
 
-/* Collapsible Header - tıklanabilir */
+/* Collapsible Header - tÄ±klanabilir */
 .gm-files-header {
     display: flex;
     align-items: center;
@@ -11608,7 +11608,7 @@ body.day-mode .gm-excel-scenario-card.active {
     transform: rotate(180deg);
 }
 
-/* File Badges - collapsed durumda görünür */
+/* File Badges - collapsed durumda gÃ¶rÃ¼nÃ¼r */
 .gm-file-badges {
     display: none;
     gap: 8px;
@@ -11668,7 +11668,7 @@ body.day-mode .gm-file-badge-secondary {
     background: rgba(139, 92, 246, 0.08);
 }
 
-/* Ana konteyner - Flexbox yatay düzen */
+/* Ana konteyner - Flexbox yatay dÃ¼zen */
 .gm-file-row {
     display: flex;
     flex-direction: row;
@@ -11677,7 +11677,7 @@ body.day-mode .gm-file-badge-secondary {
     max-height: 140px;
 }
 
-/* Her kolon için temel stil */
+/* Her kolon iÃ§in temel stil */
 .gm-file-col {
     flex: 1;
     min-width: 0;
@@ -11690,7 +11690,7 @@ body.day-mode .gm-file-badge-secondary {
     overflow: hidden;
 }
 
-/* gm-file-info - hem kolon hem bilgi paneli olarak çalışır */
+/* gm-file-info - hem kolon hem bilgi paneli olarak Ã§alÄ±ÅŸÄ±r */
 .gm-file-col.gm-file-info {
     flex: 1;
     min-width: 200px;
@@ -11729,7 +11729,7 @@ body.day-mode .gm-file-badge-secondary {
     scrollbar-width: thin;
 }
 
-/* Dosya yükleme kolonları */
+/* Dosya yÃ¼kleme kolonlarÄ± */
 .gm-file-upload-col {
     flex: 0 0 160px;
     max-width: 180px;
@@ -11749,7 +11749,7 @@ body.day-mode .gm-file-badge-secondary {
     margin-bottom: 4px !important;
 }
 
-/* Dosya bilgi kolonları - scroll destekli */
+/* Dosya bilgi kolonlarÄ± - scroll destekli */
 .gm-file-info-col {
     flex: 1;
     min-width: 200px;
@@ -11785,7 +11785,7 @@ body.day-mode .gm-file-badge-secondary {
     line-height: 1.3;
 }
 
-/* İstatistikler - yatay düzen */
+/* Ä°statistikler - yatay dÃ¼zen */
 .gm-file-info-col .gm-info-stats {
     display: flex;
     gap: 12px;
@@ -11793,7 +11793,7 @@ body.day-mode .gm-file-badge-secondary {
     font-size: 0.8rem;
 }
 
-/* Sütun chip'leri - yatay scroll */
+/* SÃ¼tun chip'leri - yatay scroll */
 .gm-file-info-col .gm-column-chips {
     display: flex;
     flex-wrap: wrap;
@@ -11803,7 +11803,7 @@ body.day-mode .gm-file-badge-secondary {
     scrollbar-width: thin;
 }
 
-/* İkinci dosya kolonu - toggle butonu */
+/* Ä°kinci dosya kolonu - toggle butonu */
 .gm-file-col-secondary {
     background: transparent;
     border: 1px dashed var(--gm-card-border);
@@ -11826,18 +11826,18 @@ body.day-mode .gm-file-badge-secondary {
     padding: 8px;
 }
 
-/* Tek dosya durumunda genişleme */
+/* Tek dosya durumunda geniÅŸleme */
 .gm-file-row:has(.gm-file-col:nth-child(2):not([style*="display: none"])):not(:has(.gm-file-col:nth-child(4):not([style*="display: none"]))) .gm-file-info-col:first-of-type {
     flex: 2;
 }
 
-/* Panel görünür olduğunda kolon ayarları */
+/* Panel gÃ¶rÃ¼nÃ¼r olduÄŸunda kolon ayarlarÄ± */
 .gm-file-col[style*="display: flex"],
 .gm-file-col:not([style*="display: none"]):not([style*="display:none"]) {
     display: flex;
 }
 
-/* Dört kolon görünürken eşit dağılım */
+/* DÃ¶rt kolon gÃ¶rÃ¼nÃ¼rken eÅŸit daÄŸÄ±lÄ±m */
 .gm-file-row:has(.gm-file-col:nth-child(4):not([style*="display: none"])) .gm-file-info-col {
     flex: 1;
 }
@@ -11852,7 +11852,7 @@ body.day-mode .gm-file-badge-secondary {
     font-size: 1rem;
 }
 
-/* Responsive - mobil için dikey düzen */
+/* Responsive - mobil iÃ§in dikey dÃ¼zen */
 @media (max-width: 900px) {
     .gm-file-row {
         flex-direction: column;
@@ -11880,10 +11880,10 @@ body.day-mode .gm-file-col-secondary {
 }
 
 /* =====================================================
-   YATAY BİLGİ PANELİ DÜZENİ (Not Sol, Veri Sağ)
+   YATAY BÄ°LGÄ° PANELÄ° DÃœZENÄ° (Not Sol, Veri SaÄŸ)
 ===================================================== */
 
-/* Yatay iç düzen */
+/* Yatay iÃ§ dÃ¼zen */
 .gm-file-info-horizontal {
     display: flex;
     flex-direction: row;
@@ -11891,7 +11891,7 @@ body.day-mode .gm-file-col-secondary {
     height: 100%;
 }
 
-/* Sol taraf - Kompakt açıklama notu (scroll yok) */
+/* Sol taraf - Kompakt aÃ§Ä±klama notu (scroll yok) */
 .gm-info-note-compact {
     flex: 0 0 auto;
     max-width: 180px;
@@ -11943,10 +11943,10 @@ body.day-mode .gm-file-col-secondary {
 }
 
 /* =====================================================
-   3 KOLONLU BİLGİ PANELİ DÜZENİ
+   3 KOLONLU BÄ°LGÄ° PANELÄ° DÃœZENÄ°
 ===================================================== */
 
-/* 3 kolonlu yatay düzen */
+/* 3 kolonlu yatay dÃ¼zen */
 .gm-file-info-3col {
     display: flex;
     flex-direction: row;
@@ -11954,7 +11954,7 @@ body.day-mode .gm-file-col-secondary {
     height: 100%;
 }
 
-/* Orta kolon - Sayfa Seçici + İstatistikler */
+/* Orta kolon - Sayfa SeÃ§ici + Ä°statistikler */
 .gm-info-stats-side {
     flex: 0 0 auto;
     min-width: 90px;
@@ -11990,7 +11990,7 @@ body.day-mode .gm-file-col-secondary {
     max-width: 100%;
 }
 
-/* Sağ kolon - Sütun Chip'leri + Önizleme */
+/* SaÄŸ kolon - SÃ¼tun Chip'leri + Ã–nizleme */
 .gm-info-chips-side {
     flex: 1 1 55%;
     display: flex;
@@ -12023,10 +12023,10 @@ body.day-mode .gm-file-col-secondary {
 }
 
 /* =====================================================
-   İKİNCİ DOSYA TOGGLE GİZLEME KURALI
+   Ä°KÄ°NCÄ° DOSYA TOGGLE GÄ°ZLEME KURALI
 ===================================================== */
 
-/* secondFileWrapper görünür olduğunda (display:block veya display:flex) toggle gizle */
+/* secondFileWrapper gÃ¶rÃ¼nÃ¼r olduÄŸunda (display:block veya display:flex) toggle gizle */
 .gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display: block"]) .gm-second-file-toggle,
 .gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display:block"]) .gm-second-file-toggle,
 .gm-file-col-secondary:has(.gm-second-file-wrapper[style*="display: flex"]) .gm-second-file-toggle,
@@ -12034,7 +12034,7 @@ body.day-mode .gm-file-col-secondary {
     display: none !important;
 }
 
-/* Toggle varsayılan görünüm */
+/* Toggle varsayÄ±lan gÃ¶rÃ¼nÃ¼m */
 .gm-file-col-secondary .gm-second-file-toggle {
     display: flex;
     align-items: center;
@@ -12044,10 +12044,10 @@ body.day-mode .gm-file-col-secondary {
 }
 
 /* =====================================================
-   VS-STYLE ÖNİZLEME BAR
+   VS-STYLE Ã–NÄ°ZLEME BAR
 ===================================================== */
 
-/* Preview bar - panel altında tam genişlik */
+/* Preview bar - panel altÄ±nda tam geniÅŸlik */
 .gm-preview-bar {
     display: flex;
     align-items: center;
@@ -12092,7 +12092,7 @@ body.day-mode .gm-file-col-secondary {
     opacity: 0.8;
 }
 
-/* Info panel düzeni - flex column */
+/* Info panel dÃ¼zeni - flex column */
 .gm-file-info-col {
     display: flex;
     flex-direction: column;
@@ -12102,7 +12102,7 @@ body.day-mode .gm-file-col-secondary {
     flex: 1;
 }
 
-/* Day mode için preview bar */
+/* Day mode iÃ§in preview bar */
 body.day-mode .gm-preview-bar {
     background: linear-gradient(180deg, rgba(74, 144, 217, 0.06) 0%, rgba(74, 144, 217, 0.01) 100%);
 }
@@ -12120,7 +12120,7 @@ body.day-mode .gm-preview-btn:hover {
 }
 
 /* =====================================================
-   İKİNCİ DOSYA BUTONLARI
+   Ä°KÄ°NCÄ° DOSYA BUTONLARI
 ===================================================== */
 
 /* Butonlar konteyneri */
@@ -12162,7 +12162,7 @@ body.day-mode .gm-crosssheet-toggle {
 }
 
 /* =====================================================
-   EXCEL TOAST BİLDİRİM
+   EXCEL TOAST BÄ°LDÄ°RÄ°M
 ===================================================== */
 .gm-excel-toast {
     position: fixed;
@@ -12209,7 +12209,7 @@ body.day-mode .gm-excel-toast {
 }
 
 /* =====================================================
-   TEMA UYUMLU SCROLLBAR STİLLERİ
+   TEMA UYUMLU SCROLLBAR STÄ°LLERÄ°
 ===================================================== */
 
 /* Dark mode scrollbar */
@@ -12448,7 +12448,7 @@ body.day-mode .gm-files-body {
     display: flex;
 }
 
-/* Blok stilini kategori i�inde biraz k���lt */
+/* Blok stilini kategori içinde biraz küçült */
 .vb-category-blocks .vb-palette-block {
     padding: 8px 10px;
 }
@@ -12459,7 +12459,7 @@ body.day-mode .gm-files-body {
     font-size: 0.8rem;
 }
 
-/* Orta Panel - Canvas (İşlem Zinciri) */
+/* Orta Panel - Canvas (Ä°ÅŸlem Zinciri) */
 .vb-canvas {
     background: rgba(255, 255, 255, 0.02);
     border: 2px dashed var(--gm-card-border);
@@ -12620,7 +12620,7 @@ body.day-mode .gm-files-body {
     width: 100%;
 }
 
-/* Sağ Panel - Ayarlar */
+/* SaÄŸ Panel - Ayarlar */
 .vb-settings {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--gm-card-border);
@@ -12763,7 +12763,7 @@ body.day-mode .gm-files-body {
     color: var(--gm-text);
 }
 
-/* Form Section (VLOOKUP gibi karmaşık bloklar için) */
+/* Form Section (VLOOKUP gibi karmaÅŸÄ±k bloklar iÃ§in) */
 .vb-form-section {
     font-size: 0.75rem;
     color: var(--gm-text-muted);
@@ -12773,10 +12773,10 @@ body.day-mode .gm-files-body {
 }
 
 /* =====================================================
-   MODERN İKON STİLLERİ (Yarı-şeffaf glassmorphism)
+   MODERN Ä°KON STÄ°LLERÄ° (YarÄ±-ÅŸeffaf glassmorphism)
    ===================================================== */
 
-/* Visual Builder Palet İkonları - Yarı-şeffaf Modern Stil */
+/* Visual Builder Palet Ä°konlarÄ± - YarÄ±-ÅŸeffaf Modern Stil */
 .vb-palette-icon {
     width: 36px;
     height: 36px;
@@ -12785,7 +12785,7 @@ body.day-mode .gm-files-body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    /* Yarı-şeffaf arka plan - renk korunuyor ama arkası görünüyor */
+    /* YarÄ±-ÅŸeffaf arka plan - renk korunuyor ama arkasÄ± gÃ¶rÃ¼nÃ¼yor */
     background: rgba(74, 144, 217, 0.15) !important;
     border: 1px solid rgba(74, 144, 217, 0.25);
     backdrop-filter: blur(4px);
@@ -12795,17 +12795,17 @@ body.day-mode .gm-files-body {
     transition: all 0.2s ease;
 }
 
-/* Hover efekti - daha belirgin ama yine şeffaf */
+/* Hover efekti - daha belirgin ama yine ÅŸeffaf */
 .vb-palette-block:hover .vb-palette-icon {
     background: rgba(74, 144, 217, 0.25) !important;
     border-color: rgba(74, 144, 217, 0.4);
     box-shadow: 0 2px 8px rgba(74, 144, 217, 0.2);
 }
 
-/* Senaryo Liste İkonları - Yarı-şeffaf Glassmorphism Stil */
-/* TÜM inline style'ları override etmek için en yüksek spesifiklik */
+/* Senaryo Liste Ä°konlarÄ± - YarÄ±-ÅŸeffaf Glassmorphism Stil */
+/* TÃœM inline style'larÄ± override etmek iÃ§in en yÃ¼ksek spesifiklik */
 
-/* Sol panel içindeki TÜM ikon spanları */
+/* Sol panel iÃ§indeki TÃœM ikon spanlarÄ± */
 .gm-left-pane span[style],
 .gm-scenarios-section span[style],
 .gm-accordion-container span[style],
@@ -12830,22 +12830,25 @@ button[data-scenario]:hover span[style] {
     box-shadow: 0 2px 8px rgba(74, 144, 217, 0.2) !important;
 }
 
-/* İkon içindeki Font Awesome ikonları için renk */
+/* Ä°kon iÃ§indeki Font Awesome ikonlarÄ± iÃ§in renk */
 .gm-left-pane span[style] i,
 .gm-scenarios-section span[style] i {
     color: var(--gm-primary) !important;
 }
 
 /* =====================================================
-   VIZ-TOAST STİLLERİ (viz.html ile aynı)
+   VIZ-TOAST STÄ°LLERÄ° (viz.html ile aynÄ±)
    ===================================================== */
 
 .viz-toast {
     position: fixed;
-    top: 20px;
+    top: auto;
+    bottom: 20px;
     right: 20px;
     min-width: 280px;
     max-width: 400px;
+    height: auto !important;
+    max-height: 15vh;
     padding: 14px 20px;
     border-radius: 8px;
     display: flex;
@@ -13027,9 +13030,9 @@ body.day-mode .op-toast {
     overflow-y: auto;
     max-height: calc(100vh - 420px);
     min-height: 200px;
-    /* Koruma: Mobilde/k���k ekranda �ok k���lmesin */
+    /* Koruma: Mobilde/küçük ekranda çok küçülmesin */
     padding-right: 5px;
-    /* Scrollbar i�in bo�luk */
+    /* Scrollbar için boşluk */
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
@@ -13159,12 +13162,12 @@ body:not(.day-mode) .vb-block-icon i {
 
 
 /* ===== HELP TOGGLE BUTTON - MODERN STYLE ===== */
-/* Buton sa� panelin i�inde, sa� �st k��ede duracak */
+/* Buton sağ panelin içinde, sağ üst köşede duracak */
 .gm-help-toggle-btn {
     position: fixed;
     top: 80px;
     right: 320px;
-    /* Sa� panel geni�li�inin biraz i�inde */
+    /* Sağ panel genişliğinin biraz içinde */
     z-index: 1002;
     background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
     border: none;
@@ -13190,24 +13193,24 @@ body:not(.day-mode) .vb-block-icon i {
     box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
 }
 
-/* Panel A�IKKEN toggle butonunu G�ZLE - sadece X g�r�ns�n */
+/* Panel AÇIKKEN toggle butonunu GİZLE - sadece X görünsün */
 .gm-main:not(.help-collapsed):not(.excel-help-closed) .gm-help-toggle-btn {
     opacity: 0;
     pointer-events: none;
     transform: scale(0.8);
 }
 
-/* Panel KAPALIYKEN toggle butonu g�r�n�r ve biraz sola kayar */
+/* Panel KAPALIYKEN toggle butonu görünür ve biraz sola kayar */
 .gm-main.help-collapsed .gm-help-toggle-btn,
 .gm-main.excel-help-closed .gm-help-toggle-btn {
     opacity: 1;
     pointer-events: auto;
     right: 25px;
-    /* Panel kapal�yken sa� duvara yak�n */
+    /* Panel kapalıyken sağ duvara yakın */
 }
 
 /* ===== TEXT OVERFLOW - LINE CLAMP (sadece native title tooltip kullan) ===== */
-/* Senaryo listesi - ba�l�k */
+/* Senaryo listesi - başlık */
 .gm-excel-scenario-card h4,
 .gm-scenario-item h4 {
     display: -webkit-box;
@@ -13219,7 +13222,7 @@ body:not(.day-mode) .vb-block-icon i {
     max-height: 2.6em;
 }
 
-/* Senaryo listesi - a��klama */
+/* Senaryo listesi - açıklama */
 .gm-excel-scenario-card p,
 .gm-scenario-item p {
     display: -webkit-box;
@@ -13245,7 +13248,7 @@ body:not(.day-mode) .vb-block-icon i {
     max-height: 1.2em;
 }
 
-/* Blok paleti - a��klama */
+/* Blok paleti - açıklama */
 .vb-palette-info span:last-child,
 .vb-palette-block .vb-palette-info>span:last-of-type {
     display: -webkit-box;
@@ -13259,10 +13262,10 @@ body:not(.day-mode) .vb-block-icon i {
     color: var(--gm-text-muted);
 }
 
-/* NOT: Hover ::after tooltip KALDIRILDI - sadece native title tooltip kullan�l�yor */
+/* NOT: Hover ::after tooltip KALDIRILDI - sadece native title tooltip kullanılıyor */
 
 /* ===== HELP PANEL STICKY HEADER ===== */
-/* K�lavuz paneli kayd�r�ld���nda ba�l�k ve X butonu sabit kal�r */
+/* Kılavuz paneli kaydırıldığında başlık ve X butonu sabit kalır */
 .gm-help-card {
     position: relative;
     max-height: calc(100vh - 120px);
@@ -13517,7 +13520,7 @@ body.day-mode .gm-preview-table tbody tr:nth-child(even) {
     background: rgba(0, 0, 0, 0.02);
 }
 
-/* Preview Button (�al��t�r yan�nda) */
+/* Preview Button (Çalıştır yanında) */
 .preview-btn {
     display: inline-flex;
     align-items: center;
@@ -13545,7 +13548,7 @@ body.day-mode .gm-preview-table tbody tr:nth-child(even) {
     cursor: not-allowed;
 }
 
-/* ===== PREMIUM FEATURE CARD - RAPOR ST�DYOSU PRO ===== */
+/* ===== PREMIUM FEATURE CARD - RAPOR STÜDYOSU PRO ===== */
 .gm-feature-card {
     position: relative;
     margin: 12px 0 16px 0;
@@ -13925,7 +13928,7 @@ body.day-mode .gm-source-hint--warning {
     gap: 14px;
 }
 
-.opx-modal-highlight > i {
+.opx-modal-highlight>i {
     color: var(--gm-primary, #4a90d9);
     font-size: 1.2rem;
     margin-top: 2px;
@@ -14114,7 +14117,7 @@ body.day-mode .opx-modal-lead {
     .opx-modal {
         align-items: flex-end;
     }
-    
+
     .opx-modal-container {
         width: 100%;
         max-width: 100%;
@@ -14122,16 +14125,16 @@ body.day-mode .opx-modal-lead {
         border-radius: 24px 24px 0 0;
         transform: translateY(100%);
     }
-    
+
     .opx-modal.opx-modal-open .opx-modal-container {
         transform: translateY(0);
     }
-    
+
     .opx-modal-header {
         padding: 20px;
         position: relative;
     }
-    
+
     .opx-modal-header::before {
         content: '';
         position: absolute;
@@ -14143,11 +14146,11 @@ body.day-mode .opx-modal-lead {
         background: var(--gm-divider, #334155);
         border-radius: 2px;
     }
-    
+
     .opx-modal-body {
         padding: 20px;
     }
-    
+
     .opx-contact-btn {
         width: 100%;
     }
@@ -14177,15 +14180,28 @@ body.day-mode .footer-logo-light {
 
 /* UPDATED LOGO ADJUSTMENTS */
 .footer-logo {
-    height: 48px !important; /* Larger size */
+    height: 48px !important;
+    /* Larger size */
     width: auto !important;
     margin-left: 15px !important;
     vertical-align: middle;
     object-fit: contain;
 }
-.opx-input-group { margin-bottom: 15px; text-align: left; }
-.opx-input-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
-.opx-input-group input, .opx-input-group textarea {
+
+.opx-input-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.opx-input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.opx-input-group input,
+.opx-input-group textarea {
     width: 100%;
     padding: 10px;
     border-radius: 6px;
@@ -14193,8 +14209,17 @@ body.day-mode .footer-logo-light {
     background: var(--gm-bg-alt, #fff);
     color: var(--gm-text, #333);
 }
-.opx-contact-secondary { margin-top: 10px; font-size: 0.9em; opacity: 0.8; }
-.opx-text-link { color: inherit; text-decoration: underline; }
+
+.opx-contact-secondary {
+    margin-top: 10px;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.opx-text-link {
+    color: inherit;
+    text-decoration: underline;
+}
 
 
 /* TIGHT FOOTER OVERRIDE */
@@ -14203,5 +14228,113 @@ body.day-mode .footer-logo-light {
     min-height: 50px !important;
     height: auto !important;
 }
-.footer-copy { line-height: 48px; } /* Center text vertically with the 48px logo */
 
+.footer-copy {
+    line-height: 48px;
+}
+
+/* Center text vertically with the 48px logo */
+
+
+/* =====================================================
+   CENTRAL TOAST SYSTEM (op-toast)
+   TÜM SAYFALAR İÇİN MERKEZİ TOAST STİLİ
+   Hub, Excel Studio, Visual Studio, PDF Tools, OCR
+   ORİJİNAL viz-toast stili (GitHub 0259a98)
+   ===================================================== */
+
+/* Toast Host Container - sağ alt köşe */
+.op-toast-host {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    pointer-events: none;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+/* Individual Toast Element - ORİJİNAL STİL */
+.op-toast {
+    pointer-events: auto;
+    position: relative;
+    padding: 14px 20px;
+    background: var(--gm-card-bg);
+    border: 1px solid var(--gm-card-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--gm-text);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    min-width: 280px;
+    max-width: 420px;
+}
+
+.op-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.op-toast.hide {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+/* Toast Types - Sol kenar renkli çizgi */
+.op-toast-success {
+    border-left: 4px solid var(--gm-success);
+}
+
+.op-toast-success .op-toast-message::before {
+    content: "✓ ";
+    color: var(--gm-success);
+}
+
+.op-toast-warning,
+.op-toast-warn {
+    border-left: 4px solid #ffc107;
+}
+
+.op-toast-warning .op-toast-message::before,
+.op-toast-warn .op-toast-message::before {
+    content: "⚠ ";
+    color: #ffc107;
+}
+
+.op-toast-info {
+    border-left: 4px solid var(--gm-primary);
+}
+
+.op-toast-info .op-toast-message::before {
+    content: "ℹ ";
+    color: var(--gm-primary);
+}
+
+.op-toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.op-toast-error .op-toast-message::before {
+    content: "✕ ";
+    color: #ef4444;
+}
+
+/* Light mode adjustments */
+body.day-mode .op-toast,
+body:not(.dark-mode) .op-toast {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Toast Message */
+.op-toast-message {
+    flex: 1;
+    line-height: 1.4;
+}

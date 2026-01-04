@@ -1,4 +1,4 @@
-console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
+﻿console.log("🔥 opradox app.js VERSION: 2024-12-14-v3 - FLAGS AND ICONS ENABLED");
 const BACKEND_BASE_URL = "http://127.0.0.1:8100"; // Direct backend URL for development
 
 let SCENARIO_CATALOG = {};
@@ -8,309 +8,6 @@ let UI_TEXTS = {};
 let CURRENT_LANG = "tr";
 let ACTIVE_SCENARIO_ID = null;
 let LAST_RESULT_DATA = null;
-
-// ===== UNIFIED TOAST NOTIFICATION SYSTEM =====
-// Global toast function - single source for all pages (Excel Studio, Visual Studio, etc.)
-const TOAST_MAX_VISIBLE = 3;
-const TOAST_QUEUE = [];
-let TOAST_ACTIVE_COUNT = 0;
-
-/**
- * Show a toast notification (bottom-right, stacking, no icons)
- * @param {string} message - Toast message text
- * @param {string} type - Toast type: 'success' | 'info' | 'warn' | 'error'
- * @param {number} duration - Duration in ms (default: 4000)
- */
-window.showToast = function (message, type = 'info', duration = 4000) {
-    // Ensure host container exists
-    let host = document.querySelector('.op-toast-host');
-    if (!host) {
-        host = document.createElement('div');
-        host.className = 'op-toast-host';
-        document.body.appendChild(host);
-    }
-
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = `op-toast op-toast-${type}`;
-    toast.innerHTML = `<span class="op-toast-message">${message}</span>`;
-
-    // Queue management - max 3 visible at once
-    if (TOAST_ACTIVE_COUNT >= TOAST_MAX_VISIBLE) {
-        // Remove oldest toast to make room
-        const oldestToast = host.querySelector('.op-toast.show');
-        if (oldestToast) {
-            dismissToast(oldestToast);
-        }
-    }
-
-    // Add to DOM
-    host.appendChild(toast);
-    TOAST_ACTIVE_COUNT++;
-
-    // Trigger show animation
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            toast.classList.add('show');
-        });
-    });
-
-    // Auto dismiss after duration
-    const dismissTimeout = setTimeout(() => {
-        dismissToast(toast);
-    }, duration);
-
-    // Store timeout for potential early dismissal
-    toast._dismissTimeout = dismissTimeout;
-
-    function dismissToast(t) {
-        if (t._dismissed) return;
-        t._dismissed = true;
-
-        clearTimeout(t._dismissTimeout);
-        t.classList.remove('show');
-        t.classList.add('hide');
-
-        setTimeout(() => {
-            if (t.parentNode) {
-                t.parentNode.removeChild(t);
-                TOAST_ACTIVE_COUNT = Math.max(0, TOAST_ACTIVE_COUNT - 1);
-            }
-        }, 300);
-    }
-
-    return toast;
-};
-
-// ===== RESULT DISPLAY SYSTEM =====
-// Global result display function - used by VisualBuilder and scenario execution
-// ===== RESULT DISPLAY SYSTEM =====
-// Global result display function - used by VisualBuilder and scenario execution
-window.displayResult = function (result) {
-    console.log("📊 displayResult called with:", result);
-
-    // Store for later use (share, feedback, etc.)
-    if (typeof LAST_RESULT_DATA !== 'undefined') {
-        window.LAST_RESULT_DATA = result;
-    }
-
-    const resultContainer = document.getElementById("resultJson");
-    const markdownResult = document.getElementById("markdownResult");
-    const downloadPlaceholder = document.getElementById("downloadExcelPlaceholder");
-    const statusMessage = document.getElementById("statusMessage");
-    const feedbackWidget = document.getElementById("inlineFeedbackWidget");
-
-    if (!resultContainer) {
-        console.error("resultJson container not found");
-        return;
-    }
-
-    // Clear previous content
-    if (statusMessage) statusMessage.innerHTML = '';
-    if (markdownResult) markdownResult.style.display = 'none';
-
-    const T = typeof EXTRA_TEXTS !== 'undefined' && typeof CURRENT_LANG !== 'undefined'
-        ? EXTRA_TEXTS[CURRENT_LANG] : {};
-
-    // --- 1. SUMMARY SECTION ---
-    // Try technical_details first, then summary, then fallback
-    const tech = result.technical_details || {};
-    const summ = result.summary || {};
-
-    // Helper for safe value display
-    const safeVal = (v, suffix = '') => (v !== undefined && v !== null && v !== '') ? `<strong>${v}</strong>${suffix}` : '—';
-
-    const inputRows = safeVal(tech.input_rows ?? summ["Girdi Satır Sayısı"] ?? summ["Input Rows"], ' ' + (T.info_rows || 'satır'));
-    const outputRows = safeVal(tech.output_rows ?? summ["Sonuç Satır Sayısı"] ?? summ["Output Rows"], ' ' + (T.info_rows || 'satır'));
-    const outputCols = safeVal(tech.output_columns ?? summ["Sonuç Sütun Sayısı"] ?? summ["Output Columns"], ' ' + (T.info_cols || 'sütun'));
-    const engine = safeVal(tech.engine ?? summ["Motor"] ?? result.engine);
-    const operations = tech.operations ? tech.operations.join(', ') : (summ["Yapılan İşlemler"] ?? summ["Operations"] ?? '—');
-
-    const summaryHtml = `
-        <div class="gm-result-success" style="padding:16px; background:rgba(16,185,129,0.1); border-radius:8px; margin-bottom:12px; border-left:3px solid #10b981;">
-            <h4 style="color:#10b981; margin:0 0 12px 0; font-size:1rem;">
-                <i class="fas fa-check-circle"></i> ${CURRENT_LANG === 'tr' ? 'İşlem Tamamlandı' : 'Operation Complete'}
-            </h4>
-            <ul style="list-style:none; padding:0; margin:0; color:var(--gm-text); font-size:0.9rem;">
-                <li style="margin-bottom:6px;">📥 ${CURRENT_LANG === 'tr' ? 'Girdi' : 'Input'}: ${inputRows}</li>
-                <li style="margin-bottom:6px;">📤 ${CURRENT_LANG === 'tr' ? 'Çıktı' : 'Output'}: ${outputRows}, ${outputCols}</li>
-                <li style="margin-bottom:6px;">⚙️ ${CURRENT_LANG === 'tr' ? 'İşlemler' : 'Operations'}: ${operations}</li>
-                <li style="margin-bottom:6px;">🔧 ${CURRENT_LANG === 'tr' ? 'Motor' : 'Engine'}: ${engine}</li>
-            </ul>
-        </div>
-    `;
-
-    // --- 2. DOWNLOAD BUTTONS (3 TYPES) ---
-    const backendUrl = typeof BACKEND_BASE_URL !== 'undefined' ? BACKEND_BASE_URL : '';
-    const dlUrl = (url) => url ? (url.startsWith('http') ? url : backendUrl + url) : null;
-
-    const excelUrl = dlUrl(result.download_url);
-    const csvUrl = dlUrl(result.csv_url);
-    const jsonUrl = dlUrl(result.json_url);
-
-    let downloadHtml = `<div class="gm-download-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;">`;
-
-    if (excelUrl) {
-        downloadHtml += `
-            <a href="${excelUrl}" class="gm-gradient-btn" download style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-size:0.85rem; padding:8px 16px;">
-                <i class="fas fa-file-excel"></i> ${T.download_excel || 'Excel Olarak İndir'}
-            </a>`;
-    }
-
-    if (csvUrl) {
-        downloadHtml += `
-            <a href="${csvUrl}" class="gm-pill-btn" download style="display:inline-flex; align-items:center; gap:6px;">
-                <i class="fas fa-file-csv"></i> CSV
-            </a>`;
-    }
-
-    if (jsonUrl) {
-        downloadHtml += `
-            <a href="${jsonUrl}" class="gm-pill-btn" download style="display:inline-flex; align-items:center; gap:6px;">
-                <i class="fas fa-file-code"></i> JSON
-            </a>`;
-    } else if (result.data) {
-        downloadHtml += `
-            <button onclick="downloadResultAsJson()" class="gm-pill-btn" style="display:inline-flex; align-items:center; gap:6px;">
-                 <i class="fas fa-file-code"></i> JSON
-            </button>`;
-    }
-
-    downloadHtml += `</div>`;
-
-    // --- 3. SHARE OPTIONS ---
-    const shareHtml = `
-        <div class="gm-share-section" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
-            <span style="font-size:0.85rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Paylaş:' : 'Share:'}</span>
-            <button onclick="copyResultLink()" class="gm-icon-btn is-sm" title="Link Kopyala"><i class="fas fa-link"></i></button>
-            <button onclick="shareViaEmail()" class="gm-icon-btn is-sm" title="Email"><i class="fas fa-envelope"></i></button>
-            <button onclick="copyResultSummary()" class="gm-icon-btn is-sm" title="Özet Kopyala"><i class="fas fa-copy"></i></button>
-        </div>
-    `;
-
-    // --- 4. PYTHON CODE SECTION ---
-    let codeHtml = '';
-    if (result.generated_python_code) {
-        codeHtml = `
-            <div class="gm-code-section" style="margin-top:16px; border:1px solid var(--gm-card-border); border-radius:8px; overflow:hidden;">
-                <div class="gm-code-header" style="padding:8px 12px; background:rgba(139,92,246,0.15); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:600; color:var(--gm-text); font-size:0.85rem;">
-                        <i class="fab fa-python" style="color:#3776ab;"></i> ${T.code_summary_title || 'Python Kodu'}
-                    </span>
-                    <button onclick="copyPythonCode()" class="gm-pill-btn" style="font-size:0.75rem; padding:4px 10px;">
-                        <i class="fas fa-copy"></i> ${T.copy_code || 'Kopyala'}
-                    </button>
-                </div>
-                <pre id="generatedPythonCode" style="margin:0; padding:12px; background:var(--gm-bg); font-size:0.8rem; overflow-x:auto; max-height:250px; overflow-y:auto;"><code class="language-python">${escapeHtml(result.generated_python_code)}</code></pre>
-            </div>
-        `;
-    }
-
-    // --- 5. NEW SCENARIO BUTTON ---
-    const newScenarioHtml = `
-        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--gm-card-border); display:flex; justify-content:space-between;">
-             <button onclick="clearResultAndReset()" class="gm-pill-btn" style="font-size:0.85rem; border:1px solid var(--gm-card-border);">
-                <i class="fas fa-undo"></i> ${CURRENT_LANG === 'tr' ? 'Seçimleri Temizle' : 'Reset Inputs'}
-            </button>
-            <button onclick="showScenarioList()" class="gm-gradient-btn" style="font-size:0.85rem;">
-                <i class="fas fa-plus"></i> ${CURRENT_LANG === 'tr' ? 'Yeni Senaryo Seç' : 'New Scenario'}
-            </button>
-        </div>
-    `;
-
-    // --- COMBINE ---
-    resultContainer.innerHTML = summaryHtml + downloadHtml + shareHtml + codeHtml + newScenarioHtml;
-    resultContainer.style.display = 'block';
-
-    // Show download text/button in placeholder logic if needed
-    if (downloadPlaceholder) {
-        downloadPlaceholder.innerHTML = '';
-    }
-
-    // Show feedback widget
-    if (feedbackWidget && typeof showInlineFeedbackWidget === 'function') {
-        showInlineFeedbackWidget();
-    } else if (feedbackWidget) {
-        feedbackWidget.style.display = 'block';
-    }
-
-    // --- HIGHLIGHT ---
-    if (typeof highlightPython === 'function') {
-        highlightPython();
-    } else if (typeof Prism !== 'undefined') {
-        Prism.highlightAllInside && Prism.highlightAllInside(resultContainer) || Prism.highlightAll();
-    }
-};
-
-// Start helpers for share/download
-window.downloadResultAsJson = function () {
-    if (!LAST_RESULT_DATA) return;
-    const blob = new Blob([JSON.stringify(LAST_RESULT_DATA, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `result_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-};
-
-window.copyResultLink = function () {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => showToast("Link kopyalandı", "success"));
-};
-
-window.shareViaEmail = function () {
-    window.open('mailto:?subject=Opradox Result&body=Check this out');
-};
-
-window.copyResultSummary = function () {
-    const text = document.querySelector('.gm-result-success')?.innerText || '';
-    navigator.clipboard.writeText(text).then(() => showToast("Özet kopyalandı", "success"));
-};
-
-window.showScenarioList = function () {
-    const scList = document.getElementById('scenarioListContainer');
-    if (scList) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    showToast("Yeni senaryo için listeden seçim yapın", "info");
-};
-
-// Helper: Escape HTML to prevent XSS
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Helper: Copy Python code to clipboard
-window.copyPythonCode = function () {
-    const codeEl = document.getElementById('generatedPythonCode');
-    if (codeEl) {
-        navigator.clipboard.writeText(codeEl.textContent).then(() => {
-            if (typeof showToast === 'function') {
-                showToast('✓ ' + (CURRENT_LANG === 'tr' ? 'Kod kopyalandı!' : 'Code copied!'), 'success', 2000);
-            }
-        });
-    }
-};
-
-// Helper: Clear result and reset for new scenario
-window.clearResultAndReset = function () {
-    const resultContainer = document.getElementById("resultJson");
-    const feedbackWidget = document.getElementById("inlineFeedbackWidget");
-
-    if (resultContainer) {
-        resultContainer.innerHTML = '// ' + (CURRENT_LANG === 'tr' ? 'Sonuçlar burada görünecek.' : 'Results will appear here.');
-        resultContainer.style.whiteSpace = 'pre';
-    }
-    if (feedbackWidget) {
-        feedbackWidget.style.display = 'none';
-    }
-
-    window.LAST_RESULT_DATA = null;
-};
 
 // UI İçin Sabit Metinler (Backend'den gelmeyenler)
 const EXTRA_TEXTS = {
@@ -457,9 +154,6 @@ const EXTRA_TEXTS = {
         "block_validate": "Doğrula",
         "block_window": "Rank / Pencere",
         "lbl_second_file_required": "Aynı veya farklı dosyadan seçim yapabilirsiniz",
-        "lbl_second_source_success": "Kaynak: {filename}",
-        "lbl_second_source_info": "İstersen aynı dosyadan farklı sayfa da seçebilirsin.",
-        "lbl_second_source_warning": "Bu senaryo ikinci kaynak gerektirir: 2. dosya yükle veya sayfa seç.",
         "lbl_second_file_ref": "İkinci dosyadan referans liste seçebilirsiniz",
         "lbl_main_file_col": "Ana Dosya Sütunu:",
         "lbl_second_file_col": "İkinci Dosya Sütunu:",
@@ -476,13 +170,6 @@ const EXTRA_TEXTS = {
         "validate_result": "📌 Sonuç: Yeni sütun eklenir → Geçerli / Geçersiz",
         "recommend_site": "Siteyi Tavsiye Et",
         "share_result": "Sonuç Paylaş",
-
-        // === Veri Kaynağı Seçici ===
-        "lbl_data_source": "Veri Kaynağı",
-        "data_source_primary": "Ana Dosya",
-        "data_source_secondary": "İkinci Dosya",
-        "data_source_crosssheet": "Aynı Dosyadan Farklı Sayfa",
-        "data_source_hint": "İkinci dosya yükleyin veya aynı dosyadan farklı sayfa seçin",
 
         // === YENİ ÖZELLİKLER (2024) ===
         // Koşullu Biçimlendirme
@@ -627,21 +314,7 @@ const EXTRA_TEXTS = {
         "new_cc_col1": "Birinci Sütun",
         "new_cc_col2": "İkinci Sütun",
         "new_cc_date1": "Başlangıç Tarihi Sütunu",
-        "new_cc_date2": "Bitiş Tarihi Sütunu",
-
-        // === EXCEL STUDIO V2 (2024-12) ===
-        "pro_title": "Özel Rapor Oluşturucu",
-        "pro_subtitle": "Sürükle, Bırak, Raporla",
-        "add_file": "Dosya Ekle",
-        "file_preview": "Önizleme",
-        "search_scenarios": "Senaryo ara...",
-        "active": "Aktif",
-        "help_placeholder": "Detaylar için senaryo seçin.",
-        "waiting_selection": "Seçim Bekleniyor...",
-        "results_placeholder": "// Sonuçlar burada görünecek.",
-        "step3_title": "Senaryo Ayarları",
-        "pro_coming_soon": "Visual Builder yakında aktif olacak!",
-        "new_file": "Yeni Dosya"
+        "new_cc_date2": "Bitiş Tarihi Sütunu"
     },
     "en": {
         "file_ph_1": "Select File / Drag & Drop",
@@ -812,9 +485,6 @@ const EXTRA_TEXTS = {
         "block_validate": "Validate",
         "block_window": "Rank / Window",
         "lbl_second_file_required": "You can select from the same or a different file",
-        "lbl_second_source_success": "Source: {filename}",
-        "lbl_second_source_info": "You can also pick another sheet from the same workbook.",
-        "lbl_second_source_warning": "This scenario requires a second source: upload a 2nd file or select a sheet.",
         "lbl_second_file_ref": "You can select a reference list from second file",
         "lbl_main_file_col": "Main File Column:",
         "lbl_second_file_col": "Second File Column:",
@@ -831,13 +501,6 @@ const EXTRA_TEXTS = {
         "validate_result": "📌 Result: New column added → Valid / Invalid",
         "recommend_site": "Recommend Site",
         "share_result": "Share Result",
-
-        // === Data Source Selector ===
-        "lbl_data_source": "Data Source",
-        "data_source_primary": "Main File",
-        "data_source_secondary": "Second File",
-        "data_source_crosssheet": "Different Sheet from Same File",
-        "data_source_hint": "Upload a second file or select a different sheet from the same file",
 
         // === NEW FEATURES (2024) ===
         // Conditional Formatting
@@ -960,21 +623,7 @@ const EXTRA_TEXTS = {
         "new_cc_col1": "First Column",
         "new_cc_col2": "Second Column",
         "new_cc_date1": "Start Date Column",
-        "new_cc_date2": "End Date Column",
-
-        // === EXCEL STUDIO V2 (2024-12) ===
-        "pro_title": "Custom Report Builder",
-        "pro_subtitle": "Drag, Drop, Report",
-        "add_file": "Add File",
-        "file_preview": "Preview",
-        "search_scenarios": "Search scenarios...",
-        "active": "Active",
-        "help_placeholder": "Select a scenario for details.",
-        "waiting_selection": "Waiting for selection...",
-        "results_placeholder": "// Results will appear here.",
-        "step3_title": "Scenario Settings",
-        "pro_coming_soon": "Visual Builder coming soon!",
-        "new_file": "New File"
+        "new_cc_date2": "End Date Column"
     }
 };
 
@@ -990,78 +639,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // Metinleri İlk Dile Göre Ayarla
     updateUITexts();
-
-    // ===== SENARYO ARAMA İŞLEYİCİSİ =====
-    const scenarioSearch = document.getElementById("scenarioSearch");
-    if (scenarioSearch) {
-        scenarioSearch.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase().trim();
-            const container = document.getElementById("scenarioListContainer");
-            if (!container) return;
-
-            const cards = container.querySelectorAll(".gm-excel-scenario-card");
-            const categories = container.querySelectorAll(".gm-excel-category-label");
-            const categoryVisibility = {};
-
-            // Tüm kartları filtrele
-            cards.forEach(card => {
-                const title = (card.dataset.title || "").toLowerCase();
-                const catKey = card.dataset.category || "";
-                const matches = query === "" || title.includes(query);
-
-                card.style.display = matches ? "" : "none";
-
-                // Kategori görünürlüğünü takip et
-                if (!categoryVisibility[catKey]) categoryVisibility[catKey] = false;
-                if (matches) categoryVisibility[catKey] = true;
-            });
-
-            // Kategori başlıklarını güncelle
-            categories.forEach(cat => {
-                const catKey = cat.dataset.category || "";
-                cat.style.display = categoryVisibility[catKey] ? "" : "none";
-            });
-        });
-    }
-
-    // ===== SÜRÜKLE-BIRAK DROP HANDLER =====
-    const middlePane = document.querySelector(".gm-middle-pane");
-    if (middlePane) {
-        middlePane.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            middlePane.classList.add("drag-over");
-        });
-
-        middlePane.addEventListener("dragleave", (e) => {
-            // Sadece pane dışına çıkıldığında kaldır
-            if (!middlePane.contains(e.relatedTarget)) {
-                middlePane.classList.remove("drag-over");
-            }
-        });
-
-        middlePane.addEventListener("drop", (e) => {
-            e.preventDefault();
-            middlePane.classList.remove("drag-over");
-
-            try {
-                const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-                if (data && data.id) {
-                    // Senaryo nesnesini bul
-                    const scenario = SCENARIO_LIST.find(sc => sc.id === data.id);
-                    if (scenario) {
-                        // Kartı bul ve seç
-                        const card = document.querySelector(`.gm-excel-scenario-card[data-id="${data.id}"]`);
-                        selectScenario(scenario, card);
-                        if (typeof showToast === "function") {
-                            showToast(`✅ ${scenario.title} seçildi`, "success", 2000);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Drop parse error:", err);
-            }
-        });
-    }
 
     // Veriyi Çek
     initApp();
@@ -1240,22 +817,12 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
         const data = await res.json();
         console.log(`✅ Backend: sheet="${data.active_sheet}" rows=${data.row_count} cols=${data.columns?.length} first="${data.columns?.[0]}"`);
 
-        // Dosya yükleme toast bildirimi
-        if (typeof showToast === 'function' && data.columns && data.row_count) {
-            const T = EXTRA_TEXTS[CURRENT_LANG];
-            const successMsg = CURRENT_LANG === 'tr'
-                ? `📁 ${data.row_count} satır, ${data.columns.length} sütun yüklendi`
-                : `📁 ${data.row_count} rows, ${data.columns.length} columns loaded`;
-            showToast(successMsg, 'success', 3000);
-        }
-
         if (data.columns) {
             FILE_COLUMNS = data.columns;
 
             // Sheet bilgilerini kaydet (sadece ilk yüklemede)
             if (!skipDropdownRebuild && data.sheet_names && data.sheet_names.length > 0) {
                 FILE_SHEET_NAMES = data.sheet_names;
-                window.SHEET_NAMES = data.sheet_names; // VisualBuilder için global erişim
                 FILE_SELECTED_SHEET = data.active_sheet || data.sheet_names[0];
             }
 
@@ -1282,119 +849,6 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
             }
 
             showFileInfo(data, 1, skipDropdownRebuild);
-
-            // DYNAMIC REFRESH: Ana dosya yüklendiğinde aktif senaryo formunu güncelle
-            // Bu sayede kullanıcı önce senaryo seçip sonra dosya yüklerse sütunlar anında yansır
-            document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="primary"]').forEach(widget => {
-                const selectEl = widget.querySelector('select');
-                if (selectEl) {
-                    const currentVal = selectEl.value;
-                    selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
-                        data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
-                }
-            });
-            console.log('✓ Primary column selectors refreshed with new main file columns');
-
-            // DYNAMIC ENABLE: Crosssheet option enable et (if multiple sheets)
-            if (data.sheet_names && data.sheet_names.length > 1) {
-                const otherSheets = data.sheet_names.filter(s => s !== data.active_sheet);
-                const T = EXTRA_TEXTS[CURRENT_LANG] || EXTRA_TEXTS['tr'];
-
-                document.querySelectorAll('.gm-data-source-select').forEach(select => {
-                    // Enable crosssheet option
-                    const crosssheetOpt = select.querySelector('option[value="crosssheet"]');
-                    if (crosssheetOpt) {
-                        crosssheetOpt.disabled = false;
-                        crosssheetOpt.style.display = '';
-                        console.log('✓ Crosssheet option enabled in data_source dropdown');
-                    }
-
-                    // Get or create crosssheet-area
-                    const paramName = select.name || select.id.replace('data_source_', '');
-                    let csArea = document.getElementById(`crosssheet_area_${paramName}`);
-
-                    if (!csArea && otherSheets.length > 0) {
-                        // CREATE crosssheet-area dynamically (wasn't created at render time)
-                        csArea = document.createElement('div');
-                        csArea.id = `crosssheet_area_${paramName}`;
-                        csArea.className = 'crosssheet-area';
-                        csArea.style.cssText = 'display: none; gap: 10px; align-items: center; margin-top: 8px;';
-                        csArea.innerHTML = `
-                            <span style="font-size:0.85rem; color:var(--gm-text-muted);">${T.lbl_sheet || 'Sayfa'}:</span>
-                            <select class="crosssheet-select" style="flex:1; padding:6px 10px; border:1px solid var(--gm-border); border-radius:6px; background:var(--gm-bg); color:var(--gm-text);">
-                                ${otherSheets.map(s => `<option value="${s}">${s}</option>`).join('')}
-                            </select>
-                        `;
-
-                        // Insert after the dropdown row in the wrapper
-                        const wrapper = select.closest('.gm-data-source-block');
-                        if (wrapper) {
-                            wrapper.appendChild(csArea);
-                        }
-
-                        // Add change handler for the new crosssheet-select
-                        const csSelect = csArea.querySelector('.crosssheet-select');
-                        if (csSelect) {
-                            csSelect.onchange = async function () {
-                                const sheetName = this.value;
-                                const fileInput = document.getElementById('fileInput');
-                                if (!fileInput || !fileInput.files[0]) return;
-
-                                try {
-                                    const formData = new FormData();
-                                    formData.append('file', fileInput.files[0]);
-                                    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
-                                    const res = await fetch(url, { method: 'POST', body: formData });
-                                    const fetchData = await res.json();
-
-                                    if (fetchData.columns && Array.isArray(fetchData.columns)) {
-                                        if (typeof updateFile2ColumnDatalist === 'function') {
-                                            updateFile2ColumnDatalist(fetchData.columns);
-                                        }
-
-                                        // Update ProColumnSelector widgets
-                                        document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
-                                            const selectEl = widget.querySelector('select');
-                                            if (selectEl) {
-                                                const currentVal = selectEl.value;
-                                                selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
-                                                    fetchData.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
-                                            }
-                                        });
-
-                                        console.log(`✓ Cross-sheet: "${sheetName}" - ${fetchData.columns.length} sütun yüklendi`);
-                                    }
-                                } catch (err) {
-                                    console.error('Cross-sheet column fetch error:', err);
-                                }
-                            };
-                        }
-
-                        console.log('✓ Crosssheet area CREATED dynamically:', csArea.id);
-                    } else if (csArea) {
-                        // Update existing crosssheet-select options
-                        const csSelect = csArea.querySelector('.crosssheet-select');
-                        if (csSelect && otherSheets.length > 0) {
-                            csSelect.innerHTML = otherSheets.map(s => `<option value="${s}">${s}</option>`).join('');
-                            console.log('✓ Crosssheet sheet options updated:', otherSheets);
-                        }
-                    }
-
-                    // Auto-select crosssheet if no second file loaded
-                    if (!FILE2_COLUMNS || FILE2_COLUMNS.length === 0) {
-                        select.value = 'crosssheet';
-                        if (csArea) {
-                            csArea.style.display = 'flex';
-                            // Trigger fetch for first sheet
-                            const csSelect = csArea.querySelector('.crosssheet-select');
-                            if (csSelect && csSelect.value) {
-                                csSelect.dispatchEvent(new Event('change'));
-                            }
-                        }
-                        console.log('✓ Crosssheet auto-selected (no second file loaded)');
-                    }
-                });
-            }
 
             // YENİ (BUG 2 FIX): Cross-sheet dropdown'ları senkronize et
             // Sol panelden sayfa değişirse, cross-sheet UI'daki dropdown'lar da güncellenmeli
@@ -1498,32 +952,6 @@ async function inspectFile2(file, sheetName = null, skipDropdownRebuild = false,
             // YENİ (PHASE 1): İkinci dosya sütunlarını datalist'e ekle
             updateFile2ColumnDatalist(data.columns);
             console.log('✓ updateFile2ColumnDatalist called with', data.columns.length, 'columns');
-
-            // DYNAMIC REFRESH: İkinci dosya yüklendiğinde aktif senaryo formunu güncelle
-            // Bu sayede kullanıcı önce senaryo seçip sonra dosya yüklerse sütunlar anında yansır
-            document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
-                const selectEl = widget.querySelector('select');
-                if (selectEl) {
-                    const currentVal = selectEl.value;
-                    selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
-                        data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
-                }
-            });
-            console.log('✓ Secondary column selectors refreshed with new file2 columns');
-
-            // data_source dropdown'ını "secondary" olarak seç ve crosssheet area'yı gizle
-            document.querySelectorAll('.gm-data-source-select').forEach(select => {
-                if (select.value === '' || select.value === 'crosssheet') {
-                    select.value = 'secondary';
-                    // Hide crosssheet area
-                    const paramName = select.name || select.id.replace('data_source_', '');
-                    const csArea = document.getElementById(`crosssheet_area_${paramName}`);
-                    if (csArea) {
-                        csArea.style.display = 'none';
-                    }
-                    console.log('✓ data_source set to secondary after file2 upload');
-                }
-            });
 
             // YENİ (PHASE 1): Tüm cross-sheet uyarılarını güncelle
             updateAllCrossSheetWarnings();
@@ -1979,7 +1407,7 @@ function populateCrossSheetDropdown() {
 
     select.innerHTML = FILE_SHEET_NAMES
         .filter(s => s !== FILE_SELECTED_SHEET) // Seçili sayfayı hariç tut
-        .map(s => `<option value="${s}">${s}</option>`)
+        .map(s => `< option value = "${s}" > ${s}</option > `)
         .join('');
 }
 
@@ -2073,101 +1501,14 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
 
-                            <!-- İkinci Dosya Durum Mesajı - Conditional Visibility -->
-                            ${(() => {
-            const mode = getSecondSourceHintMode();
-            const shouldShow = shouldShowSecondSourceHint();
-            if (!shouldShow || mode === 'hidden') {
-                return `<div class="gm-source-hint" style="display:none;"></div>`;
-            }
-            const T = EXTRA_TEXTS[CURRENT_LANG];
-            let icon, text, cssClass;
-            if (mode === 'success') {
-                icon = 'fa-check-circle';
-                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-                cssClass = 'gm-source-hint--success';
-            } else if (mode === 'info') {
-                icon = 'fa-info-circle';
-                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
-                cssClass = 'gm-source-hint--info';
-            } else {
-                icon = 'fa-exclamation-triangle';
-                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
-                cssClass = 'gm-source-hint--warning';
-            }
-            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
-        })()}
+                            <!-- İkinci Dosya Durum Mesajı -->
+                            <div class="gm-sf-warning" style="color:${hasSecondFile ? 'var(--gm-success)' : '#ef4444'}; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
+                                ${hasSecondFile
+            ? `<i class="fas fa-check-circle"></i> ${FILE2_NAME}`
+            : `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}`
+        }
+                            </div>
                         </div>`;
-}
-
-// ===== SECOND SOURCE HINT HELPERS =====
-// Scenarios that truly require a second file source
-const SECOND_FILE_SCENARIOS_GLOBAL = [
-    'join-two-tables-key',
-    'vlookup-single-match',
-    'xlookup-single-match',
-    'pq-append-tables',
-    'validate-values-against-list',
-    'fallback-lookup',
-    'multi-column-lookup',
-    'reverse-lookup-last-match'
-];
-
-// Determine if second source hint should be visible
-function shouldShowSecondSourceHint() {
-    // Check if active scenario requires second file
-    const required = SECOND_FILE_SCENARIOS_GLOBAL.includes(ACTIVE_SCENARIO_ID);
-
-    // Check if second file is loaded
-    const hasSecondFile = !!FILE2_NAME || (FILE2_COLUMNS && FILE2_COLUMNS.length > 0);
-
-    // Check if main file has multiple sheets
-    const hasMultiSheet = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
-
-    // Check if user opened second file panel
-    const userOpened = document.getElementById("secondFileWrapper")?.style?.display === "block";
-
-    return required || hasSecondFile || hasMultiSheet || userOpened;
-}
-
-// Get the mode for second source hint: 'success' | 'info' | 'warning' | 'hidden'
-function getSecondSourceHintMode() {
-    const required = SECOND_FILE_SCENARIOS_GLOBAL.includes(ACTIVE_SCENARIO_ID);
-    const hasSecondFile = !!FILE2_NAME || (FILE2_COLUMNS && FILE2_COLUMNS.length > 0);
-    const hasMultiSheet = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
-
-    if (hasSecondFile) return 'success';   // ✅ Green status
-    if (required) return 'warning';         // ⚠️ Red requirement
-    if (hasMultiSheet) return 'info';       // ℹ️ Neutral info
-    return 'hidden';
-}
-
-
-// Render the second source hint HTML based on mode
-function renderSecondSourceHint(mode, containerClass = '') {
-    const T = EXTRA_TEXTS[CURRENT_LANG];
-
-    if (mode === 'hidden' || !shouldShowSecondSourceHint()) {
-        return `<div class="gm-source-hint ${containerClass}" style="display:none;"></div>`;
-    }
-
-    let icon, text, cssClass;
-
-    if (mode === 'success') {
-        icon = 'fa-check-circle';
-        text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-        cssClass = 'gm-source-hint--success';
-    } else if (mode === 'info') {
-        icon = 'fa-info-circle';
-        text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
-        cssClass = 'gm-source-hint--info';
-    } else { // warning
-        icon = 'fa-exclamation-triangle';
-        text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
-        cssClass = 'gm-source-hint--warning';
-    }
-
-    return `<div class="gm-source-hint ${cssClass} ${containerClass}"><i class="fas ${icon}"></i> ${text}</div>`;
 }
 
 
@@ -2241,38 +1582,24 @@ window.toggleProMergeSource = function (checkbox) {
 // YENİ: İkinci dosya yüklendiğinde tüm PRO bloklarındaki uyarıları güncelle
 window.updateProBlockWarnings = function () {
     const T = EXTRA_TEXTS[CURRENT_LANG];
-    const mode = getSecondSourceHintMode();
-    const shouldShow = shouldShowSecondSourceHint();
-
     document.querySelectorAll('.gm-pro-merge-source').forEach(container => {
         const checkbox = container.querySelector('.pro-use-crosssheet');
-        const warning = container.querySelector('.gm-sf-warning, .gm-source-hint');
+        const warning = container.querySelector('.gm-sf-warning');
 
         // Cross-sheet aktif değilse uyarıyı kontrol et
         if (!checkbox || !checkbox.checked) {
             if (warning) {
-                // Gate: Gizle veya moduna göre göster
-                if (!shouldShow || mode === 'hidden') {
-                    warning.style.display = 'none';
-                    return;
-                }
-
-                // Update content and styling based on mode
-                warning.style.display = 'flex';
-                warning.className = 'gm-source-hint gm-source-hint--' + mode;
-
-                if (mode === 'success') {
-                    const successText = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-                    warning.innerHTML = `<i class="fas fa-check-circle"></i> ${successText}`;
-                } else if (mode === 'info') {
-                    warning.innerHTML = `<i class="fas fa-info-circle"></i> ${T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.'}`;
-                } else { // warning
-                    warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.'}`;
+                if (FILE2_NAME) {
+                    warning.innerHTML = `< i class="fas fa-check-circle" ></i > ${FILE2_NAME} `;
+                    warning.style.color = 'var(--gm-success)';
+                } else {
+                    warning.innerHTML = `< i class="fas fa-exclamation-triangle" ></i > ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'} `;
+                    warning.style.color = '#ef4444';
                 }
             }
         }
     });
-    console.log(`[updateProBlockWarnings] mode: ${mode}, shouldShow: ${shouldShow}, FILE2_NAME: ${FILE2_NAME}`);
+    console.log(`[updateProBlockWarnings] FILE2_NAME: ${FILE2_NAME} `);
 };
 
 // YENİ: Cross-sheet sütunlarını getir ve arayüzü güncelle
@@ -2322,7 +1649,7 @@ window.fetchCrossSheetColumns = async function (select) {
         if (data.columns) {
             // 1. Görsel listeyi güncelle (capsule biçiminde - modern stil)
             columnList.innerHTML = data.columns.map(col =>
-                `<span class="gm-col-chip-modern" onclick="copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
+                `< span class="gm-col-chip-modern" onclick = "copyColumnToInput(this, '${col.replace(/'/g, "\\'")}')">${col}</span>`
             ).join('');
 
             // 2. Autocomplete listesini güncelle (file2-columns datalist)
@@ -2392,342 +1719,79 @@ window.copyColumnToInput = function (chip, colName) {
 
 function renderAccordionMenu() {
     const container = document.getElementById("scenarioListContainer");
-    const premiumContainer = document.getElementById("premiumCardContainer");
     if (!container) return;
     container.innerHTML = "";
 
-    // ===== PREMIUM FEATURE CARD - RAPOR STÜDYOSU PRO =====
-    // Premium Card ayrı container'a eklenir (sticky, scroll etmez)
-    if (premiumContainer) {
-        premiumContainer.innerHTML = ""; // Temizle
-
-        const featureCard = document.createElement("div");
-        featureCard.className = "gm-feature-card";
-        featureCard.innerHTML = `
-            <span class="gm-feature-badge">${CURRENT_LANG === 'tr' ? '✦ Öne Çıkan' : '✦ Featured'}</span>
-            <div class="gm-feature-content">
-                <div class="gm-feature-icon">
-                    <i class="fas fa-wand-magic-sparkles"></i>
-                </div>
-                <div class="gm-feature-text">
-                    <h4 class="gm-feature-title">
-                        ${CURRENT_LANG === 'tr' ? 'Rapor Stüdyosu PRO' : 'Report Studio PRO'}
-                    </h4>
-                    <p class="gm-feature-desc">
-                        ${CURRENT_LANG === 'tr'
-                ? 'Görsel akış tasarlayın. Filtreleme, RANK, çoklu sayfa çıktısı.'
-                : 'Design visual pipelines. Filtering, RANK, multi-sheet exports.'}
-                    </p>
-                </div>
-                <button class="gm-feature-cta">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        `;
-
-        // Feature card tıklama - Visual Builder'ı aktif et
-        featureCard.addEventListener("click", () => {
-            ACTIVE_SCENARIO_ID = "custom-report-builder-pro";
-            const proScenario = SCENARIO_LIST.find(s => s.id === "custom-report-builder-pro");
-            if (proScenario) {
-                document.getElementById("scenarioTitle").textContent = proScenario.title;
-                // Subtitle güncelleme - PRO açıklaması
-                const subtitle = document.getElementById("scenarioSubtitle");
-                if (subtitle) {
-                    subtitle.textContent = proScenario.short || proScenario.description ||
-                        (CURRENT_LANG === 'tr'
-                            ? 'Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.'
-                            : 'Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.');
-                }
-                renderDynamicForm("custom-report-builder-pro", proScenario.params || []);
-                loadScenarioHelp("custom-report-builder-pro");
-            }
-            if (typeof VisualBuilder !== 'undefined' && VisualBuilder.init) {
-                VisualBuilder.init();
-            }
-        });
-
-        // Drag-and-drop support - Premium Card'ı dashboard'a sürükle
-        featureCard.draggable = true;
-
-        featureCard.addEventListener("dragstart", (e) => {
-            e.dataTransfer.setData("text/plain", JSON.stringify({
-                id: "custom-report-builder-pro",
-                title: CURRENT_LANG === 'tr' ? 'Rapor Stüdyosu PRO' : 'Report Studio PRO',
-                params: [],
-                isPremium: true
-            }));
-            featureCard.classList.add("dragging");
-        });
-
-        featureCard.addEventListener("dragend", () => {
-            featureCard.classList.remove("dragging");
-        });
-
-        premiumContainer.appendChild(featureCard);
-    }
-    // ===== END PREMIUM FEATURE CARD =====
-
-    // Kategori İsimleri ve İkonları
-    const categoryConfig = {
-        "lookup_join": {
-            name: CURRENT_LANG === 'tr' ? "Veri Birleştirme" : "Lookup & Join",
-            icon: "fa-link", color: "#4a90d9"
-        },
-        "counting_frequency": {
-            name: CURRENT_LANG === 'tr' ? "Sayma & Sıklık" : "Counting",
-            icon: "fa-calculator", color: "#10b981"
-        },
-        "conditional_aggregation": {
-            name: CURRENT_LANG === 'tr' ? "Toplama & Ortalama" : "Aggregation",
-            icon: "fa-chart-bar", color: "#8b5cf6"
-        },
-        "data_tools_dynamic": {
-            name: CURRENT_LANG === 'tr' ? "Veri Araçları" : "Data Tools",
-            icon: "fa-tools", color: "#f59e0b"
-        },
-        "text_cleaning": {
-            name: CURRENT_LANG === 'tr' ? "Metin Temizleme" : "Cleaning",
-            icon: "fa-broom", color: "#06b6d4"
-        },
-        "reporting_pivot": {
-            name: CURRENT_LANG === 'tr' ? "Rapor & Pivot" : "Reporting",
-            icon: "fa-table", color: "#ec4899"
-        },
-        "charts_visualization": {
-            name: CURRENT_LANG === 'tr' ? "Grafik" : "Charts",
-            icon: "fa-chart-pie", color: "#14b8a6"
-        },
-        "dates_durations": {
-            name: CURRENT_LANG === 'tr' ? "Tarih İşlemleri" : "Dates",
-            icon: "fa-calendar-alt", color: "#f97316"
-        },
-        "duplicates_uniques": {
-            name: CURRENT_LANG === 'tr' ? "Tekrar/Benzersiz" : "Duplicates",
-            icon: "fa-clone", color: "#6366f1"
-        },
-        "stats": {
-            name: CURRENT_LANG === 'tr' ? "İstatistik" : "Stats",
-            icon: "fa-chart-line", color: "#3b82f6"
-        },
-        "conditional_formatting": {
-            name: CURRENT_LANG === 'tr' ? "Renklendirme" : "Formatting",
-            icon: "fa-palette", color: "#a855f7"
-        },
-        "conditional_logic_segmentation": {
-            name: CURRENT_LANG === 'tr' ? "Mantıksal" : "Logic",
-            icon: "fa-code-branch", color: "#22c55e"
-        },
-        "data_quality_validation": {
-            name: CURRENT_LANG === 'tr' ? "Veri Kalitesi" : "Quality",
-            icon: "fa-check-circle", color: "#eab308"
-        },
-        "other": {
-            name: CURRENT_LANG === 'tr' ? "Diğer" : "Other",
-            icon: "fa-ellipsis-h", color: "#64748b"
-        }
+    // Kategori İsimleri
+    const niceNames = {
+        "lookup_join": CURRENT_LANG === 'tr' ? "Veri Birleştirme" : "Lookup & Join",
+        "counting_frequency": CURRENT_LANG === 'tr' ? "Sayma & Sıklık" : "Counting",
+        "conditional_aggregation": CURRENT_LANG === 'tr' ? "Toplama & Ortalama" : "Aggregation",
+        "data_tools_dynamic": CURRENT_LANG === 'tr' ? "Veri Araçları" : "Data Tools",
+        "text_cleaning": CURRENT_LANG === 'tr' ? "Metin Temizleme" : "Cleaning",
+        "reporting_pivot": CURRENT_LANG === 'tr' ? "Rapor & Pivot" : "Reporting",
+        "charts_visualization": CURRENT_LANG === 'tr' ? "Grafik" : "Charts",
+        "dates_durations": CURRENT_LANG === 'tr' ? "Tarih İşlemleri" : "Dates",
+        "duplicates_uniques": CURRENT_LANG === 'tr' ? "Tekrar/Benzersiz" : "Duplicates",
+        "stats": CURRENT_LANG === 'tr' ? "İstatistik" : "Stats",
+        "conditional_formatting": CURRENT_LANG === 'tr' ? "Renklendirme" : "Formatting",
+        "conditional_logic_segmentation": CURRENT_LANG === 'tr' ? "Mantıksal" : "Logic",
+        "data_quality_validation": CURRENT_LANG === 'tr' ? "Veri Kalitesi" : "Quality",
+        "other": CURRENT_LANG === 'tr' ? "Diğer" : "Other"
     };
 
     Object.keys(SCENARIO_CATALOG).forEach(catKey => {
         const scenarios = SCENARIO_CATALOG[catKey];
         if (!scenarios || scenarios.length === 0) return;
 
-        const config = categoryConfig[catKey] || {
-            name: catKey.replace(/_/g, " "),
-            icon: "fa-folder",
-            color: "#64748b"
-        };
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "gm-accordion-item";
 
-        // Kategori başlığı
-        const categoryLabel = document.createElement("div");
-        categoryLabel.className = "gm-excel-category-label";
-        categoryLabel.dataset.category = catKey; // Arama için kategori işareti
-        categoryLabel.innerHTML = `<i class="fas ${config.icon}" style="margin-right:6px;"></i>${config.name}`;
-        container.appendChild(categoryLabel);
+        // Başlık Formatlama
+        let title = niceNames[catKey] || catKey.replace(/_/g, " ");
+        title = title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
 
-        // Senaryo kartları
+        const headerBtn = document.createElement("button");
+        headerBtn.className = "gm-accordion-header";
+        headerBtn.innerHTML = `<span>${title}</span> <i class="fas fa-chevron-down"></i>`;
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "gm-accordion-content";
+
         scenarios.forEach(sc => {
-            // Premium Card olarak gösterilen senaryoyu normal listeden atla (duplikasyon önleme)
-            if (sc.id === "custom-report-builder-pro") return;
+            const btn = document.createElement("button");
+            btn.className = "gm-scenario-btn";
+            btn.textContent = sc.title;
+            btn.dataset.id = sc.id;
+            btn.dataset.params = JSON.stringify(sc.params || []);
 
-            const card = document.createElement("div");
-            card.className = "gm-excel-scenario-card";
-            card.dataset.id = sc.id;
-            card.dataset.params = JSON.stringify(sc.params || []);
-            card.dataset.title = sc.title;
-            card.dataset.category = catKey; // Arama için kategori işareti
-            card.draggable = true; // Sürükle-bırak için
-            // Tooltip: başlık + açıklama
-            const tooltipText = sc.title + (sc.short || sc.description ? '\n' + (sc.short || sc.description) : '');
-            card.title = tooltipText;
+            if (sc.id === ACTIVE_SCENARIO_ID) btn.classList.add("active");
 
-            if (sc.id === ACTIVE_SCENARIO_ID) card.classList.add("active");
-
-            // Scenario-specific icons based on ID or keywords
-            const scenarioIcons = {
-                "custom-report-builder-pro": { icon: "fa-wand-magic-sparkles", color: "#8b5cf6" },
-                "pivot-builder-pro": { icon: "fa-table-cells", color: "#10b981" },
-                "custom-report-builder": { icon: "fa-shapes", color: "#f97316" },
-                "vlookup-basic": { icon: "fa-link", color: "#4a90d9" },
-                "vlookup-multi-column": { icon: "fa-arrows-left-right", color: "#4a90d9" },
-                "index-match": { icon: "fa-search-plus", color: "#4a90d9" },
-                "countif-advanced": { icon: "fa-calculator", color: "#10b981" },
-                "sumif-multicolumn": { icon: "fa-sigma", color: "#10b981" },
-                "rank-simple": { icon: "fa-trophy", color: "#f59e0b" },
-                "rank-grouped": { icon: "fa-medal", color: "#f59e0b" },
-                "filter-advanced": { icon: "fa-filter", color: "#ec4899" },
-                "text-split": { icon: "fa-scissors", color: "#06b6d4" },
-                "text-clean": { icon: "fa-broom", color: "#06b6d4" },
-                "date-diff": { icon: "fa-calendar-days", color: "#9a3050" },
-                "pivot-multi-level": { icon: "fa-layer-group", color: "#8b5cf6" },
-                "duplicate-finder": { icon: "fa-copy", color: "#ef4444" },
-                "concatenate-columns": { icon: "fa-text-width", color: "#06b6d4" },
-                "formula-column": { icon: "fa-function", color: "#f97316" },
-            };
-
-            // Get scenario icon or fall back to category icon
-            let iconInfo = scenarioIcons[sc.id];
-            if (!iconInfo) {
-                // Try to match by keywords in title
-                const title = (sc.title || "").toLowerCase();
-                if (title.includes("vlookup") || title.includes("birleşt")) iconInfo = { icon: "fa-link", color: "#4a90d9" };
-                else if (title.includes("rank") || title.includes("sıra")) iconInfo = { icon: "fa-trophy", color: "#f59e0b" };
-                else if (title.includes("pivot") || title.includes("özet")) iconInfo = { icon: "fa-table-cells", color: "#8b5cf6" };
-                else if (title.includes("filter") || title.includes("filtre")) iconInfo = { icon: "fa-filter", color: "#ec4899" };
-                else if (title.includes("sayı") || title.includes("count") || title.includes("topla") || title.includes("sum")) iconInfo = { icon: "fa-calculator", color: "#10b981" };
-                else if (title.includes("tarih") || title.includes("date")) iconInfo = { icon: "fa-calendar", color: "#9a3050" };
-                else if (title.includes("metin") || title.includes("text") || title.includes("birleş")) iconInfo = { icon: "fa-font", color: "#06b6d4" };
-                else iconInfo = { icon: config.icon, color: config.color };
-            }
-
-            card.innerHTML = `
-                <div class="gm-excel-scenario-icon" data-color="${iconInfo.color}">
-                    <i class="fas ${iconInfo.icon}"></i>
-                </div>
-                <div class="gm-excel-scenario-info">
-                    <h4>${sc.title}</h4>
-                    <p>${sc.short || sc.description || sc.hint || ''}</p>
-                </div>
-            `;
-
-            // Click event
-            card.addEventListener("click", () => selectScenario(sc, card));
-
-            // Drag start event
-            card.addEventListener("dragstart", (e) => {
-                e.dataTransfer.setData("text/plain", JSON.stringify({
-                    id: sc.id,
-                    title: sc.title,
-                    params: sc.params || []
-                }));
-                card.classList.add("dragging");
-            });
-
-            card.addEventListener("dragend", () => {
-                card.classList.remove("dragging");
-            });
-
-            container.appendChild(card);
+            btn.addEventListener("click", () => selectScenario(sc, btn));
+            contentDiv.appendChild(btn);
         });
+
+        headerBtn.addEventListener("click", () => {
+            contentDiv.classList.toggle("open");
+            headerBtn.querySelector("i").className = contentDiv.classList.contains("open") ? "fas fa-chevron-up" : "fas fa-chevron-down";
+        });
+
+        itemDiv.appendChild(headerBtn);
+        itemDiv.appendChild(contentDiv);
+        container.appendChild(itemDiv);
     });
 }
-
-// ===== DRAG-DROP ZONE SETUP FOR MIDDLE PANE =====
-// Senaryo kartlarını orta panele sürükleyerek aktif edebilme
-function setupMiddlePaneDropZone() {
-    const middlePane = document.querySelector('.gm-middle-pane');
-    if (!middlePane) return;
-
-    // Prevent default to allow drop
-    middlePane.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        middlePane.classList.add('drag-over');
-    });
-
-    middlePane.addEventListener('dragleave', (e) => {
-        // Only remove if leaving the actual element, not children
-        if (e.relatedTarget && middlePane.contains(e.relatedTarget)) return;
-        middlePane.classList.remove('drag-over');
-    });
-
-    middlePane.addEventListener('drop', (e) => {
-        e.preventDefault();
-        middlePane.classList.remove('drag-over');
-
-        try {
-            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-            if (!data || !data.id) return;
-
-            console.log('📦 Scenario dropped:', data);
-
-            // Find the scenario in SCENARIO_LIST
-            const scenario = SCENARIO_LIST.find(s => s.id === data.id);
-
-            if (data.isPremium || data.id === 'custom-report-builder-pro') {
-                // Premium Card dropped - activate Visual Builder
-                ACTIVE_SCENARIO_ID = 'custom-report-builder-pro';
-                if (scenario) {
-                    document.getElementById('scenarioTitle').textContent = scenario.title;
-                    // Subtitle güncelleme - PRO açıklaması
-                    const subtitle = document.getElementById('scenarioSubtitle');
-                    if (subtitle) {
-                        subtitle.textContent = scenario.short || scenario.description ||
-                            (CURRENT_LANG === 'tr'
-                                ? 'Görsel rapor akışı tasarlayın. Filtreleme, RANK ve çoklu sayfa çıktısı ile verinize hükmedin.'
-                                : 'Design visual report pipelines. Master your data with filtering, RANK, and multi-sheet exports.');
-                    }
-                    renderDynamicForm('custom-report-builder-pro', scenario.params || []);
-                    loadScenarioHelp('custom-report-builder-pro');
-                }
-                if (typeof VisualBuilder !== 'undefined' && VisualBuilder.init) {
-                    VisualBuilder.init();
-                }
-                showToast(CURRENT_LANG === 'tr' ? '🎨 Visual Builder açıldı!' : '🎨 Visual Builder opened!', 'success');
-            } else if (scenario) {
-                // Normal scenario dropped
-                selectScenario(scenario, null);
-                showToast(CURRENT_LANG === 'tr' ? `✅ ${scenario.title} seçildi` : `✅ ${scenario.title} selected`, 'success');
-            }
-        } catch (err) {
-            console.warn('Drop data parse error:', err);
-        }
-    });
-
-    console.log('✅ Middle pane drop zone initialized');
-}
-
-// Call setup after renderAccordionMenu is called (deferred)
-setTimeout(setupMiddlePaneDropZone, 500);
 
 async function selectScenario(scenario, btnElement) {
-    // Clear both old button format and new card format
-    document.querySelectorAll(".gm-scenario-btn, .gm-excel-scenario-card").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".gm-scenario-btn").forEach(b => b.classList.remove("active"));
     if (btnElement) btnElement.classList.add("active");
-
-    // Deselect PRO card
-    const proCard = document.getElementById("proBuilderCard");
-    if (proCard) proCard.classList.remove("active");
-
-    // YENİ: Senaryo seçildiğinde dosya alanını otomatik daralt
-    const filesSection = document.getElementById("filesSection");
-    if (filesSection && !filesSection.classList.contains("collapsed")) {
-        filesSection.classList.add("collapsed");
-    }
-
-    // YENİ: Dosya yüklenmemişse kullanıcıya uyarı göster
-    const fileInput = document.getElementById("fileInput");
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        if (typeof showToast === 'function') {
-            showToast("📁 Henüz dosya yüklenmedi. Devam etmeden önce dosyanızı yüklemeyi unutmayın!", "info", 4000);
-        }
-    }
 
     ACTIVE_SCENARIO_ID = scenario.id;
     document.getElementById("scenarioTitle").textContent = scenario.title;
-    document.getElementById("scenarioSubtitle").textContent = scenario.short || scenario.description || "";
+    document.getElementById("scenarioSubtitle").textContent = scenario.short || "";
 
-    // Use scenario.params directly instead of parsing from btnElement
-    const params = scenario.params || [];
+    let params = [];
+    try { params = JSON.parse(btnElement.dataset.params); } catch (e) { }
     renderDynamicForm(scenario.id, params);
     loadScenarioHelp(scenario.id);
 
@@ -2760,38 +1824,10 @@ function renderDynamicForm(scenarioId, params) {
     // YENİ: PRO BUILDER BYPASS & GLOBAL OPTIONS INIT
     // ============================================================================
 
-    // Visual Builder Container referansı
-    const vbContainer = document.getElementById("visualBuilderContainer");
-
     // PRO Builder senaryosunu atla (dokunma!)
     if (scenarioId === 'custom-report-builder') {
         console.log('⚠️ PRO Builder detected - using existing code, skipping optional features');
         // Mevcut PRO Builder kodunu çalıştır (aşağıda devam ediyor)
-        if (vbContainer) vbContainer.style.display = 'none';
-    }
-    // Visual Builder için özel senaryo - Oyun Hamuru PRO
-    else if (scenarioId === 'custom-report-builder-pro') {
-        console.log('🎨 Visual Builder PRO detected - opening Visual Builder');
-
-        // Normal form container'ı gizle, Visual Builder'ı göster
-        container.innerHTML = `
-            <div class="gm-info-box" style="padding:12px; margin-bottom:10px;">
-                <i class="fas fa-wand-magic-sparkles" style="color:#8b5cf6;"></i>
-                <strong>Visual Builder Aktif</strong> - Blokları sürükleyerek veya tıklayarak pipeline oluşturun.
-            </div>
-        `;
-
-        if (vbContainer) {
-            vbContainer.style.display = 'grid';
-            // Visual Builder'ı başlat
-            if (typeof VisualBuilder !== 'undefined') {
-                VisualBuilder.init();
-            }
-        }
-        return; // Normal form render'ı atla
-    } else {
-        // Diğer senaryolarda Visual Builder'ı gizle
-        if (vbContainer) vbContainer.style.display = 'none';
     }
 
     // Global opsiyonları yükle (ilk çağrıda)
@@ -2823,32 +1859,100 @@ function renderDynamicForm(scenarioId, params) {
         // PHASE 3: İkinci dosya gerektiren senaryolar için CROSS-SHEET UI bloğu ekle
         // ============================================================================
         const SECOND_FILE_SCENARIOS = [
-            // Only scenarios that TRULY REQUIRE a second file source
+            // Gerçek catalog ID'ler (verified from scenarios_catalog.json)
             'join-two-tables-key',
             'vlookup-single-match',
             'xlookup-single-match',
             'pq-append-tables',
             'validate-values-against-list',
+            'concatenate-columns',
             'fallback-lookup',
-            'multi-column-lookup',
-            'reverse-lookup-last-match'
+            // Multi-column scenarios that benefit from cross-sheet
+            'correlation-two-columns',
+            'days-between-dates',
+            'sum-between-dates',
+            'pivot-multi-level',
+            'percentiles-and-quartiles',
+            'compute-age-from-dob',
+            'find-inconsistent-casing',
+            'highlight-top-bottom-n',
+            'multi-condition-label-if',
+            'outlier-flagging',
+            'running-total-by-group',
+            'score-cards-weighted-points',
+            'filter-rows-by-condition'
         ];
 
         const needsCrossSheet = SECOND_FILE_SCENARIOS.includes(scenarioId);
 
         // BUG 4 FIX: İkinci dosya sütunları datalist'ini önceden hazırla
         // Form render edilmeden önce datalist hazır olmalı ki autocomplete çalışsın
-        // NOTE: Initially use FILE2_COLUMNS if available, otherwise empty
         if (FILE2_COLUMNS && FILE2_COLUMNS.length > 0) {
             updateFile2ColumnDatalist(FILE2_COLUMNS);
             console.log('✓ BUG 4 FIX: file2-columns datalist rendered before form');
-        } else {
-            // No second file loaded - file2-columns will be empty initially
-            updateFile2ColumnDatalist([]);
         }
 
-        // OLD CROSSSHEET UI REMOVED - Now using data_source parameter instead
+        // TEMPORARY DEBUG: Force render for testing
+        if (true) { // Was: if (needsCrossSheet)
+            // Cross-sheet UI bloğunu formun başına ekle
+            const csBlock = document.createElement('div');
+            csBlock.className = 'gm-form-row';
+            csBlock.innerHTML = getInlineCrossSheetHTML(`scenario_${scenarioId}`);
+            form.appendChild(csBlock);
+        }
         // ============================================================================
+
+        // YENİ: Inline Cross-Sheet UI (Oyun Hamuru PRO tarzı)
+        // Eğer senaryo ikinci dosya gerektiriyorsa, formun başına ekle
+        const scenario = SCENARIO_LIST.find(s => s.id === scenarioId);
+        if (scenario && scenario.requiresSecondFile) {
+
+            const inlineCS = document.createElement('div');
+            inlineCS.className = "gm-form-row";
+            inlineCS.style.marginBottom = "20px";
+            inlineCS.style.padding = "10px";
+            inlineCS.style.border = "1px solid var(--gm-border)";
+            inlineCS.style.borderRadius = "8px";
+            inlineCS.style.backgroundColor = "var(--gm-bg-secondary)";
+
+            // Başlık
+            inlineCS.innerHTML = `<label style="color:var(--gm-primary); margin-bottom:10px; display:block;"><i class="fas fa-link"></i> İkinci Dosya / Cross-Sheet Kaynağı</label>`;
+
+            // getInlineCrossSheetHTML fonksiyonunu kullan (PRO Builder ile aynı yapı)
+            // ID çakışmasını önlemek için prefix kullanabiliriz veya direct DOM verip listener ekleyebiliriz.
+            // Ancak getInlineCrossSheetHTML string dönüyor. Biz bunu 'dynamic-form' ID'si ile çağıralım.
+            const csHTML = getInlineCrossSheetHTML("dynamic_form_cross_sheet");
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = csHTML;
+            inlineCS.appendChild(contentDiv);
+
+            form.appendChild(inlineCS);
+
+            // Listenerları bağla (Inputlar DOM'a eklendikten sonra çalışacak, ama burada tanımlı olsun)
+            setTimeout(() => {
+                const toggle = document.querySelector(`input[name="cross_sheet_dynamic_form_cross_sheet"]`);
+                if (toggle) {
+                    toggle.onchange = (e) => {
+                        toggleProMergeSource('dynamic_form_cross_sheet', e.target.checked);
+                        // Sol paneli de güncelle (Senkronizasyon)
+                        const globalOption = document.getElementById("crossSheetOption");
+                        if (globalOption && globalOption.checked !== e.target.checked) {
+                            globalOption.click();
+                        }
+                    };
+
+                    // Başlangıç durumu (Global state ile senkronize et)
+                    const globalOption = document.getElementById("crossSheetOption");
+                    if (globalOption && globalOption.checked) {
+                        toggle.checked = true;
+                        toggleProMergeSource('dynamic_form_cross_sheet', true);
+                    } else {
+                        // Default olarak false ise uyarısını göster
+                        updateProBlockWarnings();
+                    }
+                }
+            }, 100);
+        }
 
         params.forEach(p => {
             const row = document.createElement("div");
@@ -2859,11 +1963,8 @@ function renderDynamicForm(scenarioId, params) {
             const desc = (CURRENT_LANG === 'tr' ? p.description_tr : p.description_en) || "";
             const ph = (CURRENT_LANG === 'tr' ? p.placeholder_tr : p.placeholder_en) || "";
 
-            // Açıklamayı label altına küçük not olarak ekle + required/optional indicator
-            const isRequired = p.required === true;
-            const requiredIndicator = isRequired ? '<span style="color:#ef4444; font-weight:bold;"> *</span>' : '';
-            const optionalBadge = !isRequired ? `<span style="font-size:0.65rem; background:rgba(100,116,139,0.2); color:var(--gm-text-muted); padding:1px 6px; border-radius:8px; margin-left:6px;">${CURRENT_LANG === 'tr' ? 'Opsiyonel' : 'Optional'}</span>` : '';
-            row.innerHTML = `<label>${lbl}${requiredIndicator}${optionalBadge} <span style="font-weight:400; font-size:0.75rem; color:var(--gm-primary); opacity:0.8; margin-left:5px;">${desc ? '(' + desc + ')' : ''}</span></label>`;
+            // Açıklamayı label altına küçük not olarak ekle
+            row.innerHTML = `<label>${lbl} <span style="font-weight:400; font-size:0.75rem; color:var(--gm-primary); opacity:0.8; margin-left:5px;">(${desc})</span></label>`;
 
             if (p.type === 'select') {
                 const sel = document.createElement("select");
@@ -2911,7 +2012,7 @@ function renderDynamicForm(scenarioId, params) {
 
                     // CORRECT LOGIC: İkinci dosya senaryolarında file2-columns VARSAYILAN
                     // Cross-sheet aktifse ona göre değişir
-                    if (needsCrossSheet) {
+                    if (true) { // TEMP DEBUG: was needsCrossSheet
                         inp.setAttribute('list', 'file2-columns'); // Default: ikinci dosya
                         inp.classList.add('crosssheet-aware-input'); // Marker for toggle updates
                     } else {
@@ -2937,207 +2038,6 @@ function renderDynamicForm(scenarioId, params) {
                 listWrap.appendChild(addBtn);
                 addItem(); // İlk satır
                 row.appendChild(listWrap);
-            } else if (p.type === 'data_source') {
-                // ============================================================================
-                // VERİ KAYNAĞI SEÇİCİ (PRO Data Source Block)
-                // Ana Dosya | İkinci Dosya | Aynı Dosyadan Farklı Sayfa
-                // ============================================================================
-                const hasMultipleSheets = FILE_SHEET_NAMES && FILE_SHEET_NAMES.length > 1;
-                const hasSecondFile = !!FILE2_NAME;
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'gm-data-source-block';
-                wrapper.style.cssText = `
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                    padding: 12px;
-                    background: rgba(59,130,246,0.08);
-                    border: 1px solid rgba(59,130,246,0.3);
-                    border-radius: 8px;
-                    margin-top: 4px;
-                `;
-
-                // Dropdown row
-                const dropdownRow = document.createElement('div');
-                dropdownRow.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;';
-
-                // Icon
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-database';
-                icon.style.cssText = 'color: var(--gm-primary); font-size: 1rem;';
-                dropdownRow.appendChild(icon);
-
-                // Select dropdown
-                const select = document.createElement('select');
-                select.name = p.name;
-                select.id = `data_source_${p.name}`;
-                select.className = 'gm-data-source-select';
-                select.style.cssText = `
-                    flex: 1;
-                    min-width: 180px;
-                    padding: 8px 12px;
-                    border: 1px solid var(--gm-border);
-                    border-radius: 6px;
-                    background: var(--gm-bg);
-                    color: var(--gm-text);
-                    font-size: 0.9rem;
-                `;
-
-                // Options - İkinci Dosya OR Aynı Dosyadan Farklı Sayfa
-                // Crosssheet option ALWAYS added (may be disabled if no sheets yet)
-                const optSecondary = document.createElement('option');
-                optSecondary.value = 'secondary';
-                optSecondary.textContent = T.data_source_secondary || 'İkinci Dosya';
-                select.appendChild(optSecondary);
-
-                // Always add crosssheet option - enable/disable based on sheet availability
-                const optCrosssheet = document.createElement('option');
-                optCrosssheet.value = 'crosssheet';
-                optCrosssheet.textContent = T.data_source_crosssheet || 'Aynı Dosyadan Farklı Sayfa';
-                optCrosssheet.disabled = !hasMultipleSheets;
-                if (!hasMultipleSheets) {
-                    optCrosssheet.style.display = 'none'; // Hide if no sheets
-                }
-                select.appendChild(optCrosssheet);
-
-                console.log(`[data_source] hasMultipleSheets=${hasMultipleSheets}, FILE_SHEET_NAMES=`, FILE_SHEET_NAMES);
-
-                // Auto-select best default:
-                // 1. If second file is loaded → select "İkinci Dosya"
-                // 2. If only main file with multiple sheets → select "Farklı Sayfa"
-                // 3. Otherwise → select "İkinci Dosya" (user will need to load a file)
-                if (FILE2_COLUMNS && FILE2_COLUMNS.length > 0) {
-                    select.value = 'secondary';
-                } else if (hasMultipleSheets) {
-                    select.value = 'crosssheet';
-                } else {
-                    select.value = 'secondary';
-                }
-
-                dropdownRow.appendChild(select);
-                wrapper.appendChild(dropdownRow);
-
-                // Cross-sheet selector (hidden by default, shown when crosssheet selected)
-                if (hasMultipleSheets) {
-                    const crossSheetOptions = (FILE_SHEET_NAMES || [])
-                        .filter(s => s !== FILE_SELECTED_SHEET)
-                        .map(s => `<option value="${s}">${s}</option>`)
-                        .join('');
-
-                    const csArea = document.createElement('div');
-                    csArea.id = `crosssheet_area_${p.name}`;
-                    csArea.className = 'crosssheet-area';
-                    csArea.style.cssText = 'display: none; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--gm-border);';
-                    csArea.innerHTML = `
-                        <i class="fas fa-layer-group" style="color:var(--gm-primary); font-size:0.85rem;"></i>
-                        <select class="crosssheet-select" style="flex:1; padding:6px 10px; border:1px solid var(--gm-border); border-radius:6px; background:var(--gm-bg); color:var(--gm-text);">
-                            ${crossSheetOptions}
-                        </select>
-                    `;
-                    wrapper.appendChild(csArea);
-
-                    // Crosssheet select change handler - fetch columns from selected sheet
-                    const csSelect = csArea.querySelector('.crosssheet-select');
-                    if (csSelect) {
-                        csSelect.onchange = async function () {
-                            const sheetName = this.value;
-                            const fileInput = document.getElementById('fileInput');
-                            if (!fileInput || !fileInput.files[0]) return;
-
-                            try {
-                                const formData = new FormData();
-                                formData.append('file', fileInput.files[0]);
-                                const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(sheetName)}`;
-                                const res = await fetch(url, { method: 'POST', body: formData });
-                                const data = await res.json();
-
-                                if (data.columns && Array.isArray(data.columns)) {
-                                    if (typeof updateFile2ColumnDatalist === 'function') {
-                                        updateFile2ColumnDatalist(data.columns);
-                                    }
-
-                                    // CRITICAL: Also update ProColumnSelector widgets with column_source="secondary"
-                                    document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
-                                        const selectEl = widget.querySelector('select');
-                                        if (selectEl) {
-                                            const currentVal = selectEl.value;
-                                            selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
-                                                data.columns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
-                                        }
-                                    });
-
-                                    console.log(`✓ Cross-sheet: "${sheetName}" - ${data.columns.length} sütun yüklendi`);
-                                }
-                            } catch (err) {
-                                console.error('Cross-sheet column fetch error:', err);
-                            }
-                        };
-
-                        // Trigger initial fetch if crosssheet-select has a value
-                        if (csSelect.value) {
-                            csSelect.dispatchEvent(new Event('change'));
-                        }
-                    }
-                }
-
-                // Toggle crosssheet area and update columns based on selection
-                select.onchange = async function () {
-                    const csArea = document.getElementById(`crosssheet_area_${p.name}`);
-                    if (csArea) {
-                        csArea.style.display = this.value === 'crosssheet' ? 'flex' : 'none';
-                    }
-
-                    // Determine new columns based on selection (only secondary sources)
-                    let newColumns = [];
-                    if (this.value === 'secondary') {
-                        newColumns = FILE2_COLUMNS || [];
-                    } else if (this.value === 'crosssheet' && csArea) {
-                        // Cross-sheet: fetch columns from selected sheet
-                        const csSelect = csArea.querySelector('.crosssheet-select');
-                        if (csSelect && csSelect.value) {
-                            const fileInput = document.getElementById('fileInput');
-                            if (fileInput && fileInput.files[0]) {
-                                try {
-                                    const formData = new FormData();
-                                    formData.append('file', fileInput.files[0]);
-                                    const url = `${BACKEND_BASE_URL}/ui/inspect?sheet_name=${encodeURIComponent(csSelect.value)}`;
-                                    const res = await fetch(url, { method: 'POST', body: formData });
-                                    const data = await res.json();
-                                    if (data.columns && Array.isArray(data.columns)) {
-                                        newColumns = data.columns;
-                                    }
-                                } catch (err) {
-                                    console.error('Cross-sheet column fetch error:', err);
-                                }
-                            }
-                        }
-                    }
-
-                    // Update file2-columns datalist (for secondary columns)
-                    if (typeof updateFile2ColumnDatalist === 'function') {
-                        updateFile2ColumnDatalist(newColumns);
-                    }
-
-                    // Update all ProColumnSelector widgets with column_source="secondary"
-                    document.querySelectorAll('.pro-column-selector-wrapper[data-column-source="secondary"]').forEach(widget => {
-                        const selectEl = widget.querySelector('select');
-                        if (selectEl) {
-                            const currentVal = selectEl.value;
-                            selectEl.innerHTML = '<option value="">-- Seçin --</option>' +
-                                newColumns.map(col => `<option value="${col}"${col === currentVal ? ' selected' : ''}>${col}</option>`).join('');
-                        }
-                    });
-
-                    console.log(`[data_source] Changed to ${this.value}, ${newColumns.length} secondary columns available`);
-                };
-
-                // Trigger initial column load based on current selection
-                setTimeout(() => {
-                    select.dispatchEvent(new Event('change'));
-                }, 100);
-
-                row.appendChild(wrapper);
             } else if (p.type === 'json_builder') {
                 const builderContainer = document.createElement('div');
                 builderContainer.className = 'gm-builder-container';
@@ -3735,34 +2635,6 @@ function renderDynamicForm(scenarioId, params) {
                                     <textarea class="pro-out-col-desc" placeholder='${CURRENT_LANG === 'tr' ? '{"SütunAdı": "Açıklama...", "Diğer": "Yorum..."}' : '{"ColumnName": "Description...", "Other": "Note..."}'}' style="width:100%; height:50px; font-size:0.75rem; resize:vertical;"></textarea>
                                     <small style="color:var(--gm-text-muted); font-size:0.7rem;">${CURRENT_LANG === 'tr' ? 'JSON formatında. Excel başlık hücrelerine yorum olarak eklenir.' : 'JSON format. Added as comments to Excel header cells.'}</small>
                                 </div>
-                                <hr style="border:none; border-top:1px solid var(--gm-border-color); margin:10px 0;">
-                                <div>
-                                    <label>📐 ${CURRENT_LANG === 'tr' ? 'Excel Formatı' : 'Excel Formatting'}:</label>
-                                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top:5px;">
-                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                            <input type="checkbox" class="pro-out-freeze" checked style="cursor:pointer;">
-                                            ${CURRENT_LANG === 'tr' ? 'Başlığı Dondur' : 'Freeze Header'}
-                                        </label>
-                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                            <input type="checkbox" class="pro-out-autofit" checked style="cursor:pointer;">
-                                            ${CURRENT_LANG === 'tr' ? 'Otomatik Genişlik' : 'Auto-Fit Columns'}
-                                        </label>
-                                        <label style="font-size:0.75rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                            <input type="checkbox" class="pro-out-header-style" checked style="cursor:pointer;">
-                                            ${CURRENT_LANG === 'tr' ? 'Başlık Stili' : 'Header Style'}
-                                        </label>
-                                    </div>
-                                </div>
-                                <div style="margin-top:8px;">
-                                    <label style="font-size:0.75rem;">${CURRENT_LANG === 'tr' ? 'Sayı Formatı' : 'Number Format'}:</label>
-                                    <select class="pro-out-numformat" style="width:100%;">
-                                        <option value="">${CURRENT_LANG === 'tr' ? 'Varsayılan' : 'Default'}</option>
-                                        <option value="#,##0">${CURRENT_LANG === 'tr' ? 'Tam Sayı (1.234)' : 'Integer (1,234)'}</option>
-                                        <option value="#,##0.00">${CURRENT_LANG === 'tr' ? 'Ondalıklı (1.234,56)' : 'Decimal (1,234.56)'}</option>
-                                        <option value="0.00%">${CURRENT_LANG === 'tr' ? 'Yüzde (12,34%)' : 'Percentage (12.34%)'}</option>
-                                        <option value="₺#,##0.00">${CURRENT_LANG === 'tr' ? 'Para Birimi (₺)' : 'Currency (₺)'}</option>
-                                    </select>
-                                </div>
                             </div>
                         `;
                         } else if (type === 'merge') {
@@ -3797,29 +2669,10 @@ function renderDynamicForm(scenarioId, params) {
                                 </div>
                                 ` : ''}
                                 
-                                <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
-                                ${(() => {
-                                    const mode = getSecondSourceHintMode();
-                                    const shouldShow = shouldShowSecondSourceHint();
-                                    if (!shouldShow || mode === 'hidden') {
-                                        return `<div class="gm-source-hint" style="display:none;"></div>`;
-                                    }
-                                    let icon, text, cssClass;
-                                    if (mode === 'success') {
-                                        icon = 'fa-check-circle';
-                                        text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-                                        cssClass = 'gm-source-hint--success';
-                                    } else if (mode === 'info') {
-                                        icon = 'fa-info-circle';
-                                        text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
-                                        cssClass = 'gm-source-hint--info';
-                                    } else {
-                                        icon = 'fa-exclamation-triangle';
-                                        text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
-                                        cssClass = 'gm-source-hint--warning';
-                                    }
-                                    return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
-                                })()}
+                                <!-- İkinci Dosya Gerekli Uyarısı -->
+                                <div class="gm-sf-warning" style="color:#ef4444; font-size:0.75rem; ${hasMultipleSheets ? '' : 'flex:1;'}">
+                                    <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
+                                </div>
                             </div>
                             
                             <!-- Birleştirme Parametreleri -->
@@ -3918,9 +2771,6 @@ function renderDynamicForm(scenarioId, params) {
                                         <option value="bottom_n">${T.cf_bottom_n || 'En Düşük N'}</option>
                                         <option value="duplicate">${T.cf_duplicate || 'Tekrarlananlar'}</option>
                                         <option value="unique">${T.cf_unique || 'Benzersizler'}</option>
-                                        <option value="text_contains">${T.cf_text_contains || 'Metin İçerir'}</option>
-                                        <option value="blanks">${T.cf_blanks || 'Boş Hücreler'}</option>
-                                        <option value="no_blanks">${T.cf_no_blanks || 'Dolu Hücreler'}</option>
                                     </select>
                                 </div>
                             </div>
@@ -3945,13 +2795,6 @@ function renderDynamicForm(scenarioId, params) {
                                     <div style="flex:1;">
                                         <label style="font-size:0.7rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Değer (Eşik veya N)' : 'Value (Threshold or N)'}</label>
                                         <input type="number" class="pro-cf-threshold" value="10" style="width:100%;">
-                                    </div>
-                                </div>
-                                <!-- Text Contains için -->
-                                <div class="cf-text-fields" style="display:none; gap:8px; margin-top:8px;">
-                                    <div style="flex:1;">
-                                        <label style="font-size:0.7rem; color:var(--gm-text-muted);">${CURRENT_LANG === 'tr' ? 'Aranacak Metin' : 'Search Text'}</label>
-                                        <input type="text" class="pro-cf-text" placeholder="${CURRENT_LANG === 'tr' ? 'Örn: Hata' : 'e.g. Error'}" style="width:100%;">
                                     </div>
                                 </div>
                             </div>
@@ -3981,11 +2824,6 @@ function renderDynamicForm(scenarioId, params) {
                                     if (thresholdFields) {
                                         thresholdFields.style.display = ['threshold', 'top_n', 'bottom_n'].includes(cfType) ? 'flex' : 'none';
                                     }
-                                    // Text alanı: text_contains
-                                    const textFields = container?.querySelector('.cf-text-fields');
-                                    if (textFields) {
-                                        textFields.style.display = cfType === 'text_contains' ? 'flex' : 'none';
-                                    }
                                 };
 
                                 if (typeSelect) {
@@ -4007,7 +2845,6 @@ function renderDynamicForm(scenarioId, params) {
                                         <option value="pie">${T.chart_pie || 'Pasta Grafik'}</option>
                                         <option value="doughnut">${T.chart_doughnut || 'Halka Grafik'}</option>
                                         <option value="scatter">${T.chart_scatter || 'Dağılım Grafiği'}</option>
-                                        <option value="radar">${T.chart_radar || 'Radar Grafik'}</option>
                                     </select>
                                 </div>
                                 <div style="flex:1; min-width:120px;">
@@ -4436,63 +3273,6 @@ function renderDynamicForm(scenarioId, params) {
                                             columns: body.querySelector('.pro-comp-cols').value.split(',').map(c => c.trim()),
                                             separator: body.querySelector('.pro-comp-sep')?.value || ' '
                                         });
-                                    } else if (ctype === 'if_else') {
-                                        // EĞER-İSE-DEĞİLSE
-                                        const condCol = body.querySelector('.pro-cond-col')?.value.trim();
-                                        if (condCol) {
-                                            actions.push({
-                                                type: 'computed',
-                                                name: name,
-                                                ctype: 'if_else',
-                                                condition_column: condCol,
-                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
-                                                condition_value: body.querySelector('.pro-cond-val')?.value || '',
-                                                true_value: body.querySelector('.pro-if-true')?.value || '',
-                                                false_value: body.querySelector('.pro-if-false')?.value || ''
-                                            });
-                                        }
-                                    } else if (ctype === 'date_diff') {
-                                        // TARİH FARKI
-                                        const date1 = body.querySelector('.pro-date-col1')?.value.trim();
-                                        const date2 = body.querySelector('.pro-date-col2')?.value.trim();
-                                        if (date1 && date2) {
-                                            actions.push({
-                                                type: 'computed',
-                                                name: name,
-                                                ctype: 'date_diff',
-                                                date1_column: date1,
-                                                date2_column: date2,
-                                                unit: body.querySelector('.pro-date-unit')?.value || 'days'
-                                            });
-                                        }
-                                    } else if (ctype === 'countif') {
-                                        // EĞERSAY (COUNTIF)
-                                        const rangeCol = body.querySelector('.pro-range-col')?.value.trim();
-                                        if (rangeCol) {
-                                            actions.push({
-                                                type: 'computed',
-                                                name: name,
-                                                ctype: 'countif',
-                                                range_column: rangeCol,
-                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
-                                                criteria: body.querySelector('.pro-cond-val')?.value || ''
-                                            });
-                                        }
-                                    } else if (ctype === 'sumif') {
-                                        // EĞERTOPLA (SUMIF)
-                                        const rangeCol = body.querySelector('.pro-range-col')?.value.trim();
-                                        const sumCol = body.querySelector('.pro-sum-col')?.value.trim();
-                                        if (rangeCol) {
-                                            actions.push({
-                                                type: 'computed',
-                                                name: name,
-                                                ctype: 'sumif',
-                                                range_column: rangeCol,
-                                                operator: body.querySelector('.pro-cond-op')?.value || '==',
-                                                criteria: body.querySelector('.pro-cond-val')?.value || '',
-                                                sum_column: sumCol || rangeCol
-                                            });
-                                        }
                                     } else if (ctype === 'text_transform') {
                                         const sourceCol = body.querySelector('.pro-tt-source')?.value.trim();
                                         const transformType = body.querySelector('.pro-tt-type')?.value || 'remove_parentheses';
@@ -4674,12 +3454,7 @@ function renderDynamicForm(scenarioId, params) {
                                     group_by_sheet: body.querySelector('.pro-out-grp-col').value.trim(),
                                     summary_sheet: body.querySelector('.pro-out-summary').checked,
                                     slicers: slicers.length > 0 ? slicers : null,
-                                    column_descriptions: Object.keys(colDescriptions).length > 0 ? colDescriptions : null,
-                                    // Excel Format Options (YENİ)
-                                    freeze_header: body.querySelector('.pro-out-freeze')?.checked ?? true,
-                                    auto_fit_columns: body.querySelector('.pro-out-autofit')?.checked ?? true,
-                                    header_style: body.querySelector('.pro-out-header-style')?.checked ?? true,
-                                    number_format: body.querySelector('.pro-out-numformat')?.value || null
+                                    column_descriptions: Object.keys(colDescriptions).length > 0 ? colDescriptions : null
                                 });
                             } else if (type === 'merge') {
                                 // İKİNCİ DOSYA - BİRLEŞTİR (VLOOKUP/JOIN)
@@ -4755,10 +3530,6 @@ function renderDynamicForm(scenarioId, params) {
                                         cfAction.threshold = parseInt(body.querySelector('.pro-cf-threshold')?.value || '10');
                                         cfAction.n = cfAction.threshold; // Alias
                                     }
-                                    // text_contains için aranacak metin (YENİ)
-                                    if (cfType === 'text_contains') {
-                                        cfAction.text = body.querySelector('.pro-cf-text')?.value || '';
-                                    }
                                     actions.push(cfAction);
                                 }
                             } else if (type === 'chart') {
@@ -4770,7 +3541,7 @@ function renderDynamicForm(scenarioId, params) {
                                         type: 'chart',
                                         chart_type: body.querySelector('.pro-chart-type')?.value || 'column',
                                         x_column: xCol,
-                                        y_columns: yCol ? [yCol] : [],
+                                        y_column: yCol,
                                         title: body.querySelector('.pro-chart-title')?.value.trim() || ''
                                     });
                                 }
@@ -4828,116 +3599,28 @@ function renderDynamicForm(scenarioId, params) {
                     return;
                 }
 
-                // 3. Conditional Column Datalist Assignment
-                // First check explicit column_source property from catalog
-                let listId = null;
+                const inp = document.createElement("input");
+                inp.type = "text"; // Default to text input
+                inp.name = p.name;
+                inp.placeholder = ph;
 
-                if (p.column_source === 'primary') {
-                    // Ana dosya sütunları (colOptions)
-                    listId = 'colOptions';
-                } else if (p.column_source === 'secondary') {
-                    // İkinci dosya / cross-sheet sütunları (file2-columns)
-                    listId = 'file2-columns';
-                } else {
-                    // Fallback: Use heuristic logic for backward compatibility
-                    // Only show column suggestions if the parameter name implies it requires a column.
-                    const colKeywords = ['column', 'col', 'sütun', 'key', 'anahtar', 'field', 'alan', 'target', 'source', 'hedef', 'kaynak', 'rows', 'satırlar', 'group', 'grup', 'date', 'tarih'];
-                    const excludeKeywords = ['value', 'değer', 'limit', 'threshold', 'eşik', 'count', 'sayı', 'name', 'isim', 'title', 'başlık', 'separator', 'ayraç'];
-
-                    let shouldShowCols = false;
-                    if (colKeywords.some(kw => pName.includes(kw))) shouldShowCols = true;
-                    if (excludeKeywords.some(kw => pName.includes(kw))) shouldShowCols = false;
-
-                    // FIX: 'value_column' should be a column selector despite having 'value' in name
-                    if (pName.includes('value_column') || pName.includes('değer_sütunu') || pName.includes('value_columns') || pName === 'values' || pName === 'columns') {
-                        shouldShowCols = true;
-                    }
-
-                    if (scenarioNeedsSecondFile && isSecondFileParam) {
-                        if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference') || pName.includes('key') || pName.includes('right_on')) {
-                            listId = 'file2-columns';
-                        } else {
-                            listId = 'colOptions';
-                        }
-                    } else if (shouldShowCols) {
-                        listId = 'colOptions';
-                    }
-                }
-
-                // --- PRO STYLE COLUMN SELECTOR INTEGRATION ---
-                // 3. Özel Durum: Hedef Sütun / Yeni Sütun Adı (Manuel giriş ama şık stil)
-                if (p.name === 'target_column' || p.name === 'result_column' || p.name === 'new_column_name') {
-                    const inp = document.createElement("input");
-                    inp.type = "text";
-                    inp.name = p.name;
-                    inp.placeholder = ph || (CURRENT_LANG === 'tr' ? 'Yeni Sütun Adı...' : 'New Column Name...');
-                    // .vb-select sınıfını ekleyerek dropdown gibi görünmesini sağlıyoruz
-                    inp.className = "vb-select";
-                    inp.style.width = "100%";
-                    // Normal input border/bg stillerini ezip vb-select stilini alması için
-                    inp.style.border = "1px solid var(--gm-card-border, #444)";
-                    inp.style.backgroundColor = "var(--gm-card-bg, #222)";
-                    inp.style.color = "var(--gm-text, #eee)";
-
-                    if (p.required === true) inp.required = true;
-
-                    // Hafif focus efekti
-                    inp.onfocus = function () { this.style.borderColor = "var(--gm-primary, #4a90d9)"; };
-                    inp.onblur = function () { this.style.borderColor = "var(--gm-card-border, #444)"; };
-
-                    row.appendChild(inp);
-                    form.appendChild(row);
-                    return; // Diğer koşullara girmesin
-                }
-
-                // 4. Varsayılan: Liste Bazlı Seçim (ProColumnSelector) veya Normal Input
-                // listId yukarıda keyword analizi ile belirlenmişti. Onu kullanıyoruz.
-
-                if (listId === 'colOptions' || listId === 'file2-columns') {
-                    // Sütun listesini belirle
-                    const columns = (listId === 'colOptions')
-                        ? (typeof FILE_COLUMNS !== 'undefined' ? FILE_COLUMNS : [])
-                        : (typeof FILE2_COLUMNS !== 'undefined' ? FILE2_COLUMNS : []);
-
-                    // column_source attribute for dynamic updates
-                    const columnSource = p.column_source || (listId === 'file2-columns' ? 'secondary' : 'primary');
-
-                    if (typeof ProColumnSelector !== 'undefined') {
-                        const proHtml = ProColumnSelector.render(p.name, p.default || "", columns, "", p.multiple || false);
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = proHtml;
-                        const widget = tempDiv.firstElementChild;
-                        widget.style.margin = "0";
-                        widget.style.padding = "0";
-                        widget.style.border = "none";
-                        widget.setAttribute('data-column-source', columnSource);
-                        const internalLabel = widget.querySelector('label');
-                        if (internalLabel) internalLabel.style.display = 'none';
-
-                        row.appendChild(widget);
-
-                        if (p.required === true) {
-                            const hiddenInput = widget.querySelector(`input[name="${p.name}"]`);
-                            if (hiddenInput) hiddenInput.required = true;
-                        }
+                // 2. Sütun Datalist Kaynağı Seçimi
+                if (scenarioNeedsSecondFile && isSecondFileParam && !pName.includes('key_column') && !pName.includes('anahtar')) { // Anahtar sütun bazen 1. dosyadır, dikkat.
+                    // Genellikle 'key_column' 1. dosya, 'lookup_key_column' 2. dosyadır.
+                    if (pName.includes('lookup') || pName.includes('return') || pName.includes('target') || pName.includes('reference')) {
+                        inp.setAttribute('list', 'file2-columns');
                     } else {
-                        const inp = document.createElement("input");
-                        inp.type = "text";
-                        inp.name = p.name;
-                        inp.placeholder = ph;
-                        inp.setAttribute('list', listId);
-                        inp.setAttribute('data-column-source', columnSource);
-                        if (p.required === true) inp.required = true;
-                        row.appendChild(inp);
+                        inp.setAttribute('list', 'colOptions');
                     }
+                } else if (scenarioNeedsSecondFile && isSecondFileParam && (pName.includes('lookup_key') || pName.includes('right_on'))) {
+                    // Explicit 2. dosya anahtar isimleri
+                    inp.setAttribute('list', 'file2-columns');
                 } else {
-                    const inp = document.createElement("input");
-                    inp.type = "text";
-                    inp.name = p.name;
-                    inp.placeholder = ph;
-                    if (p.required === true) inp.required = true;
-                    row.appendChild(inp);
+                    inp.setAttribute('list', 'colOptions'); // Varsayılan: 1. dosya
                 }
+
+                if (p.required !== false) inp.required = true;
+                row.appendChild(inp);
             }
             form.appendChild(row);
         });
@@ -5000,38 +3683,12 @@ function renderDynamicForm(scenarioId, params) {
 
         // ============================================================================
 
-        // FAZ 2.2: Buton container (Çalıştır + Önizleme)
-        const btnContainer = document.createElement("div");
-        btnContainer.style.cssText = "display: flex; gap: 12px; margin-top: 10px;";
-
-        // Çalıştır butonu
         const btn = document.createElement("button");
         btn.type = "submit";
         btn.className = "gm-gradient-btn";
         btn.textContent = EXTRA_TEXTS[CURRENT_LANG].run_btn;
-        btn.style.flex = "1";
-        btnContainer.appendChild(btn);
-
-        // FAZ 2.2: Önizleme butonu
-        const previewBtn = document.createElement("button");
-        previewBtn.type = "button";
-        previewBtn.className = "preview-btn";
-        previewBtn.innerHTML = `<i class="fas fa-eye"></i> ${CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview'}`;
-        previewBtn.title = CURRENT_LANG === 'tr' ? 'İlk 100 satırı önizle (Excel oluşturmadan)' : 'Preview first 100 rows (without Excel generation)';
-        previewBtn.onclick = (e) => {
-            e.preventDefault();
-            if (typeof window.previewScenario === 'function') {
-                window.previewScenario(scenarioId);
-            } else {
-                console.error('previewScenario function not found');
-                if (typeof showToast === 'function') {
-                    showToast('Önizleme fonksiyonu bulunamadı', 'error', 3000);
-                }
-            }
-        };
-        btnContainer.appendChild(previewBtn);
-
-        form.appendChild(btnContainer);
+        btn.style.width = "100%";
+        form.appendChild(btn);
         container.appendChild(form);
     } catch (err) {
         console.error("Form Render Error:", err);
@@ -5754,15 +4411,11 @@ async function runScenario(scenarioId) {
             }
 
             // OYUN HAMURU PRO: Builder Serialization
-            // FIX: Only serialize if pro_actions container exists (Linear Builder only, not VisualBuilder)
             if (el.type === 'hidden' && el.id && el.id.startsWith('pro_config_')) {
                 const configName = el.name;
-                const proActionsContainer = document.getElementById(`pro_actions_${configName}`);
-                // Guard: Only override if Linear Builder's action list exists AND serializeProConfig is defined
-                if (proActionsContainer && window.serializeProConfig) {
+                if (window.serializeProConfig) {
                     el.value = JSON.stringify(window.serializeProConfig(configName));
                 }
-                // If VisualBuilder already set the value, don't override it
             }
 
             // JSON Textarea ise parse etmeye çalış
@@ -5798,18 +4451,6 @@ async function runScenario(scenarioId) {
             LAST_RESULT_DATA = data;
             renderScenarioResult(data);
 
-            // FAZ 1.3: Warnings kontrolü - backend'den uyarı gelirse toast göster
-            if (data.warnings && data.warnings.length > 0) {
-                const warnCount = data.warnings.length;
-                const warnMsg = CURRENT_LANG === 'tr'
-                    ? `⚠️ ${warnCount} adımda uyarı oluştu. Detaylar için konsolu kontrol edin.`
-                    : `⚠️ ${warnCount} step(s) had warnings. Check console for details.`;
-                if (typeof showToast === 'function') {
-                    showToast(warnMsg, 'warn', 7000);
-                }
-                console.warn('Pipeline Warnings:', data.warnings);
-            }
-
             // YENİ: Feedback widget'ı göster
             if (typeof showInlineFeedbackWidget === 'function') {
                 showInlineFeedbackWidget(scenarioId);
@@ -5825,193 +4466,9 @@ async function runScenario(scenarioId) {
         } else { throw new Error(data.detail); }
     } catch (e) {
         if (statusDiv) statusDiv.textContent = ""; // Clear loading on error
-        // alert("Hata: " + e.message);
-        if (typeof showToast === 'function') {
-            showToast("❌ " + e.message, 'error', 5000);
-        } else {
-            alert("Hata: " + e.message);
-        }
+        alert("Hata: " + e.message);
     }
 }
-
-// ===== FAZ 2.2: GLOBAL PREVIEW SYSTEM =====
-/**
- * Canlı Önizleme - Tüm senaryolar için merkezi önizleme fonksiyonu
- * Backend'e is_preview: true göndererek sadece ilk 100 satırı işler
- */
-async function previewScenario(scenarioId) {
-    console.log('🔍 previewScenario called with:', scenarioId);
-
-    const fileInput = document.getElementById("fileInput");
-    if (!fileInput || !fileInput.files[0]) {
-        if (typeof showToast === 'function') {
-            showToast(CURRENT_LANG === 'tr' ? "📁 Önce dosya yükleyin" : "📁 Please upload a file first", "warning", 3000);
-        }
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", fileInput.files[0]);
-    formData.append("header_row", SELECTED_HEADER_ROW.toString());
-
-    // Sheet name - doğru değişken adı
-    if (typeof FILE_SELECTED_SHEET !== 'undefined' && FILE_SELECTED_SHEET) {
-        formData.append("sheet_name", FILE_SELECTED_SHEET);
-    }
-
-    // Tüm form verilerini topla (runScenario ile aynı mantık)
-    const paramsData = { is_preview: true };
-
-    // Form ID'yi bul - normal senaryolar için form_scenarioId, PRO için vbSettings olabilir
-    let form = document.getElementById(`form_${scenarioId}`);
-    if (!form) {
-        // Visual Builder için config'i al
-        if (typeof VisualBuilder !== 'undefined' && VisualBuilder.exportToJSON) {
-            const vbConfig = VisualBuilder.exportToJSON();
-            paramsData.config = vbConfig;
-            console.log('🎨 Visual Builder config:', vbConfig);
-        }
-    } else {
-        form.querySelectorAll("input:not([name*='[]']), select, textarea").forEach(el => {
-            if (el.name && el.value) {
-                paramsData[el.name] = el.value;
-            }
-        });
-    }
-
-    formData.append("params", JSON.stringify(paramsData));
-    console.log('📤 Preview params:', paramsData);
-
-    // Preview loading state
-    const previewBtn = document.querySelector('.preview-btn');
-    if (previewBtn) {
-        previewBtn.disabled = true;
-        previewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (CURRENT_LANG === 'tr' ? 'Yükleniyor...' : 'Loading...');
-    }
-
-    try {
-        console.log('🌐 Fetching preview from:', `${BACKEND_BASE_URL}/run/${scenarioId}`);
-        const res = await fetch(`${BACKEND_BASE_URL}/run/${scenarioId}`, { method: "POST", body: formData });
-        const data = await res.json();
-        console.log('📥 Preview response:', data);
-
-        if (res.ok && data.preview_data) {
-            renderPreviewTable(data.preview_data);
-            if (typeof showToast === 'function') {
-                showToast(CURRENT_LANG === 'tr' ? '✓ Önizleme hazır' : '✓ Preview ready', 'success', 2000);
-            }
-        } else if (res.ok) {
-            // Normal result but no preview_data - bu senaryo is_preview desteklemiyor olabilir
-            console.warn('No preview_data in response. Backend may not support is_preview for this scenario.');
-            if (typeof showToast === 'function') {
-                showToast(CURRENT_LANG === 'tr' ? 'Bu senaryo önizleme desteklemiyor' : 'This scenario does not support preview', 'warning', 3000);
-            }
-        } else {
-            throw new Error(data.detail || 'Preview failed');
-        }
-    } catch (e) {
-        console.error('Preview error:', e);
-        if (typeof showToast === 'function') {
-            showToast('❌ ' + e.message, 'error', 5000);
-        }
-    } finally {
-        if (previewBtn) {
-            previewBtn.disabled = false;
-            previewBtn.innerHTML = '<i class="fas fa-eye"></i> ' + (CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview');
-        }
-    }
-}
-
-/**
- * Önizleme Tablosu Render - Modal olarak gösterilir
- */
-function renderPreviewTable(previewData) {
-    console.log('📊 renderPreviewTable called with:', previewData);
-
-    // Mevcut modal'ı kaldır
-    let existing = document.getElementById('previewTableContainer');
-    if (existing) existing.remove();
-
-    // Modal overlay oluştur
-    const overlay = document.createElement('div');
-    overlay.id = 'previewTableContainer';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    `;
-
-    // ESC ile kapatma
-    overlay.onclick = (e) => {
-        if (e.target === overlay) overlay.remove();
-    };
-
-    const { columns, rows, truncated, row_limit, total_rows } = previewData;
-
-    // Truncation helper
-    const truncateCell = (val) => {
-        if (val === null || val === undefined) return '';
-        const str = String(val);
-        return str.length > 50 ? str.substring(0, 47) + '...' : str;
-    };
-
-    // Modal içeriği
-    const modal = document.createElement('div');
-    modal.className = 'gm-preview-container';
-    modal.style.cssText = `
-        max-width: 95vw;
-        max-height: 90vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    `;
-
-    modal.innerHTML = `
-        <div class="gm-preview-header">
-            <h4><i class="fas fa-table"></i> ${CURRENT_LANG === 'tr' ? 'Önizleme' : 'Preview'}</h4>
-            <span class="gm-preview-badge">
-                ${CURRENT_LANG === 'tr' ? 'Sadece ilk ' + row_limit + ' satır' : 'First ' + row_limit + ' rows only'}
-                ${truncated ? ' (' + (CURRENT_LANG === 'tr' ? 'toplam ' : 'total ') + total_rows + ')' : ''}
-            </span>
-            <button class="gm-preview-close" onclick="document.getElementById('previewTableContainer').remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="gm-preview-note">
-            <i class="fas fa-info-circle"></i> 
-            ${CURRENT_LANG === 'tr'
-            ? 'Not: Rank/Pivot gibi işlemler küçük örneklemde farklı sonuç verebilir.'
-            : 'Note: Rank/Pivot operations may yield different results on small samples.'}
-        </div>
-        <div class="gm-preview-table-wrapper" style="flex: 1; overflow: auto;">
-            <table class="gm-preview-table">
-                <thead>
-                    <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
-                </thead>
-                <tbody>
-                    ${rows.map(row => `<tr>${columns.map(col => `<td title="${String(row[col] || '')}">${truncateCell(row[col])}</td>`).join('')}</tr>`).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    console.log('✅ Preview modal rendered successfully');
-}
-
-// Global erişim için
-window.previewScenario = previewScenario;
-window.renderPreviewTable = renderPreviewTable;
 
 // Yardımcı: JSON Syntax Highlighting
 // Yardımcı: JSON Syntax Highlighting
@@ -6185,18 +4642,11 @@ function bindEvents() {
     // 2. Dosya Seçimi
     document.getElementById("fileInput").addEventListener("change", (e) => {
         if (e.target.files[0]) {
-            const fileName = e.target.files[0].name;
-            document.getElementById("selectedFileName").textContent = fileName;
+            document.getElementById("selectedFileName").textContent = e.target.files[0].name;
             updateUITexts();
-            const fileLabel = document.querySelector(".gm-file-label");
-            if (fileLabel) fileLabel.style.borderColor = "var(--gm-success)";
+            document.querySelector(".gm-file-label").style.borderColor = "var(--gm-success)";
             CURRENT_FILE = e.target.files[0]; // YENİ: Dosya referansını kaydet
             inspectFile(e.target.files[0]); // Inspect columns
-
-            // Excel Studio V2: Create file tab in file bar
-            if (typeof createFileTab === 'function') {
-                createFileTab(fileName, 1);
-            }
         }
     });
     const f2 = document.getElementById("fileInput2");
@@ -6512,32 +4962,9 @@ function bindEvents() {
     // 6. Dil Değiştirme
     document.getElementById("langToggle").addEventListener("click", async () => {
         CURRENT_LANG = CURRENT_LANG === "tr" ? "en" : "tr";
-
-        // 1. Statik UI Metinlerini Güncelle
-        if (typeof updateUITexts === 'function') updateUITexts();
-
-        // 2. Menüyü Yeni Dilde Yükle
         await loadMenuData(CURRENT_LANG);
 
-        // 3. Aktif Senaryo Varsa Formu Yeniden Render Et (Çeviriler için)
-        if (ACTIVE_SCENARIO_ID && typeof SCENARIO_LIST !== 'undefined') {
-            const activeScenario = SCENARIO_LIST.find(s => s.id === ACTIVE_SCENARIO_ID);
-            if (activeScenario && typeof selectScenario === 'function') {
-                // Formu ve başlıkları güncelle
-                selectScenario(activeScenario);
-
-                // Menüdeki butonu tekrar aktif yap
-                const newBtns = document.querySelectorAll(".gm-scenario-btn");
-                newBtns.forEach(btn => {
-                    // Buton metni veya index kontrolü zor, basitçe aktif sınıfı ekleyelim mi?
-                    // Genellikle loadMenuData sonrası butonlar sıfırlanır.
-                    // Şimdilik selectScenario(..., null) çağrıldığı için active class ekleme selectScenario içinde null kontrolüyle pass geçilir.
-                    // İdeal çözüm: butonları ID ile bulmak. Şimdilik formun düzelmesi yeterli.
-                });
-            }
-        }
-
-        // 4. Sonuç Alanını Güncelle
+        // Eğer LAST_RESULT_DATA aktif senaryoya aitse yeniden render et, değilse temizle
         if (LAST_RESULT_DATA && LAST_RESULT_DATA.scenario_id === ACTIVE_SCENARIO_ID) {
             renderScenarioResult(LAST_RESULT_DATA);
         } else {
@@ -6615,230 +5042,7 @@ function bindEvents() {
             }
         });
     }
-
-    // ============================================================================
-    // EXCEL STUDIO V2 - NEW EVENT HANDLERS
-    // ============================================================================
-
-    // Help Panel Toggle Button - Support both header (helpToggle) and any other toggle (helpToggleBtn)
-    const helpToggleBtn = document.getElementById("helpToggleBtn") || document.getElementById("helpToggle");
-    const helpToggleHeader = document.getElementById("helpToggle"); // Header button
-    const helpCloseBtn = document.getElementById("helpCloseBtn");
-    const mainContent = document.getElementById("mainContent");
-
-    function toggleExcelHelp() {
-        if (!mainContent) return;
-
-        if (mainContent.classList.contains("excel-help-closed")) {
-            mainContent.classList.remove("excel-help-closed");
-            mainContent.classList.add("excel-help-open");
-            if (helpToggleBtn) helpToggleBtn.classList.add("active");
-            if (helpToggleHeader) helpToggleHeader.classList.add("active");
-        } else {
-            mainContent.classList.remove("excel-help-open");
-            mainContent.classList.add("excel-help-closed");
-            if (helpToggleBtn) helpToggleBtn.classList.remove("active");
-            if (helpToggleHeader) helpToggleHeader.classList.remove("active");
-        }
-    }
-
-    if (helpToggleBtn) {
-        helpToggleBtn.addEventListener("click", toggleExcelHelp);
-    }
-    // Also bind to header help toggle if different
-    if (helpToggleHeader && helpToggleHeader !== helpToggleBtn) {
-        helpToggleHeader.addEventListener("click", toggleExcelHelp);
-    }
-
-    if (helpCloseBtn) {
-        helpCloseBtn.addEventListener("click", function () {
-            if (mainContent) {
-                mainContent.classList.remove("excel-help-open");
-                mainContent.classList.add("excel-help-closed");
-                if (helpToggleBtn) helpToggleBtn.classList.remove("active");
-            }
-        });
-    }
-
-    // Note: fileInput change handler is in bindEvents (line 4732) which calls both inspectFile and createFileTab
-
-    // Add Second File Button
-    const addSecondFileBtn = document.getElementById("addSecondFileBtn");
-    if (addSecondFileBtn) {
-        addSecondFileBtn.addEventListener("click", function () {
-            // Trigger second file upload
-            const fi2 = document.getElementById("fileInput2");
-            if (fi2) fi2.click();
-        });
-    }
-
-    // Second File Input change event
-    const fileInput2El = document.getElementById("fileInput2");
-    if (fileInput2El) {
-        fileInput2El.addEventListener("change", function () {
-            if (this.files && this.files.length > 0) {
-                const fileName = this.files[0].name;
-                createFileTab(fileName, 2);
-            }
-        });
-    }
 }
-
-// Create file tab in the file bar
-function createFileTab(fileName, fileNumber) {
-    const container = document.getElementById("fileTabsContainer");
-    if (!container) return;
-
-    // Check if tab already exists
-    const existingTab = document.querySelector(`.gm-excel-file-tab[data-file="${fileNumber}"]`);
-    if (existingTab) {
-        // Update existing tab
-        const nameSpan = existingTab.querySelector(".tab-name");
-        if (nameSpan) nameSpan.textContent = fileName;
-        return;
-    }
-
-    // Find upload tab position
-    const uploadTab = document.getElementById(`file${fileNumber}UploadTab`);
-
-    // Create new file tab
-    const tab = document.createElement("div");
-    tab.className = "gm-excel-file-tab active";
-    tab.dataset.file = fileNumber;
-    tab.innerHTML = `
-        <span class="tab-dot"></span>
-        <span class="tab-name">${fileName}</span>
-        <span class="tab-close" onclick="removeFileTab(${fileNumber})">&times;</span>
-    `;
-
-    // Insert after upload tab or at the end
-    if (uploadTab) {
-        uploadTab.style.display = "none"; // Hide upload tab when file is loaded
-        container.insertBefore(tab, uploadTab.nextSibling);
-    } else {
-        container.appendChild(tab);
-    }
-
-    // Show + button for second file if it's first file
-    if (fileNumber === 1) {
-        const addBtn = document.getElementById("addSecondFileBtn");
-        if (addBtn) addBtn.style.display = "flex";
-
-        // Add file-loaded class to file bar
-        const fileBar = container.closest(".gm-excel-file-bar");
-        if (fileBar) fileBar.classList.add("file-loaded");
-    }
-
-    // Deactivate other tabs
-    container.querySelectorAll(".gm-excel-file-tab").forEach(t => {
-        if (t !== tab) t.classList.remove("active");
-    });
-}
-
-// Remove file tab
-function removeFileTab(fileNumber) {
-    const tab = document.querySelector(`.gm-excel-file-tab[data-file="${fileNumber}"]`);
-    if (tab) tab.remove();
-
-    // Show upload tab again
-    const uploadTab = document.getElementById(`file${fileNumber}UploadTab`);
-    if (uploadTab) uploadTab.style.display = "flex";
-
-    // Hide + button and remove file-loaded class if first file is removed
-    if (fileNumber === 1) {
-        const addBtn = document.getElementById("addSecondFileBtn");
-        if (addBtn) addBtn.style.display = "none";
-
-        const fileBar = document.querySelector(".gm-excel-file-bar");
-        if (fileBar) fileBar.classList.remove("file-loaded");
-
-        // Hide file info panel
-        const fileInfoPanel = document.getElementById("fileInfoPanel");
-        if (fileInfoPanel) fileInfoPanel.style.display = "none";
-    }
-
-    // Hide file info panel 2 if second file removed
-    if (fileNumber === 2) {
-        const fileInfoPanel2 = document.getElementById("fileInfoPanel2");
-        if (fileInfoPanel2) fileInfoPanel2.style.display = "none";
-    }
-
-    // Clear file input
-    const input = document.getElementById(fileNumber === 1 ? "fileInput" : "fileInput2");
-    if (input) input.value = "";
-}
-
-// Open Visual Builder - Oyun Hamuru PRO (Gelişmiş Dinamik Rapor)
-function openVisualBuilder() {
-    // Find the custom-report-builder-pro scenario in SCENARIO_LIST (note: hyphen, not underscore)
-    const proScenario = SCENARIO_LIST.find(sc => sc.id === "custom-report-builder-pro");
-
-    if (proScenario) {
-        // Use existing selectScenario logic with the found scenario
-        const titleEl = document.getElementById("scenarioTitle");
-        const subtitleEl = document.getElementById("scenarioSubtitle");
-
-        if (titleEl) titleEl.textContent = proScenario.title;
-        if (subtitleEl) subtitleEl.textContent = proScenario.short || proScenario.description || "";
-
-        // Clear any previously selected scenario buttons
-        document.querySelectorAll(".gm-excel-scenario-card.active, .gm-scenario-btn.active").forEach(btn => {
-            btn.classList.remove("active");
-        });
-
-        // Highlight PRO card
-        const proCard = document.getElementById("proBuilderCard");
-        if (proCard) proCard.classList.add("active");
-
-        // Set active scenario
-        ACTIVE_SCENARIO_ID = proScenario.id;
-
-        // Render the dynamic form
-        renderDynamicForm(proScenario.id, proScenario.params || []);
-
-        // Load help content
-        loadScenarioHelp(proScenario.id);
-    } else {
-        // Fallback: Show placeholder if scenario not found
-        const T = EXTRA_TEXTS[CURRENT_LANG];
-        const formContainer = document.getElementById("dynamicFormContainer");
-        const titleEl = document.getElementById("scenarioTitle");
-        const subtitleEl = document.getElementById("scenarioSubtitle");
-
-        if (titleEl) titleEl.textContent = T.pro_title || "Özel Rapor Oluşturucu";
-        if (subtitleEl) subtitleEl.textContent = T.pro_subtitle || "Sürükle, Bırak, Raporla";
-
-        if (formContainer) {
-            formContainer.innerHTML = `
-                <div style="text-align:center; padding:60px 20px;">
-                    <div style="font-size:4rem; margin-bottom:20px;">🚀</div>
-                    <h3 style="color:var(--gm-primary); margin-bottom:10px;">Oyun Hamuru PRO</h3>
-                    <p style="color:var(--gm-text-muted); font-size:0.9rem;">${T.pro_coming_soon || "Yükleniyor..."}</p>
-                    <p style="font-size:0.8rem; color:#ef4444; margin-top:20px;">
-                        ⚠️ Senaryo yüklenemedi. Lütfen sayfayı yenileyin veya backend'in çalıştığından emin olun.
-                    </p>
-                </div>
-            `;
-        }
-
-        // Clear active scenario - this is a special mode
-        ACTIVE_SCENARIO_ID = null;
-
-        // Clear any previously selected scenario buttons
-        document.querySelectorAll(".gm-excel-scenario-card.active, .gm-scenario-btn.active").forEach(btn => {
-            btn.classList.remove("active");
-        });
-
-        // Highlight PRO card
-        const proCard = document.getElementById("proBuilderCard");
-        if (proCard) proCard.classList.add("active");
-    }
-}
-
-// Export new functions to window for onclick handlers
-window.openVisualBuilder = openVisualBuilder;
-window.createFileTab = createFileTab;
-window.removeFileTab = removeFileTab;
 
 // ============================================================================
 // PHASE 1: CROSS-SHEET CORE FUNCTIONS
@@ -6910,29 +5114,10 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
-        ${(() => {
-            const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : 'hidden';
-            const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : false;
-            if (!shouldShow || mode === 'hidden') {
-                return `<div class="gm-source-hint" style="display:none;"></div>`;
-            }
-            let icon, text, cssClass;
-            if (mode === 'success') {
-                icon = 'fa-check-circle';
-                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-                cssClass = 'gm-source-hint--success';
-            } else if (mode === 'info') {
-                icon = 'fa-info-circle';
-                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
-                cssClass = 'gm-source-hint--info';
-            } else {
-                icon = 'fa-exclamation-triangle';
-                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
-                cssClass = 'gm-source-hint--warning';
-            }
-            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
-        })()}
+        <!-- İkinci Dosya Gerekli Uyarısı -->
+        <div class="sf-warning" style="color:#ef4444; font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
+            <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
+        </div>
     </div>
     `;
 }
@@ -7008,29 +5193,10 @@ function getInlineCrossSheetHTML(uniqueId = '') {
         </div>
         ` : ''}
         
-        <!-- İkinci Dosya Gerekli Uyarısı - Conditional Visibility -->
-        ${(() => {
-            const mode = typeof getSecondSourceHintMode === 'function' ? getSecondSourceHintMode() : 'hidden';
-            const shouldShow = typeof shouldShowSecondSourceHint === 'function' ? shouldShowSecondSourceHint() : false;
-            if (!shouldShow || mode === 'hidden') {
-                return `<div class="gm-source-hint" style="display:none;"></div>`;
-            }
-            let icon, text, cssClass;
-            if (mode === 'success') {
-                icon = 'fa-check-circle';
-                text = (T.lbl_second_source_success || 'Source: {filename}').replace('{filename}', FILE2_NAME || 'File2');
-                cssClass = 'gm-source-hint--success';
-            } else if (mode === 'info') {
-                icon = 'fa-info-circle';
-                text = T.lbl_second_source_info || 'You can also pick another sheet from the same workbook.';
-                cssClass = 'gm-source-hint--info';
-            } else {
-                icon = 'fa-exclamation-triangle';
-                text = T.lbl_second_source_warning || 'This scenario requires a second source: upload a 2nd file or select a sheet.';
-                cssClass = 'gm-source-hint--warning';
-            }
-            return `<div class="gm-source-hint ${cssClass}" style="${hasMultipleSheets ? '' : 'flex:1;'}"><i class="fas ${icon}"></i> ${text}</div>`;
-        })()}
+        <!-- İkinci Dosya Gerekli Uyarısı -->
+        <div class="sf-warning" style="color:#ef4444; font-size:0.75rem; ${!hasSecondFile ? '' : 'display:none;'} ${hasMultipleSheets ? '' : 'flex:1;'}">
+            <i class="fas fa-exclamation-triangle"></i> ${T.lbl_second_file_required || 'İkinci dosya yükleyin veya yukarıdan sayfa seçin'}
+        </div>
     </div>
     `;
 }

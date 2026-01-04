@@ -170,6 +170,13 @@ export async function loadDataWithOptions() {
             activeDataset.columnsInfo = VIZ_STATE.columnsInfo;
         }
 
+        // FAZ-7B: Large Data Check
+        if (VIZ_STATE.data.length > 50000) {
+            if (typeof showToast === 'function') {
+                showToast(`⚠️ Büyük veri seti tespit edildi (${VIZ_STATE.data.length.toLocaleString('tr-TR')} satır). Performans modu aktif.`, 'warning', 7000);
+            }
+        }
+
         document.getElementById('vizDropZone').style.display = 'none';
         document.getElementById('vizFileInfo').style.display = 'block';
         document.getElementById('vizFileName').textContent = file.name;
@@ -179,9 +186,26 @@ export async function loadDataWithOptions() {
         updateDataProfile();
 
         console.log(`✅ ${file.name} yüklendi: ${VIZ_STATE.data.length} satır, ${VIZ_STATE.columns.length} sütun`);
-        if (typeof showToast === 'function') showToast(`${VIZ_STATE.data.length.toLocaleString('tr-TR')} satır yüklendi`, 'success');
 
-        VIZ_STATE.charts.forEach(config => { if (typeof renderChart === 'function') renderChart(config); });
+        // FAZ-4: Broadcast change
+        if (typeof window.broadcastDataChange === 'function') {
+            const rowCount = VIZ_STATE.data.length.toLocaleString(VIZ_STATE.lang === 'en' ? 'en-US' : 'tr-TR');
+            const msg = VIZ_STATE.lang === 'en'
+                ? `${rowCount} rows loaded`
+                : `${rowCount} satır yüklendi`;
+            window.broadcastDataChange({
+                source: 'load',
+                type: 'full_reload',
+                log: msg
+            });
+        } else {
+            const rowCount = VIZ_STATE.data.length.toLocaleString(VIZ_STATE.lang === 'en' ? 'en-US' : 'tr-TR');
+            const msg = VIZ_STATE.lang === 'en'
+                ? `${rowCount} rows loaded`
+                : `${rowCount} satır yüklendi`;
+            if (typeof showToast === 'function') showToast(msg, 'success');
+            VIZ_STATE.charts.forEach(config => { if (typeof renderChart === 'function') renderChart(config); });
+        }
 
 
     } catch (error) {
@@ -546,7 +570,16 @@ export function applyTransform() {
     if (!VIZ_STATE.columns.includes(newCol)) VIZ_STATE.columns.push(newCol);
 
     document.getElementById('transformModal')?.remove();
-    if (typeof showToast === 'function') showToast(`"${newCol}" sütunu oluşturuldu`, 'success');
+    // FAZ-4: Broadcast change
+    if (typeof window.broadcastDataChange === 'function') {
+        window.broadcastDataChange({
+            source: 'transform',
+            type: 'modification',
+            log: `Data transformed: ${type} applied to ${source} -> ${newCol}`
+        });
+    } else {
+        if (typeof showToast === 'function') showToast(`"${newCol}" sütunu oluşturuldu`, 'success');
+    }
 }
 
 // -----------------------------------------------------
@@ -2289,5 +2322,28 @@ function loadMultipleFiles() {
 
 window.loadMultipleFiles = loadMultipleFiles;
 
-console.log('✅ data.js module loaded (with filter, sort, clean, all show modals)');
+// Global Access Bindings
+window.handleFileSelect = handleFileSelect;
+window.loadFile = loadFile;
+window.updateDatasetSelector = updateDatasetSelector;
+window.loadDataWithOptions = loadDataWithOptions;
+window.reloadWithOptions = reloadWithOptions;
+window.clearData = clearData;
+window.updateDataProfile = updateDataProfile;
+window.renderColumnsList = renderColumnsList;
+window.updateDropdowns = updateDropdowns;
+window.aggregateData = aggregateData;
+window.exportDataAsCSV = exportDataAsCSV;
+window.exportDataAsJSON = exportDataAsJSON;
+window.showTransformUI = showTransformUI;
+window.applyTransform = applyTransform;
+window.showJoinModal = showJoinModal;
+window.executeJoin = executeJoin;
+window.showGoogleSheetsModal = showGoogleSheetsModal;
+window.importGoogleSheet = importGoogleSheet;
+window.connectGoogleOAuth = connectGoogleOAuth;
+window.showSQLModal = showSQLModal;
+window.testSQLConnection = testSQLConnection;
+// Note: executeSQLQuery should be exported if defined in this file
 
+console.log('📦 data.js module loaded (with filter, sort, clean, all show modals)');

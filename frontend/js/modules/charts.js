@@ -11,18 +11,28 @@ import { aggregateData, updateDataProfile } from './data.js';
 // -----------------------------------------------------
 // CHART CREATION & MANAGEMENT
 // -----------------------------------------------------
-export function addChart(type = 'bar') {
-    const chartId = `chart_${++VIZ_STATE.chartCounter}`;
 
-    const chartConfig = {
-        id: chartId,
+/**
+ * FAZ-6A: Multi-axis Validation
+ * Define axis requirements for each chart type
+ */
+export function getChartAxisRequirements(type) {
+    const specs = {
+        'bar': { axes: 2, y2: false, label: 'Bar' },
+        'line': { axes: 2, y2: false, label: 'Line' },
+        'scatter': { axes: 2, y2: false, label: 'Scatter' },
+        'pie': { axes: 0, y2: false, label: 'Pie' },
+        'dual_line_bar': { axes: 2, y2: true, label: 'Dual Axis (Line+Bar)' },
+        'mixed': { axes: 2, y2: true, label: 'Mixed Chart' },
+        'heatmap': { axes: 2, y2: false, label: 'Heatmap' }
+    };
+    return specs[type] || { axes: 2, y2: false, label: 'Chart' };
+}
+
+export function addChart(type = 'bar') {
+    const config = {
+        id: `chart_${++VIZ_STATE.chartCounter}`,
         type: type,
-        title: `Grafik ${VIZ_STATE.chartCounter}`,
-        xAxis: VIZ_STATE.columns[0] || '',
-        yAxis: VIZ_STATE.columns[1] || VIZ_STATE.columns[0] || '',
-        yAxes: [VIZ_STATE.columns[1] || VIZ_STATE.columns[0] || ''],
-        y2Axis: null,
-        useDualAxis: false,
         aggregation: 'sum',
         color: '#4a90d9',
         dataLimit: 20,
@@ -34,14 +44,14 @@ export function addChart(type = 'bar') {
         maxCol: null
     };
 
-    VIZ_STATE.charts.push(chartConfig);
+    VIZ_STATE.charts.push(config);
 
     // Widget oluştur
-    createChartWidget(chartConfig);
+    createChartWidget(config);
     updateEmptyState();
 
     // Seç ve ayarları göster
-    selectChart(chartId);
+    selectChart(config.id);
 }
 
 export function createChartWidget(config) {

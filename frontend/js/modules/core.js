@@ -23,6 +23,9 @@ export const VIZ_STATE = {
     maxHistory: 50,
     isUndoing: false,
 
+    // FAZ-4B: Academic Change Log
+    changeLog: [],
+
     get file() { return this.getActiveFile(); },
     get data() { return this.getActiveData(); },
     get columns() { return this.getActiveColumns(); },
@@ -43,7 +46,7 @@ export const VIZ_STATE = {
     getDatasetById(id) { return this.datasets[id] || null; },
     addDataset(file, data, columns, columnsInfo, sheets = []) {
         const id = `dataset_${++this.datasetCounter}`;
-        this.datasets[id] = { id, file, data, columns, columnsInfo, sheets, name: file?.name || id, audit_log: {} };
+        this.datasets[id] = { id, file, data, columns, columnsInfo, sheets, name: file?.name || id, audit_log: [] };
         this.activeDatasetId = id;
         console.log(`📁 Yeni dataset eklendi: ${id} (${file?.name})`);
         return id;
@@ -66,8 +69,98 @@ export const VIZ_STATE = {
     getDatasetList() { return Object.values(this.datasets).map(d => ({ id: d.id, name: d.name, rowCount: d.data?.length || 0 })); }
 };
 
+/**
+ * FAZ-4: Central Data Pipeline Broadcast
+ * Single source of truth for updating all UI components after data changes.
+ * @param {object} options - { source: 'transform'|'filter'|'load', type: string, log: string }
+ */
+/**
+ * FAZ-4: Central Data Pipeline Broadcast
+ * Single source of truth for updating all UI components after data changes.
+ * FAZ-7: Performance optimized (Staggered updates)
+ * @param {object} options - { source: 'transform'|'filter'|'load', type: string, log: string }
+ */
+export function broadcastDataChange(options = {}) {
+    console.log('📡 broadcastDataChange:', options);
+
+    // 1. Log to Academic History
+    if (options.log) {
+        const entry = {
+            timestamp: new Date().toISOString(),
+            source: options.source || 'unknown',
+            type: options.type || 'modification',
+            note: options.log
+        };
+        VIZ_STATE.changeLog.push(entry);
+        // Also log to active dataset's specific audit log if exists
+        const ds = VIZ_STATE.getActiveDataset();
+        if (ds) {
+            if (!ds.audit_log) ds.audit_log = [];
+            ds.audit_log.push(entry);
+        }
+    }
+
+    // 2. Update Core UI
+    if (typeof window.renderColumnsList === 'function') window.renderColumnsList(); // data.js
+    if (typeof window.updateDropdowns === 'function') window.updateDropdowns(); // data.js
+    if (typeof window.updateDataProfile === 'function') window.updateDataProfile(); // data.js
+
+    // 3. Rerender All Charts (FAZ-7: Staggered)
+    if (VIZ_STATE.charts && VIZ_STATE.charts.length > 0) {
+        if (typeof window.renderChart === 'function') {
+            // Determine stagger delay based on data size
+            const rowCount = VIZ_STATE.data ? VIZ_STATE.data.length : 0;
+            const staggerDelay = rowCount > 20000 ? 300 : (rowCount > 5000 ? 100 : 20);
+
+            if (rowCount > 5000) {
+                console.log(`🚀 Performance Mode: Staggering updates (${staggerDelay}ms delay)`);
+                if (typeof showToast === 'function') showToast('Görselleştirmeler güncelleniyor...', 'info');
+            }
+
+            VIZ_STATE.charts.forEach((config, index) => {
+                setTimeout(() => {
+                    try {
+                        window.renderChart(config);
+                    } catch (e) {
+                        console.warn(`Chart update failed for ${config.id}:`, e);
+                    }
+                }, index * staggerDelay);
+            });
+        }
+    }
+
+    // 4. Refresh All Stat Widgets
+    if (typeof window.refreshAllStatWidgets === 'function') {
+        // Wait for charts to start updating
+        setTimeout(() => window.refreshAllStatWidgets(), 500);
+    }
+
+    // 5. User Feedback
+    if (options.log && typeof showToast === 'function') {
+        // Toast type: load=success, diğer durumlar=info
+        const toastType = options.source === 'load' ? 'success' : 'info';
+        showToast(options.log, toastType);
+    }
+}
+
+/**
+ * FAZ-7: Global Debounce Utility
+ */
+export function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Global erişim
 window.VIZ_STATE = VIZ_STATE;
+window.broadcastDataChange = broadcastDataChange;
 window.VIZ_TEXTS = VIZ_TEXTS;
 export { VIZ_TEXTS };
 
@@ -75,6 +168,13 @@ export { VIZ_TEXTS };
 // INITIALIZATION
 // -----------------------------------------------------
 export function initVizStudio() {
+    // FAZ-3: Duplicate load guard
+    if (window.__VIZ_STUDIO_INITIALIZED__) {
+        console.warn('⚠️ initVizStudio already called, skipping duplicate initialization');
+        return;
+    }
+    window.__VIZ_STUDIO_INITIALIZED__ = true;
+
     console.log('🎨 Visual Studio başlatıldı (Production v1.0)');
     injectCoreStyles();
 
@@ -204,48 +304,51 @@ function applyLocalization() {
 // -----------------------------------------------------
 // EVENT LISTENERS
 // -----------------------------------------------------
+// -----------------------------------------------------
+// EVENT LISTENERS
+// -----------------------------------------------------
 export function setupEventListeners() {
     document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
     document.getElementById('langToggle')?.addEventListener('click', toggleLang);
     document.getElementById('vizFileInput')?.addEventListener('change', (e) => {
-        if (typeof handleFileSelect === 'function') handleFileSelect(e);
+        if (typeof window.handleFileSelect === 'function') window.handleFileSelect(e);
     });
     document.getElementById('vizFileRemove')?.addEventListener('click', () => {
-        if (typeof clearData === 'function') clearData();
+        if (typeof window.clearData === 'function') window.clearData();
     });
     document.getElementById('loadDataBtn')?.addEventListener('click', () => {
         document.getElementById('vizFileInput')?.click();
     });
     document.getElementById('addChartBtn')?.addEventListener('click', () => {
-        if (typeof addChart === 'function') addChart('bar');
+        if (typeof window.addChart === 'function') window.addChart('bar');
     });
     document.getElementById('clearCanvasBtn')?.addEventListener('click', () => {
-        if (typeof clearDashboard === 'function') clearDashboard();
+        if (typeof window.clearDashboard === 'function') window.clearDashboard();
     });
     document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
-        if (typeof hideSettings === 'function') hideSettings();
+        if (typeof window.hideSettings === 'function') window.hideSettings();
     });
     document.getElementById('applySettingsBtn')?.addEventListener('click', () => {
-        if (typeof applyChartSettings === 'function') applyChartSettings();
+        if (typeof window.applyChartSettings === 'function') window.applyChartSettings();
     });
     document.getElementById('deleteChartBtn')?.addEventListener('click', () => {
-        if (typeof deleteSelectedChart === 'function') deleteSelectedChart();
+        if (typeof window.deleteSelectedChart === 'function') window.deleteSelectedChart();
     });
     document.getElementById('chartColor')?.addEventListener('input', (e) => {
         const preview = document.querySelector('.viz-color-preview');
         if (preview) preview.style.background = e.target.value;
     });
     document.getElementById('saveBtn')?.addEventListener('click', () => {
-        if (typeof showSaveMenu === 'function') showSaveMenu();
+        if (typeof window.showSaveMenu === 'function') window.showSaveMenu();
     });
     document.getElementById('exportBtn')?.addEventListener('click', () => {
-        if (typeof showExportMenu === 'function') showExportMenu();
+        if (typeof window.showExportMenu === 'function') window.showExportMenu();
     });
     ['showMeanLine', 'showMedianLine', 'showStdBand', 'showTrendLine'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
-            if (VIZ_STATE.selectedChart && typeof renderChart === 'function') {
+            if (VIZ_STATE.selectedChart && typeof window.renderChart === 'function') {
                 const config = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
-                if (config) renderChart(config);
+                if (config) window.renderChart(config);
             }
         });
     });
@@ -272,7 +375,7 @@ export function setupDragAndDrop() {
             e.preventDefault();
             dashboard.classList.remove('drag-over');
             const chartType = e.dataTransfer.getData('chartType');
-            if (chartType && typeof addChart === 'function') addChart(chartType);
+            if (chartType && typeof window.addChart === 'function') window.addChart(chartType);
         });
     }
 }
@@ -282,13 +385,13 @@ export function setupDragAndDrop() {
 // -----------------------------------------------------
 export function setupKeyboardShortcuts() {
     if (typeof Mousetrap !== 'undefined') {
-        Mousetrap.bind('ctrl+k', (e) => { e.preventDefault(); if (typeof toggleCommandPalette === 'function') toggleCommandPalette(); });
-        Mousetrap.bind('ctrl+s', (e) => { e.preventDefault(); if (typeof saveDashboard === 'function') saveDashboard(); });
-        Mousetrap.bind('delete', () => { if (typeof deleteSelectedChart === 'function') deleteSelectedChart(); });
-        Mousetrap.bind('ctrl+e', (e) => { e.preventDefault(); if (typeof exportPNG === 'function') exportPNG(); });
-        Mousetrap.bind('f11', (e) => { e.preventDefault(); if (typeof toggleFullscreen === 'function') toggleFullscreen(); });
+        Mousetrap.bind('ctrl+k', (e) => { e.preventDefault(); if (typeof window.toggleCommandPalette === 'function') window.toggleCommandPalette(); });
+        Mousetrap.bind('ctrl+s', (e) => { e.preventDefault(); if (typeof window.saveDashboard === 'function') window.saveDashboard(); });
+        Mousetrap.bind('delete', () => { if (typeof window.deleteSelectedChart === 'function') window.deleteSelectedChart(); });
+        Mousetrap.bind('ctrl+e', (e) => { e.preventDefault(); if (typeof window.exportPNG === 'function') window.exportPNG(); });
+        Mousetrap.bind('f11', (e) => { e.preventDefault(); if (typeof window.toggleFullscreen === 'function') window.toggleFullscreen(); });
         Mousetrap.bind('ctrl+d', (e) => { e.preventDefault(); toggleTheme(); });
-        Mousetrap.bind('?', () => { if (typeof showShortcuts === 'function') showShortcuts(); });
+        Mousetrap.bind('?', () => { if (typeof window.showShortcuts === 'function') window.showShortcuts(); });
     }
 }
 

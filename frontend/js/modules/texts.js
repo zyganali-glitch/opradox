@@ -6,6 +6,10 @@
 export const VIZ_TEXTS = {
     tr: {
         viz_subtitle: 'Visual Studio',
+        module_excel: 'Excel Studio',
+        module_viz: 'Visual Studio',
+        module_pdf: 'PDF Tools',
+        module_ocr: 'OCR Lab',
         data_columns: 'Veri Sütunları',
         drop_excel: 'Excel dosyası sürükleyin',
         no_data_loaded: 'Veri yükleyin',
@@ -312,6 +316,10 @@ export const VIZ_TEXTS = {
     },
     en: {
         viz_subtitle: 'Visual Studio',
+        module_excel: 'Excel Studio',
+        module_viz: 'Visual Studio',
+        module_pdf: 'PDF Tools',
+        module_ocr: 'OCR Lab',
         data_columns: 'Data Columns',
         drop_excel: 'Drop Excel file here',
         no_data_loaded: 'Load data',

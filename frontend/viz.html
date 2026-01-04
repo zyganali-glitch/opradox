@@ -83,6 +83,56 @@
     <script defer src="js/fileDocker.js"></script>
 
     <!-- =============================================== -->
+    <!-- DEBUG CATCHER ( Temporary for Dead Buttons Fix ) -->
+    <!-- =============================================== -->
+    <div id="debug-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; color:white; font-family:monospace; padding:20px; overflow:auto;">
+        <div style="background:#e74c3c; padding:15px; border-radius:5px; margin-bottom:20px;">
+            <h2 style="margin:0 0 10px 0;">🚨 HATA YAKALANDI</h2>
+            <p>Lütfen aşağıdaki hatayı geliştiriciye bildirin:</p>
+            <button onclick="document.getElementById('debug-overlay').style.display='none'"
+                style="float:right; margin-top:-30px; background:white; color:black; border:none; padding:5px 10px; cursor:pointer;">Kapat</button>
+        </div>
+        <pre id="debug-log" style="white-space:pre-wrap; font-size:14px; color:#f1c40f;"></pre>
+        <div style="margin-top:20px;">
+            <h3>Module Status:</h3>
+            <ul id="module-status-list" style="list-style:none; padding:0;"></ul>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const logEl = document.getElementById('debug-log');
+            const overlay = document.getElementById('debug-overlay');
+            const listEl = document.getElementById('module-status-list');
+
+            function showErr(msg) {
+                overlay.style.display = 'block';
+                logEl.textContent += msg + '\n-------------------\n';
+                console.error(msg);
+            }
+
+            window.onerror = function (msg, url, line, col, error) {
+                showErr(`JS ERROR:\nMsg: ${msg}\nFile: ${url}\nLine: ${line}:${col}\nErr: ${error ? error.stack : 'N/A'}`);
+                return false;
+            };
+
+            window.addEventListener('unhandledrejection', function (event) {
+                showErr(`PROMISE ERROR:\nReason: ${event.reason}`);
+            });
+
+            window.markModuleLoaded = function (name) {
+                const li = document.createElement('li');
+                li.innerHTML = `✅ ${name} loaded`;
+                li.style.color = '#2ecc71';
+                listEl.appendChild(li);
+            }
+        })();
+    </script>
+
+    <!-- FAZ-5: Central Toast System (must load BEFORE modules) -->
+    <script src="js/toast.js"></script>
+
+    <!-- =============================================== -->
     <!-- MODULAR VIZ.JS ARCHITECTURE (NEW ES6 MODULES)  -->
     <!-- =============================================== -->
     <script type="module">
@@ -100,7 +150,8 @@
         import './js/modules/advanced.js';
 
         // 4. Initialize System
-        window.addEventListener('DOMContentLoaded', () => {
+        // 4. Initialize System
+        const initSystem = () => {
             console.log('🚀 Opradox Modular System Initializing...');
 
             // Window binding check
@@ -113,7 +164,13 @@
                     if (module.initVizStudio) module.initVizStudio();
                 });
             }
-        });
+        };
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', initSystem);
+        } else {
+            initSystem();
+        }
     </script>
 
     <!-- Legacy file handlers REMOVED - files don't exist (404) -->

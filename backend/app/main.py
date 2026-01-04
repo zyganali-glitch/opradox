@@ -617,22 +617,24 @@ async def serve_img_no_cache(filename: str):
         )
     raise HTTPException(status_code=404, detail="Image file not found")
 
-# JS dosyaları için özel endpoint (no-cache headers ile)
-@app.get("/js/{filename:path}")
-async def serve_js_no_cache(filename: str):
-    from fastapi.responses import FileResponse
-    js_path = FRONTEND_DIR / "js" / filename
-    if js_path.exists():
-        return FileResponse(
-            js_path, 
-            media_type="application/javascript",
-            headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
-            }
-        )
-    raise HTTPException(status_code=404, detail="JS file not found")
+app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
+
+# JS dosyaları için özel endpoint (DEVRE DIŞI - Module Loading Fix)
+# @app.get("/js/{filename:path}")
+# async def serve_js_no_cache(filename: str):
+#     from fastapi.responses import FileResponse
+#     js_path = FRONTEND_DIR / "js" / filename
+#     if js_path.exists():
+#         return FileResponse(
+#             js_path, 
+#             media_type="application/javascript",
+#             headers={
+#                 "Cache-Control": "no-cache, no-store, must-revalidate",
+#                 "Pragma": "no-cache",
+#                 "Expires": "0"
+#             }
+#         )
+#     raise HTTPException(status_code=404, detail="JS file not found")
 
 # HELP dosyaları için endpoint (video tutorials)
 @app.get("/help/{filename:path}")

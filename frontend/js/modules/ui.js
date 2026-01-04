@@ -6,75 +6,26 @@
 import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 
 // -----------------------------------------------------
-// TOAST NOTIFICATIONS (with queue/stack system)
+// TOAST NOTIFICATIONS - FAZ-5: Delegated to Central System
+// Now uses window.showToast from toast.js
 // -----------------------------------------------------
-const toastQueue = [];
-const MAX_VISIBLE_TOASTS = 3;
-let lastToastMessage = '';
-let lastToastTime = 0;
 
+/**
+ * Proxy to central Toast system (FAZ-5)
+ * Delegates all calls to window.showToast from toast.js
+ */
 export function showToast(message, type = 'info', duration = 5000) {
-    // Deduplication: same message within 2 seconds = skip
-    const now = Date.now();
-    if (message === lastToastMessage && (now - lastToastTime) < 2000) {
-        return;
+    // FAZ-5: Use central Toast system
+    if (typeof window.showToast === 'function') {
+        return window.showToast(message, type, duration);
     }
-    lastToastMessage = message;
-    lastToastTime = now;
-
-    const toast = document.createElement('div');
-    toast.className = `viz-toast viz-toast-${type}`;
-
-    const icons = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'warning': 'fa-exclamation-triangle',
-        'info': 'fa-info-circle'
-    };
-
-    toast.innerHTML = `
-        <i class="fas ${icons[type] || icons.info}"></i>
-        <span>${message}</span>
-    `;
-
-    document.body.appendChild(toast);
-    toastQueue.push(toast);
-
-    // Remove oldest if exceeding max
-    if (toastQueue.length > MAX_VISIBLE_TOASTS) {
-        const oldest = toastQueue.shift();
-        if (oldest && oldest.parentElement) {
-            oldest.remove();
-        }
-    }
-
-    // Stack positioning (bottom-right, stacked upward)
-    repositionToasts();
-
-    // CSS transition ile göster (.show class ekleyerek)
-    setTimeout(() => toast.classList.add('show'), 10);
-
-    // Belirtilen süre sonra kaldır
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            const idx = toastQueue.indexOf(toast);
-            if (idx > -1) toastQueue.splice(idx, 1);
-            toast.remove();
-            repositionToasts();
-        }, 300);
-    }, duration);
+    // Fallback: console log if central system not loaded
+    console.warn('[UI.JS] Central Toast not available, message:', message);
 }
 
+// Legacy repositionToasts - no longer needed with central system
 function repositionToasts() {
-    let offset = 20;
-    for (let i = toastQueue.length - 1; i >= 0; i--) {
-        const t = toastQueue[i];
-        if (t && t.style) {
-            t.style.bottom = `${offset}px`;
-            offset += 60; // Toast height + gap
-        }
-    }
+    // Kept for backward compatibility - central system handles positioning
 }
 
 // Make repositionToasts available globally for close button
@@ -252,6 +203,139 @@ export function clearDashboard() {
 // -----------------------------------------------------
 // SAVE & LOAD DASHBOARD
 // -----------------------------------------------------
+// FAZ-5: Global Export Menu
+export function showExportMenu() {
+    const modal = document.createElement('div');
+    modal.className = 'viz-stat-modal-overlay';
+    modal.innerHTML = `
+        <div class="viz-stat-modal" style="max-width: 450px;">
+            <div class="viz-stat-modal-header" style="background: linear-gradient(135deg, #2c3e50, #4ca1af);">
+                <h3><i class="fas fa-file-export"></i> Dışa Aktar / Export</h3>
+                <button onclick="this.closest('.viz-stat-modal-overlay').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="viz-stat-modal-body">
+                <div class="viz-export-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <!-- Dashboard Image -->
+                    <div class="viz-export-card" onclick="exportPNG()" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                        <i class="fas fa-image" style="font-size: 2rem; color: #4a90d9; margin-bottom: 10px;"></i>
+                        <h4 style="margin: 0; font-size: 0.9rem;">Dashboard (PNG)</h4>
+                        <small style="color: #888;">Görüntüyü İndir</small>
+                    </div>
+
+                    <!-- Dashboard PDF -->
+                    <div class="viz-export-card" onclick="exportPDF()" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                        <i class="fas fa-file-pdf" style="font-size: 2rem; color: #e74c3c; margin-bottom: 10px;"></i>
+                        <h4 style="margin: 0; font-size: 0.9rem;">Smart Report (PDF)</h4>
+                        <small style="color: #888;">A4 Rapor Formatı</small>
+                    </div>
+
+                    <!-- Data CSV -->
+                    <div class="viz-export-card" onclick="if(window.exportDataAsCSV) window.exportDataAsCSV(); else console.error('CSV export missing')" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                        <i class="fas fa-file-csv" style="font-size: 2rem; color: #2ecc71; margin-bottom: 10px;"></i>
+                        <h4 style="margin: 0; font-size: 0.9rem;">Veri (CSV)</h4>
+                        <small style="color: #888;">Excel Uyumlu</small>
+                    </div>
+
+                    <!-- Data JSON -->
+                    <div class="viz-export-card" onclick="if(window.exportDataAsJSON) window.exportDataAsJSON(); else console.error('JSON export missing')" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                        <i class="fas fa-code" style="font-size: 2rem; color: #f39c12; margin-bottom: 10px;"></i>
+                        <h4 style="margin: 0; font-size: 0.9rem;">Veri (JSON)</h4>
+                        <small style="color: #888;">Ham Veri</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Hover effect via JS
+    modal.querySelectorAll('.viz-export-card').forEach(card => {
+        card.onmouseenter = () => { card.style.background = 'rgba(255,255,255,0.1)'; card.style.borderColor = '#4a90d9'; };
+        card.onmouseleave = () => { card.style.background = 'rgba(255,255,255,0.05)'; card.style.borderColor = 'rgba(255,255,255,0.1)'; };
+    });
+}
+
+// FAZ-5: Export PNG
+export async function exportPNG() {
+    if (typeof html2canvas === 'undefined') { showToast('html2canvas kütüphanesi yüklenemedi', 'error'); return; }
+
+    showToast('Dashboard görüntüleniyor (PNG)...', 'info');
+    const dashboard = document.getElementById('vizDashboardGrid'); // Capture only the grid
+
+    try {
+        const canvas = await html2canvas(dashboard || document.body, {
+            backgroundColor: '#1a1a2e', // Dark theme bg
+            scale: 2
+        });
+
+        const link = document.createElement('a');
+        link.download = `dashboard_export_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        showToast('PNG başarıyla indirildi', 'success');
+        document.querySelector('.viz-stat-modal-overlay')?.remove();
+    } catch (e) {
+        console.error('PNG Export Error:', e);
+        showToast('Görüntü oluşturulamadı: ' + e.message, 'error');
+    }
+}
+
+// FAZ-5: Export PDF (Smart Report)
+export async function exportPDF() {
+    if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+        showToast('PDF kütüphaneleri (html2canvas/jspdf) eksik', 'error');
+        return;
+    }
+    const { jsPDF } = jspdf;
+
+    showToast('PDF Raporu hazırlanıyor...', 'info');
+    const dashboard = document.getElementById('vizDashboardGrid');
+
+    try {
+        const canvas = await html2canvas(dashboard || document.body, {
+            backgroundColor: '#1a1a2e',
+            scale: 2
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        // Add Header
+        pdf.setFillColor(40, 40, 40);
+        pdf.rect(0, 0, pdfWidth, 20, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(16);
+        pdf.text('Opradox Visual Studio Report', 10, 13);
+        pdf.setFontSize(10);
+        pdf.text(new Date().toLocaleString(), pdfWidth - 50, 13);
+
+        // Add Image
+        let heightLeft = imgHeight;
+        let position = 25; // Margin top
+
+        // Simple fit for single page view usually preferred for dashboard
+        if (imgHeight < pdfHeight - 30) {
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        } else {
+            // Fit to page
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight - 30);
+        }
+
+        pdf.save(`opradox_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+        showToast('PDF başarıyla indirildi', 'success');
+        document.querySelector('.viz-stat-modal-overlay')?.remove();
+    } catch (e) {
+        console.error('PDF Export Error:', e);
+        showToast('PDF oluşturulamadı: ' + e.message, 'error');
+    }
+}
 export function showSaveMenu() {
     saveDashboard();
 }
@@ -663,7 +747,11 @@ export function submitFeedback() {
 // -----------------------------------------------------
 // WINDOW BINDINGS
 // -----------------------------------------------------
-window.showToast = showToast;
+// NOTE: showToast is now provided by app.js (central Toast system - FAZ-5)
+// window.showToast = showToast;  // REMOVED - using central op-toast from app.js
+window.showExportMenu = showExportMenu;
+window.exportPNG = exportPNG;
+window.exportPDF = exportPDF;
 window.showSettings = showSettings;
 window.hideSettings = hideSettings;
 window.applyChartSettings = applyChartSettings;
@@ -831,6 +919,15 @@ export function closeCommandPalette() {
     const palette = document.getElementById('commandPalette');
     if (palette) palette.style.display = 'none';
 }
+
+// Core UI Bindings
+// NOTE: window.showToast is provided by toast.js (FAZ-5 central system)
+// window.showToast = showToast; // REMOVED - causes recursion with proxy
+window.createModal = createModal;
+window.showSettings = showSettings;
+window.hideSettings = hideSettings;
+window.updateEmptyState = updateEmptyState;
+// Note: closeVizPreviewModal, downloadPDFFromPreview, closePDFPreviewModal are exported from preview.js
 
 // Annotation bindings
 window.toggleAnnotationMode = toggleAnnotationMode;

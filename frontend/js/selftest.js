@@ -925,6 +925,25 @@
             return 'PASS: k<2 rejected with message';
         });
 
+        // TEST E: clusterCounts present and length = k
+        results.faz7Tests.kmeansClusterCounts = runSmokeTest('KMeans clusterCounts', () => {
+            if (typeof window.runKMeansAnalysis !== 'function') return 'FAIL: not exposed';
+            const data = [];
+            for (let i = 0; i < 20; i++) data.push({ X: Math.random() * 10, Y: Math.random() * 10 });
+            const k = 3;
+            const result = window.runKMeansAnalysis(data, ['X', 'Y'], k);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.clusterCounts || result.clusterCounts.length !== k) {
+                return `FAIL: clusterCounts.length=${result.clusterCounts?.length}, expected ${k}`;
+            }
+            // Sum of counts should equal N
+            const totalCount = result.clusterCounts.reduce((a, b) => a + b, 0);
+            if (totalCount !== data.length) {
+                return `FAIL: sum(clusterCounts)=${totalCount}, expected ${data.length}`;
+            }
+            return `PASS: clusterCounts=[${result.clusterCounts.join(',')}]`;
+        });
+
         // Count FAZ-7 test passes
         const faz7Results = Object.values(results.faz7Tests);
         results.checks.faz7TestsPassed = faz7Results.filter(r => r.startsWith('PASS')).length;
@@ -1101,8 +1120,128 @@
         results.checks.faz10TestsTotal = faz10Results.length;
 
         // =====================================================
+        // FAZ-11: CRONBACH + REGRESSION İMZA BİRLEŞTİRME (FAZ-3)
+        // =====================================================
+
+        results.faz11Tests = {};
+
+        // TEST A: Cronbach Alpha UI format (data + columns)
+        results.faz11Tests.cronbachUIFormat = runSmokeTest('Cronbach Alpha UI format', () => {
+            if (typeof window.runCronbachAlpha !== 'function') return 'FAIL: not exposed';
+            // 5 denek, 3 item
+            const testData = [
+                { Q1: 4, Q2: 5, Q3: 4 },
+                { Q1: 3, Q2: 4, Q3: 3 },
+                { Q1: 5, Q2: 5, Q3: 5 },
+                { Q1: 4, Q2: 4, Q3: 4 },
+                { Q1: 3, Q2: 3, Q3: 3 }
+            ];
+            const result = window.runCronbachAlpha(testData, ['Q1', 'Q2', 'Q3'], 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            const alpha = result.cronbachAlpha ?? result.alpha;
+            if (typeof alpha !== 'number' || !isFinite(alpha)) return 'FAIL: alpha not finite';
+            if (!result.tables || result.tables.length === 0) return 'FAIL: no SPSS tables';
+            if (result.tables[0].name !== 'Reliability Statistics') return 'FAIL: wrong table name';
+            return `PASS: α=${alpha.toFixed(3)}`;
+        });
+
+        // TEST B: Cronbach Alpha legacy format (2D matrix)
+        results.faz11Tests.cronbachLegacyFormat = runSmokeTest('Cronbach Alpha legacy 2D matrix', () => {
+            if (typeof window.runCronbachAlpha !== 'function') return 'FAIL: not exposed';
+            // 4 denek, 3 item (2D matrix)
+            const matrix = [
+                [4, 5, 4],
+                [3, 4, 3],
+                [5, 5, 5],
+                [4, 4, 4]
+            ];
+            const result = window.runCronbachAlpha(matrix, 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            const alpha = result.cronbachAlpha ?? result.alpha;
+            if (typeof alpha !== 'number' || !isFinite(alpha)) return 'FAIL: alpha not finite';
+            return `PASS: α=${alpha.toFixed(3)}`;
+        });
+
+        // TEST C: Linear Regression UI format (data + yColumn + xColumn)
+        results.faz11Tests.regressionUIFormat = runSmokeTest('Regression UI format', () => {
+            if (typeof window.runLinearRegression !== 'function') return 'FAIL: not exposed';
+            const testData = [
+                { X: 1, Y: 2.1 },
+                { X: 2, Y: 4.0 },
+                { X: 3, Y: 5.9 },
+                { X: 4, Y: 8.0 },
+                { X: 5, Y: 10.1 }
+            ];
+            const result = window.runLinearRegression(testData, 'Y', 'X', 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (typeof result.rSquared !== 'number' || !isFinite(result.rSquared)) return 'FAIL: R² not finite';
+            if (!result.tables || result.tables.length < 3) return 'FAIL: missing SPSS tables';
+            const tableNames = result.tables.map(t => t.name);
+            if (!tableNames.includes('Model Summary')) return 'FAIL: missing Model Summary table';
+            if (!tableNames.includes('ANOVA')) return 'FAIL: missing ANOVA table';
+            if (!tableNames.includes('Coefficients')) return 'FAIL: missing Coefficients table';
+            return `PASS: R²=${result.rSquared.toFixed(3)}`;
+        });
+
+        // TEST D: Linear Regression legacy format (x[], y[])
+        results.faz11Tests.regressionLegacyFormat = runSmokeTest('Regression legacy x/y arrays', () => {
+            if (typeof window.runLinearRegression !== 'function') return 'FAIL: not exposed';
+            const x = [1, 2, 3, 4, 5];
+            const y = [2.1, 4.0, 5.9, 8.0, 10.1];
+            const result = window.runLinearRegression(x, y, 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (typeof result.rSquared !== 'number' || !isFinite(result.rSquared)) return 'FAIL: R² not finite';
+            return `PASS: R²=${result.rSquared.toFixed(3)}`;
+        });
+
+        // Count FAZ-11 test passes
+        const faz11Results = Object.values(results.faz11Tests);
+        results.checks.faz11TestsPassed = faz11Results.filter(r => r.startsWith('PASS')).length;
+        results.checks.faz11TestsTotal = faz11Results.length;
+
+        // =====================================================
+        // FAZ-12: POWER ANALYSIS (FAZ-5)
+        // =====================================================
+
+        results.faz12Tests = {};
+
+        // TEST A: Power Analysis with effectSize=0.5, n=30, alpha=0.05
+        results.faz12Tests.powerFinite = runSmokeTest('Power Analysis (d=0.5, n=30)', () => {
+            if (typeof window.runPowerAnalysis !== 'function') return 'FAIL: not exposed';
+            const result = window.runPowerAnalysis(0.5, 30, 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (typeof result.power !== 'number' || !isFinite(result.power)) return 'FAIL: power not finite';
+            if (result.power < 0 || result.power > 1) return `FAIL: power out of range ${result.power}`;
+            return `PASS: power=${(result.power * 100).toFixed(1)}%`;
+        });
+
+        // TEST B: Power Analysis with testType parameter
+        results.faz12Tests.powerTestType = runSmokeTest('Power Analysis testType', () => {
+            if (typeof window.runPowerAnalysis !== 'function') return 'FAIL: not exposed';
+            const result = window.runPowerAnalysis(0.5, 50, 0.05, 'correlation');
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (typeof result.power !== 'number') return 'FAIL: power not a number';
+            return `PASS: correlation power=${(result.power * 100).toFixed(1)}%`;
+        });
+
+        // TEST C: Power Analysis SPSS table exists
+        results.faz12Tests.powerTable = runSmokeTest('Power Analysis SPSS table', () => {
+            if (typeof window.runPowerAnalysis !== 'function') return 'FAIL: not exposed';
+            const result = window.runPowerAnalysis(0.8, 20, 0.05, 'ttest');
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.tables || result.tables.length === 0) return 'FAIL: no tables';
+            return `PASS: table="${result.tables[0].name}"`;
+        });
+
+        // Count FAZ-12 test passes
+        const faz12Results = Object.values(results.faz12Tests);
+        results.checks.faz12TestsPassed = faz12Results.filter(r => r.startsWith('PASS')).length;
+        results.checks.faz12TestsTotal = faz12Results.length;
+
+        // =====================================================
         // END STAT ENGINE TESTS
         // =====================================================
+
 
         // Final status
         if (results.errors.length > 0) {
@@ -1147,7 +1286,13 @@
         const faz10Info = results.checks.faz10TestsPassed !== undefined
             ? ` | FAZ10: ${results.checks.faz10TestsPassed}/${results.checks.faz10TestsTotal}`
             : '';
-        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}`);
+        const faz11Info = results.checks.faz11TestsPassed !== undefined
+            ? ` | FAZ11: ${results.checks.faz11TestsPassed}/${results.checks.faz11TestsTotal}`
+            : '';
+        const faz12Info = results.checks.faz12TestsPassed !== undefined
+            ? ` | FAZ12: ${results.checks.faz12TestsPassed}/${results.checks.faz12TestsTotal}`
+            : '';
+        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}`);
 
         return results;
     }
