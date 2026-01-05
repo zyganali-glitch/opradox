@@ -681,6 +681,12 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
     const pooledStd = calculatePooledStdDev(std1, std2, n1, n2);
     const cohensD = calculateCohensD(mean1, mean2, pooledStd);
 
+    // 95% Confidence Interval for mean difference (SPSS-level output)
+    const se = Math.sqrt(var1 / n1 + var2 / n2);
+    const meanDiff = mean1 - mean2;
+    const ciLower = meanDiff - tCritical * se;
+    const ciUpper = meanDiff + tCritical * se;
+
     const significant = Math.abs(t) > tCritical;
 
     return {
@@ -696,7 +702,9 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
         significant: significant,
         cohensD: cohensD,
         effectSizeInterpretation: interpretCohensD(cohensD),
-        meanDifference: mean1 - mean2,
+        meanDifference: meanDiff,
+        standardError: se,
+        confidenceInterval: { lower: ciLower, upper: ciUpper, level: 1 - alpha },
         interpretation: significant
             ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
             : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
@@ -2209,36 +2217,83 @@ function normalCDF(z) {
 /**
  * Interpret Cohen's d effect size
  * FAZ-ST4: Returns bilingual interpretation {tr, en}
+ * FAZ-10: Enhanced with direction and SPSS thresholds
+ * Thresholds (Cohen, 1988): |d| < 0.2 = negligible, 0.2-0.5 = small, 0.5-0.8 = medium, > 0.8 = large
  */
 function interpretCohensD(d, lang = null) {
     const absD = Math.abs(d);
-    let tr, en;
-    if (absD < 0.2) { tr = 'Çok küçük'; en = 'Very small'; }
-    else if (absD < 0.5) { tr = 'Küçük'; en = 'Small'; }
-    else if (absD < 0.8) { tr = 'Orta'; en = 'Medium'; }
-    else { tr = 'Büyük'; en = 'Large'; }
+    const direction = d >= 0 ? 'pozitif' : 'negatif';
+    const directionEN = d >= 0 ? 'positive' : 'negative';
+
+    let magnitude_tr, magnitude_en, threshold;
+    if (absD < 0.2) {
+        magnitude_tr = 'ihmal edilebilir';
+        magnitude_en = 'negligible';
+        threshold = '|d| < 0.2';
+    }
+    else if (absD < 0.5) {
+        magnitude_tr = 'küçük';
+        magnitude_en = 'small';
+        threshold = '0.2 ≤ |d| < 0.5';
+    }
+    else if (absD < 0.8) {
+        magnitude_tr = 'orta';
+        magnitude_en = 'medium';
+        threshold = '0.5 ≤ |d| < 0.8';
+    }
+    else {
+        magnitude_tr = 'büyük';
+        magnitude_en = 'large';
+        threshold = '|d| ≥ 0.8';
+    }
+
+    const tr = `${magnitude_tr.charAt(0).toUpperCase() + magnitude_tr.slice(1)} ${direction} etki (d = ${d.toFixed(2)}, ${threshold})`;
+    const en = `${magnitude_en.charAt(0).toUpperCase() + magnitude_en.slice(1)} ${directionEN} effect (d = ${d.toFixed(2)}, ${threshold})`;
 
     // If specific language requested, return string; otherwise return object
     if (lang === 'tr') return tr;
     if (lang === 'en') return en;
-    return { tr, en };
+    return { tr, en, magnitude: magnitude_en, direction: directionEN, d: d, threshold };
 }
 
 /**
  * Interpret Eta-squared effect size
  * FAZ-ST4: Returns bilingual interpretation {tr, en}
+ * FAZ-10: Enhanced with SPSS thresholds (Cohen, 1988)
+ * Thresholds: η² < 0.01 = negligible, 0.01-0.06 = small, 0.06-0.14 = medium, > 0.14 = large
  */
 function interpretEtaSquared(eta2, lang = null) {
-    let tr, en;
-    if (eta2 < 0.01) { tr = 'Çok küçük'; en = 'Very small'; }
-    else if (eta2 < 0.06) { tr = 'Küçük'; en = 'Small'; }
-    else if (eta2 < 0.14) { tr = 'Orta'; en = 'Medium'; }
-    else { tr = 'Büyük'; en = 'Large'; }
+    let magnitude_tr, magnitude_en, threshold;
+    const varianceExplained = (eta2 * 100).toFixed(1);
+
+    if (eta2 < 0.01) {
+        magnitude_tr = 'ihmal edilebilir';
+        magnitude_en = 'negligible';
+        threshold = 'η² < 0.01';
+    }
+    else if (eta2 < 0.06) {
+        magnitude_tr = 'küçük';
+        magnitude_en = 'small';
+        threshold = '0.01 ≤ η² < 0.06';
+    }
+    else if (eta2 < 0.14) {
+        magnitude_tr = 'orta';
+        magnitude_en = 'medium';
+        threshold = '0.06 ≤ η² < 0.14';
+    }
+    else {
+        magnitude_tr = 'büyük';
+        magnitude_en = 'large';
+        threshold = 'η² ≥ 0.14';
+    }
+
+    const tr = `${magnitude_tr.charAt(0).toUpperCase() + magnitude_tr.slice(1)} etki (η² = ${eta2.toFixed(3)}, %${varianceExplained} varyans açıklandı, ${threshold})`;
+    const en = `${magnitude_en.charAt(0).toUpperCase() + magnitude_en.slice(1)} effect (η² = ${eta2.toFixed(3)}, ${varianceExplained}% variance explained, ${threshold})`;
 
     // If specific language requested, return string; otherwise return object
     if (lang === 'tr') return tr;
     if (lang === 'en') return en;
-    return { tr, en };
+    return { tr, en, magnitude: magnitude_en, eta2: eta2, varianceExplained: parseFloat(varianceExplained), threshold };
 }
 
 

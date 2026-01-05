@@ -2,19 +2,20 @@
 
 Bu dosya, SELFTEST MASTER PROMPT implementasyonundan ertelenen maddeleri içerir.
 
-## FAZ-ST3 — Parameter Combinations (Deferred)
+## FAZ-ST3 — Parameter Combinations (✅ COMPLETED)
 
-- [ ] **Comprehensive alpha 0.01/0.10 tests**
-  - Tüm istatistiksel testler için `alpha=0.01` ve `alpha=0.10` parametreleriyle golden dataset testleri eklenecek
-  - Mevcut testler sadece `alpha=0.05` için yapıldı
-  - Her test fonksiyonu için ayrı alpha değerleriyle sonuç doğrulaması gerekli
+- [x] **Comprehensive alpha 0.01/0.10 tests**
+  - ✅ Alpha=0.01 testleri: t-tests, ANOVA, Chi-Square, Correlation (8 test)
+  - ✅ Alpha=0.10 testleri: t-tests, ANOVA, Chi-Square (6 test)
+  - `selftest.js` kategori: `L-AlphaParams`
 
-## FAZ-ST5 — SPSS Output Format (Deferred)
+## FAZ-ST5 — SPSS Output Format (✅ COMPLETED)
 
-- [ ] **Explicit MS=SS/df validation**
-  - ANOVA çıktılarında Mean Square (MS) = Sum of Squares (SS) / degrees of freedom (df) formülünün doğrulanması
-  - Two-Way ANOVA ve Repeated Measures ANOVA için bu doğrulama testleri eklenecek
-  - SPSS çıktı formatı ile uyumluluk kontrolü
+- [x] **Explicit MS=SS/df validation**
+  - ✅ One-Way ANOVA: MS_between ve MS_within doğrulaması
+  - ✅ Two-Way ANOVA: factorA, factorB, interaction, error MS doğrulaması
+  - ✅ Repeated Measures ANOVA: treatment MS doğrulaması
+  - `selftest.js` kategori: `M-SPSSFormat`
 
 ---
 
