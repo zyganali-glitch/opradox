@@ -117,7 +117,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
         window.downloadFile(url, 'dashboard_config.json');
         URL.revokeObjectURL(url);
 
-        if (window.showToast) window.showToast('Konfigürasyon kaydedildi', 'success');
+        if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Konfigürasyon kaydedildi' : 'Configuration saved', 'success');
         return config;
     };
 
@@ -133,7 +133,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                     const config = JSON.parse(e.target.result);
                     applyConfig(config);
                 } catch (err) {
-                    if (window.showToast) window.showToast('JSON parse hatası: ' + err.message, 'error');
+                    if (window.showToast) window.showToast((window.VIZ_STATE?.lang === 'tr' ? 'JSON parse hatası: ' : 'JSON parse error: ') + err.message, 'error');
                 }
             };
             reader.readAsText(jsonOrFile);
@@ -146,7 +146,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 const config = JSON.parse(jsonOrFile);
                 applyConfig(config);
             } catch (err) {
-                if (window.showToast) window.showToast('JSON parse hatası: ' + err.message, 'error');
+                if (window.showToast) window.showToast((window.VIZ_STATE?.lang === 'tr' ? 'JSON parse hatası: ' : 'JSON parse error: ') + err.message, 'error');
             }
             return;
         }
@@ -170,7 +170,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
     function applyConfig(config) {
         if (!config || !window.VIZ_STATE) {
-            if (window.showToast) window.showToast('Geçersiz konfigürasyon', 'error');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Geçersiz konfigürasyon' : 'Invalid configuration', 'error');
             return;
         }
 
@@ -229,14 +229,14 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             setTimeout(() => window.rerenderAllCharts(), 100);
         }
 
-        if (window.showToast) window.showToast(`Konfigürasyon yüklendi (${config.charts?.length || 0} grafik)`, 'success');
+        if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? `Konfigürasyon yüklendi (${config.charts?.length || 0} grafik)` : `Configuration loaded (${config.charts?.length || 0} charts)`, 'success');
     }
 
     // =====================================================
     // FAZ 1C: exportPortableDashboard - Full Implementation
     // =====================================================
     window.exportPortableDashboard = async function () {
-        if (window.showToast) window.showToast('Portable Dashboard oluşturuluyor...', 'info');
+        if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Portable Dashboard oluşturuluyor...' : 'Creating Portable Dashboard...', 'info');
 
         try {
             // Grafik verilerini topla
@@ -343,11 +343,11 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             window.downloadFile(url, `opradox-dashboard-${Date.now()}.html`);
             URL.revokeObjectURL(url);
 
-            if (window.showToast) window.showToast('Portable Dashboard indirildi!', 'success');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Portable Dashboard indirildi!' : 'Portable Dashboard downloaded!', 'success');
 
         } catch (error) {
             console.error('Portable dashboard hatası:', error);
-            if (window.showToast) window.showToast('Dashboard oluşturulamadı', 'error');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Dashboard oluşturulamadı' : 'Failed to create dashboard', 'error');
         }
     };
 
@@ -357,13 +357,13 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     window.exportChartAsSVG = function (chartId) {
         const targetId = chartId || window.VIZ_STATE?.selectedChart;
         if (!targetId) {
-            if (window.showToast) window.showToast('Önce bir grafik seçin', 'warning');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Önce bir grafik seçin' : 'Please select a chart first', 'warning');
             return;
         }
 
         const chart = window.VIZ_STATE?.echartsInstances?.[targetId];
         if (!chart) {
-            if (window.showToast) window.showToast('Grafik bulunamadı', 'error');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Grafik bulunamadı' : 'Chart not found', 'error');
             return;
         }
 
@@ -375,10 +375,10 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             });
 
             window.downloadFile(svgUrl, `chart_${targetId}.svg`);
-            if (window.showToast) window.showToast('SVG indirildi', 'success');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'SVG indirildi' : 'SVG downloaded', 'success');
         } catch (error) {
             console.error('SVG export hatası:', error);
-            if (window.showToast) window.showToast('SVG oluşturulamadı', 'error');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'SVG oluşturulamadı' : 'Failed to create SVG', 'error');
         }
     };
 
@@ -413,7 +413,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
             // Clipboard'a kopyala
             navigator.clipboard.writeText(shareURL).then(() => {
-                if (window.showToast) window.showToast('Paylaşım linki kopyalandı!', 'success');
+                if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Paylaşım linki kopyalandı!' : 'Share link copied!', 'success');
             }).catch(() => {
                 // Fallback: prompt ile göster
                 prompt('Paylaşım Linki:', shareURL);
@@ -424,7 +424,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
         } catch (e) {
             console.error('Share URL error:', e);
-            if (window.showToast) window.showToast('Paylaşım linki oluşturulamadı', 'error');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Paylaşım linki oluşturulamadı' : 'Failed to create share link', 'error');
         }
     };
 
@@ -697,7 +697,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             const columns = window.VIZ_STATE?.columns || window.VIZ_STATE?.getActiveColumns?.() || [];
 
             if (!data || data.length === 0) {
-                if (window.showToast) window.showToast('Dışa aktarılacak veri yok', 'warning');
+                if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Dışa aktarılacak veri yok' : 'No data to export', 'warning');
                 return;
             }
 
@@ -714,7 +714,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
                     // Download
                     XLSX.writeFile(wb, filename);
-                    if (window.showToast) window.showToast(`Excel dosyası indirildi: ${filename}`, 'success');
+                    if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? `Excel dosyası indirildi: ${filename}` : `Excel file downloaded: ${filename}`, 'success');
                 } else {
                     // CSV fallback
                     console.warn('XLSX kütüphanesi bulunamadı, CSV olarak indiriliyor');
@@ -740,11 +740,11 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                         a.click();
                     }
                     URL.revokeObjectURL(url);
-                    if (window.showToast) window.showToast(`CSV dosyası indirildi (XLSX mevcut değil)`, 'success');
+                    if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'CSV dosyası indirildi (XLSX mevcut değil)' : 'CSV file downloaded (XLSX not available)', 'success');
                 }
             } catch (error) {
                 console.error('Excel export hatası:', error);
-                if (window.showToast) window.showToast('Excel export hatası: ' + error.message, 'error');
+                if (window.showToast) window.showToast((window.VIZ_STATE?.lang === 'tr' ? 'Excel export hatası: ' : 'Excel export error: ') + error.message, 'error');
             }
         };
     }
@@ -755,7 +755,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     if (typeof window.exportAsPowerPoint !== 'function' || window.exportAsPowerPoint.toString().includes('geliştirilmekte')) {
         window.exportAsPowerPoint = function () {
             if (window.showToast) {
-                window.showToast('PowerPoint export: Planlanan özellik (PPT kütüphanesi gerekli). Şimdilik Portable HTML kullanın.', 'info');
+                window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'PowerPoint export: Planlanıyor (PPT kütüphanesi gerekli). Portable HTML kullanın.' : 'PowerPoint export: Planned feature (PPT library required). Use Portable HTML.', 'info');
             }
             console.info('[DEFER] exportAsPowerPoint - PPT export library (pptxgenjs) planned for future release');
         };
@@ -771,7 +771,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             } else if (typeof window.exportDashboardAsPDF === 'function') {
                 return window.exportDashboardAsPDF();
             } else {
-                if (window.showToast) window.showToast('PDF export: Portable HTML veya PNG kullanın', 'info');
+                if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'PDF export: Portable HTML veya PNG kullanın' : 'PDF export: Use Portable HTML or PNG', 'info');
             }
         };
     }
@@ -877,7 +877,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             case 'exportPNG':
                 if (typeof window.exportChartAsPNG === 'function') window.exportChartAsPNG();
                 else if (typeof window.exportPNG === 'function') window.exportPNG();
-                else window.showToast('Önce grafik seçin', 'warning');
+                else window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Önce grafik seçin' : 'Please select a chart', 'warning');
                 break;
             case 'exportAllPNG':
                 if (typeof window.exportDashboardAsPNG === 'function') window.exportDashboardAsPNG();
@@ -921,7 +921,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     function exportAllChartsPNG() {
         const charts = Object.keys(window.VIZ_STATE?.echartsInstances || {});
         if (charts.length === 0) {
-            window.showToast('Dashboard\'da grafik yok', 'warning');
+            window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Dashboard\'da grafik yok' : 'No charts in dashboard', 'warning');
             return;
         }
 
@@ -934,7 +934,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 }, index * 500);
             }
         });
-        window.showToast(`${charts.length} grafik indiriliyor...`, 'success');
+        window.showToast(window.VIZ_STATE?.lang === 'tr' ? `${charts.length} grafik indiriliyor...` : `Downloading ${charts.length} charts...`, 'success');
     }
 
     function exportDataAsCSV() {
@@ -942,7 +942,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
         const columns = window.VIZ_STATE?.columns || [];
 
         if (data.length === 0) {
-            window.showToast('Dışa aktarılacak veri yok', 'warning');
+            window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Dışa aktarılacak veri yok' : 'No data to export', 'warning');
             return;
         }
 
@@ -959,7 +959,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
         const url = URL.createObjectURL(blob);
         window.downloadFile(url, `opradox_data_${Date.now()}.csv`);
         URL.revokeObjectURL(url);
-        window.showToast('CSV indirildi', 'success');
+        window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'CSV indirildi' : 'CSV downloaded', 'success');
     }
     window.showFilePreviewModal = window.showFilePreviewModal || window.showHeaderPreview;
     window.closeFilePreviewModal = window.closeFilePreviewModal || window.closeVizPreviewModal || function () { };
@@ -2886,9 +2886,9 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             window.HISTORY.redoStack.push(JSON.parse(JSON.stringify(window.VIZ_STATE)));
             Object.assign(window.VIZ_STATE, state);
             if (typeof window.rerenderAllCharts === 'function') window.rerenderAllCharts();
-            if (window.showToast) window.showToast('Geri alındı', 'info');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Geri alındı' : 'Undone', 'info');
         } else {
-            if (window.showToast) window.showToast('Geri alınacak işlem yok', 'warning');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Geri alınacak işlem yok' : 'Nothing to undo', 'warning');
         }
     };
 
@@ -2898,9 +2898,9 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             window.HISTORY.undoStack.push(JSON.parse(JSON.stringify(window.VIZ_STATE)));
             Object.assign(window.VIZ_STATE, state);
             if (typeof window.rerenderAllCharts === 'function') window.rerenderAllCharts();
-            if (window.showToast) window.showToast('İleri alındı', 'info');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'İleri alındı' : 'Redone', 'info');
         } else {
-            if (window.showToast) window.showToast('İleri alınacak işlem yok', 'warning');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'İleri alınacak işlem yok' : 'Nothing to redo', 'warning');
         }
     };
 
@@ -2915,7 +2915,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
         // Block remote URLs if not allowed
         if (isRemoteUrl && !window.VIZ_SETTINGS?.allowRemoteUrlLoad) {
             console.warn('[safeFetch] Remote URL blocked:', url);
-            if (window.showToast) window.showToast('Remote URL yükleme devre dışı', 'warning');
+            if (window.showToast) window.showToast(window.VIZ_STATE?.lang === 'tr' ? 'Remote URL yükleme devre dışı' : 'Remote URL loading disabled', 'warning');
             return Promise.reject(new Error('Remote URL loading disabled'));
         }
 

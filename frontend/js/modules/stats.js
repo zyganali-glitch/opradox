@@ -661,7 +661,7 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
     const n2 = group2.length;
 
     if (n1 < 2 || n2 < 2) {
-        return { error: 'Her grup en az 2 gözlem içermelidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Her grup en az 2 gözlem içermelidir' : 'Each group must contain at least 2 observations', valid: false };
     }
 
     const mean1 = calculateMean(group1);
@@ -691,7 +691,7 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Bağımsız Örneklem T-Testi (Welch)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Bağımsız Örneklem T-Testi (Welch)' : 'Independent Samples T-Test (Welch)',
         group1Stats: { n: n1, mean: mean1, std: std1, variance: var1 },
         group2Stats: { n: n2, mean: mean2, std: std2, variance: var2 },
         tStatistic: t,
@@ -706,8 +706,8 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
         standardError: se,
         confidenceInterval: { lower: ciLower, upper: ciUpper, level: 1 - alpha },
         interpretation: significant
-            ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -716,12 +716,12 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
  */
 export function runPairedTTest(before, after, alpha = 0.05) {
     if (before.length !== after.length) {
-        return { error: 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır' : 'Paired groups must be of equal length', valid: false };
     }
 
     const n = before.length;
     if (n < 2) {
-        return { error: 'En az 2 eşleştirilmiş gözlem gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 eşleştirilmiş gözlem gereklidir' : 'At least 2 paired observations required', valid: false };
     }
 
     // Calculate differences
@@ -742,7 +742,7 @@ export function runPairedTTest(before, after, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Eşleştirilmiş Örneklem T-Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş Örneklem T-Testi' : 'Paired Samples T-Test',
         n: n,
         meanDifference: meanDiff,
         stdDifference: stdDiff,
@@ -756,8 +756,8 @@ export function runPairedTTest(before, after, alpha = 0.05) {
         cohensD: cohensD,
         effectSizeInterpretation: interpretCohensD(cohensD),
         interpretation: significant
-            ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
     };
 }
 
@@ -767,7 +767,7 @@ export function runPairedTTest(before, after, alpha = 0.05) {
 export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
     const n = sample.length;
     if (n < 2) {
-        return { error: 'En az 2 gözlem gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 gözlem gereklidir' : 'At least 2 observations required', valid: false };
     }
 
     const sampleMean = calculateMean(sample);
@@ -784,7 +784,7 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Tek Örneklem T-Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Tek Örneklem T-Testi' : 'One-Sample T-Test',
         n: n,
         sampleMean: sampleMean,
         sampleStd: sampleStd,
@@ -798,8 +798,8 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
         cohensD: cohensD,
         effectSizeInterpretation: interpretCohensD(cohensD),
         interpretation: significant
-            ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı (p < ${alpha})`
-            : `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı değil (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı (p < ${alpha})` : `Sample mean is significantly different from population mean (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı değil (p >= ${alpha})` : `Sample mean is not significantly different from population mean (p >= ${alpha})`)
     };
 }
 
@@ -809,13 +809,13 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
 export function runOneWayANOVA(groups, alpha = 0.05) {
     const k = groups.length; // Number of groups
     if (k < 2) {
-        return { error: 'En az 2 grup gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 grup gereklidir' : 'At least 2 groups required', valid: false };
     }
 
     // Filter out empty groups
     const validGroups = groups.filter(g => g && g.length > 0);
     if (validGroups.length < 2) {
-        return { error: 'En az 2 geçerli grup gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geçerli grup gereklidir' : 'At least 2 valid groups required', valid: false };
     }
 
     const groupStats = validGroups.map(g => ({
@@ -887,7 +887,7 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Tek Yönlü ANOVA',
+        testName: VIZ_STATE.lang === 'tr' ? 'Tek Yönlü ANOVA' : 'One-Way ANOVA',
         numberOfGroups: validGroups.length,
         totalN: N,
         grandMean: grandMean,
@@ -907,8 +907,8 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
             comparisons: postHocComparisons
         },
         interpretation: significant
-            ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -1070,7 +1070,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     const df_Model = df_A + df_B + df_AB;
 
     if (df_Error <= 0) {
-        return { error: 'Hata serbestlik derecesi ≤ 0 (hücre başına daha fazla gözlem gerekli)', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Hata serbestlik derecesi ≤ 0 (hücre başına daha fazla gözlem gerekli)' : 'Error degrees of freedom ≤ 0 (more observations per cell required)', valid: false };
     }
 
     // 8. Mean Squares
@@ -1170,18 +1170,18 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
 
     // 13. Build interpretation
     const significantEffects = [];
-    if (p_A < alpha) significantEffects.push(`${factorAColumn} ana etkisi`);
-    if (p_B < alpha) significantEffects.push(`${factorBColumn} ana etkisi`);
-    if (p_AB < alpha) significantEffects.push(`${factorAColumn}×${factorBColumn} etkileşimi`);
+    if (p_A < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorAColumn} ana etkisi` : `${factorAColumn} main effect`);
+    if (p_B < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorBColumn} ana etkisi` : `${factorBColumn} main effect`);
+    if (p_AB < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorAColumn}×${factorBColumn} etkileşimi` : `${factorAColumn}×${factorBColumn} interaction`);
 
     const interpretation = significantEffects.length > 0
-        ? `Anlamlı etkiler: ${significantEffects.join(', ')} (p < ${alpha})`
-        : `Hiçbir etki istatistiksel olarak anlamlı değil (p >= ${alpha})`;
+        ? (VIZ_STATE.lang === 'tr' ? `Anlamlı etkiler: ${significantEffects.join(', ')} (p < ${alpha})` : `Significant effects: ${significantEffects.join(', ')} (p < ${alpha})`)
+        : (VIZ_STATE.lang === 'tr' ? `Hiçbir etki istatistiksel olarak anlamlı değil (p >= ${alpha})` : `No effect is statistically significant (p >= ${alpha})`);
 
     return {
         valid: true,
         testType: 'twoWayANOVA',
-        testName: 'İki Yönlü ANOVA (Faktöriyel)',
+        testName: VIZ_STATE.lang === 'tr' ? 'İki Yönlü ANOVA (Faktöriyel)' : 'Two-Way ANOVA (Factorial)',
         alpha: alpha,
         N: N,
         grandMean: grandMean,
@@ -1475,7 +1475,7 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
     return {
         valid: true,
         testType: 'repeatedMeasuresANOVA',
-        testName: 'Tekrarlı Ölçümler ANOVA',
+        testName: VIZ_STATE.lang === 'tr' ? 'Tekrarlı Ölçümler ANOVA' : 'Repeated Measures ANOVA',
         alpha: alpha,
         n: n,
         k: k,
@@ -1770,7 +1770,7 @@ export function runChiSquareTest(contingencyTable, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Ki-Kare Bağımsızlık Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Ki-Kare Bağımsızlık Testi' : 'Chi-Square Test of Independence',
         observed: contingencyTable,
         expected: expected,
         rowTotals: rowTotals,
@@ -1786,8 +1786,8 @@ export function runChiSquareTest(contingencyTable, alpha = 0.05) {
         effectSizes: { cramersV: cramersV, phi: rows === 2 && cols === 2 ? cramersV : null },
         effectSizeInterpretation: interpretCramersV(cramersV),
         interpretation: significant
-            ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki var (p < ${alpha})`
-            : `Değişkenler arasında istatistiksel olarak anlamlı ilişki yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki var (p < ${alpha})` : `There is a statistically significant relationship between variables (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki yok (p >= ${alpha})` : `There is no statistically significant relationship between variables (p >= ${alpha})`)
     };
 }
 
@@ -1841,7 +1841,7 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Mann-Whitney U Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Mann-Whitney U Testi' : 'Mann-Whitney U Test',
         group1Stats: { n: n1, rankSum: R1, median: calculateMedian(group1) },
         group2Stats: { n: n2, rankSum: R2, median: calculateMedian(group2) },
         U1: U1,
@@ -1855,8 +1855,8 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
         effectSizeR: effectR,
         effectSizeInterpretation: interpretEffectR(effectR),
         interpretation: significant
-            ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -1866,12 +1866,12 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
 export function runKruskalWallis(groups, alpha = 0.05) {
     const k = groups.length;
     if (k < 2) {
-        return { error: 'En az 2 grup gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 grup gereklidir' : 'At least 2 groups required', valid: false };
     }
 
     const validGroups = groups.filter(g => g && g.length > 0);
     if (validGroups.length < 2) {
-        return { error: 'En az 2 geçerli grup gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geçerli grup gereklidir' : 'At least 2 valid groups required', valid: false };
     }
 
     // Combine all values with group labels
@@ -1917,7 +1917,7 @@ export function runKruskalWallis(groups, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Kruskal-Wallis H Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Kruskal-Wallis H Testi' : 'Kruskal-Wallis H Test',
         numberOfGroups: validGroups.length,
         totalN: N,
         groupStats: groupStats,
@@ -1929,8 +1929,8 @@ export function runKruskalWallis(groups, alpha = 0.05) {
         significant: significant,
         epsilonSquared: epsilonSquared,
         interpretation: significant
-            ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -1939,12 +1939,12 @@ export function runKruskalWallis(groups, alpha = 0.05) {
  */
 export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
     if (before.length !== after.length) {
-        return { error: 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır' : 'Paired groups must be of equal length', valid: false };
     }
 
     const n = before.length;
     if (n < 5) {
-        return { error: 'En az 5 eşleştirilmiş gözlem gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 5 eşleştirilmiş gözlem gereklidir' : 'At least 5 paired observations required', valid: false };
     }
 
     // Calculate differences and remove zeros
@@ -1987,7 +1987,7 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Wilcoxon İşaretli Sıralar Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Wilcoxon İşaretli Sıralar Testi' : 'Wilcoxon Signed-Rank Test',
         n: n,
         nNonZero: nNonZero,
         Wplus: Wplus,
@@ -2001,8 +2001,8 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
         effectSizeR: effectR,
         effectSizeInterpretation: interpretEffectR(effectR),
         interpretation: significant
-            ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
     };
 }
 
@@ -2051,7 +2051,7 @@ export function runFriedmanTest(measurements, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Friedman Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Friedman Testi' : 'Friedman Test',
         n: n,
         k: k,
         rankSums: rankSums,
@@ -2064,8 +2064,8 @@ export function runFriedmanTest(measurements, alpha = 0.05) {
         significant: significant,
         kendallW: kendallW,
         interpretation: significant
-            ? `Koşullar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})`
-            : `Koşullar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between conditions (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between conditions (p >= ${alpha})`)
     };
 }
 
@@ -2080,7 +2080,7 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     const n = data.length;
 
     if (n < 3) {
-        return { error: 'En az 3 gözlem gereklidir', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 3 gözlem gereklidir' : 'At least 3 observations required', valid: false };
     }
 
     if (n > 5000) {
@@ -2128,7 +2128,7 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: 'Shapiro-Wilk Normallik Testi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Shapiro-Wilk Normallik Testi' : 'Shapiro-Wilk Normality Test',
         n: n,
         wStatistic: W,
         zScore: z,
@@ -2137,8 +2137,8 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
         significant: significant,
         isNormal: !significant,
         interpretation: !significant
-            ? `Veri normal dağılımdan anlamlı şekilde sapmıyor (p >= ${alpha})`
-            : `Veri normal dağılımdan anlamlı şekilde sapıyor (p < ${alpha})`
+            ? (VIZ_STATE.lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapmıyor (p >= ${alpha})` : `Data does not significantly deviate from normal distribution (p >= ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapıyor (p < ${alpha})` : `Data significantly deviates from normal distribution (p < ${alpha})`)
     };
 }
 
@@ -4827,9 +4827,9 @@ export function runDescriptiveStats(data, columns) {
 
     return {
         testType: 'descriptive',
-        testName: 'Betimsel İstatistikler',
+        testName: VIZ_STATE.lang === 'tr' ? 'Betimsel İstatistikler' : 'Descriptive Statistics',
         results: results,
-        interpretation: `${results.length} değişken analiz edildi.`
+        interpretation: VIZ_STATE.lang === 'tr' ? `${results.length} değişken analiz edildi.` : `${results.length} variables analyzed.`
     };
 }
 
@@ -5011,7 +5011,7 @@ export function runFrequencyAnalysis(data, column) {
 
     return {
         testType: 'frequency',
-        testName: 'Frekans Analizi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Frekans Analizi' : 'Frequency Analysis',
         column: column,
         total: total,
         validCount: validCount,
@@ -5038,7 +5038,7 @@ export function runFrequencyAnalysis(data, column) {
  */
 export function runPCAAnalysis(data, columns) {
     if (columns.length < 2) {
-        return { error: 'PCA için en az 2 değişken gerekli', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'PCA için en az 2 değişken gerekli' : 'At least 2 variables required for PCA', valid: false };
     }
 
     // 1. Extract and validate data
@@ -5169,7 +5169,7 @@ export function runPCAAnalysis(data, columns) {
  */
 export function runKMeansAnalysis(data, columns, k = 3) {
     if (columns.length < 2) {
-        return { error: 'K-Means için en az 2 değişken gerekli', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'K-Means için en az 2 değişken gerekli' : 'At least 2 variables required for K-Means', valid: false };
     }
     if (k < 2) k = 2;
     if (k > data.length) k = Math.min(data.length, 10);
@@ -5329,7 +5329,7 @@ export function runKMeansAnalysis(data, columns, k = 3) {
 
     return {
         testType: 'kmeans',
-        testName: 'K-Means Kümeleme',
+        testName: VIZ_STATE.lang === 'tr' ? 'K-Means Kümeleme' : 'K-Means Clustering',
         valid: true,
         k: k,
         nObservations: matrix.length,
@@ -5353,7 +5353,7 @@ export function runKMeansAnalysis(data, columns, k = 3) {
  */
 export function runCronbachAlpha(data, columns) {
     const k = columns.length;
-    if (k < 2) return { valid: false, error: 'En az 2 madde gerekli', testName: "Cronbach's Alpha" };
+    if (k < 2) return { valid: false, error: VIZ_STATE.lang === 'tr' ? 'En az 2 madde gerekli' : 'At least 2 items required', testName: "Cronbach's Alpha" };
 
     // Calculate item variances
     const itemVars = columns.map(col => {
@@ -5428,13 +5428,15 @@ export function runLinearRegression(data, yColumn, xColumn) {
 
     return {
         testType: 'regression',
-        testName: 'Doğrusal Regresyon',
+        testName: VIZ_STATE.lang === 'tr' ? 'Doğrusal Regresyon' : 'Linear Regression',
         slope: slope,
         intercept: intercept,
         r: r,
         rSquared: r2,
         equation: `y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}`,
-        interpretation: `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn}, ${yColumn}'deki varyansın %${(r2 * 100).toFixed(1)}'ini açıklıyor.`
+        interpretation: VIZ_STATE.lang === 'tr'
+            ? `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn}, ${yColumn}'deki varyansın %${(r2 * 100).toFixed(1)}'ini açıklıyor.`
+            : `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn} explains ${(r2 * 100).toFixed(1)}% of variance in ${yColumn}.`
     };
 }
 
@@ -5453,14 +5455,14 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
     return {
         valid: true,
         testType: 'power',
-        testName: 'Güç Analizi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Güç Analizi' : 'Power Analysis',
         effectSize: effectSize,
         sampleSize: n,
         alpha: alpha,
         power: Math.min(0.99, Math.max(0.01, power)),
         interpretation: power > 0.8
-            ? `Yeterli güç (%${(power * 100).toFixed(0)}). Bu örneklem büyüklüğü yeterli.`
-            : `Düşük güç (%${(power * 100).toFixed(0)}). Daha büyük örneklem önerilir.`
+            ? (VIZ_STATE.lang === 'tr' ? `Yeterli güç (%${(power * 100).toFixed(0)}). Bu örneklem büyüklüğü yeterli.` : `Adequate power (${(power * 100).toFixed(0)}%). Sample size is sufficient.`)
+            : (VIZ_STATE.lang === 'tr' ? `Düşük güç (%${(power * 100).toFixed(0)}). Daha büyük örneklem önerilir.` : `Low power (${(power * 100).toFixed(0)}%). Larger sample recommended.`)
     };
 }
 
@@ -5475,7 +5477,7 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
  */
 export function runLogisticRegression(data, yColumn, xColumns) {
     if (!yColumn || xColumns.length < 1) {
-        return { error: 'Bağımlı ve en az 1 bağımsız değişken gerekli', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Bağımlı ve en az 1 bağımsız değişken gerekli' : 'Dependent variable and at least 1 independent variable required', valid: false };
     }
 
     // 1. Validate binary outcome
@@ -5559,7 +5561,7 @@ export function runLogisticRegression(data, yColumn, xColumns) {
 
     return {
         testType: 'logistic',
-        testName: 'Lojistik Regresyon',
+        testName: VIZ_STATE.lang === 'tr' ? 'Lojistik Regresyon' : 'Logistic Regression',
         valid: true,
         nObservations: matrix.length,
         classes: uniqueY,
@@ -5603,16 +5605,16 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
     if (parseRatio < 0.5) {
         return {
             testType: 'timeseries',
-            testName: 'Zaman Serisi Analizi',
+            testName: VIZ_STATE.lang === 'tr' ? 'Zaman Serisi Analizi' : 'Time Series Analysis',
             valid: false,
-            error: `${timeColumn} sütunu geçerli tarih formatında değil`,
+            error: VIZ_STATE.lang === 'tr' ? `${timeColumn} sütunu geçerli tarih formatında değil` : `${timeColumn} column is not in valid date format`,
             parseReport: {
                 parsed: parsedDates,
                 failed: failedDates,
                 ratio: (parseRatio * 100).toFixed(1) + '%'
             },
             degrade: true,
-            reason: 'Zaman serisi analizi için tarih sütunu gereklidir'
+            reason: VIZ_STATE.lang === 'tr' ? 'Zaman serisi analizi için tarih sütunu gereklidir' : 'Date column required for time series analysis'
         };
     }
 
@@ -5635,7 +5637,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
         sumXX += i * i;
     });
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const trendDirection = slope > 0.01 ? 'Artış' : slope < -0.01 ? 'Azalış' : 'Sabit';
+    const trendDirection = slope > 0.01 ? (VIZ_STATE.lang === 'tr' ? 'Artış' : 'Increasing') : slope < -0.01 ? (VIZ_STATE.lang === 'tr' ? 'Azalış' : 'Decreasing') : (VIZ_STATE.lang === 'tr' ? 'Sabit' : 'Stable');
 
     // 5. Moving average (window = 5 or n/10)
     const windowSize = Math.max(3, Math.min(5, Math.floor(n / 10)));
@@ -5648,7 +5650,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
 
     return {
         testType: 'timeseries',
-        testName: 'Zaman Serisi Analizi',
+        testName: VIZ_STATE.lang === 'tr' ? 'Zaman Serisi Analizi' : 'Time Series Analysis',
         valid: true,
         n: n,
         parseReport: { parsed: parsedDates, failed: failedDates },
@@ -5673,7 +5675,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
  */
 export function runDiscriminantAnalysis(data, groupColumn, columns) {
     if (!groupColumn || columns.length < 1) {
-        return { error: 'Grup ve en az 1 değişken gerekli', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Grup ve en az 1 değişken gerekli' : 'Group and at least 1 variable required', valid: false };
     }
 
     // 1. Group data
@@ -5728,7 +5730,7 @@ export function runDiscriminantAnalysis(data, groupColumn, columns) {
 
     return {
         testType: 'discriminant',
-        testName: 'Diskriminant Analizi (LDA)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Diskriminant Analizi (LDA)' : 'Discriminant Analysis (LDA)',
         valid: true,
         nObservations: total,
         nGroups: groupNames.length,
@@ -5752,7 +5754,7 @@ export function runDiscriminantAnalysis(data, groupColumn, columns) {
  */
 export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) {
     if (!timeColumn || !eventColumn) {
-        return { error: 'Zaman ve olay değişkeni gerekli', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Zaman ve olay değişkeni gerekli' : 'Time and event variable required', valid: false };
     }
 
     // 1. Parse data
@@ -5768,7 +5770,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
     });
 
     if (observations.length < 5) {
-        return { error: 'Yeterli veri yok (min 5 gözlem)', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Yeterli veri yok (min 5 gözlem)' : 'Insufficient data (min 5 observations)', valid: false };
     }
 
     // 2. Kaplan-Meier by group
@@ -5815,7 +5817,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
 
     return {
         testType: 'survival',
-        testName: 'Sağkalım Analizi (Kaplan-Meier)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Sağkalım Analizi (Kaplan-Meier)' : 'Survival Analysis (Kaplan-Meier)',
         valid: true,
         nObservations: observations.length,
         nGroups: groups.length,
@@ -5840,9 +5842,9 @@ export function generateAPAReport(data, columns) {
     if (actualData.length === 0 || actualColumns.length === 0) {
         return {
             testType: 'apa',
-            testName: 'APA Raporu',
-            error: 'Veri bulunamadı. Önce bir dosya yükleyin.',
-            html: '<div class="apa-report"><p class="error">Veri bulunamadı.</p></div>'
+            testName: VIZ_STATE.lang === 'tr' ? 'APA Raporu' : 'APA Report',
+            error: VIZ_STATE.lang === 'tr' ? 'Veri bulunamadı. Önce bir dosya yükleyin.' : 'Data not found. Please load a file first.',
+            html: VIZ_STATE.lang === 'tr' ? '<div class="apa-report"><p class="error">Veri bulunamadı.</p></div>' : '<div class="apa-report"><p class="error">Data not found.</p></div>'
         };
     }
 
@@ -5869,9 +5871,9 @@ export function generateAPAReport(data, columns) {
 
     return {
         testType: 'apa',
-        testName: 'APA Raporu',
+        testName: VIZ_STATE.lang === 'tr' ? 'APA Raporu' : 'APA Report',
         html: report,
-        interpretation: 'APA 7 formatında istatistik özeti oluşturuldu.'
+        interpretation: VIZ_STATE.lang === 'tr' ? 'APA 7 formatında istatistik özeti oluşturuldu.' : 'Statistical summary generated in APA 7 format.'
     };
 }
 
