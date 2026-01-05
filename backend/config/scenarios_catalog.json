@@ -719,6 +719,7 @@
       {
         "name": "return_mode",
         "type": "select",
+        "ui_level": "advanced",
         "label_tr": "Dönüş Modu",
         "label_en": "Return Mode",
         "description_tr": "Sonucu nasıl görmek istersiniz?",
@@ -4319,6 +4320,7 @@
       {
         "name": "group_column",
         "type": "text",
+        "ui_level": "advanced",
         "label_tr": "Gruplama Sütunu",
         "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi bir gruba göre renklendirmek istiyorsanız, bu alana gruplamak istediğiniz sütunun başlığını yazın. Örneğin, 'Kategori'. Eğer bu alanı boş bırakırsanız, tüm veriler tek bir grup olarak işlenecektir.",
@@ -8850,6 +8852,7 @@
       {
         "name": "group_column",
         "type": "text",
+        "ui_level": "advanced",
         "label_tr": "Gruplandırma Sütunu",
         "label_en": "Grouping Column",
         "description_tr": "Eğer verilerinizi belirli bir kritere göre gruplamak istiyorsanız, bu alana o sütunun başlığını yazın. Bu alan opsiyoneldir, yani boş bırakabilirsiniz.",
@@ -8860,6 +8863,7 @@
       {
         "name": "ignore_case",
         "type": "select",
+        "ui_level": "advanced",
         "label_tr": "Büyük/Küçük Harf Duyarsız Kontrol",
         "label_en": "Ignore Case Sensitivity",
         "description_tr": "Eğer değerlerinizi büyük/küçük harf duyarsız bir şekilde kontrol etmek istiyorsanız, bu alandan 'Evet' seçeneğini işaretleyin. Aksi takdirde, 'Hayır' seçeneğini seçin.",
@@ -8878,6 +8882,7 @@
       {
         "name": "valid_values",
         "type": "text",
+        "ui_level": "advanced",
         "label_tr": "Geçerli Değerler",
         "label_en": "Valid Values",
         "placeholder_tr": "A, B, C..."
@@ -9019,6 +9024,7 @@
       {
         "name": "lookup_column",
         "type": "text",
+        "ui_level": "hidden",
         "label_tr": "Arama Sütunu",
         "label_en": "Lookup Column",
         "required": true,
@@ -9027,6 +9033,7 @@
       {
         "name": "return_column",
         "type": "text",
+        "ui_level": "hidden",
         "label_tr": "Dönüş Sütunu",
         "label_en": "Return Column",
         "column_source": "secondary"
@@ -9113,12 +9120,11 @@
   },
   {
     "id": "xlookup-single-match",
-    "requiresSecondFile": true,
     "category": "lookup_join",
     "title_tr": "Esnek arama ile tek değer çek (XLOOKUP tarzı)",
     "title_en": "Flexible lookup to pull a single value (XLOOKUP style)",
-    "short_tr": "Sağdan sola arama, bulunamazsa varsayılan değer gibi esnek seçeneklerle tek değer getiren senaryo.",
-    "short_en": "Lookup with flexible options such as right-to-left search and default value when not found.",
+    "short_tr": "Aynı dosyada bir değeri arayıp, başka bir sütundan karşılık gelen değeri getirir.",
+    "short_en": "Search for a value in the same file and return the corresponding value from another column.",
     "status": "implemented",
     "implementation": {
       "module": "app.scenarios.xlookup_single_match",
@@ -9130,17 +9136,10 @@
         "type": "text",
         "label_tr": "Aranacak Değer",
         "label_en": "Lookup Value",
-        "description_tr": "Bu alana, aramak istediğiniz değeri yazın. Örneğin, bir ürünün adını veya ID'sini girebilirsiniz. Eğer bu alanı yanlış yazarsanız veya değeri bulamazsanız, sonuç olarak 'bulunamadı' mesajı alırsınız.",
-        "description_en": "Enter the value you want to search for. For example, you can enter a product name or ID. If you write this field incorrectly or cannot find the value, you will receive a 'not found' message.",
+        "description_tr": "Aramak istediğiniz değeri yazın. Örneğin, bir ürün adı veya ID girebilirsiniz.",
+        "description_en": "Enter the value you want to search for. For example, you can enter a product name or ID.",
         "placeholder_tr": "Örn: Elma...",
         "placeholder_en": "e.g. Apple...",
-        "column_source": "primary"
-      },
-      {
-        "name": "data_source",
-        "type": "data_source",
-        "label_tr": "Veri Kaynağı",
-        "label_en": "Data Source",
         "required": true
       },
       {
@@ -9148,27 +9147,29 @@
         "type": "text",
         "label_tr": "Arama Sütunu",
         "label_en": "Lookup Column",
-        "description_tr": "Bu alana, arama yapmak istediğiniz sütunun başlığını yazın. Örneğin, 'Ürün Adı' veya 'Ürün ID'si' gibi. Eğer bu alanı yanlış yazarsanız, arama işlemi gerçekleşmez.",
-        "description_en": "Enter the header of the column you want to search in. For example, 'Product Name' or 'Product ID'. If you write this field incorrectly, the search operation will not occur.",
+        "description_tr": "Değerin aranacağı sütunu seçin. Bu sütunda aradığınız değer bulunacak.",
+        "description_en": "Select the column where the value will be searched. The value you're looking for will be found in this column.",
         "placeholder_tr": "Örn: Ürün Adı...",
         "placeholder_en": "e.g. Product Name...",
         "required": true,
-        "column_source": "secondary"
+        "column_source": "primary"
       },
       {
         "name": "return_column",
         "type": "text",
         "label_tr": "Sonuç Sütunu",
         "label_en": "Return Column",
-        "description_tr": "Bu alana, arama sonucunda hangi sütunun değerini almak istediğinizi yazın. Örneğin, 'Fiyat' veya 'Stok Miktarı'. Eğer bu alanı yanlış yazarsanız, sonuç alamazsınız.",
-        "description_en": "Enter the column from which you want to retrieve the value after the search. For example, 'Price' or 'Stock Quantity'. If you write this field incorrectly, you will not be able to get a result.",
+        "description_tr": "Eşleşme bulunduğunda hangi sütunun değerini almak istediğinizi seçin.",
+        "description_en": "Select which column's value you want to retrieve when a match is found.",
         "placeholder_tr": "Örn: Fiyat...",
         "placeholder_en": "e.g. Price...",
-        "column_source": "secondary"
+        "required": true,
+        "column_source": "primary"
       },
       {
         "name": "default_value",
         "type": "text",
+        "ui_level": "advanced",
         "label_tr": "Varsayılan Değer",
         "label_en": "Default Value",
         "description_tr": "Eşleşme bulunamazsa döndürülecek değer. Boş bırakılabilir.",
@@ -9180,6 +9181,7 @@
       {
         "name": "search_mode",
         "type": "select",
+        "ui_level": "advanced",
         "label_tr": "Arama Yöntemi",
         "label_en": "Search Mode",
         "description_tr": "Bu alanda, arama işleminin hangi yönde yapılacağını seçin. 'Soldan Sağa' veya 'Sağdan Sola' seçeneklerinden birini tercih edebilirsiniz. Yanlış bir seçim yaparsanız, arama işlemi gerçekleşmez.",
@@ -9199,6 +9201,7 @@
       {
         "name": "case_sensitive",
         "type": "select",
+        "ui_level": "advanced",
         "label_tr": "Büyük/Küçük Harf Duyarlılığı",
         "label_en": "Case Sensitivity",
         "description_tr": "Bu alanda, aramanızın büyük/küçük harf duyarlı olup olmayacağını seçin. Eğer 'Evet' seçerseniz, 'Elma' ile 'elma' farklı değerler olarak kabul edilir. Yanlış bir seçim yaparsanız, arama sonuçlarınızı etkileyebilir.",
@@ -9407,5 +9410,79 @@
       "grouping",
       "sorting"
     ]
+  },
+  {
+    "id": "concatenate-columns",
+    "category": "text_cleaning",
+    "title_tr": "Sütunları Birleştir (Concatenate)",
+    "title_en": "Concatenate Columns",
+    "short_tr": "Birden fazla sütunu tek bir sütunda birleştirir.",
+    "short_en": "Merges multiple columns into a single column.",
+    "status": "implemented",
+    "implementation": {
+      "module": "app.scenarios.concatenate_columns",
+      "func": "run"
+    },
+    "params": [
+      {
+        "name": "columns",
+        "type": "text",
+        "label_tr": "Birleştirilecek Sütunlar",
+        "label_en": "Columns to Concatenate",
+        "description_tr": "Birleştirmek istediğiniz sütun adlarını virgülle ayırarak yazın. Örn: Ad, Soyad",
+        "description_en": "Enter the column names to concatenate, separated by commas. E.g.: FirstName, LastName",
+        "placeholder_tr": "Örn: Ad, Soyad...",
+        "placeholder_en": "e.g. FirstName, LastName...",
+        "required": true
+      },
+      {
+        "name": "separator",
+        "type": "text",
+        "label_tr": "Ayırıcı",
+        "label_en": "Separator",
+        "description_tr": "Sütunlar arasına eklenecek karakter. Boş bırakılırsa boşluk kullanılır.",
+        "description_en": "Character to insert between columns. If empty, space is used.",
+        "placeholder_tr": "Örn: boşluk, virgül, tire...",
+        "placeholder_en": "e.g. space, comma, dash..."
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "description_tr": "Sütunların alınacağı kaynak. Ana dosya, ikinci dosya veya farklı sayfa seçebilirsiniz.",
+        "description_en": "Source for columns. You can select main file, second file, or different sheet."
+      }
+    ],
+    "tags_tr": [
+      "birleştir",
+      "concatenate",
+      "sütun birleştirme",
+      "metin birleştirme",
+      "ad soyad",
+      "concat"
+    ],
+    "tags_en": [
+      "concatenate",
+      "merge columns",
+      "combine text",
+      "join columns",
+      "concat"
+    ],
+    "help_tr": {
+      "what_is_tr": "Bu senaryo, birden fazla sütundaki verileri tek bir sütunda birleştirmenizi sağlar. Örneğin, Ad ve Soyad sütunlarını birleştirerek Tam Ad sütunu oluşturabilirsiniz.",
+      "how_to_tr": [
+        "Birleştirmek istediğiniz sütun adlarını virgülle ayırarak yazın.",
+        "Ayırıcı karakteri belirleyin (boşluk, virgül, tire vb.).",
+        "İsterseniz farklı dosya/sayfadan sütun seçebilirsiniz.",
+        "İşlemi başlatın.",
+        "--- <b>💡 İpuçları:</b> ---",
+        "İpucu: Sütun adlarını doğru yazdığınızdan emin olun.",
+        "Dikkat: Farklı dosyadan sütun seçerseniz satır sayıları eşleşmelidir."
+      ],
+      "examples_tr": [
+        "Örnek: Ad ve Soyad sütunlarını boşluk ile birleştirmek için: 'Ad, Soyad' yazın ve ayırıcı olarak boşluk seçin."
+      ]
+    }
   }
 ]

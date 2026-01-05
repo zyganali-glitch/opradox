@@ -7,7 +7,10 @@ def run(df: pd.DataFrame, params: dict) -> dict:
     raw_cols = params.get("columns", "")
     separator = params.get("separator", " ")
     
-    # Clean separator keywords
+    # İkinci dosya/sayfa desteği
+    df2 = params.get("df2") or params.get("lookup_df")
+    
+    # Ayırıcı anahtar kelimelerini temizle
     if separator.strip().lower() == "boşluk": separator = " "
     if separator.strip().lower() == "virgül": separator = ","
     if separator.strip().lower() == "tire": separator = "-"
@@ -17,21 +20,33 @@ def run(df: pd.DataFrame, params: dict) -> dict:
     if not cols:
         raise HTTPException(status_code=400, detail="Birleştirilecek sütunları giriniz.")
     
-    missing = [c for c in cols if c not in df.columns]
+    # Her sütun için hangi dataframe'in kullanılacağını belirle
+    # df2 varsa ve sütun df2'de ama df'de yoksa, df2'den al
+    working_df = df.copy()
+    
+    if df2 is not None and isinstance(df2, pd.DataFrame):
+        # df2 sütunlarını working_df'e ekle (çakışma varsa sonuna _file2 ekle)
+        for col in df2.columns:
+            if col in working_df.columns:
+                working_df[f"{col}_file2"] = df2[col].values[:len(working_df)] if len(df2) >= len(working_df) else df2[col].reindex(working_df.index).values
+            else:
+                working_df[col] = df2[col].values[:len(working_df)] if len(df2) >= len(working_df) else df2[col].reindex(working_df.index).values
+    
+    missing = [c for c in cols if c not in working_df.columns]
     if missing:
         raise HTTPException(status_code=400, detail=f"Sütunlar bulunamadı: {missing}")
 
-    # Concatenate
+    # Birleştirme işlemi
     new_col_name = "Birleştirilmiş_" + "_".join(cols[:2])
     
     try:
-        # Convert all to string and join
-        df[new_col_name] = df[cols].astype(str).agg(separator.join, axis=1)
+        # Hepsini string'e çevir ve birleştir
+        working_df[new_col_name] = working_df[cols].astype(str).agg(separator.join, axis=1)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Hata: {str(e)}")
 
-    row_count = len(df)
-    preview = df.head(20).to_markdown(index=False)
+    row_count = len(working_df)
+    preview = working_df.head(20).to_markdown(index=False)
     
     # Python kod özeti
     cols_str = ', '.join([f"'{c}'" for c in cols])
@@ -65,5 +80,5 @@ df.to_excel('concatenated_result.xlsx', index=False)
         "summary": "Sütun birleştirme tamamlandı.",
         "markdown_result": f"**Sonuç:** {cols} sütunları '{separator}' ile birleştirildi.\n\n### Önizleme\n\n{preview}",
         "technical_details": technical_details,
-        "df_out": df
+        "df_out": working_df
     }
