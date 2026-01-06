@@ -2622,6 +2622,66 @@ export function renderStatResults(result, type) {
         return html;
     }
 
+    // FAZ-2: SPECIAL CASE: SPSS-style tables (ANOVA, Chi-Square, T-Test SPSS wrappers)
+    if (result.tables && Array.isArray(result.tables) && result.tables.length > 0) {
+        // Render each SPSS table
+        result.tables.forEach(tbl => {
+            if (!tbl || !tbl.columns || !tbl.rows) return;
+            html += `<h5 class="stat-spss-table-title">${tbl.name || 'Table'}</h5>`;
+            html += '<table class="stat-table stat-spss-table">';
+            html += '<thead><tr>';
+            tbl.columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            tbl.rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    const cellVal = cell === '' || cell === null || cell === undefined ? '' : cell;
+                    html += `<td>${cellVal}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+        });
+
+        // Effect sizes section
+        if (result.effectSizes) {
+            html += '<div class="stat-effect-sizes">';
+            html += '<h5>Etki Büyüklüğü</h5>';
+            if (result.effectSizes.omegaSquared !== undefined) {
+                html += `<div class="stat-effect-item"><strong>ω² (Omega Squared):</strong> ${fmtNum(result.effectSizes.omegaSquared, 4)} <span class="stat-effect-interp">(${result.effectSizes.interpretation || 'N/A'})</span></div>`;
+            }
+            if (result.effectSizes.etaSquared !== undefined) {
+                html += `<div class="stat-effect-item"><strong>η² (Eta Squared):</strong> ${fmtNum(result.effectSizes.etaSquared, 4)}</div>`;
+            }
+            if (result.effectSizes.cramersV !== undefined) {
+                html += `<div class="stat-effect-item"><strong>Cramer's V:</strong> ${fmtNum(result.effectSizes.cramersV, 4)}</div>`;
+            }
+            html += '</div>';
+        }
+
+        // APA interpretation
+        const apaText = (VIZ_STATE?.lang === 'tr' ? result.apaTR : result.apaEN) || result.interpretation;
+        if (apaText) {
+            html += `<div class="stat-interpretation"><i class="fas fa-graduation-cap"></i><span>${apaText}</span></div>`;
+        }
+
+        // Levene assumption check warning
+        if (result.levene && result.levene.pValue !== undefined) {
+            const leveneOk = result.levene.pValue > (result.alpha || 0.05);
+            const leveneClass = leveneOk ? 'stat-assumption-ok' : 'stat-assumption-violated';
+            const leveneIcon = leveneOk ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            const leveneMsg = leveneOk
+                ? 'Varyanslar homojen (Levene p > α)'
+                : 'Varyanslar homojen DEĞİL (Levene p < α)';
+            html += `<div class="stat-assumption ${leveneClass}"><i class="fas ${leveneIcon}"></i> ${leveneMsg}</div>`;
+        }
+
+        html += `</div><div class="stat-result-footer"><small>α = ${result.alpha || 0.05}</small><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        return html;
+    }
+
     // FAZ-5: SPECIAL CASE: TimeSeries - render trend and forecast
     if (result.testType === 'timeseries') {
         if (result.error) {
@@ -3538,15 +3598,18 @@ export async function runStatForWidget(widgetId, statType, datasetId, xCol, yCol
             const d1 = data.filter(d => d[xCol] == group1).map(d => parseFloat(d[yCol]));
             const d2 = data.filter(d => d[xCol] == group2).map(d => parseFloat(d[yCol]));
             result = runIndependentTTest(d1, d2, 0.05); // Call existing function
-        } else if (statType === 'anova' && typeof runOneWayANOVA === 'function') {
-            // Group logic needed
+        } else if (statType === 'anova' && (typeof runOneWayANOVA_SPSS === 'function' || typeof runOneWayANOVA === 'function')) {
+            // FAZ-2: Route to SPSS wrapper for complete output
             const groups = {};
             data.forEach(d => {
                 const g = d[xCol];
                 if (!groups[g]) groups[g] = [];
                 groups[g].push(parseFloat(d[yCol]));
             });
-            result = runOneWayANOVA(Object.values(groups), 0.05);
+            const groupNames = Object.keys(groups).sort();
+            result = typeof runOneWayANOVA_SPSS === 'function'
+                ? runOneWayANOVA_SPSS(Object.values(groups), 0.05, groupNames)
+                : runOneWayANOVA(Object.values(groups), 0.05);
         } else if (statType === 'descriptive' && typeof calculateDescriptiveStats === 'function') {
             const vals = data.map(d => parseFloat(d[yCol])).filter(n => !isNaN(n));
             result = calculateDescriptiveStats(vals);
@@ -3687,10 +3750,13 @@ export function runStatWidgetAnalysis(widgetId) {
             case 'anova':
             case 'anova-oneway':
                 // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                // FAZ-2: Route to SPSS wrapper for complete output
                 const anovaGroup = group || var1;
                 const anovaValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
                 if (!anovaValue || !anovaGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
-                result = runOneWayANOVA(groupDataByColumn(data, anovaGroup, anovaValue), alpha);
+                // Get group names for SPSS output
+                const anovaGroupNames = [...new Set(data.map(r => r[anovaGroup]).filter(v => v !== null && v !== '' && v !== undefined))].sort();
+                result = runOneWayANOVA_SPSS(groupDataByColumn(data, anovaGroup, anovaValue), alpha, anovaGroupNames);
                 break;
 
             // ==================== CHI-SQUARE ====================
@@ -6393,14 +6459,16 @@ export function runStatTest(testType) {
             result = runOneSampleTTest(yData, 0, 0.05);
             break;
         case 'anova':
-            // Split into 3 groups for ANOVA
+            // Split into 3 groups for ANOVA - FAZ-2: Use SPSS wrapper
             const third = Math.floor(yData.length / 3);
             const groups = [
                 yData.slice(0, third),
                 yData.slice(third, 2 * third),
                 yData.slice(2 * third)
             ];
-            result = runOneWayANOVA(groups, 0.05);
+            result = typeof runOneWayANOVA_SPSS === 'function'
+                ? runOneWayANOVA_SPSS(groups, 0.05, ['Group 1', 'Group 2', 'Group 3'])
+                : runOneWayANOVA(groups, 0.05);
             break;
         case 'correlation':
             // Use first half vs second half
