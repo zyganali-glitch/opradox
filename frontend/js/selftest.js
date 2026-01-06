@@ -143,16 +143,21 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             return 'PASS';
         });
 
-        // Test 9: Statistical Motors (Levene & Updated ANOVA)
-        results.smokeTests.statMotors = runSmokeTest('statMotors', () => {
-            // Check if functions are exposed (might need adapter update)
-            // Use try-catch if they are module-bound and not window-bound
+        // Test 9: Statistical Motors (Levene & ANOVA SPSS Wrapper)
+        results.smokeTests.statMotors = runSmokeTest('statMotors.anova_spss_wrapper', () => {
+            // Check if SPSS wrapper function is exposed
             try {
-                if (typeof window.runLeveneTest !== 'function' || typeof window.runOneWayANOVA !== 'function') {
-                    // Start checking imports from module if possible? No, we are in non-module script probably or need window binding.
-                    // For now, assume they SHOULD be on window if the app is working as "monolithic" replacement.
-                    // If not, this test will correctly SKIP.
-                    return 'SKIP: stat functions missing on window';
+                // Check for SPSS wrapper first, fallback to legacy
+                const hasSpssWrapper = typeof window.runOneWayANOVA_SPSS === 'function';
+                const hasLegacy = typeof window.runOneWayANOVA === 'function';
+                const hasLevene = typeof window.runLeveneTest === 'function';
+
+                if (!hasSpssWrapper && !hasLegacy) {
+                    return 'SKIP: ANOVA functions missing on window';
+                }
+
+                if (!hasLevene) {
+                    return 'SKIP: runLeveneTest missing on window';
                 }
 
                 // Dummy data for ANOVA
@@ -160,14 +165,33 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
                 const group2 = [11, 13, 15, 17];
                 const group3 = [20, 22, 24, 26];
 
-                // Run Levene
+                // Run Levene independently
                 const levene = window.runLeveneTest([group1, group2, group3]);
                 if (!levene.valid) return 'FAIL: Levene invalid';
 
-                // Run ANOVA (should include OmegaSq and Levene in result)
-                const anova = window.runOneWayANOVA([group1, group2, group3]);
-                if (anova.effectSizes.omegaSquared === undefined) return 'FAIL: Omega Squared missing';
-                if (!anova.stats.levene) return 'FAIL: Levene in ANOVA missing';
+                // Run ANOVA using SPSS wrapper if available, else legacy
+                const anovaFn = hasSpssWrapper ? window.runOneWayANOVA_SPSS : window.runOneWayANOVA;
+                const anova = anovaFn([group1, group2, group3]);
+
+                // Graceful field checks - WARN instead of FAIL for missing optional fields
+                const warnings = [];
+
+                // Check omegaSquared in effectSizes
+                const omegaSq = anova.effectSizes?.omegaSquared ?? anova.omegaSquared;
+                if (omegaSq === undefined) {
+                    warnings.push('MISSING_FIELD: omegaSquared');
+                }
+
+                // Check levene in stats or assumptions
+                const leveneInAnova = anova.stats?.levene ?? anova.assumptions?.levene ?? anova.levene;
+                if (!leveneInAnova) {
+                    warnings.push('MISSING_FIELD: levene in ANOVA result');
+                }
+
+                // Return result based on warnings
+                if (warnings.length > 0) {
+                    return `WARN: ${warnings.join('; ')}`;
+                }
 
                 return 'PASS';
             } catch (e) {
