@@ -294,6 +294,108 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         });
 
         // =====================================================
+        // FAZ-3: STAT WIDGET UI SMOKE TEST
+        // =====================================================
+
+        // Test 16: Stat Widget UI Smoke Test
+        results.smokeTests.statWidgetUI = runSmokeTest('statWidgetUI.smoke', () => {
+            // Check required functions
+            if (typeof window.createStatWidget !== 'function') {
+                return 'SKIP: createStatWidget missing';
+            }
+            if (typeof window.runStatWidgetAnalysis !== 'function') {
+                return 'SKIP: runStatWidgetAnalysis missing';
+            }
+
+            // Check dashboard grid exists
+            const dashboard = document.getElementById('vizDashboardGrid');
+            if (!dashboard) {
+                return 'SKIP: vizDashboardGrid not found';
+            }
+
+            const warnings = [];
+
+            try {
+                // Create ANOVA widget
+                window.createStatWidget('anova');
+
+                // Wait a bit for DOM to update
+                const widgets = dashboard.querySelectorAll('.viz-stat-widget');
+                if (widgets.length === 0) {
+                    return 'FAIL: Widget not created';
+                }
+
+                const newWidget = widgets[widgets.length - 1];
+                const widgetId = newWidget.id;
+
+                if (!widgetId) {
+                    return 'FAIL: Widget has no ID';
+                }
+
+                // Try to select dropdown values
+                const xColSelect = document.getElementById(`${widgetId}_xCol`);
+                const yColSelect = document.getElementById(`${widgetId}_yCol`);
+
+                if (!xColSelect || !yColSelect) {
+                    warnings.push('MISSING: dropdown selectors');
+                } else {
+                    // Try to select first options if available
+                    if (xColSelect.options.length > 1) {
+                        xColSelect.selectedIndex = 1;
+                    }
+                    if (yColSelect.options.length > 1) {
+                        yColSelect.selectedIndex = 1;
+                    }
+                }
+
+                // Run analysis
+                try {
+                    window.runStatWidgetAnalysis(widgetId);
+                } catch (e) {
+                    warnings.push(`ANALYSIS_ERROR: ${e.message.slice(0, 50)}`);
+                }
+
+                // Check result container
+                const resultBody = document.getElementById(`${widgetId}_body`);
+                if (!resultBody || resultBody.innerHTML.includes('Hesaplanıyor')) {
+                    warnings.push('WARN: result still loading or empty');
+                }
+
+                // Test copy functions (catch clipboard permission errors gracefully)
+                const copyFns = ['copyStatAsText', 'copyStatAsAPA', 'copyStatAsTable'];
+                copyFns.forEach(fn => {
+                    if (typeof window[fn] === 'function') {
+                        try {
+                            window[fn](widgetId);
+                        } catch (e) {
+                            // Clipboard errors are expected - just note it
+                            if (e.message && e.message.includes('clipboard')) {
+                                // Ignore clipboard permission errors
+                            } else {
+                                warnings.push(`${fn}: ${e.message.slice(0, 30)}`);
+                            }
+                        }
+                    }
+                });
+
+                // Cleanup: remove widget
+                if (newWidget && newWidget.parentNode) {
+                    newWidget.parentNode.removeChild(newWidget);
+                }
+
+                // Return result
+                if (warnings.length > 0) {
+                    return `WARN: ${warnings.slice(0, 3).join('; ')}`;
+                }
+
+                return 'PASS';
+
+            } catch (e) {
+                return `FAIL: ${e.message}`;
+            }
+        });
+
+        // =====================================================
         // EXPANDED TESTS - Chart Type Coverage (44 types)
         // =====================================================
 
