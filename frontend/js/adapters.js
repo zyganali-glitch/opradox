@@ -2370,15 +2370,25 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     };
 
     // createServiceWorker - Service worker kaydet
+    // FAZ-KONSOL-3: Single entry point with guard
     window.createServiceWorker = async function () {
+        // Guard: prevent double registration (check first)
+        if (window.__SW_REGISTERED__) {
+            console.log('⚠️ Service Worker already registered, skipping duplicate call');
+            return true;
+        }
+
+        // Set flag IMMEDIATELY - even before PWA check (prevent race)
+        window.__SW_REGISTERED__ = true;
+
         if (!window.checkPWASupport()) {
             if (window.showToast) window.showToast('Service Worker desteklenmiyor', 'warning');
             return false;
         }
 
         try {
-            const registration = await navigator.serviceWorker.register('/js/sw.js');
-            console.log('✅ Service Worker registered:', registration.scope);
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('✅ Service Worker registered (scope: /)');
             if (window.showToast) window.showToast('PWA etkinleştirildi', 'success');
 
             // Update handler
@@ -2393,6 +2403,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
             return true;
         } catch (error) {
+            // DON'T reset flag - one attempt per session is enough
             console.error('Service Worker registration failed:', error);
             if (window.showToast) window.showToast('PWA kaydı başarısız', 'error');
             return false;
@@ -3115,6 +3126,296 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             console.log('[SELFTEST] loader injected (selftest=1)');
         }
     } catch (e) { /* no-op */ }
+
+    // =====================================================
+    // FAZ-2: detectAnomalies UI Wrapper
+    // Makes the BI Insights button work with single click
+    // =====================================================
+    (function setupDetectAnomaliesUIWrapper() {
+        // Wait for core detectAnomalies to be available
+        const waitForCore = setInterval(() => {
+            if (typeof window.detectAnomalies === 'function') {
+                clearInterval(waitForCore);
+
+                // Store reference to core function
+                const coreDetect = window.detectAnomalies;
+
+                // Override with UI wrapper
+                window.detectAnomalies = function (dataArg, columnArg, method, threshold, axis) {
+                    const lang = window.VIZ_STATE?.lang || 'tr';
+
+                    // If called with explicit arguments, pass through to core
+                    if (dataArg && columnArg) {
+                        return coreDetect(dataArg, columnArg, method, threshold, axis);
+                    }
+
+                    // UI wrapper: get data from active chart
+                    const selectedChartId = window.VIZ_STATE?.selectedChart;
+                    if (!selectedChartId) {
+                        if (window.showToast) {
+                            window.showToast(lang === 'tr' ? 'Önce bir grafik seçin' : 'Please select a chart first', 'warning');
+                        }
+                        return { anomalies: [], stats: null, interpretation: lang === 'tr' ? 'Grafik seçilmedi' : 'No chart selected' };
+                    }
+
+                    const config = (window.VIZ_STATE?.charts || []).find(c => c.id === selectedChartId);
+                    if (!config) {
+                        if (window.showToast) {
+                            window.showToast(lang === 'tr' ? 'Grafik konfigürasyonu bulunamadı' : 'Chart configuration not found', 'error');
+                        }
+                        return { anomalies: [], stats: null, interpretation: lang === 'tr' ? 'Grafik bulunamadı' : 'Chart not found' };
+                    }
+
+                    const data = window.VIZ_STATE?.data || [];
+                    if (!data || data.length === 0) {
+                        if (window.showToast) {
+                            window.showToast(lang === 'tr' ? 'Veri yüklenmemiş' : 'No data loaded', 'warning');
+                        }
+                        return { anomalies: [], stats: null, interpretation: lang === 'tr' ? 'Veri yok' : 'No data' };
+                    }
+
+                    // Determine column(s) to analyze
+                    const yColumn = config.yAxis || config.yColumn || config.yAxes?.[0];
+                    if (!yColumn) {
+                        if (window.showToast) {
+                            window.showToast(lang === 'tr' ? 'Grafik Y ekseni belirlenmemiş' : 'Chart Y axis not defined', 'warning');
+                        }
+                        return { anomalies: [], stats: null, interpretation: lang === 'tr' ? 'Y ekseni yok' : 'No Y axis' };
+                    }
+
+                    // Call core function with defaults
+                    const result = coreDetect(data, yColumn, method || 'zscore', threshold || 3, axis || 'y');
+
+                    // Render results to DOM
+                    const anomalyResultsEl = document.getElementById('anomalyResults');
+                    const anomalyCountEl = document.getElementById('anomalyCount');
+                    const anomalyListEl = document.getElementById('anomalyList');
+
+                    if (anomalyResultsEl) {
+                        anomalyResultsEl.style.display = 'block';
+                    }
+
+                    if (anomalyCountEl) {
+                        const count = result.anomalies?.length || 0;
+                        anomalyCountEl.textContent = count;
+                        anomalyCountEl.className = count > 0 ? 'anomaly-count anomaly-found' : 'anomaly-count';
+                    }
+
+                    if (anomalyListEl) {
+                        if (result.anomalies && result.anomalies.length > 0) {
+                            anomalyListEl.innerHTML = result.anomalies.slice(0, 10).map((a, i) => `
+                                <div class="anomaly-item ${a.type || ''}">
+                                    <span class="anomaly-index">#${a.index + 1}</span>
+                                    <span class="anomaly-value">${typeof a.value === 'number' ? a.value.toFixed(2) : a.value}</span>
+                                    <span class="anomaly-type">${a.type === 'high' ? '↑' : '↓'}</span>
+                                    ${a.zScore ? `<span class="anomaly-zscore">z=${a.zScore.toFixed(2)}</span>` : ''}
+                                </div>
+                            `).join('') + (result.anomalies.length > 10 ? `<div class="anomaly-more">+${result.anomalies.length - 10} ${lang === 'tr' ? 'daha' : 'more'}...</div>` : '');
+                        } else {
+                            anomalyListEl.innerHTML = `<div class="no-anomaly">${lang === 'tr' ? 'Anomali tespit edilmedi' : 'No anomalies detected'}</div>`;
+                        }
+                    }
+
+                    // Show interpretation
+                    if (result.interpretation) {
+                        const interpEl = document.getElementById('anomalyInterpretation');
+                        if (interpEl) {
+                            interpEl.textContent = result.interpretation;
+                        }
+                    }
+
+                    // Toast notification
+                    if (window.showToast) {
+                        const count = result.anomalies?.length || 0;
+                        if (count > 0) {
+                            window.showToast(
+                                lang === 'tr' ? `${count} anomali tespit edildi (${yColumn})` : `${count} anomalies detected (${yColumn})`,
+                                'warning'
+                            );
+                        } else {
+                            window.showToast(
+                                lang === 'tr' ? `Anomali bulunamadı (${yColumn})` : `No anomalies found (${yColumn})`,
+                                'success'
+                            );
+                        }
+                    }
+
+                    console.log('[detectAnomalies] UI wrapper result:', result);
+                    return result;
+                };
+
+                console.log('✅ detectAnomalies UI wrapper installed');
+            }
+        }, 100);
+
+        // Timeout after 10 seconds
+        setTimeout(() => clearInterval(waitForCore), 10000);
+    })();
+
+    // =====================================================
+    // FAZ-1: STAT COPY FUNCTIONS (Graceful Fallback)
+    // =====================================================
+
+    /**
+     * Copy stat result as HTML table to clipboard
+     */
+    window.copyStatAsHTML = function (statResult) {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        if (!statResult) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak sonuç yok' : 'No result to copy', 'warning');
+            return false;
+        }
+
+        try {
+            // Build HTML table from result
+            let html = `<table border="1" style="border-collapse:collapse;">`;
+            html += `<tr><th colspan="2">${statResult.testName || 'Test Result'}</th></tr>`;
+
+            if (statResult.stats) {
+                Object.entries(statResult.stats).forEach(([key, val]) => {
+                    if (typeof val === 'number') {
+                        html += `<tr><td>${key}</td><td>${val.toFixed(4)}</td></tr>`;
+                    } else if (typeof val !== 'object') {
+                        html += `<tr><td>${key}</td><td>${val}</td></tr>`;
+                    }
+                });
+            }
+
+            if (statResult.pValue !== undefined) {
+                html += `<tr><td>p-value</td><td>${statResult.pValue.toFixed(4)}</td></tr>`;
+            }
+            if (statResult.pValues?.pearson !== undefined) {
+                html += `<tr><td>p-value</td><td>${statResult.pValues.pearson.toFixed(4)}</td></tr>`;
+            }
+
+            html += `</table>`;
+
+            // Try Clipboard API
+            if (navigator.clipboard && navigator.clipboard.write) {
+                const blob = new Blob([html], { type: 'text/html' });
+                navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })]).then(() => {
+                    if (window.showToast) window.showToast(lang === 'tr' ? 'HTML olarak kopyalandı' : 'Copied as HTML', 'success');
+                }).catch(() => {
+                    // Fallback to text
+                    navigator.clipboard.writeText(html);
+                    if (window.showToast) window.showToast(lang === 'tr' ? 'Metin olarak kopyalandı' : 'Copied as text', 'info');
+                });
+                return true;
+            } else {
+                // No Clipboard API
+                if (window.showToast) window.showToast(lang === 'tr' ? 'Clipboard API desteklenmiyor' : 'Clipboard API not supported', 'warning');
+                console.log('[copyStatAsHTML] Fallback - HTML content:', html);
+                return false;
+            }
+        } catch (e) {
+            console.error('[copyStatAsHTML] Error:', e);
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalama hatası' : 'Copy error', 'error');
+            return false;
+        }
+    };
+
+    /**
+     * Copy stat result as plain text to clipboard
+     */
+    window.copyStatAsText = function (statResult) {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        if (!statResult) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak sonuç yok' : 'No result to copy', 'warning');
+            return false;
+        }
+
+        try {
+            // Build text from result
+            let text = `${statResult.testName || 'Test Result'}\n`;
+            text += '='.repeat(40) + '\n';
+
+            if (statResult.apaTR || statResult.apaEN) {
+                text += (lang === 'tr' ? statResult.apaTR : statResult.apaEN) || statResult.interpretation || '';
+                text += '\n\n';
+            }
+
+            if (statResult.stats) {
+                Object.entries(statResult.stats).forEach(([key, val]) => {
+                    if (typeof val === 'number') {
+                        text += `${key}: ${val.toFixed(4)}\n`;
+                    } else if (typeof val !== 'object') {
+                        text += `${key}: ${val}\n`;
+                    }
+                });
+            }
+
+            // Try Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (window.showToast) window.showToast(lang === 'tr' ? 'Metin olarak kopyalandı' : 'Copied as text', 'success');
+                }).catch(() => {
+                    if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalama başarısız' : 'Copy failed', 'error');
+                });
+                return true;
+            } else {
+                if (window.showToast) window.showToast(lang === 'tr' ? 'Clipboard API desteklenmiyor' : 'Clipboard API not supported', 'warning');
+                console.log('[copyStatAsText] Fallback - text content:', text);
+                return false;
+            }
+        } catch (e) {
+            console.error('[copyStatAsText] Error:', e);
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalama hatası' : 'Copy error', 'error');
+            return false;
+        }
+    };
+
+    /**
+     * Copy stat result as image (requires canvas support)
+     */
+    window.copyStatAsImage = function (statResult, targetElement) {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        if (!statResult) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak sonuç yok' : 'No result to copy', 'warning');
+            return false;
+        }
+
+        try {
+            // Check for html2canvas or similar
+            if (typeof html2canvas === 'undefined') {
+                if (window.showToast) window.showToast(lang === 'tr' ? 'Görsel kopyalama için html2canvas gerekli' : 'html2canvas required for image copy', 'info');
+                console.log('[copyStatAsImage] html2canvas not available');
+                return false;
+            }
+
+            const element = targetElement || document.getElementById('statResultPanel');
+            if (!element) {
+                if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak element bulunamadı' : 'Element not found', 'warning');
+                return false;
+            }
+
+            html2canvas(element).then(canvas => {
+                canvas.toBlob(blob => {
+                    if (navigator.clipboard && navigator.clipboard.write) {
+                        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+                            if (window.showToast) window.showToast(lang === 'tr' ? 'Görsel olarak kopyalandı' : 'Copied as image', 'success');
+                        });
+                    } else {
+                        // Fallback: download
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'stat_result.png';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        if (window.showToast) window.showToast(lang === 'tr' ? 'Görsel indirildi' : 'Image downloaded', 'success');
+                    }
+                });
+            });
+            return true;
+        } catch (e) {
+            console.error('[copyStatAsImage] Error:', e);
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Görsel kopyalama hatası' : 'Image copy error', 'error');
+            return false;
+        }
+    };
 
     console.log('✅ adapters.js loaded - Compatibility layer active (FINAL_AUDIT_FIX Complete)');
 })();

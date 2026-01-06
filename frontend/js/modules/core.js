@@ -245,9 +245,13 @@ function setupStatButtonListeners() {
 // -----------------------------------------------------
 export function loadSavedTheme() {
     const saved = localStorage.getItem('opradox_theme');
+    // FAZ-THEME-2: Guarantee XOR state - remove BOTH classes first, then add only one
+    document.body.classList.remove('dark-mode', 'day-mode');
     if (saved === 'day') {
-        document.body.classList.remove('dark-mode');
         document.body.classList.add('day-mode');
+    } else {
+        // Default to dark mode
+        document.body.classList.add('dark-mode');
     }
     if (typeof updateAllChartsTheme === 'function') updateAllChartsTheme();
 }
@@ -396,11 +400,30 @@ export function setupKeyboardShortcuts() {
 }
 
 // -----------------------------------------------------
-// SERVICE WORKER
+// SERVICE WORKER - FAZ-KONSOL-3: Single entry point
+// Delegates to adapters.js/createServiceWorker for full PWA support
 // -----------------------------------------------------
 export function registerServiceWorker() {
+    // Guard: check if already registered (flag owned by createServiceWorker)
+    if (window.__SW_REGISTERED__) {
+        console.log('⚠️ Service Worker already registered, skipping');
+        return;
+    }
+
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/js/sw.js').then(() => console.log('✅ Service Worker registered')).catch(err => console.warn('SW registration failed:', err));
+        // Prefer full implementation from adapters.js if available
+        if (typeof window.createServiceWorker === 'function') {
+            // Delegate to adapters.js - IT will set the flag
+            window.createServiceWorker().catch(err => {
+                console.warn('SW registration delegated call failed:', err);
+            });
+        } else {
+            // Fallback: direct registration - WE own the flag here
+            window.__SW_REGISTERED__ = true;
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('✅ Service Worker registered (scope: /)'))
+                .catch(err => console.warn('SW registration failed:', err));
+        }
     }
 }
 

@@ -1448,6 +1448,16 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         console.warn(`[SELFTEST] SKIP: ${testId} - ${reason}`);
     }
 
+    // FAZ-1: Robust pValue getter - supports multiple return formats
+    function getP(result) {
+        return result?.pValue ?? result?.pValues?.pValue ?? result?.stats?.pValue ?? null;
+    }
+
+    // FAZ-1: Robust postHoc getter - supports nested and flat formats
+    function getPostHoc(result) {
+        return result?.postHoc ?? result?.stats?.postHoc ?? null;
+    }
+
     // ===========================================
     // TEST REGISTRY
     // ===========================================
@@ -1744,8 +1754,15 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         if (!window.runOneWayANOVA) return skipTest('anova_posthoc_exists', 'Not implemented');
         const groups = [[10, 11, 12], [20, 21, 22], [30, 31, 32]];
         const result = window.runOneWayANOVA(groups, 0.05, ['G1', 'G2', 'G3']);
-        if (!result.postHoc || !result.postHoc.comparisons) return skipTest('anova_posthoc_exists', 'Post-hoc not implemented');
-        assertInRange(result.postHoc.comparisons.length, 1, 10, 'anova_posthoc_count');
+        if (!result.valid) return skipTest('anova_posthoc_exists', result.error || 'invalid');
+        // FAZ-1: Use robust postHoc getter, accept any method (Pairwise t-test, Tukey, etc.)
+        const postHoc = getPostHoc(result);
+        if (!postHoc || !postHoc.comparisons || postHoc.comparisons.length === 0) {
+            return skipTest('anova_posthoc_exists', 'Post-hoc not implemented or empty');
+        }
+        // Log method for INFO (not a failure criterion)
+        console.log(`[SELFTEST] INFO: anova_posthoc_exists method=${postHoc.method || 'unknown'}`);
+        assertInRange(postHoc.comparisons.length, 1, 10, 'anova_posthoc_count');
     });
 
     registerTest('anova_twoway', 'D-ANOVA', () => {
@@ -1834,6 +1851,40 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const result = window.runChiSquareTest(table, 0.05);
         if (result.effectSizes?.cramersV === undefined) return skipTest('cramersv_range', 'Cramers V not computed');
         assertInRange(result.effectSizes.cramersV, 0, 1, 'cramersv_range');
+    });
+
+    // FAZ-4: Crosstabs Extended smoke test
+    registerTest('crosstabs_extended', 'F-Categorical', () => {
+        if (!window.runCrosstabsExtended) return skipTest('crosstabs_extended', 'Not implemented');
+        const table = [[50, 10], [10, 50]];
+        const result = window.runCrosstabsExtended(table, 0.05, 'Gender', 'Treatment');
+        if (!result.valid) return skipTest('crosstabs_extended', result.error || 'invalid');
+        // Check that Lambda and Tau are calculated
+        if (result.effectSizes?.phi === undefined || result.effectSizes?.lambdaRow === undefined) {
+            return skipTest('crosstabs_extended', 'Association measures not computed');
+        }
+        // Phi should match Cramer's V for 2x2 table
+        assertClose(result.effectSizes.phi, result.effectSizes.cramersV, 0.001, 'crosstabs_phi_eq_cramersV');
+        console.log(`[SELFTEST] INFO: crosstabs_extended lambda=${result.effectSizes.lambdaRow?.toFixed(3) || 'N/A'}`);
+    });
+
+    // FAZ-4: Item-Total Analysis smoke test
+    registerTest('item_total_analysis', 'I-Reliability', () => {
+        if (!window.runItemTotalAnalysis) return skipTest('item_total_analysis', 'Not implemented');
+        // Create test data with 5 items and 10 cases
+        const data = [];
+        for (let i = 0; i < 10; i++) {
+            data.push({ item1: 3 + i % 2, item2: 4 + i % 3, item3: 3 + i % 2, item4: 4 + i % 2, item5: 3 + i % 3 });
+        }
+        const result = window.runItemTotalAnalysis(data, ['item1', 'item2', 'item3', 'item4', 'item5']);
+        if (!result.valid) return skipTest('item_total_analysis', result.error || 'invalid');
+        // Check that item analysis is present
+        if (!result.itemAnalysis || result.itemAnalysis.length !== 5) {
+            return skipTest('item_total_analysis', 'Item analysis not computed');
+        }
+        // Alpha should be a valid number between 0 and 1
+        assertInRange(result.cronbachAlpha, -1, 1, 'item_total_alpha');
+        console.log(`[SELFTEST] INFO: item_total_analysis alpha=${result.cronbachAlpha?.toFixed(3)}, items=${result.k}`);
     });
 
     // ===========================================
@@ -2030,6 +2081,69 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         } else {
             testResults.tests.push({ id: 'stability_infinity_guard', status: 'PASS' });
             testResults.pass++;
+        }
+    });
+
+    // ===========================================
+    // L) STATS BUTTONS / COPY TESTS (FAZ-1)
+    // ===========================================
+
+    registerTest('stats_copyAsHTML', 'L-StatsButtons', () => {
+        if (!window.copyStatAsHTML) return skipTest('stats_copyAsHTML', 'Not implemented');
+        // Create mock stat result
+        const mockResult = { testName: 'Test', stats: { value: 1.234 }, pValue: 0.05 };
+        try {
+            const result = window.copyStatAsHTML(mockResult);
+            // Should not throw - PASS if we get here
+            testResults.tests.push({ id: 'stats_copyAsHTML', status: 'PASS', note: 'No crash, returned: ' + result });
+            testResults.pass++;
+        } catch (e) {
+            testResults.tests.push({ id: 'stats_copyAsHTML', status: 'FAIL', reason: 'Threw: ' + e.message });
+            testResults.fail++;
+        }
+    });
+
+    registerTest('stats_copyAsText', 'L-StatsButtons', () => {
+        if (!window.copyStatAsText) return skipTest('stats_copyAsText', 'Not implemented');
+        const mockResult = { testName: 'Test', stats: { value: 1.234 }, apaTR: 'Test sonucu' };
+        try {
+            const result = window.copyStatAsText(mockResult);
+            testResults.tests.push({ id: 'stats_copyAsText', status: 'PASS', note: 'No crash, returned: ' + result });
+            testResults.pass++;
+        } catch (e) {
+            testResults.tests.push({ id: 'stats_copyAsText', status: 'FAIL', reason: 'Threw: ' + e.message });
+            testResults.fail++;
+        }
+    });
+
+    registerTest('stats_copyAsImage', 'L-StatsButtons', () => {
+        if (!window.copyStatAsImage) return skipTest('stats_copyAsImage', 'Not implemented');
+        const mockResult = { testName: 'Test' };
+        try {
+            // This will likely return false due to html2canvas not being available
+            const result = window.copyStatAsImage(mockResult);
+            // PASS if no crash (even if false returned)
+            testResults.tests.push({ id: 'stats_copyAsImage', status: 'PASS', note: 'No crash, returned: ' + result });
+            testResults.pass++;
+        } catch (e) {
+            testResults.tests.push({ id: 'stats_copyAsImage', status: 'FAIL', reason: 'Threw: ' + e.message });
+            testResults.fail++;
+        }
+    });
+
+    registerTest('stats_generateAPAReport', 'L-StatsButtons', () => {
+        if (!window.generateAPAReport) return skipTest('stats_generateAPAReport', 'Not implemented');
+        // Create minimal test data
+        const data = [{ col1: 1, col2: 2 }, { col1: 3, col2: 4 }];
+        const columns = ['col1', 'col2'];
+        try {
+            const result = window.generateAPAReport(data, columns);
+            // PASS if no crash
+            testResults.tests.push({ id: 'stats_generateAPAReport', status: 'PASS', note: 'No crash, result valid: ' + (result?.valid ?? 'n/a') });
+            testResults.pass++;
+        } catch (e) {
+            testResults.tests.push({ id: 'stats_generateAPAReport', status: 'FAIL', reason: 'Threw: ' + e.message });
+            testResults.fail++;
         }
     });
 

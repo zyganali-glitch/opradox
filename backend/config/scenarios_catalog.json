@@ -516,70 +516,6 @@
     }
   },
   {
-    "id": "concatenate-columns",
-    "category": "text_cleaning",
-    "title_tr": "Sütunları Birleştir (Concatenate)",
-    "title_en": "Concatenate Columns",
-    "short_tr": "İki veya daha fazla sütundaki metinleri birleştirir (Ad + Soyad gibi).",
-    "short_en": "Joins text from multiple columns into one.",
-    "status": "implemented",
-    "implementation": {
-      "module": "app.scenarios.concatenate_columns",
-      "func": "run"
-    },
-    "params": [
-      {
-        "name": "columns",
-        "type": "text",
-        "required": true,
-        "label_tr": "Sütunlar (Virgülle)",
-        "label_en": "Columns (Comma-separated)",
-        "description_tr": "Birleştirilecek sütun adları. En az 2 sütun gerekli.",
-        "description_en": "Column names to concatenate. At least 2 columns required.",
-        "placeholder_tr": "Ad, Soyad",
-        "placeholder_en": "FirstName, LastName"
-      },
-      {
-        "name": "separator",
-        "type": "text",
-        "label_tr": "Ayraç",
-        "label_en": "Separator",
-        "description_tr": "Sütunlar arasındaki ayraç karakteri",
-        "description_en": "Character between columns",
-        "placeholder_tr": "Boşluk, - veya ,",
-        "placeholder_en": "Space, - or ,",
-        "default": " "
-      }
-    ],
-    "tags_tr": [
-      "birleştir",
-      "metin",
-      "ad soyad"
-    ],
-    "help_tr": {
-      "what_is_tr": "Bu senaryo, birden fazla sütundaki metinleri belirlediğiniz bir ayraç ile tek bir sütunda birleştirir.",
-      "how_to_tr": [
-        "Birleştirilecek sütun adlarını virgülle ayırarak girin.",
-        "Ayraç karakterini girin (boşluk, tire vb.).",
-        "Çalıştır butonuna basın."
-      ],
-      "examples_tr": [
-        "Ad: Ali, Soyad: Veli -> Ali Veli"
-      ]
-    },
-    "help_en": {
-      "what_is_en": "Joins text from multiple columns into a new single column with a separator.",
-      "how_to_en": [
-        "Enter column names comma separated.",
-        "Choose separator.",
-        "Run."
-      ],
-      "examples_en": [
-        "First Name, Last Name -> First Name Last Name"
-      ]
-    }
-  },
-  {
     "id": "calculate-growth-rate",
     "category": "dates_durations",
     "title_tr": "Büyüme Oranı Hesapla (Growth Rate)",
@@ -9155,6 +9091,14 @@
         "column_source": "primary"
       },
       {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "Veri Kaynağı",
+        "label_en": "Data Source",
+        "description_tr": "Arama yapılacak veri kaynağı. Ana dosya, ikinci dosya veya farklı sayfa seçebilirsiniz.",
+        "description_en": "Data source for search. You can select main file, second file, or different sheet."
+      },
+      {
         "name": "return_column",
         "type": "text",
         "label_tr": "Sonuç Sütunu",
@@ -9164,7 +9108,7 @@
         "placeholder_tr": "Örn: Fiyat...",
         "placeholder_en": "e.g. Price...",
         "required": true,
-        "column_source": "primary"
+        "column_source": "secondary"
       },
       {
         "name": "default_value",
@@ -9425,15 +9369,36 @@
     },
     "params": [
       {
-        "name": "columns",
+        "name": "column1",
         "type": "text",
-        "label_tr": "Birleştirilecek Sütunlar",
-        "label_en": "Columns to Concatenate",
-        "description_tr": "Birleştirmek istediğiniz sütun adlarını virgülle ayırarak yazın. Örn: Ad, Soyad",
-        "description_en": "Enter the column names to concatenate, separated by commas. E.g.: FirstName, LastName",
-        "placeholder_tr": "Örn: Ad, Soyad...",
-        "placeholder_en": "e.g. FirstName, LastName...",
-        "required": true
+        "label_tr": "İlk Sütun",
+        "label_en": "First Column",
+        "description_tr": "Birleştirilecek ilk sütunu seçin (ana dosyadan).",
+        "description_en": "Select the first column to concatenate (from main file).",
+        "placeholder_tr": "Örn: Ad...",
+        "placeholder_en": "e.g. FirstName...",
+        "required": true,
+        "column_source": "primary"
+      },
+      {
+        "name": "data_source",
+        "type": "data_source",
+        "label_tr": "İkinci Sütun Kaynağı",
+        "label_en": "Second Column Source",
+        "description_tr": "İkinci sütunun hangi dosyadan alınacağını seçin. Ana dosya, ikinci dosya veya farklı sayfa.",
+        "description_en": "Select where to get the second column from. Main file, second file, or different sheet."
+      },
+      {
+        "name": "column2",
+        "type": "text",
+        "label_tr": "İkinci Sütun",
+        "label_en": "Second Column",
+        "description_tr": "Birleştirilecek ikinci sütunu seçin (seçilen kaynaktan).",
+        "description_en": "Select the second column to concatenate (from selected source).",
+        "placeholder_tr": "Örn: Soyad...",
+        "placeholder_en": "e.g. LastName...",
+        "required": true,
+        "column_source": "secondary"
       },
       {
         "name": "separator",
@@ -9443,15 +9408,8 @@
         "description_tr": "Sütunlar arasına eklenecek karakter. Boş bırakılırsa boşluk kullanılır.",
         "description_en": "Character to insert between columns. If empty, space is used.",
         "placeholder_tr": "Örn: boşluk, virgül, tire...",
-        "placeholder_en": "e.g. space, comma, dash..."
-      },
-      {
-        "name": "data_source",
-        "type": "data_source",
-        "label_tr": "Veri Kaynağı",
-        "label_en": "Data Source",
-        "description_tr": "Sütunların alınacağı kaynak. Ana dosya, ikinci dosya veya farklı sayfa seçebilirsiniz.",
-        "description_en": "Source for columns. You can select main file, second file, or different sheet."
+        "placeholder_en": "e.g. space, comma, dash...",
+        "default": " "
       }
     ],
     "tags_tr": [

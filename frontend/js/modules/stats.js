@@ -6422,11 +6422,18 @@ export function runStatTest(testType) {
         pValueEl.className = p < 0.05 ? 'viz-p-value viz-significant' : 'viz-p-value';
     }
     if (resultBodyEl) {
+        // P0 HOTFIX: Robust significance check - supports both isSignificant and significant fields
+        const hasPValue = typeof result.pValue === 'number' && !isNaN(result.pValue);
+        const sig = hasPValue
+            ? ((typeof result.isSignificant === 'boolean')
+                ? result.isSignificant
+                : (typeof result.significant === 'boolean' ? result.significant : false))
+            : false;
         resultBodyEl.innerHTML = `
             <div>n = ${yData.length}</div>
             <div>Ortalama = ${calculateMean(yData).toFixed(2)}</div>
             <div>Std Sapma = ${calculateStdDev(yData).toFixed(2)}</div>
-            <div class="${result.isSignificant ? 'viz-significant' : ''}">${result.interpretation || ''}</div>
+            <div class="${sig ? 'viz-significant' : ''}">${result.interpretation || ''}</div>
         `;
     }
 
@@ -6439,7 +6446,808 @@ export function runStatTest(testType) {
 
 window.runStatTest = runStatTest;
 
-console.log('✅ stats.js (Complete: Part 1-6 with Modal Functions + runStatTest) loaded');
+// =====================================================
+// FAZ-3: SPSS STANDARD OUTPUT WRAPPERS
+// These do NOT modify existing functions - they call them
+// and add standardized output formatting
+// =====================================================
+
+/**
+ * Independent T-Test with SPSS standard output
+ * Includes: Levene test, Student + Welch tables, Cohen's d, Hedges' g, APA format
+ */
+export function runIndependentTTest_SPSS(group1, group2, alpha = 0.05, groupNames = ['Group 1', 'Group 2']) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Get base result from existing function
+    const welchResult = runIndependentTTest(group1, group2, alpha);
+    if (!welchResult.valid) {
+        return { ...welchResult, testType: 'independentTTest_SPSS' };
+    }
+
+    // Run Levene's test for variance homogeneity
+    const leveneResult = runLeveneTestInternal([group1, group2]);
+    const equalVariances = leveneResult.pValue > alpha;
+
+    // Calculate Student's t-test (equal variances assumed)
+    const n1 = group1.length, n2 = group2.length;
+    const mean1 = calculateMean(group1), mean2 = calculateMean(group2);
+    const var1 = calculateVariance(group1, true), var2 = calculateVariance(group2, true);
+    const std1 = Math.sqrt(var1), std2 = Math.sqrt(var2);
+
+    // Pooled variance (Student's t)
+    const pooledVar = ((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2);
+    const pooledSE = Math.sqrt(pooledVar * (1 / n1 + 1 / n2));
+    const tStudent = (mean1 - mean2) / pooledSE;
+    const dfStudent = n1 + n2 - 2;
+    const pStudent = approximateTTestPValue(Math.abs(tStudent), dfStudent);
+
+    // Effect sizes
+    const pooledStd = Math.sqrt(pooledVar);
+    const cohensD = (mean1 - mean2) / pooledStd;
+    const hedgesG = cohensD * (1 - 3 / (4 * (n1 + n2) - 9)); // Hedges' correction
+
+    // Confidence intervals
+    const tCritStudent = getTCritical(dfStudent, alpha);
+    const tCritWelch = getTCritical(Math.round(welchResult.degreesOfFreedom), alpha);
+    const meanDiff = mean1 - mean2;
+    const ciStudentLower = meanDiff - tCritStudent * pooledSE;
+    const ciStudentUpper = meanDiff + tCritStudent * pooledSE;
+
+    // Build SPSS-style tables
+    const groupStatsTable = {
+        name: lang === 'tr' ? 'Grup İstatistikleri' : 'Group Statistics',
+        columns: [lang === 'tr' ? 'Grup' : 'Group', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata Ort.' : 'Std. Error Mean'],
+        rows: [
+            [groupNames[0], n1, mean1.toFixed(4), std1.toFixed(4), (std1 / Math.sqrt(n1)).toFixed(4)],
+            [groupNames[1], n2, mean2.toFixed(4), std2.toFixed(4), (std2 / Math.sqrt(n2)).toFixed(4)]
+        ]
+    };
+
+    const leveneTable = {
+        name: lang === 'tr' ? 'Varyans Homojenliği Testi (Levene)' : 'Test of Homogeneity of Variances (Levene)',
+        columns: ['F', 'df1', 'df2', 'Sig.'],
+        rows: [[leveneResult.F.toFixed(3), leveneResult.df1, leveneResult.df2, leveneResult.pValue.toFixed(4)]]
+    };
+
+    const tTestTable = {
+        name: lang === 'tr' ? 'Bağımsız Örneklem T-Testi' : 'Independent Samples T-Test',
+        columns: ['', 't', 'df', 'Sig. (2-tailed)', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata Fark' : 'Std. Error Diff.', lang === 'tr' ? '95% CI Alt' : '95% CI Lower', lang === 'tr' ? '95% CI Üst' : '95% CI Upper'],
+        rows: [
+            [lang === 'tr' ? 'Varyanslar Eşit' : 'Equal variances assumed', tStudent.toFixed(3), dfStudent, pStudent.toFixed(4), meanDiff.toFixed(4), pooledSE.toFixed(4), ciStudentLower.toFixed(4), ciStudentUpper.toFixed(4)],
+            [lang === 'tr' ? 'Varyanslar Eşit Değil' : 'Equal variances not assumed', welchResult.tStatistic.toFixed(3), welchResult.degreesOfFreedom.toFixed(2), welchResult.pValue.toFixed(4), meanDiff.toFixed(4), welchResult.standardError.toFixed(4), welchResult.confidenceInterval.lower.toFixed(4), welchResult.confidenceInterval.upper.toFixed(4)]
+        ]
+    };
+
+    // APA format
+    const effectiveT = equalVariances ? tStudent : welchResult.tStatistic;
+    const effectiveDf = equalVariances ? dfStudent : welchResult.degreesOfFreedom;
+    const effectiveP = equalVariances ? pStudent : welchResult.pValue;
+
+    const apaTR = `Bağımsız örneklem t-testi sonucuna göre, ${groupNames[0]} (M = ${mean1.toFixed(2)}, SS = ${std1.toFixed(2)}) ile ${groupNames[1]} (M = ${mean2.toFixed(2)}, SS = ${std2.toFixed(2)}) arasında ${effectiveP < alpha ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, t(${typeof effectiveDf === 'number' && effectiveDf % 1 !== 0 ? effectiveDf.toFixed(2) : effectiveDf}) = ${effectiveT.toFixed(2)}, p ${effectiveP < 0.001 ? '< .001' : '= ' + effectiveP.toFixed(3)}, d = ${cohensD.toFixed(2)}.`;
+
+    const apaEN = `An independent samples t-test revealed that the difference between ${groupNames[0]} (M = ${mean1.toFixed(2)}, SD = ${std1.toFixed(2)}) and ${groupNames[1]} (M = ${mean2.toFixed(2)}, SD = ${std2.toFixed(2)}) was ${effectiveP < alpha ? 'statistically significant' : 'not statistically significant'}, t(${typeof effectiveDf === 'number' && effectiveDf % 1 !== 0 ? effectiveDf.toFixed(2) : effectiveDf}) = ${effectiveT.toFixed(2)}, p ${effectiveP < 0.001 ? '< .001' : '= ' + effectiveP.toFixed(3)}, d = ${cohensD.toFixed(2)}.`;
+
+    const formulaTR = `t = (M₁ - M₂) / SE = (${mean1.toFixed(2)} - ${mean2.toFixed(2)}) / ${pooledSE.toFixed(4)} = ${tStudent.toFixed(3)}`;
+    const formulaEN = formulaTR;
+
+    return {
+        valid: true,
+        testType: 'independentTTest_SPSS',
+        testName: lang === 'tr' ? 'Bağımsız Örneklem T-Testi (SPSS)' : 'Independent Samples T-Test (SPSS)',
+        pValue: effectiveP,
+        significant: effectiveP < alpha,
+        alpha,
+        groupNames,
+        stats: {
+            n1, n2, mean1, mean2, std1, std2, var1, var2,
+            meanDifference: meanDiff,
+            tStudent, dfStudent, pStudent,
+            tWelch: welchResult.tStatistic,
+            dfWelch: welchResult.degreesOfFreedom,
+            pWelch: welchResult.pValue
+        },
+        pValues: {
+            levene: leveneResult.pValue,
+            student: pStudent,
+            welch: welchResult.pValue,
+            recommended: effectiveP
+        },
+        effectSizes: {
+            cohensD,
+            hedgesG,
+            interpretation: interpretCohensD(cohensD)
+        },
+        levene: {
+            F: leveneResult.F,
+            df1: leveneResult.df1,
+            df2: leveneResult.df2,
+            pValue: leveneResult.pValue,
+            equalVariances
+        },
+        tables: [groupStatsTable, leveneTable, tTestTable],
+        apaTR,
+        apaEN,
+        formulaTR,
+        formulaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN,
+        recommendation: equalVariances
+            ? (lang === 'tr' ? 'Levene testi anlamsız (p > .05), varyanslar homojen. Student t-testi kullanılmalı.' : 'Levene test non-significant (p > .05), variances are homogeneous. Use Student t-test.')
+            : (lang === 'tr' ? 'Levene testi anlamlı (p < .05), varyanslar heterojen. Welch t-testi kullanılmalı.' : 'Levene test significant (p < .05), variances are heterogeneous. Use Welch t-test.')
+    };
+}
+
+/**
+ * One-Way ANOVA with SPSS standard output
+ * Includes: Levene test, eta²/omega², Bonferroni post-hoc, ANOVA table
+ */
+export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Generate default group names
+    if (!groupNames) {
+        groupNames = groups.map((_, i) => `Group ${i + 1}`);
+    }
+
+    // Get base result from existing function
+    const baseResult = runOneWayANOVA(groups, alpha, groupNames);
+    if (!baseResult.valid) {
+        return { ...baseResult, testType: 'oneWayANOVA_SPSS' };
+    }
+
+    // Run Levene's test
+    const leveneResult = runLeveneTestInternal(groups);
+
+    // Calculate omega squared (less biased than eta squared)
+    const ssBetween = baseResult.sumOfSquares.between;
+    const ssWithin = baseResult.sumOfSquares.within;
+    const ssTotal = baseResult.sumOfSquares.total;
+    const dfBetween = baseResult.degreesOfFreedom.between;
+    const msBetween = baseResult.meanSquares.between;
+    const msWithin = baseResult.meanSquares.within;
+
+    const etaSquared = ssBetween / ssTotal;
+    const omegaSquared = (ssBetween - dfBetween * msWithin) / (ssTotal + msWithin);
+
+    // Bonferroni-corrected pairwise comparisons
+    const k = groups.length;
+    const numComparisons = (k * (k - 1)) / 2;
+    const bonferroniAlpha = alpha / numComparisons;
+
+    const postHocComparisons = [];
+    for (let i = 0; i < k; i++) {
+        for (let j = i + 1; j < k; j++) {
+            const g1 = groups[i], g2 = groups[j];
+            const n1 = g1.length, n2 = g2.length;
+            const mean1 = calculateMean(g1), mean2 = calculateMean(g2);
+            const meanDiff = mean1 - mean2;
+            const se = Math.sqrt(msWithin * (1 / n1 + 1 / n2));
+            const t = meanDiff / se;
+            const df = baseResult.degreesOfFreedom.within;
+            const pValue = approximateTTestPValue(Math.abs(t), df);
+            const pBonferroni = Math.min(1, pValue * numComparisons);
+
+            postHocComparisons.push({
+                comparison: `${groupNames[i]} - ${groupNames[j]}`,
+                group1: groupNames[i],
+                group2: groupNames[j],
+                meanDiff,
+                se,
+                t,
+                df,
+                pValue,
+                pBonferroni,
+                significant: pBonferroni < alpha
+            });
+        }
+    }
+
+    // Build SPSS-style tables
+    const descriptivesTable = {
+        name: lang === 'tr' ? 'Tanımlayıcı İstatistikler' : 'Descriptives',
+        columns: [lang === 'tr' ? 'Grup' : 'Group', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata' : 'Std. Error', lang === 'tr' ? 'Min' : 'Min', lang === 'tr' ? 'Max' : 'Max'],
+        rows: baseResult.groupStats.map((gs, i) => [
+            groupNames[i],
+            gs.n,
+            gs.mean.toFixed(4),
+            gs.std.toFixed(4),
+            (gs.std / Math.sqrt(gs.n)).toFixed(4),
+            Math.min(...groups[i]).toFixed(2),
+            Math.max(...groups[i]).toFixed(2)
+        ])
+    };
+
+    const leveneTable = {
+        name: lang === 'tr' ? 'Varyans Homojenliği Testi (Levene)' : 'Test of Homogeneity of Variances',
+        columns: ['Levene F', 'df1', 'df2', 'Sig.'],
+        rows: [[leveneResult.F.toFixed(3), leveneResult.df1, leveneResult.df2, leveneResult.pValue.toFixed(4)]]
+    };
+
+    const anovaTable = {
+        name: 'ANOVA',
+        columns: [lang === 'tr' ? 'Kaynak' : 'Source', lang === 'tr' ? 'Kareler Top.' : 'Sum of Squares', 'df', lang === 'tr' ? 'Kareler Ort.' : 'Mean Square', 'F', 'Sig.'],
+        rows: [
+            [lang === 'tr' ? 'Gruplar Arası' : 'Between Groups', ssBetween.toFixed(3), dfBetween, msBetween.toFixed(3), baseResult.fStatistic.toFixed(3), baseResult.pValue.toFixed(4)],
+            [lang === 'tr' ? 'Gruplar İçi' : 'Within Groups', ssWithin.toFixed(3), baseResult.degreesOfFreedom.within, msWithin.toFixed(3), '', ''],
+            [lang === 'tr' ? 'Toplam' : 'Total', ssTotal.toFixed(3), baseResult.degreesOfFreedom.total, '', '', '']
+        ]
+    };
+
+    const postHocTable = {
+        name: lang === 'tr' ? 'Çoklu Karşılaştırmalar (Bonferroni)' : 'Multiple Comparisons (Bonferroni)',
+        columns: [lang === 'tr' ? 'Karşılaştırma' : 'Comparison', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata' : 'Std. Error', 'Sig.', lang === 'tr' ? 'Anlamlı' : 'Significant'],
+        rows: postHocComparisons.map(c => [c.comparison, c.meanDiff.toFixed(4), c.se.toFixed(4), c.pBonferroni.toFixed(4), c.significant ? '✓' : ''])
+    };
+
+    // APA format
+    const F = baseResult.fStatistic;
+    const dfB = dfBetween;
+    const dfW = baseResult.degreesOfFreedom.within;
+    const p = baseResult.pValue;
+
+    const apaTR = `Tek yönlü ANOVA sonuçlarına göre, gruplar arasında ${p < alpha ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, η² = ${etaSquared.toFixed(3)}, ω² = ${omegaSquared.toFixed(3)}.`;
+
+    const apaEN = `A one-way ANOVA revealed ${p < alpha ? 'a statistically significant difference' : 'no statistically significant difference'} between groups, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, η² = ${etaSquared.toFixed(3)}, ω² = ${omegaSquared.toFixed(3)}.`;
+
+    const formulaTR = `F = MS_gruplar arası / MS_gruplar içi = ${msBetween.toFixed(2)} / ${msWithin.toFixed(2)} = ${F.toFixed(3)}`;
+    const formulaEN = `F = MS_between / MS_within = ${msBetween.toFixed(2)} / ${msWithin.toFixed(2)} = ${F.toFixed(3)}`;
+
+    return {
+        valid: true,
+        testType: 'oneWayANOVA_SPSS',
+        testName: lang === 'tr' ? 'Tek Yönlü ANOVA (SPSS)' : 'One-Way ANOVA (SPSS)',
+        pValue: p,
+        alpha,
+        groupNames,
+        k,
+        stats: {
+            grandMean: baseResult.grandMean,
+            totalN: baseResult.totalN,
+            F: baseResult.fStatistic,
+            dfBetween,
+            dfWithin: baseResult.degreesOfFreedom.within,
+            ssBetween,
+            ssWithin,
+            ssTotal,
+            msBetween,
+            msWithin
+        },
+        pValues: {
+            anova: baseResult.pValue,
+            levene: leveneResult.pValue
+        },
+        effectSizes: {
+            etaSquared,
+            omegaSquared,
+            interpretation: interpretEtaSquared(etaSquared)
+        },
+        significant: p < alpha,
+        levene: {
+            F: leveneResult.F,
+            df1: leveneResult.df1,
+            df2: leveneResult.df2,
+            pValue: leveneResult.pValue,
+            homogeneous: leveneResult.pValue > alpha
+        },
+        postHoc: {
+            method: 'Bonferroni',
+            correctedAlpha: bonferroniAlpha,
+            comparisons: postHocComparisons
+        },
+        tables: [descriptivesTable, leveneTable, anovaTable, postHocTable],
+        apaTR,
+        apaEN,
+        formulaTR,
+        formulaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN
+    };
+}
+
+/**
+ * Chi-Square Crosstabs with SPSS standard output
+ */
+export function runChiSquareCrosstabs_SPSS(table, alpha = 0.05, rowNames = null, colNames = null) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Get base result
+    const baseResult = runChiSquareTest(table, alpha);
+    if (!baseResult.valid) {
+        return { ...baseResult, testType: 'chiSquareCrosstabs_SPSS' };
+    }
+
+    // Default names
+    const nRows = table.length;
+    const nCols = table[0].length;
+    if (!rowNames) rowNames = table.map((_, i) => `Row ${i + 1}`);
+    if (!colNames) colNames = table[0].map((_, i) => `Col ${i + 1}`);
+
+    // Calculate expected frequencies
+    const rowTotals = table.map(row => row.reduce((a, b) => a + b, 0));
+    const colTotals = table[0].map((_, j) => table.reduce((sum, row) => sum + row[j], 0));
+    const grandTotal = rowTotals.reduce((a, b) => a + b, 0);
+
+    const expected = table.map((row, i) =>
+        row.map((_, j) => (rowTotals[i] * colTotals[j]) / grandTotal)
+    );
+
+    // Check for low expected frequencies
+    let lowExpectedCount = 0;
+    expected.forEach(row => row.forEach(e => { if (e < 5) lowExpectedCount++; }));
+    const lowExpectedPercent = (lowExpectedCount / (nRows * nCols)) * 100;
+
+    // Effect sizes
+    const chi2 = baseResult.chiSquare ?? baseResult.stats?.chiSquare ?? 0;
+    const df = baseResult.degreesOfFreedom ?? baseResult.df ?? (nRows - 1) * (nCols - 1);
+    const phi = Math.sqrt(chi2 / grandTotal);
+    const cramersV = Math.sqrt(chi2 / (grandTotal * (Math.min(nRows, nCols) - 1)));
+    const contingencyC = Math.sqrt(chi2 / (chi2 + grandTotal));
+
+    // Build crosstab table
+    const crosstabTable = {
+        name: lang === 'tr' ? 'Çapraz Tablo' : 'Crosstabulation',
+        columns: ['', ...colNames, lang === 'tr' ? 'Toplam' : 'Total'],
+        rows: table.map((row, i) => [rowNames[i], ...row.map(String), rowTotals[i].toString()])
+            .concat([[lang === 'tr' ? 'Toplam' : 'Total', ...colTotals.map(String), grandTotal.toString()]])
+    };
+
+    const expectedTable = {
+        name: lang === 'tr' ? 'Beklenen Frekanslar' : 'Expected Frequencies',
+        columns: ['', ...colNames],
+        rows: expected.map((row, i) => [rowNames[i], ...row.map(e => e.toFixed(2))])
+    };
+
+    const chi2Table = {
+        name: lang === 'tr' ? 'Ki-Kare Testleri' : 'Chi-Square Tests',
+        columns: ['', lang === 'tr' ? 'Değer' : 'Value', 'df', 'Asymp. Sig. (2-sided)'],
+        rows: [
+            ['Pearson Chi-Square', chi2.toFixed(3), df, (baseResult.pValue ?? baseResult.pValues?.pValue ?? 0).toFixed(4)],
+            ['Phi', phi.toFixed(3), '', ''],
+            ["Cramer's V", cramersV.toFixed(3), '', ''],
+            ['Contingency C', contingencyC.toFixed(3), '', '']
+        ]
+    };
+
+    const p = baseResult.pValue ?? baseResult.pValues?.pValue ?? 0;
+
+    const apaTR = `Ki-kare bağımsızlık testi sonucuna göre, değişkenler arasında ${p < alpha ? 'istatistiksel olarak anlamlı ilişki bulunmuştur' : 'istatistiksel olarak anlamlı ilişki bulunamamıştır'}, χ²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+
+    const apaEN = `A chi-square test of independence ${p < alpha ? 'revealed a statistically significant association' : 'revealed no statistically significant association'} between the variables, χ²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+
+    const formulaTR = `χ² = Σ[(O - E)² / E] = ${chi2.toFixed(3)}`;
+    const formulaEN = formulaTR;
+
+    return {
+        valid: true,
+        testType: 'chiSquareCrosstabs_SPSS',
+        testName: lang === 'tr' ? 'Ki-Kare Bağımsızlık Testi (SPSS)' : 'Chi-Square Test of Independence (SPSS)',
+        pValue: p,
+        significant: p < alpha,
+        alpha,
+        nRows,
+        nCols,
+        stats: {
+            chiSquare: chi2,
+            df,
+            grandTotal,
+            rowTotals,
+            colTotals
+        },
+        pValues: {
+            pearson: p
+        },
+        effectSizes: {
+            phi,
+            cramersV,
+            contingencyC,
+            interpretation: cramersV < 0.1 ? 'negligible' : cramersV < 0.3 ? 'small' : cramersV < 0.5 ? 'medium' : 'large'
+        },
+        observed: table,
+        expected,
+        lowExpectedWarning: lowExpectedPercent > 20
+            ? (lang === 'tr' ? `Uyarı: Beklenen frekansların %${lowExpectedPercent.toFixed(0)}'i 5'ten küçük.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
+            : null,
+        tables: [crosstabTable, expectedTable, chi2Table],
+        apaTR,
+        apaEN,
+        formulaTR,
+        formulaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN
+    };
+}
+
+/**
+ * Internal Levene test (used by SPSS wrappers)
+ */
+function runLeveneTestInternal(groups) {
+    const k = groups.length;
+    const allValues = groups.flat();
+    const N = allValues.length;
+
+    // Calculate absolute deviations from group medians
+    const groupMedians = groups.map(g => {
+        const sorted = [...g].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    });
+
+    const deviations = groups.map((g, i) => g.map(v => Math.abs(v - groupMedians[i])));
+    const groupMeans = deviations.map(d => d.reduce((a, b) => a + b, 0) / d.length);
+    const grandMean = deviations.flat().reduce((a, b) => a + b, 0) / N;
+
+    // Between-group sum of squares
+    let ssBetween = 0;
+    groups.forEach((g, i) => {
+        ssBetween += g.length * Math.pow(groupMeans[i] - grandMean, 2);
+    });
+
+    // Within-group sum of squares
+    let ssWithin = 0;
+    deviations.forEach((d, i) => {
+        d.forEach(v => {
+            ssWithin += Math.pow(v - groupMeans[i], 2);
+        });
+    });
+
+    const dfBetween = k - 1;
+    const dfWithin = N - k;
+    const msBetween = ssBetween / dfBetween;
+    const msWithin = ssWithin / dfWithin;
+    const F = msBetween / msWithin;
+    const pValue = approximateFTestPValue(F, dfBetween, dfWithin);
+
+    return { F, df1: dfBetween, df2: dfWithin, pValue };
+}
+
+// Window bindings for SPSS wrappers
+window.runIndependentTTest_SPSS = runIndependentTTest_SPSS;
+window.runOneWayANOVA_SPSS = runOneWayANOVA_SPSS;
+window.runChiSquareCrosstabs_SPSS = runChiSquareCrosstabs_SPSS;
+
+// =====================================================
+// FAZ-4: ACADEMIC MODULES (LOW COST, HIGH VALUE)
+// A) Crosstabs Extended - Full Association Measures
+// B) Item-Total Statistics - Alpha if Deleted
+// =====================================================
+
+/**
+ * A) Extended Crosstabs with Full Association Measures
+ * Adds: Phi, Cramer's V, Contingency C, Lambda (asymmetric), Goodman-Kruskal Tau
+ * SPSS-style table output
+ */
+export function runCrosstabsExtended(table, alpha = 0.05, rowVar = 'Row', colVar = 'Column') {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Validate
+    if (!table || !Array.isArray(table) || table.length < 2) {
+        return { valid: false, error: lang === 'tr' ? 'Geçersiz tablo' : 'Invalid table', testType: 'crosstabsExtended' };
+    }
+
+    const nRows = table.length;
+    const nCols = table[0]?.length || 0;
+    if (nCols < 2) {
+        return { valid: false, error: lang === 'tr' ? 'En az 2x2 tablo gerekli' : 'At least 2x2 table required', testType: 'crosstabsExtended' };
+    }
+
+    // Totals
+    const rowTotals = table.map(row => row.reduce((a, b) => a + b, 0));
+    const colTotals = table[0].map((_, j) => table.reduce((sum, row) => sum + row[j], 0));
+    const N = rowTotals.reduce((a, b) => a + b, 0);
+
+    if (N === 0) {
+        return { valid: false, error: lang === 'tr' ? 'Toplam frekans 0' : 'Total frequency is 0', testType: 'crosstabsExtended' };
+    }
+
+    // Chi-square
+    let chiSquare = 0;
+    const expected = [];
+    for (let i = 0; i < nRows; i++) {
+        expected[i] = [];
+        for (let j = 0; j < nCols; j++) {
+            const E = (rowTotals[i] * colTotals[j]) / N;
+            expected[i][j] = E;
+            if (E > 0) {
+                chiSquare += Math.pow(table[i][j] - E, 2) / E;
+            }
+        }
+    }
+
+    const df = (nRows - 1) * (nCols - 1);
+    const pValue = 1 - chiSquareCDF(chiSquare, df);
+
+    // Association measures
+    const phi = Math.sqrt(chiSquare / N);
+    const cramersV = Math.sqrt(chiSquare / (N * (Math.min(nRows, nCols) - 1)));
+    const contingencyC = Math.sqrt(chiSquare / (chiSquare + N));
+    const contingencyCMax = Math.sqrt((Math.min(nRows, nCols) - 1) / Math.min(nRows, nCols));
+    const adjustedC = contingencyC / contingencyCMax;
+
+    // Lambda (asymmetric) - Row dependent
+    const maxRowFreqs = table.map(row => Math.max(...row));
+    const sumMaxRow = maxRowFreqs.reduce((a, b) => a + b, 0);
+    const maxColTotal = Math.max(...colTotals);
+    const lambdaRow = (sumMaxRow - maxColTotal) / (N - maxColTotal);
+
+    // Lambda - Column dependent
+    const maxColFreqs = table[0].map((_, j) => Math.max(...table.map(row => row[j])));
+    const sumMaxCol = maxColFreqs.reduce((a, b) => a + b, 0);
+    const maxRowTotal = Math.max(...rowTotals);
+    const lambdaCol = (sumMaxCol - maxRowTotal) / (N - maxRowTotal);
+
+    // Lambda symmetric
+    const lambdaSym = (sumMaxRow + sumMaxCol - maxColTotal - maxRowTotal) / (2 * N - maxColTotal - maxRowTotal);
+
+    // Goodman-Kruskal Tau (row dependent)
+    let E1 = 0, E2 = 0;
+    for (let j = 0; j < nCols; j++) {
+        E1 += (colTotals[j] / N) * (1 - colTotals[j] / N);
+    }
+    for (let i = 0; i < nRows; i++) {
+        for (let j = 0; j < nCols; j++) {
+            if (rowTotals[i] > 0) {
+                E2 += (table[i][j] / N) * (1 - table[i][j] / rowTotals[i]);
+            }
+        }
+    }
+    const tauRow = E1 > 0 ? (E1 - E2) / E1 : 0;
+
+    // Low expected count warning
+    let lowExpectedCount = 0;
+    expected.forEach(row => row.forEach(e => { if (e < 5) lowExpectedCount++; }));
+    const lowExpectedPercent = (lowExpectedCount / (nRows * nCols)) * 100;
+
+    // Build tables
+    const associationTable = {
+        name: lang === 'tr' ? 'İlişki Ölçüleri' : 'Association Measures',
+        columns: [lang === 'tr' ? 'Ölçü' : 'Measure', lang === 'tr' ? 'Değer' : 'Value', lang === 'tr' ? 'Yorum' : 'Interpretation'],
+        rows: [
+            ['Phi (φ)', phi.toFixed(4), interpretEffect(phi, 'phi')],
+            ["Cramer's V", cramersV.toFixed(4), interpretEffect(cramersV, 'cramersV')],
+            ['Contingency C', contingencyC.toFixed(4), `Max: ${contingencyCMax.toFixed(3)}`],
+            ['Adjusted C', adjustedC.toFixed(4), interpretEffect(adjustedC, 'cramersV')],
+            [`Lambda (${rowVar} | ${colVar})`, isFinite(lambdaRow) ? lambdaRow.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE ölçüsü' : 'PRE measure'],
+            [`Lambda (${colVar} | ${rowVar})`, isFinite(lambdaCol) ? lambdaCol.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE ölçüsü' : 'PRE measure'],
+            ['Lambda (Symmetric)', isFinite(lambdaSym) ? lambdaSym.toFixed(4) : 'N/A', ''],
+            [`Tau (${rowVar} | ${colVar})`, isFinite(tauRow) ? tauRow.toFixed(4) : 'N/A', lang === 'tr' ? 'Goodman-Kruskal' : 'Goodman-Kruskal']
+        ]
+    };
+
+    const chi2TestTable = {
+        name: lang === 'tr' ? 'Ki-Kare Testi' : 'Chi-Square Test',
+        columns: [lang === 'tr' ? 'Test' : 'Test', lang === 'tr' ? 'Değer' : 'Value', 'df', 'p'],
+        rows: [
+            ['Pearson χ²', chiSquare.toFixed(3), df, pValue.toFixed(4)]
+        ]
+    };
+
+    // APA format
+    const apaTR = `Ki-kare bağımsızlık testi sonucuna göre ${rowVar} ve ${colVar} değişkenleri arasında ${pValue < alpha ? 'istatistiksel olarak anlamlı ilişki bulunmuştur' : 'istatistiksel olarak anlamlı ilişki bulunamamıştır'}, χ²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+
+    const apaEN = `A chi-square test of independence ${pValue < alpha ? 'revealed a statistically significant association' : 'found no statistically significant association'} between ${rowVar} and ${colVar}, χ²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+
+    return {
+        valid: true,
+        testType: 'crosstabsExtended',
+        testName: lang === 'tr' ? 'Çapraz Tablo Analizi (Genişletilmiş)' : 'Crosstabs Analysis (Extended)',
+        alpha,
+        nRows,
+        nCols,
+        N,
+        stats: {
+            chiSquare,
+            df,
+            pValue
+        },
+        pValues: {
+            pearson: pValue
+        },
+        effectSizes: {
+            phi,
+            cramersV,
+            contingencyC,
+            adjustedC,
+            lambdaRow: isFinite(lambdaRow) ? lambdaRow : null,
+            lambdaCol: isFinite(lambdaCol) ? lambdaCol : null,
+            lambdaSym: isFinite(lambdaSym) ? lambdaSym : null,
+            tauRow: isFinite(tauRow) ? tauRow : null
+        },
+        significant: pValue < alpha,
+        observed: table,
+        expected,
+        lowExpectedWarning: lowExpectedPercent > 20
+            ? (lang === 'tr' ? `Uyarı: Beklenen frekansların %${lowExpectedPercent.toFixed(0)}'i 5'ten küçük.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
+            : null,
+        tables: [chi2TestTable, associationTable],
+        apaTR,
+        apaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN
+    };
+}
+
+/**
+ * Helper: Interpret effect size
+ */
+function interpretEffect(value, type) {
+    const lang = VIZ_STATE?.lang || 'tr';
+    const absVal = Math.abs(value);
+
+    if (type === 'phi' || type === 'cramersV') {
+        if (absVal < 0.1) return lang === 'tr' ? 'İhmal edilebilir' : 'Negligible';
+        if (absVal < 0.3) return lang === 'tr' ? 'Küçük' : 'Small';
+        if (absVal < 0.5) return lang === 'tr' ? 'Orta' : 'Medium';
+        return lang === 'tr' ? 'Büyük' : 'Large';
+    }
+    return '';
+}
+
+/**
+ * B) Item-Total Statistics with Alpha if Deleted
+ * Extends basic Cronbach's Alpha with full item analysis
+ */
+export function runItemTotalAnalysis(data, columns, itemNames = null) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Validate
+    const k = columns.length;
+    if (k < 2) {
+        return { valid: false, error: lang === 'tr' ? 'En az 2 madde gerekli' : 'At least 2 items required', testType: 'itemTotalAnalysis' };
+    }
+
+    // Default item names
+    if (!itemNames) {
+        itemNames = columns.map((col, i) => `Item ${i + 1}`);
+    }
+
+    // Extract numeric values and filter complete cases
+    const cases = [];
+    data.forEach(row => {
+        const values = columns.map(col => parseFloat(row[col]));
+        if (values.every(v => !isNaN(v))) {
+            cases.push(values);
+        }
+    });
+
+    const n = cases.length;
+    if (n < 3) {
+        return { valid: false, error: lang === 'tr' ? 'En az 3 geçerli vaka gerekli' : 'At least 3 valid cases required', testType: 'itemTotalAnalysis' };
+    }
+
+    // Calculate item means and variances
+    const itemStats = columns.map((_, j) => {
+        const values = cases.map(c => c[j]);
+        const mean = values.reduce((a, b) => a + b, 0) / n;
+        const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (n - 1);
+        const std = Math.sqrt(variance);
+        return { mean, variance, std, values };
+    });
+
+    // Total scores
+    const totals = cases.map(c => c.reduce((a, b) => a + b, 0));
+    const totalMean = totals.reduce((a, b) => a + b, 0) / n;
+    const totalVariance = totals.reduce((sum, v) => sum + Math.pow(v - totalMean, 2), 0) / (n - 1);
+
+    // Overall alpha
+    const sumItemVars = itemStats.reduce((sum, s) => sum + s.variance, 0);
+    const overallAlpha = totalVariance > 0 ? (k / (k - 1)) * (1 - sumItemVars / totalVariance) : 0;
+
+    // Item-Total correlations and Alpha if deleted
+    const itemAnalysis = columns.map((col, j) => {
+        // Corrected item-total correlation (item removed from total)
+        const itemValues = itemStats[j].values;
+        const correctedTotals = cases.map((c, i) => totals[i] - c[j]);
+
+        // Pearson correlation
+        const itemMean = itemStats[j].mean;
+        const corrTotalMean = correctedTotals.reduce((a, b) => a + b, 0) / n;
+
+        let sumXY = 0, sumX2 = 0, sumY2 = 0;
+        for (let i = 0; i < n; i++) {
+            const dx = itemValues[i] - itemMean;
+            const dy = correctedTotals[i] - corrTotalMean;
+            sumXY += dx * dy;
+            sumX2 += dx * dx;
+            sumY2 += dy * dy;
+        }
+        const corrItemTotal = (sumX2 > 0 && sumY2 > 0) ? sumXY / Math.sqrt(sumX2 * sumY2) : 0;
+
+        // Alpha if item deleted
+        const remainingItems = columns.filter((_, i) => i !== j);
+        const remainingK = remainingItems.length;
+
+        // Recalculate variance without this item
+        const newTotals = cases.map(c => c.reduce((sum, v, i) => i !== j ? sum + v : sum, 0));
+        const newTotalMean = newTotals.reduce((a, b) => a + b, 0) / n;
+        const newTotalVar = newTotals.reduce((sum, v) => sum + Math.pow(v - newTotalMean, 2), 0) / (n - 1);
+
+        const newItemVars = itemStats.filter((_, i) => i !== j).reduce((sum, s) => sum + s.variance, 0);
+        const alphaIfDeleted = (remainingK > 1 && newTotalVar > 0)
+            ? (remainingK / (remainingK - 1)) * (1 - newItemVars / newTotalVar)
+            : 0;
+
+        return {
+            item: itemNames[j],
+            column: col,
+            mean: itemStats[j].mean,
+            std: itemStats[j].std,
+            variance: itemStats[j].variance,
+            corrItemTotal,
+            alphaIfDeleted,
+            recommendation: alphaIfDeleted > overallAlpha + 0.01
+                ? (lang === 'tr' ? 'Çıkarılabilir' : 'Consider removing')
+                : (corrItemTotal < 0.3 ? (lang === 'tr' ? 'Zayıf' : 'Weak') : '')
+        };
+    });
+
+    // Build tables
+    const itemStatsTable = {
+        name: lang === 'tr' ? 'Madde İstatistikleri' : 'Item Statistics',
+        columns: [lang === 'tr' ? 'Madde' : 'Item', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Dev.', lang === 'tr' ? 'Varyans' : 'Variance'],
+        rows: itemAnalysis.map(ia => [ia.item, ia.mean.toFixed(3), ia.std.toFixed(3), ia.variance.toFixed(3)])
+    };
+
+    const itemTotalTable = {
+        name: lang === 'tr' ? 'Madde-Toplam İstatistikleri' : 'Item-Total Statistics',
+        columns: [lang === 'tr' ? 'Madde' : 'Item', lang === 'tr' ? 'Düzeltilmiş M-T Kor.' : 'Corrected Item-Total Corr.', lang === 'tr' ? 'Silinirse Alpha' : 'Alpha if Deleted', lang === 'tr' ? 'Not' : 'Note'],
+        rows: itemAnalysis.map(ia => [ia.item, ia.corrItemTotal.toFixed(3), ia.alphaIfDeleted.toFixed(3), ia.recommendation])
+    };
+
+    const reliabilityTable = {
+        name: lang === 'tr' ? 'Güvenilirlik İstatistikleri' : 'Reliability Statistics',
+        columns: ["Cronbach's Alpha", lang === 'tr' ? 'Madde Sayısı' : 'N of Items', 'N'],
+        rows: [[overallAlpha.toFixed(3), k, n]]
+    };
+
+    // Interpretation
+    let reliabilityLevel;
+    if (overallAlpha >= 0.9) reliabilityLevel = lang === 'tr' ? 'mükemmel' : 'excellent';
+    else if (overallAlpha >= 0.8) reliabilityLevel = lang === 'tr' ? 'iyi' : 'good';
+    else if (overallAlpha >= 0.7) reliabilityLevel = lang === 'tr' ? 'kabul edilebilir' : 'acceptable';
+    else if (overallAlpha >= 0.6) reliabilityLevel = lang === 'tr' ? 'sorgulanabilir' : 'questionable';
+    else if (overallAlpha >= 0.5) reliabilityLevel = lang === 'tr' ? 'zayıf' : 'poor';
+    else reliabilityLevel = lang === 'tr' ? 'kabul edilemez' : 'unacceptable';
+
+    // Find problematic items
+    const weakItems = itemAnalysis.filter(ia => ia.corrItemTotal < 0.3);
+    const removableItems = itemAnalysis.filter(ia => ia.alphaIfDeleted > overallAlpha + 0.01);
+
+    // APA format
+    const apaTR = `Ölçeğin iç tutarlılığı ${k} madde üzerinden Cronbach Alfa katsayısı ile değerlendirilmiştir. Analiz sonucunda α = ${overallAlpha.toFixed(3)} (${reliabilityLevel}) bulunmuştur. ${weakItems.length > 0 ? `${weakItems.length} madde düşük madde-toplam korelasyonuna (r < .30) sahiptir.` : ''} ${removableItems.length > 0 ? `${removableItems.length} maddenin çıkarılması güvenilirliği artırabilir.` : ''}`;
+
+    const apaEN = `Internal consistency of the scale was assessed using Cronbach's alpha coefficient across ${k} items. The analysis revealed α = ${overallAlpha.toFixed(3)} (${reliabilityLevel}). ${weakItems.length > 0 ? `${weakItems.length} item(s) showed low item-total correlation (r < .30).` : ''} ${removableItems.length > 0 ? `Removing ${removableItems.length} item(s) could improve reliability.` : ''}`;
+
+    return {
+        valid: true,
+        testType: 'itemTotalAnalysis',
+        testName: lang === 'tr' ? 'Madde-Toplam Analizi' : 'Item-Total Analysis',
+        n,
+        k,
+        alpha: overallAlpha,
+        cronbachAlpha: overallAlpha,
+        reliabilityLevel,
+        stats: {
+            totalMean,
+            totalVariance,
+            sumItemVariances: sumItemVars
+        },
+        itemAnalysis,
+        weakItems: weakItems.map(w => w.item),
+        removableItems: removableItems.map(r => r.item),
+        tables: [reliabilityTable, itemStatsTable, itemTotalTable],
+        apaTR,
+        apaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN
+    };
+}
+
+// Window bindings for FAZ-4 academic modules
+window.runCrosstabsExtended = runCrosstabsExtended;
+window.runItemTotalAnalysis = runItemTotalAnalysis;
+
+console.log('✅ stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic Modules) loaded');
 
 
 

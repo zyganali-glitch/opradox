@@ -1968,11 +1968,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 
-    // Tema Kontrolü
+    // Tema Kontrolü - FAZ-THEME-2: Guarantee XOR state
+
+    document.body.classList.remove('dark-mode', 'day-mode');
 
     if (localStorage.getItem("gm_theme") === "day") {
 
         document.body.classList.add("day-mode");
+
+    } else {
+
+        document.body.classList.add("dark-mode");
 
     }
 
@@ -13130,15 +13136,29 @@ function bindEvents() {
 
 
 
-    // 7. Tema Değiştirme
+    // 7. Tema Değiştirme - FAZ-THEME-2: Explicit XOR guarantee
 
     document.getElementById("themeToggle").addEventListener("click", () => {
 
-        document.body.classList.toggle("day-mode");
+        const isDark = document.body.classList.contains("dark-mode");
 
-        const mode = document.body.classList.contains("day-mode") ? "day" : "dark";
+        if (isDark) {
 
-        localStorage.setItem("gm_theme", mode);
+            document.body.classList.remove("dark-mode");
+
+            document.body.classList.add("day-mode");
+
+            localStorage.setItem("gm_theme", "day");
+
+        } else {
+
+            document.body.classList.remove("day-mode");
+
+            document.body.classList.add("dark-mode");
+
+            localStorage.setItem("gm_theme", "dark");
+
+        }
 
     });
 

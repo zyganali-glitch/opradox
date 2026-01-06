@@ -767,6 +767,10 @@ export function renderChart(config) {
                 tooltip: {
                     trigger: 'item',
                     formatter: (p) => {
+                        // Null check to prevent 'Cannot read properties of undefined'
+                        if (!p || !p.value || !Array.isArray(p.value)) {
+                            return p?.seriesName || 'Veri yok';
+                        }
                         const xLabel = useCategoryAxis && p.data?.name ? p.data.name : (p.value[0]?.toFixed ? p.value[0].toFixed(2) : p.value[0]);
                         const yLabel = p.value[1]?.toFixed ? p.value[1].toFixed(2) : p.value[1];
                         return `${p.seriesName}<br/>X: ${xLabel}<br/>Y: ${yLabel}`;

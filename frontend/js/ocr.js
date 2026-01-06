@@ -79,9 +79,12 @@ function initOcrLab() {
 // -----------------------------------------------------
 function loadSavedTheme() {
     const saved = localStorage.getItem('opradox_theme');
+    // FAZ-THEME-2: Guarantee XOR - always remove both, then add exactly one
+    document.body.classList.remove('dark-mode', 'day-mode');
     if (saved === 'day') {
-        document.body.classList.remove('dark-mode');
         document.body.classList.add('day-mode');
+    } else {
+        document.body.classList.add('dark-mode');
     }
 }
 
@@ -94,9 +97,16 @@ function loadSavedLang() {
 
 function toggleTheme() {
     const isDark = document.body.classList.contains('dark-mode');
-    document.body.classList.toggle('dark-mode', !isDark);
-    document.body.classList.toggle('day-mode', isDark);
-    localStorage.setItem('opradox_theme', isDark ? 'day' : 'dark');
+    // FAZ-THEME-2: Explicit remove/add for XOR guarantee
+    if (isDark) {
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('day-mode');
+        localStorage.setItem('opradox_theme', 'day');
+    } else {
+        document.body.classList.remove('day-mode');
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('opradox_theme', 'dark');
+    }
 
     const logo = document.getElementById('ocrLogo');
     if (logo) {

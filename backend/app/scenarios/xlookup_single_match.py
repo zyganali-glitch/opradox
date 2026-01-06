@@ -4,6 +4,20 @@ import pandas as pd
 from fastapi import HTTPException
 
 def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+    # İkinci dosya/sayfa desteği
+    df2 = params.get("df2") or params.get("lookup_df")
+    data_source = params.get("data_source", "primary")
+    
+    # Kullanılacak DataFrame'i belirle
+    # data_source "secondary" ise veya df2 varsa ve data_source belirtilmemişse df2 kullan
+    if data_source == "secondary" and df2 is not None:
+        search_df = df2
+    elif df2 is not None and data_source not in ["primary", "secondary"]:
+        # data_source belirtilmemiş ama df2 var ise, yine de primary'den ara
+        search_df = df
+    else:
+        search_df = df
+    
     # Gerekli parametreler
     lookup_value = params.get("lookup_value")
     lookup_column = params.get("lookup_column")
@@ -18,17 +32,17 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
 
     # lookup_column boşsa ilk sütun auto-select
     if not lookup_column:
-         if len(df.columns) > 0:
-             lookup_column = df.columns[0]
+         if len(search_df.columns) > 0:
+             lookup_column = search_df.columns[0]
          else:
              raise HTTPException(status_code=400, detail="Veri seti boş. lookup_column belirtin.")
 
     # return_column boşsa ikinci sütun (veya ilk) auto-select
     if not return_column:
-         if len(df.columns) > 1:
-             return_column = df.columns[1]
-         elif len(df.columns) > 0:
-             return_column = df.columns[0]
+         if len(search_df.columns) > 1:
+             return_column = search_df.columns[1]
+         elif len(search_df.columns) > 0:
+             return_column = search_df.columns[0]
          else:
               raise HTTPException(status_code=400, detail="Veri seti boş. return_column belirtin.")
 
@@ -38,12 +52,12 @@ def run(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="return_column parametresi eksik")
 
     # Sütun kontrolü
-    missing_cols = [col for col in [lookup_column, return_column] if col not in df.columns]
+    missing_cols = [col for col in [lookup_column, return_column] if col not in search_df.columns]
     if missing_cols:
-        raise HTTPException(status_code=400, detail=f"Sütun(lar) eksik: {missing_cols} mevcut sütunlar: {list(df.columns)}")
+        raise HTTPException(status_code=400, detail=f"Sütun(lar) eksik: {missing_cols} mevcut sütunlar: {list(search_df.columns)}")
 
     # Arama için DataFrame kopyası
-    df_search = df[[lookup_column, return_column]].copy()
+    df_search = search_df[[lookup_column, return_column]].copy()
 
     # Case insensitive için dönüşüm
     if not case_sensitive:

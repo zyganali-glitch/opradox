@@ -118,22 +118,31 @@ function updateLangLabel() {
 // =====================================================
 function initTheme() {
     const saved = localStorage.getItem('opradox_theme');
-    const isDark = saved !== 'light';
-
-    document.body.classList.toggle('dark-mode', isDark);
-    document.body.classList.toggle('day-mode', !isDark);
-
-    updateLogo(isDark);
+    // FAZ-THEME-2: Guarantee XOR - always remove both, then add exactly one
+    document.body.classList.remove('dark-mode', 'day-mode');
+    if (saved === 'light' || saved === 'day') {
+        document.body.classList.add('day-mode');
+        updateLogo(false);
+    } else {
+        document.body.classList.add('dark-mode');
+        updateLogo(true);
+    }
 }
 
 function toggleTheme() {
     const isDark = document.body.classList.contains('dark-mode');
-
-    document.body.classList.toggle('dark-mode', !isDark);
-    document.body.classList.toggle('day-mode', isDark);
-
-    localStorage.setItem('opradox_theme', isDark ? 'light' : 'dark');
-    updateLogo(!isDark);
+    // FAZ-THEME-2: Explicit remove/add for XOR guarantee
+    if (isDark) {
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('day-mode');
+        localStorage.setItem('opradox_theme', 'light');
+        updateLogo(false);
+    } else {
+        document.body.classList.remove('day-mode');
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('opradox_theme', 'dark');
+        updateLogo(true);
+    }
 }
 
 function updateLogo(isDark) {
