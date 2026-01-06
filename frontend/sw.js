@@ -1,9 +1,10 @@
 // =====================================================
-// OPRADOX VISUAL STUDIO - Service Worker v5
+// OPRADOX VISUAL STUDIO - Service Worker v6
 // FAZ-SW-1: Resilient offline caching with correct assets
+// FAZ-2B: Added app.js, visualBuilder.js, favicon.ico per audit
 // =====================================================
 
-const CACHE_NAME = 'opradox-viz-v5';
+const CACHE_NAME = 'opradox-viz-v6';
 
 // Actual project files - verified against project structure
 const ASSETS_TO_CACHE = [
@@ -14,8 +15,10 @@ const ASSETS_TO_CACHE = [
     '/css/style.css',
     '/css/viz_fixes.css',
 
-    // Core JS
+    // Core JS (FAZ-2B: Added app.js, visualBuilder.js)
+    '/js/app.js',
     '/js/adapters.js',
+    '/js/visualBuilder.js',
     '/js/toast.js',
     '/js/fileDocker.js',
     '/js/selftest.js',
@@ -30,8 +33,9 @@ const ASSETS_TO_CACHE = [
     '/js/modules/preview.js',
     '/js/modules/texts.js',
 
-    // PWA Manifest
-    '/manifest.json'
+    // PWA Manifest & Icons
+    '/manifest.json',
+    '/favicon.ico'
 ];
 
 // =====================================================
