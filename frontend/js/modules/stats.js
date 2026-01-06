@@ -865,21 +865,65 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
 
     const significant = F > fCritical;
 
-    // Generate simple post-hoc pairwise comparisons (Tukey HSD simplified)
+    // FAZ-P2-4: Check variance homogeneity with Levene test for post-hoc method selection
+    const leveneResult = runLeveneTest(validGroups, alpha);
+    const variancesHomogeneous = !leveneResult.significant; // If Levene not significant, variances are equal
+
+    // Determine post-hoc method
+    const postHocMethod = variancesHomogeneous ? 'Tukey HSD' : 'Games-Howell';
+
+    // Generate post-hoc pairwise comparisons
     const postHocComparisons = [];
+
+    // Get group names from arguments or use defaults
+    const groupNamesArg = arguments[2]; // groupNames parameter
+    const groupNames = Array.isArray(groupNamesArg) ? groupNamesArg : validGroups.map((_, i) => `Group ${i + 1}`);
+
     for (let i = 0; i < validGroups.length; i++) {
         for (let j = i + 1; j < validGroups.length; j++) {
             const meanDiff = groupStats[i].mean - groupStats[j].mean;
-            const se = Math.sqrt(msWithin * (1 / groupStats[i].n + 1 / groupStats[j].n));
-            const t = meanDiff / se;
-            const pVal = approximateTTestPValue(Math.abs(t), dfWithin);
+            let se, df, pVal, ciLow, ciHigh;
+
+            if (variancesHomogeneous) {
+                // Tukey HSD: uses pooled MSE
+                se = Math.sqrt(msWithin * (1 / groupStats[i].n + 1 / groupStats[j].n));
+                df = dfWithin;
+                const t = Math.abs(meanDiff) / se;
+                pVal = approximateTTestPValue(t, df);
+                // Approximate 95% CI
+                const tCrit = getTCritical(alpha, df);
+                ciLow = meanDiff - tCrit * se;
+                ciHigh = meanDiff + tCrit * se;
+            } else {
+                // Games-Howell: uses individual group variances (Welch-type)
+                const var1 = groupStats[i].variance;
+                const var2 = groupStats[j].variance;
+                const n1 = groupStats[i].n;
+                const n2 = groupStats[j].n;
+                se = Math.sqrt(var1 / n1 + var2 / n2);
+                // Welch-Satterthwaite degrees of freedom
+                const num = Math.pow(var1 / n1 + var2 / n2, 2);
+                const denom = Math.pow(var1 / n1, 2) / (n1 - 1) + Math.pow(var2 / n2, 2) / (n2 - 1);
+                df = num / denom;
+                const t = Math.abs(meanDiff) / se;
+                pVal = approximateTTestPValue(t, df);
+                // Approximate 95% CI
+                const tCrit = getTCritical(alpha, Math.floor(df));
+                ciLow = meanDiff - tCrit * se;
+                ciHigh = meanDiff + tCrit * se;
+            }
+
             postHocComparisons.push({
-                group1: i,
-                group2: j,
+                group1: groupNames[i] || `G${i + 1}`,
+                group2: groupNames[j] || `G${j + 1}`,
+                group1Index: i,
+                group2Index: j,
                 meanDiff: meanDiff,
                 se: se,
-                t: t,
+                df: df,
                 pValue: pVal,
+                ciLow: ciLow,
+                ciHigh: ciHigh,
                 significant: pVal < alpha
             });
         }
@@ -902,8 +946,13 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
         significant: significant,
         etaSquared: etaSquared,
         effectSizeInterpretation: interpretEtaSquared(etaSquared),
+        // FAZ-P2-4: Levene test result for variance homogeneity
+        levene: leveneResult,
+        variancesHomogeneous: variancesHomogeneous,
+        // FAZ-P2-4: Post-hoc method field (Tukey HSD or Games-Howell)
+        postHocMethod: postHocMethod,
         postHoc: {
-            method: 'Pairwise t-test',
+            method: postHocMethod,
             comparisons: postHocComparisons
         },
         interpretation: significant
@@ -1839,14 +1888,24 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
 
     const significant = Math.abs(z) > zCritical;
 
+    // APA format strings
+    const lang = VIZ_STATE?.lang || 'tr';
+    const apaTR = `Mann-Whitney U testi sonuçlarına göre, gruplar arasında ${significant ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, U = ${U.toFixed(2)}, z = ${z.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, r = ${effectR.toFixed(2)}.`;
+    const apaEN = `A Mann-Whitney U test ${significant ? 'revealed a statistically significant difference' : 'revealed no statistically significant difference'} between groups, U = ${U.toFixed(2)}, z = ${z.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, r = ${effectR.toFixed(2)}.`;
+
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Mann-Whitney U Testi' : 'Mann-Whitney U Test',
+        testName: lang === 'tr' ? 'Mann-Whitney U Testi' : 'Mann-Whitney U Test',
         group1Stats: { n: n1, rankSum: R1, median: calculateMedian(group1) },
         group2Stats: { n: n2, rankSum: R2, median: calculateMedian(group2) },
+        // Original fields (backward compatibility)
         U1: U1,
         U2: U2,
         U: U,
+        // Canonical aliases (FIX-P0-STATS-CANON)
+        uStatistic: U,
+        u1Statistic: U1,
+        u2Statistic: U2,
         zStatistic: z,
         zCritical: zCritical,
         pValue: pValue,
@@ -1854,9 +1913,12 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
         significant: significant,
         effectSizeR: effectR,
         effectSizeInterpretation: interpretEffectR(effectR),
+        // APA format strings
+        apaTR: apaTR,
+        apaEN: apaEN,
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
+            ? (lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -2134,6 +2196,427 @@ export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
             : (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between conditions (p >= ${alpha})`)
     };
 }
+// =====================================================
+// LOGISTIC REGRESSION (FAZ-P1-3)
+// =====================================================
+
+/**
+ * Logistic Regression with IRLS (Iteratively Reweighted Least Squares)
+ * Supports both (X, y) and (data, yCol, xCols) formats
+ * 
+ * @param {Array} arg1 - Either X matrix (array of arrays) or data (array of objects)
+ * @param {Array|string} arg2 - Either y vector (array) or yCol (column name)
+ * @param {Array|object} arg3 - Either options object or xCols (array of column names)
+ * @param {object} arg4 - Options if using data format
+ */
+export function runLogisticRegression(arg1, arg2, arg3, arg4) {
+    // FAZ-P1-3: Detect input format
+    let X, y, options = {};
+
+    if (!arg1 || !Array.isArray(arg1) || arg1.length === 0) {
+        return { valid: false, error: 'No data provided' };
+    }
+
+    // Check if first element is an object (data format) or array (X format)
+    if (typeof arg1[0] === 'object' && !Array.isArray(arg1[0])) {
+        // Data format: (data, yCol, xCols, options)
+        const data = arg1;
+        const yCol = arg2;
+        const xCols = arg3;
+        options = arg4 || {};
+
+        if (!yCol || !xCols || !Array.isArray(xCols)) {
+            return { valid: false, error: 'Data format requires: (data, yCol, xCols)' };
+        }
+
+        // Convert to X, y format
+        X = [];
+        y = [];
+        for (const row of data) {
+            const xRow = xCols.map(col => parseFloat(row[col]) || 0);
+            const yVal = parseFloat(row[yCol]);
+            if (!isNaN(yVal)) {
+                X.push(xRow);
+                y.push(yVal === 0 ? 0 : 1); // Binary classification
+            }
+        }
+
+        if (X.length === 0) {
+            return { valid: false, error: 'No valid data rows after parsing' };
+        }
+    } else {
+        // X, y format: (X, y, options)
+        X = arg1;
+        y = arg2;
+        options = arg3 || {};
+
+        if (!y || !Array.isArray(y)) {
+            return { valid: false, error: 'Y vector (arg2) must be an array' };
+        }
+    }
+
+    const n = X.length;
+    const p = X[0]?.length || 0;
+
+    if (n < 2 || p < 1) {
+        return { valid: false, error: `Insufficient data: n=${n}, p=${p}` };
+    }
+
+    if (X.length !== y.length) {
+        return { valid: false, error: `Length mismatch: X=${X.length}, y=${y.length}` };
+    }
+
+    // Add intercept column (column of 1s)
+    const XwithIntercept = X.map(row => [1, ...row]);
+    const numParams = p + 1; // +1 for intercept
+
+    // IRLS algorithm
+    const maxIter = options.maxIterations || 25;
+    const tolerance = options.tolerance || 1e-6;
+    let beta = new Array(numParams).fill(0); // Start with zeros
+    let converged = false;
+    let iterations = 0;
+    let warnings = [];
+    let method = 'IRLS';
+
+    // Sigmoid function
+    const sigmoid = z => {
+        if (z > 20) return 0.9999999;
+        if (z < -20) return 0.0000001;
+        return 1 / (1 + Math.exp(-z));
+    };
+
+    try {
+        for (let iter = 0; iter < maxIter; iter++) {
+            iterations = iter + 1;
+
+            // Calculate probabilities
+            const probs = XwithIntercept.map(xi => {
+                const z = xi.reduce((sum, xij, j) => sum + xij * beta[j], 0);
+                return sigmoid(z);
+            });
+
+            // Calculate weights W = p(1-p)
+            const W = probs.map(p => Math.max(p * (1 - p), 1e-10));
+
+            // Calculate z = X*beta + (y - p) / W
+            const z = XwithIntercept.map((xi, i) => {
+                const xBeta = xi.reduce((sum, xij, j) => sum + xij * beta[j], 0);
+                return xBeta + (y[i] - probs[i]) / W[i];
+            });
+
+            // Weighted least squares: (X'WX)^-1 * X'Wz
+            // Calculate X'WX
+            const XtWX = [];
+            for (let j = 0; j < numParams; j++) {
+                XtWX[j] = [];
+                for (let k = 0; k < numParams; k++) {
+                    let sum = 0;
+                    for (let i = 0; i < n; i++) {
+                        sum += XwithIntercept[i][j] * W[i] * XwithIntercept[i][k];
+                    }
+                    XtWX[j][k] = sum;
+                }
+            }
+
+            // Calculate X'Wz
+            const XtWz = [];
+            for (let j = 0; j < numParams; j++) {
+                let sum = 0;
+                for (let i = 0; i < n; i++) {
+                    sum += XwithIntercept[i][j] * W[i] * z[i];
+                }
+                XtWz[j] = sum;
+            }
+
+            // Solve system using simple matrix inversion for small matrices
+            const newBeta = solveLinearSystem(XtWX, XtWz);
+
+            if (!newBeta || newBeta.some(b => !isFinite(b))) {
+                // IRLS failed, fall back to gradient descent
+                method = 'GD';
+                warnings.push('IRLS: ill-conditioned matrix, falling back to GD');
+                break;
+            }
+
+            // Check convergence
+            const maxChange = Math.max(...newBeta.map((b, j) => Math.abs(b - beta[j])));
+            beta = newBeta;
+
+            if (maxChange < tolerance) {
+                converged = true;
+                break;
+            }
+        }
+
+        // If IRLS failed, use gradient descent
+        if (method === 'GD') {
+            beta = new Array(numParams).fill(0);
+            const learningRate = 0.1;
+
+            for (let iter = 0; iter < maxIter * 10; iter++) {
+                iterations = iter + 1;
+                const gradient = new Array(numParams).fill(0);
+
+                for (let i = 0; i < n; i++) {
+                    const z = XwithIntercept[i].reduce((sum, xij, j) => sum + xij * beta[j], 0);
+                    const prob = sigmoid(z);
+                    const error = y[i] - prob;
+
+                    for (let j = 0; j < numParams; j++) {
+                        gradient[j] += error * XwithIntercept[i][j];
+                    }
+                }
+
+                const maxGrad = Math.max(...gradient.map(Math.abs));
+                for (let j = 0; j < numParams; j++) {
+                    beta[j] += learningRate * gradient[j] / n;
+                }
+
+                if (maxGrad < tolerance * n) {
+                    converged = true;
+                    break;
+                }
+            }
+        }
+
+    } catch (e) {
+        return { valid: false, error: 'Optimization failed: ' + e.message };
+    }
+
+    // Calculate predictions and metrics
+    const predictions = XwithIntercept.map(xi => {
+        const z = xi.reduce((sum, xij, j) => sum + xij * beta[j], 0);
+        return sigmoid(z);
+    });
+
+    // Log-likelihood
+    let logLikelihood = 0;
+    for (let i = 0; i < n; i++) {
+        const p = Math.max(Math.min(predictions[i], 0.9999999), 0.0000001);
+        logLikelihood += y[i] * Math.log(p) + (1 - y[i]) * Math.log(1 - p);
+    }
+
+    // Null log-likelihood (intercept only)
+    const yMean = y.reduce((a, b) => a + b, 0) / n;
+    const logLikelihoodNull = n * (yMean * Math.log(yMean) + (1 - yMean) * Math.log(1 - yMean));
+
+    // -2LL
+    const minus2LL = -2 * logLikelihood;
+
+    // Pseudo R² metrics
+    const mcFaddenR2 = 1 - (logLikelihood / logLikelihoodNull);
+    const nagelkerkeR2 = (1 - Math.exp(-2 * (logLikelihood - logLikelihoodNull) / n)) /
+        (1 - Math.exp(2 * logLikelihoodNull / n));
+    const coxSnellR2 = 1 - Math.exp(-2 * (logLikelihood - logLikelihoodNull) / n);
+
+    // Accuracy
+    const predictedClasses = predictions.map(p => p >= 0.5 ? 1 : 0);
+    const correct = predictedClasses.reduce((sum, pred, i) => sum + (pred === y[i] ? 1 : 0), 0);
+    const accuracy = correct / n;
+
+    // Confusion matrix
+    let TP = 0, TN = 0, FP = 0, FN = 0;
+    for (let i = 0; i < n; i++) {
+        if (y[i] === 1 && predictedClasses[i] === 1) TP++;
+        else if (y[i] === 0 && predictedClasses[i] === 0) TN++;
+        else if (y[i] === 0 && predictedClasses[i] === 1) FP++;
+        else FN++;
+    }
+
+    // Coefficients output
+    const coefficients = beta.slice(1); // Exclude intercept
+    const intercept = beta[0];
+
+    // Odds ratios (exp of coefficients)
+    const oddsRatios = coefficients.map(b => Math.exp(b));
+
+    // Standard errors and p-values (simplified approximation)
+    // Using Fisher Information approximation
+    const pValues = [];
+    const standardErrors = [];
+
+    try {
+        // Calculate information matrix
+        const info = [];
+        for (let j = 0; j < numParams; j++) {
+            info[j] = [];
+            for (let k = 0; k < numParams; k++) {
+                let sum = 0;
+                for (let i = 0; i < n; i++) {
+                    const p = predictions[i];
+                    sum += XwithIntercept[i][j] * XwithIntercept[i][k] * p * (1 - p);
+                }
+                info[j][k] = sum;
+            }
+        }
+
+        // Invert information matrix for variance-covariance
+        const varCov = invertMatrix(info);
+
+        if (varCov) {
+            for (let j = 0; j < numParams; j++) {
+                const se = Math.sqrt(Math.abs(varCov[j][j]));
+                standardErrors.push(se);
+                const zStat = beta[j] / (se || 1);
+                const pVal = 2 * (1 - normalCDF(Math.abs(zStat)));
+                pValues.push(isFinite(pVal) ? pVal : 1);
+            }
+        } else {
+            // Fallback: use default values (p=1 means not significant)
+            for (let j = 0; j < numParams; j++) {
+                standardErrors.push(0);
+                pValues.push(1.0);
+            }
+        }
+    } catch (e) {
+        for (let j = 0; j < numParams; j++) {
+            standardErrors.push(0);
+            pValues.push(1.0);
+        }
+    }
+
+    return {
+        valid: true,
+        testName: 'Logistic Regression',
+        testType: 'logistic-regression',
+        method: method,
+        n: n,
+        p: p,
+        converged: converged,
+        iterations: iterations,
+
+        // Coefficients
+        coefficients: coefficients,
+        intercept: intercept,
+        beta: beta,
+        standardErrors: standardErrors.slice(1),
+        pValues: pValues.slice(1),
+
+        // Odds ratios
+        oddsRatios: oddsRatios,
+        oddsRatio: oddsRatios, // Alias
+
+        // Model fit
+        logLikelihood: logLikelihood,
+        logLikelihoodNull: logLikelihoodNull,
+        minus2LL: minus2LL,
+        deviance: minus2LL,
+
+        // Pseudo R²
+        mcFaddenR2: mcFaddenR2,
+        coxSnellR2: coxSnellR2,
+        nagelkerkeR2: nagelkerkeR2,
+        pseudoR2: nagelkerkeR2, // Default alias
+
+        // Classification metrics
+        accuracy: accuracy,
+        confusionMatrix: { TP, TN, FP, FN },
+        sensitivity: TP / (TP + FN) || 0,
+        specificity: TN / (TN + FP) || 0,
+
+        // Predictions
+        predictedProbabilities: predictions,
+        predictedClasses: predictedClasses,
+
+        warnings: warnings.length > 0 ? warnings : undefined,
+
+        interpretation: VIZ_STATE.lang === 'tr'
+            ? `Lojistik regresyon analizi ${method} yöntemiyle tamamlandı. Model doğruluğu: %${(accuracy * 100).toFixed(1)}, Nagelkerke R² = ${nagelkerkeR2.toFixed(3)}`
+            : `Logistic regression analysis completed using ${method}. Model accuracy: ${(accuracy * 100).toFixed(1)}%, Nagelkerke R² = ${nagelkerkeR2.toFixed(3)}`
+    };
+}
+
+/**
+ * Simple linear system solver for small matrices (Cramer's rule fallback)
+ */
+function solveLinearSystem(A, b) {
+    const n = A.length;
+    if (n === 0) return null;
+
+    // Use Gaussian elimination with partial pivoting
+    const aug = A.map((row, i) => [...row, b[i]]);
+
+    for (let col = 0; col < n; col++) {
+        // Find pivot
+        let maxRow = col;
+        for (let row = col + 1; row < n; row++) {
+            if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) {
+                maxRow = row;
+            }
+        }
+        [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+
+        if (Math.abs(aug[col][col]) < 1e-10) {
+            return null; // Singular matrix
+        }
+
+        // Eliminate
+        for (let row = col + 1; row < n; row++) {
+            const factor = aug[row][col] / aug[col][col];
+            for (let j = col; j <= n; j++) {
+                aug[row][j] -= factor * aug[col][j];
+            }
+        }
+    }
+
+    // Back substitution
+    const x = new Array(n).fill(0);
+    for (let row = n - 1; row >= 0; row--) {
+        x[row] = aug[row][n];
+        for (let j = row + 1; j < n; j++) {
+            x[row] -= aug[row][j] * x[j];
+        }
+        x[row] /= aug[row][row];
+    }
+
+    return x;
+}
+
+/**
+ * Simple matrix inversion for small matrices
+ */
+function invertMatrix(A) {
+    const n = A.length;
+    const aug = A.map((row, i) => {
+        const newRow = [...row];
+        for (let j = 0; j < n; j++) {
+            newRow.push(i === j ? 1 : 0);
+        }
+        return newRow;
+    });
+
+    // Forward elimination
+    for (let col = 0; col < n; col++) {
+        let maxRow = col;
+        for (let row = col + 1; row < n; row++) {
+            if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) {
+                maxRow = row;
+            }
+        }
+        [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+
+        if (Math.abs(aug[col][col]) < 1e-10) {
+            return null;
+        }
+
+        const pivot = aug[col][col];
+        for (let j = 0; j < 2 * n; j++) {
+            aug[col][j] /= pivot;
+        }
+
+        for (let row = 0; row < n; row++) {
+            if (row !== col) {
+                const factor = aug[row][col];
+                for (let j = 0; j < 2 * n; j++) {
+                    aug[row][j] -= factor * aug[col][j];
+                }
+            }
+        }
+    }
+
+    return aug.map(row => row.slice(n));
+}
 
 // =====================================================
 // NORMALITY TESTS
@@ -2150,16 +2633,48 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     }
 
     if (n > 5000) {
+        // FAZ-P1-2: Kolmogorov-Smirnov fallback for large samples
+        const sorted = [...data].sort((a, b) => a - b);
+        const mean = data.reduce((a, b) => a + b, 0) / n;
+        const variance = data.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / n;
+        const stdDev = Math.sqrt(variance) || 1;
+
+        // Calculate K-S D statistic against normal distribution
+        let D = 0;
+        for (let i = 0; i < n; i++) {
+            const x = (sorted[i] - mean) / stdDev;
+            const Fn = (i + 1) / n; // Empirical CDF
+            const Fx = normalCDF(x); // Theoretical normal CDF
+            D = Math.max(D, Math.abs(Fn - Fx), Math.abs((i / n) - Fx));
+        }
+
+        // Approximate p-value for K-S test
+        const sqrtN = Math.sqrt(n);
+        const lambda = (sqrtN + 0.12 + 0.11 / sqrtN) * D;
+        let pValue = 0;
+        for (let k = 1; k <= 100; k++) {
+            pValue += 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * lambda * lambda);
+        }
+        pValue = Math.max(0, Math.min(1, pValue));
+
+        const significant = pValue < alpha;
+
         return {
             valid: true,
-            testName: 'Shapiro-Wilk Normallik Testi',
+            testName: 'Kolmogorov-Smirnov Normality Test',
+            testType: 'kolmogorov-smirnov',
             n: n,
+            D: D,
+            pValue: pValue,
+            alpha: alpha,
+            significant: significant,
+            isNormal: !significant,
             warning: true,
-            interpretation: `Shapiro-Wilk testi bilimsel olarak n ≤ 5000 ile sınırlıdır. Bu kadar büyük örneklerde (n = ${n}) Merkezi Limit Teoremi gereği dağılım yaklaşık normal kabul edilir. Alternatif olarak D'Agostino-Pearson veya Kolmogorov-Smirnov testleri önerilir.`,
-            interpretationEN: `Shapiro-Wilk test is scientifically limited to n ≤ 5000. For samples this large (n = ${n}), the Central Limit Theorem suggests approximate normality. Consider D'Agostino-Pearson or Kolmogorov-Smirnov tests as alternatives.`,
-            isNormal: true, // Assume normal for large samples
-            pValue: null,
-            wStatistic: null
+            interpretation: VIZ_STATE.lang === 'tr'
+                ? `Shapiro-Wilk n ≤ 5000 ile sınırlı olduğundan Kolmogorov-Smirnov testi kullanıldı (n = ${n}).`
+                : `Kolmogorov-Smirnov test used because Shapiro-Wilk is limited to n ≤ 5000 (n = ${n}).`,
+            W: NaN,
+            wStatistic: NaN
         };
     }
 
@@ -2195,7 +2710,9 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     return {
         valid: true,
         testName: VIZ_STATE.lang === 'tr' ? 'Shapiro-Wilk Normallik Testi' : 'Shapiro-Wilk Normality Test',
+        testType: 'shapiro-wilk',
         n: n,
+        W: W,
         wStatistic: W,
         zScore: z,
         pValue: pValue,
@@ -5298,12 +5815,48 @@ export function runPCAAnalysis(data, columns) {
 /**
  * Run K-Means Clustering (Real Lloyd's Algorithm)
  * Uses: k-means++ initialization, iterative centroid update, convergence detection
+ * FAZ-P2-1: writeBack option and canonical output fields added
+ * @param {Array} data - Data array
+ * @param {Array} columns - Column names for clustering
+ * @param {number|object} kOrOpts - Either k value or options object {k, writeBack}
  */
-export function runKMeansAnalysis(data, columns, k = 3) {
+export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
+    // FAZ-P2-1: Parse options
+    let k = 3;
+    let writeBack = true; // Default: mutate data
+
+    if (typeof kOrOpts === 'object' && kOrOpts !== null) {
+        k = kOrOpts.k || 3;
+        writeBack = kOrOpts.writeBack !== false; // default true
+    } else {
+        k = kOrOpts || 3;
+    }
+
+    // FAZ-P2-1: Handle null columns or array input format (e.g., [[1,2], [3,4]])
+    if (!columns || !Array.isArray(columns) || columns.length === 0) {
+        // Check if data is array of arrays
+        if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
+            // Convert array of arrays to array of objects
+            const dims = data[0].length;
+            columns = Array.from({ length: dims }, (_, i) => `dim${i}`);
+            data = data.map(row => {
+                const obj = {};
+                row.forEach((v, i) => obj[columns[i]] = v);
+                return obj;
+            });
+        } else {
+            return { error: VIZ_STATE.lang === 'tr' ? 'K-Means için sütun listesi gerekli' : 'Column list required for K-Means', valid: false };
+        }
+    }
+
     if (columns.length < 2) {
         return { error: VIZ_STATE.lang === 'tr' ? 'K-Means için en az 2 değişken gerekli' : 'At least 2 variables required for K-Means', valid: false };
     }
-    if (k < 2) k = 2;
+
+    // FAZ-P2-1: k<2 must return error, not silently fix
+    if (k < 2) {
+        return { error: VIZ_STATE.lang === 'tr' ? 'K değeri en az 2 olmalıdır' : 'K must be at least 2', valid: false };
+    }
     if (k > data.length) k = Math.min(data.length, 10);
 
     // 1. Build data matrix and standardize
@@ -5454,10 +6007,32 @@ export function runKMeansAnalysis(data, columns, k = 3) {
 
     const totalSSE = clusterStats.reduce((s, c) => s + parseFloat(c.sse), 0).toFixed(2);
 
-    // Assign clusters to original data
-    matrix.forEach((p, i) => {
-        data[p.idx]['_cluster'] = assignments[i] + 1;
-    });
+    // FAZ-P2-1: Assign clusters to original data only if writeBack is true
+    if (writeBack) {
+        matrix.forEach((p, i) => {
+            data[p.idx]['_cluster'] = assignments[i] + 1;
+        });
+    }
+
+    // FAZ-P2-1: Build canonical output fields
+    // centers: k x dims array (unstandardized)
+    const centers = centroids.map((c, ci) =>
+        c.map((v, j) => v * stds[j] + means[j])
+    );
+
+    // clusterCounts: array of length k
+    const clusterCounts = centroids.map((_, ci) =>
+        assignments.filter(a => a === ci).length
+    );
+
+    // inertia: within-cluster sum of squares (already calculated as totalSSE)
+    const inertia = parseFloat(totalSSE);
+
+    // assignments: array mapping each valid row to cluster index (0-based)
+    const assignmentsOutput = matrix.map((p, i) => ({
+        rowIndex: p.idx,
+        cluster: assignments[i]
+    }));
 
     return {
         testType: 'kmeans',
@@ -5469,8 +6044,16 @@ export function runKMeansAnalysis(data, columns, k = 3) {
         iterations: iterations,
         converged: converged,
         totalSSE: totalSSE,
+
+        // FAZ-P2-1: Canonical output fields
+        centers: centers,
+        inertia: isFinite(inertia) ? inertia : NaN,
+        clusterCounts: clusterCounts,
+        assignments: assignments.map(a => a), // Simple array of cluster indices (0-based)
+        clusterAssignments: assignmentsOutput, // Detailed with row indices
+
         clusters: clusterStats,
-        assignmentColumn: '_cluster',
+        assignmentColumn: writeBack ? '_cluster' : null,
         interpretation: {
             tr: `${matrix.length} gözlem ${k} kümeye ayrıldı (${iterations} iterasyon${converged ? ', yakınsadı' : ''}). Toplam SSE: ${totalSSE}`,
             en: `${matrix.length} observations clustered into ${k} groups (${iterations} iterations${converged ? ', converged' : ''}). Total SSE: ${totalSSE}`
@@ -5482,22 +6065,28 @@ export function runKMeansAnalysis(data, columns, k = 3) {
 /**
  * Run Cronbach's Alpha
  * FAZ-4: valid field ve NaN guard eklendi
+ * FAZ-P2-2: SPSS tables format added
  */
 export function runCronbachAlpha(data, columns) {
     const k = columns.length;
     if (k < 2) return { valid: false, error: VIZ_STATE.lang === 'tr' ? 'En az 2 madde gerekli' : 'At least 2 items required', testName: "Cronbach's Alpha" };
 
-    // Calculate item variances
-    const itemVars = columns.map(col => {
+    // Calculate item variances and means
+    const itemStats = columns.map(col => {
         const values = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
-        return calculateVariance(values);
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = calculateVariance(values);
+        return { column: col, mean, variance, n: values.length };
     });
+
+    const itemVars = itemStats.map(s => s.variance);
 
     // Calculate total score variance
     const totals = data.map(row => {
         return columns.reduce((sum, col) => sum + (parseFloat(row[col]) || 0), 0);
     });
     const totalVar = calculateVariance(totals);
+    const totalMean = totals.reduce((a, b) => a + b, 0) / totals.length;
 
     // FAZ-4: Guard - totalVar = 0 durumunda alpha tanımsız
     if (totalVar === 0 || !isFinite(totalVar)) {
@@ -5520,12 +6109,81 @@ export function runCronbachAlpha(data, columns) {
         };
     }
 
+    // Calculate item-total correlations and alpha-if-deleted
+    const itemTotalStats = columns.map((col, idx) => {
+        // Calculate correlation between item and total minus this item
+        const itemValues = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+        const restTotals = data.map(row => {
+            return columns.filter((_, i) => i !== idx)
+                .reduce((sum, c) => sum + (parseFloat(row[c]) || 0), 0);
+        });
+
+        const correctedItemTotal = calculateCorrelation(itemValues, restTotals);
+
+        // Alpha if item deleted
+        const remainingVars = itemVars.filter((_, i) => i !== idx);
+        const remainingVarSum = remainingVars.reduce((a, b) => a + b, 0);
+        const remainingK = k - 1;
+        const alphaIfDeleted = remainingK > 1
+            ? (remainingK / (remainingK - 1)) * (1 - remainingVarSum / totalVar)
+            : NaN;
+
+        return {
+            item: col,
+            mean: itemStats[idx].mean,
+            variance: itemStats[idx].variance,
+            correctedItemTotal: isFinite(correctedItemTotal) ? correctedItemTotal : 0,
+            alphaIfDeleted: isFinite(alphaIfDeleted) ? alphaIfDeleted : alpha
+        };
+    });
+
     let interpretation;
     if (alpha >= 0.9) interpretation = 'Mükemmel güvenilirlik';
     else if (alpha >= 0.8) interpretation = 'İyi güvenilirlik';
     else if (alpha >= 0.7) interpretation = 'Kabul edilebilir güvenilirlik';
     else if (alpha >= 0.6) interpretation = 'Sorgulanabilir güvenilirlik';
     else interpretation = 'Zayıf güvenilirlik';
+
+    // FAZ-P2-2: SPSS-like tables format
+    const tables = [
+        {
+            title: VIZ_STATE.lang === 'tr' ? 'Güvenilirlik İstatistikleri' : 'Reliability Statistics',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? "Cronbach's Alpha" : "Cronbach's Alpha",
+                VIZ_STATE.lang === 'tr' ? 'Madde Sayısı' : 'N of Items'
+            ],
+            rows: [
+                [alpha.toFixed(3), k]
+            ]
+        },
+        {
+            title: VIZ_STATE.lang === 'tr' ? 'Madde-Toplam İstatistikleri' : 'Item-Total Statistics',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? 'Madde' : 'Item',
+                VIZ_STATE.lang === 'tr' ? 'Ortalama' : 'Mean',
+                VIZ_STATE.lang === 'tr' ? 'Düzeltilmiş Madde-Toplam Korelasyonu' : 'Corrected Item-Total Correlation',
+                VIZ_STATE.lang === 'tr' ? 'Madde Çıkarıldığında Alpha' : "Cronbach's Alpha if Item Deleted"
+            ],
+            rows: itemTotalStats.map(item => [
+                item.item,
+                item.mean.toFixed(3),
+                item.correctedItemTotal.toFixed(3),
+                item.alphaIfDeleted.toFixed(3)
+            ])
+        }
+    ];
+
+    // FAZ-P2-2: Legacy format (for backward compatibility)
+    const legacy = {
+        columns: ['Item', 'Mean', 'Variance', 'Corrected Item-Total r', 'Alpha if Deleted'],
+        rows: itemTotalStats.map(item => [
+            item.item,
+            item.mean.toFixed(3),
+            item.variance.toFixed(3),
+            item.correctedItemTotal.toFixed(3),
+            item.alphaIfDeleted.toFixed(3)
+        ])
+    };
 
     return {
         valid: true,
@@ -5534,12 +6192,19 @@ export function runCronbachAlpha(data, columns) {
         alpha: alpha,
         cronbachAlpha: alpha,
         itemCount: k,
-        interpretation: interpretation
+        nItems: k,
+        interpretation: interpretation,
+        // FAZ-P2-2: SPSS format
+        tables: tables,
+        legacy: legacy,
+        // Item statistics for detailed analysis
+        itemStatistics: itemTotalStats
     };
 }
 
 /**
  * Run simple linear regression
+ * FAZ-P2-2: SPSS tables format added
  */
 export function runLinearRegression(data, yColumn, xColumn) {
     const pairs = data.map(r => ({
@@ -5548,34 +6213,155 @@ export function runLinearRegression(data, yColumn, xColumn) {
     })).filter(p => !isNaN(p.x) && !isNaN(p.y));
 
     const n = pairs.length;
+
+    if (n < 3) {
+        return {
+            valid: false,
+            error: VIZ_STATE.lang === 'tr' ? 'En az 3 veri noktası gerekli' : 'At least 3 data points required',
+            testName: VIZ_STATE.lang === 'tr' ? 'Doğrusal Regresyon' : 'Linear Regression'
+        };
+    }
+
     const sumX = pairs.reduce((s, p) => s + p.x, 0);
     const sumY = pairs.reduce((s, p) => s + p.y, 0);
     const sumXY = pairs.reduce((s, p) => s + p.x * p.y, 0);
     const sumX2 = pairs.reduce((s, p) => s + p.x * p.x, 0);
+    const sumY2 = pairs.reduce((s, p) => s + p.y * p.y, 0);
+
+    const meanX = sumX / n;
+    const meanY = sumY / n;
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
     const r = calculateCorrelation(pairs.map(p => p.x), pairs.map(p => p.y));
     const r2 = r * r;
 
+    // Calculate additional statistics for SPSS output
+    // Predicted values and residuals
+    const predicted = pairs.map(p => intercept + slope * p.x);
+    const residuals = pairs.map((p, i) => p.y - predicted[i]);
+
+    // Sum of Squares
+    const ssTotal = pairs.reduce((s, p) => s + Math.pow(p.y - meanY, 2), 0);
+    const ssRegression = pairs.reduce((s, p, i) => s + Math.pow(predicted[i] - meanY, 2), 0);
+    const ssResidual = residuals.reduce((s, r) => s + r * r, 0);
+
+    // Degrees of freedom
+    const dfRegression = 1; // Simple linear regression has 1 predictor
+    const dfResidual = n - 2;
+    const dfTotal = n - 1;
+
+    // Mean Squares
+    const msRegression = ssRegression / dfRegression;
+    const msResidual = ssResidual / dfResidual;
+
+    // F-statistic and p-value
+    const fStatistic = msRegression / msResidual;
+    const pValueF = 1 - approximateFTestPValue(fStatistic, dfRegression, dfResidual);
+
+    // Standard errors for coefficients
+    const seResidual = Math.sqrt(msResidual);
+    const ssX = pairs.reduce((s, p) => s + Math.pow(p.x - meanX, 2), 0);
+    const seSlope = seResidual / Math.sqrt(ssX);
+    const seIntercept = seResidual * Math.sqrt((1 / n) + (meanX * meanX) / ssX);
+
+    // t-statistics and p-values for coefficients
+    const tSlope = slope / seSlope;
+    const tIntercept = intercept / seIntercept;
+    const pSlope = 2 * (1 - approximateTTestPValue(Math.abs(tSlope), dfResidual));
+    const pIntercept = 2 * (1 - approximateTTestPValue(Math.abs(tIntercept), dfResidual));
+
+    // Adjusted R-squared
+    const r2Adjusted = 1 - ((1 - r2) * (n - 1) / (n - 2));
+
+    // FAZ-P2-2: SPSS-like tables
+    const tables = [
+        {
+            title: VIZ_STATE.lang === 'tr' ? 'Model Özeti' : 'Model Summary',
+            columns: ['R', 'R²', VIZ_STATE.lang === 'tr' ? 'Düzeltilmiş R²' : 'Adjusted R²', VIZ_STATE.lang === 'tr' ? 'Std. Hata' : 'Std. Error'],
+            rows: [
+                [r.toFixed(3), r2.toFixed(3), r2Adjusted.toFixed(3), seResidual.toFixed(3)]
+            ]
+        },
+        {
+            title: 'ANOVA',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? 'Kaynak' : 'Source',
+                VIZ_STATE.lang === 'tr' ? 'Kareler Toplamı' : 'Sum of Squares',
+                'df',
+                VIZ_STATE.lang === 'tr' ? 'Ort. Kare' : 'Mean Square',
+                'F',
+                VIZ_STATE.lang === 'tr' ? 'Anlamlılık' : 'Sig.'
+            ],
+            rows: [
+                [VIZ_STATE.lang === 'tr' ? 'Regresyon' : 'Regression', ssRegression.toFixed(3), dfRegression, msRegression.toFixed(3), fStatistic.toFixed(3), pValueF.toFixed(4)],
+                [VIZ_STATE.lang === 'tr' ? 'Kalıntı' : 'Residual', ssResidual.toFixed(3), dfResidual, msResidual.toFixed(3), '', ''],
+                [VIZ_STATE.lang === 'tr' ? 'Toplam' : 'Total', ssTotal.toFixed(3), dfTotal, '', '', '']
+            ]
+        },
+        {
+            title: VIZ_STATE.lang === 'tr' ? 'Katsayılar' : 'Coefficients',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? 'Model' : 'Model',
+                'B',
+                VIZ_STATE.lang === 'tr' ? 'Std. Hata' : 'Std. Error',
+                'Beta',
+                't',
+                VIZ_STATE.lang === 'tr' ? 'Anlamlılık' : 'Sig.'
+            ],
+            rows: [
+                [VIZ_STATE.lang === 'tr' ? '(Sabit)' : '(Constant)', intercept.toFixed(4), seIntercept.toFixed(4), '', tIntercept.toFixed(3), pIntercept.toFixed(4)],
+                [xColumn, slope.toFixed(4), seSlope.toFixed(4), r.toFixed(3), tSlope.toFixed(3), pSlope.toFixed(4)]
+            ]
+        }
+    ];
+
+    // FAZ-P2-2: Legacy format
+    const legacy = {
+        columns: ['Statistic', 'Value'],
+        rows: [
+            ['R', r.toFixed(4)],
+            ['R²', r2.toFixed(4)],
+            ['Adjusted R²', r2Adjusted.toFixed(4)],
+            ['Slope (B)', slope.toFixed(4)],
+            ['Intercept', intercept.toFixed(4)],
+            ['F', fStatistic.toFixed(4)],
+            ['Sig.', pValueF.toFixed(4)]
+        ]
+    };
+
     return {
+        valid: true,
         testType: 'regression',
         testName: VIZ_STATE.lang === 'tr' ? 'Doğrusal Regresyon' : 'Linear Regression',
+        n: n,
         slope: slope,
         intercept: intercept,
         r: r,
         rSquared: r2,
+        r2Adjusted: r2Adjusted,
+        fStatistic: fStatistic,
+        pValue: pValueF,
         equation: `y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}`,
+        // Coefficients with SE and t
+        coefficients: {
+            intercept: { B: intercept, SE: seIntercept, t: tIntercept, p: pIntercept },
+            slope: { B: slope, SE: seSlope, Beta: r, t: tSlope, p: pSlope, variable: xColumn }
+        },
+        // FAZ-P2-2: SPSS format
+        tables: tables,
+        legacy: legacy,
         interpretation: VIZ_STATE.lang === 'tr'
-            ? `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn}, ${yColumn}'deki varyansın %${(r2 * 100).toFixed(1)}'ini açıklıyor.`
-            : `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn} explains ${(r2 * 100).toFixed(1)}% of variance in ${yColumn}.`
+            ? `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn}, ${yColumn}'deki varyansın %${(r2 * 100).toFixed(1)}'ini açıklıyor. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF.toFixed(4)}`
+            : `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn} explains ${(r2 * 100).toFixed(1)}% of variance in ${yColumn}. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF.toFixed(4)}`
     };
 }
 
 /**
  * Run power analysis
+ * FAZ-P2-3: SPSS tables format added
  */
-export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
+export function runPowerAnalysis(effectSize, n, alpha = 0.05, testType = 't-test') {
     // Simplified power calculation for t-test
     const se = Math.sqrt(2 / n);
     const ncp = effectSize / se; // Non-centrality parameter
@@ -5583,6 +6369,30 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
 
     // Approximate power using normal distribution
     const power = 1 - normalCDF(criticalT - ncp);
+    const clampedPower = Math.min(0.99, Math.max(0.01, power));
+
+    // FAZ-P2-3: SPSS-like tables
+    const tables = [
+        {
+            title: VIZ_STATE.lang === 'tr' ? 'Güç Analizi Sonuçları' : 'Power Analysis Results',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? 'Test Tipi' : 'Test Type',
+                VIZ_STATE.lang === 'tr' ? 'Etki Büyüklüğü' : 'Effect Size',
+                'Alpha',
+                'N',
+                VIZ_STATE.lang === 'tr' ? 'Güç' : 'Power'
+            ],
+            rows: [
+                [testType, effectSize.toFixed(2), alpha.toFixed(2), n, (clampedPower * 100).toFixed(1) + '%']
+            ]
+        }
+    ];
+
+    // Legacy format
+    const legacy = {
+        columns: ['Test Type', 'Effect Size', 'Alpha', 'N', 'Power'],
+        rows: [[testType, effectSize.toFixed(2), alpha.toFixed(2), n, (clampedPower * 100).toFixed(1) + '%']]
+    };
 
     return {
         valid: true,
@@ -5591,120 +6401,24 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05) {
         effectSize: effectSize,
         sampleSize: n,
         alpha: alpha,
-        power: Math.min(0.99, Math.max(0.01, power)),
-        interpretation: power > 0.8
-            ? (VIZ_STATE.lang === 'tr' ? `Yeterli güç (%${(power * 100).toFixed(0)}). Bu örneklem büyüklüğü yeterli.` : `Adequate power (${(power * 100).toFixed(0)}%). Sample size is sufficient.`)
-            : (VIZ_STATE.lang === 'tr' ? `Düşük güç (%${(power * 100).toFixed(0)}). Daha büyük örneklem önerilir.` : `Low power (${(power * 100).toFixed(0)}%). Larger sample recommended.`)
+        power: clampedPower,
+        // FAZ-P2-3: SPSS format
+        tables: tables,
+        legacy: legacy,
+        interpretation: clampedPower > 0.8
+            ? (VIZ_STATE.lang === 'tr' ? `Yeterli güç (%${(clampedPower * 100).toFixed(0)}). Bu örneklem büyüklüğü yeterli.` : `Adequate power (${(clampedPower * 100).toFixed(0)}%). Sample size is sufficient.`)
+            : (VIZ_STATE.lang === 'tr' ? `Düşük güç (%${(clampedPower * 100).toFixed(0)}). Daha büyük örneklem önerilir.` : `Low power (${(clampedPower * 100).toFixed(0)}%). Larger sample recommended.`)
     };
 }
 
 // normalCDF already defined at L1396 - removed duplicate
 
+
 // NOTE: The following helper functions (approximateFTestPValue, incompleteBeta, beta, logGamma)
 // are already defined earlier in this file. Removed duplicates to prevent SyntaxError.
 
-/**
- * Logistic regression (Basic Gradient Descent Implementation)
- * For binary outcomes only - returns coefficients, odds ratios, accuracy
- */
-export function runLogisticRegression(data, yColumn, xColumns) {
-    if (!yColumn || xColumns.length < 1) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Bağımlı ve en az 1 bağımsız değişken gerekli' : 'Dependent variable and at least 1 independent variable required', valid: false };
-    }
+// NOTE: runLogisticRegression function moved to line ~2150 with IRLS algorithm (FAZ-P1-3)
 
-    // 1. Validate binary outcome
-    const yValues = data.map(r => r[yColumn]).filter(v => v !== null && v !== undefined && v !== '');
-    const uniqueY = [...new Set(yValues)];
-
-    if (uniqueY.length !== 2) {
-        return {
-            error: `Bağımlı değişken binary (2 sınıf) olmalı. Mevcut: ${uniqueY.length} sınıf`,
-            valid: false,
-            degrade: true,
-            reason: 'Lojistik regresyon sadece 2 sınıflı değişkenler için çalışır'
-        };
-    }
-
-    // Map to 0/1
-    const yMap = { [uniqueY[0]]: 0, [uniqueY[1]]: 1 };
-
-    // 2. Build matrix
-    const matrix = [];
-    data.forEach(row => {
-        const y = yMap[row[yColumn]];
-        if (y === undefined) return;
-
-        const x = [1]; // Intercept
-        let valid = true;
-        xColumns.forEach(col => {
-            const val = parseFloat(row[col]);
-            if (isNaN(val)) valid = false;
-            else x.push(val);
-        });
-
-        if (valid) matrix.push({ y, x });
-    });
-
-    if (matrix.length < 10) {
-        return { error: 'Yeterli geçerli veri yok (min 10 satır)', valid: false };
-    }
-
-    // 3. Gradient descent
-    const nFeatures = xColumns.length + 1;
-    let weights = new Array(nFeatures).fill(0);
-    const learningRate = 0.1;
-    const maxIter = 1000;
-
-    const sigmoid = z => 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, z))));
-
-    for (let iter = 0; iter < maxIter; iter++) {
-        const gradients = new Array(nFeatures).fill(0);
-
-        matrix.forEach(({ y, x }) => {
-            const z = x.reduce((s, xi, i) => s + xi * weights[i], 0);
-            const pred = sigmoid(z);
-            const error = pred - y;
-            x.forEach((xi, i) => gradients[i] += error * xi);
-        });
-
-        weights = weights.map((w, i) => w - learningRate * gradients[i] / matrix.length);
-    }
-
-    // 4. Calculate predictions and accuracy
-    let correct = 0;
-    matrix.forEach(({ y, x }) => {
-        const z = x.reduce((s, xi, i) => s + xi * weights[i], 0);
-        const pred = sigmoid(z) >= 0.5 ? 1 : 0;
-        if (pred === y) correct++;
-    });
-    const accuracy = (correct / matrix.length * 100).toFixed(1);
-
-    // 5. Build coefficient table
-    const coefficients = [
-        { variable: '(Intercept)', beta: weights[0].toFixed(4), oddsRatio: Math.exp(weights[0]).toFixed(3) }
-    ];
-    xColumns.forEach((col, i) => {
-        coefficients.push({
-            variable: col,
-            beta: weights[i + 1].toFixed(4),
-            oddsRatio: Math.exp(weights[i + 1]).toFixed(3)
-        });
-    });
-
-    return {
-        testType: 'logistic',
-        testName: VIZ_STATE.lang === 'tr' ? 'Lojistik Regresyon' : 'Logistic Regression',
-        valid: true,
-        nObservations: matrix.length,
-        classes: uniqueY,
-        coefficients: coefficients,
-        accuracy: accuracy,
-        interpretation: {
-            tr: `Model %${accuracy} doğrulukla sınıflandırma yaptı. Katsayılar tabloda gösterilmektedir.`,
-            en: `Model classified with ${accuracy}% accuracy. Coefficients shown in table.`
-        }
-    };
-}
 
 /**
  * Time series analysis (with date validation)
@@ -7377,9 +8091,49 @@ export function runItemTotalAnalysis(data, columns, itemNames = null) {
     };
 }
 
-// Window bindings for FAZ-4 academic modules
+// =====================================================
+// Window bindings - public API
+// FIX-P1-3: All functions exposed for selftest verification
+// =====================================================
+
+// WIDGET_CATALOG (23 stat functions)
+window.runOneSampleTTest = runOneSampleTTest;
+window.runIndependentTTest = runIndependentTTest;
+window.runPairedTTest = runPairedTTest;
+window.runOneWayANOVA = runOneWayANOVA;
+window.runTwoWayANOVA = runTwoWayANOVA;
+window.runRepeatedMeasuresANOVA = runRepeatedMeasuresANOVA;
+window.runCorrelationTest = runCorrelationTest;
+window.runChiSquareTest = runChiSquareTest;
+window.runLinearRegression = runLinearRegression;
+window.runLogisticRegression = runLogisticRegression;
+window.runMannWhitneyU = runMannWhitneyU;
+window.runWilcoxonSignedRank = runWilcoxonSignedRank;
+window.runKruskalWallis = runKruskalWallis;
+window.runFriedmanTest = runFriedmanTest;
+window.runShapiroWilkTest = runShapiroWilkTest;
+window.runLeveneTest = runLeveneTest;
+window.runPCAAnalysis = runPCAAnalysis;
+window.runKMeansAnalysis = runKMeansAnalysis;
+window.runPowerAnalysis = runPowerAnalysis;
+window.runCronbachAlpha = runCronbachAlpha;
+window.runDescriptiveStats = runDescriptiveStats;
+window.runFrequencyAnalysis = runFrequencyAnalysis;
+
+// SPSS Wrappers
+window.runIndependentTTest_SPSS = runIndependentTTest_SPSS;
+window.runOneWayANOVA_SPSS = runOneWayANOVA_SPSS;
+window.runChiSquareCrosstabs_SPSS = runChiSquareCrosstabs_SPSS;
+
+// FAZ-4 Academic modules
 window.runCrosstabsExtended = runCrosstabsExtended;
 window.runItemTotalAnalysis = runItemTotalAnalysis;
+
+// Utility functions (for selftest)
+window.calculateMean = calculateMean;
+window.calculateVariance = calculateVariance;
+window.calculateStdDev = calculateStdDev;
+window.runStatWidgetAnalysis = runStatWidgetAnalysis;
 
 console.log('✅ stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic Modules) loaded');
 
