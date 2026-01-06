@@ -2008,18 +2008,82 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
 
 /**
  * Friedman Test (Non-parametric repeated measures)
+ * Backward compatible: supports both matrix format and data+multiVars format
+ * 
+ * Usage 1 (legacy): runFriedmanTest(measurementsMatrix, alpha)
+ *   - measurementsMatrix: array of arrays, each inner array is one subject's measurements
+ * 
+ * Usage 2 (new): runFriedmanTest(dataObjects, multiVarsArray, alpha)
+ *   - dataObjects: array of row objects [{M1: 5, M2: 7}, ...]
+ *   - multiVarsArray: array of column keys ['M1', 'M2', 'M3']
  */
-export function runFriedmanTest(measurements, alpha = 0.05) {
-    // measurements: array of arrays, each inner array is one subject's measurements across conditions
+export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
+    let measurements;
+    let alpha;
+
+    // FIX-P0-1: Detect input format and normalize
+    if (Array.isArray(arg2)) {
+        // New format: runFriedmanTest(dataObjects, multiVarsArray, alpha?)
+        const dataObjects = arg1;
+        const multiVars = arg2;
+        alpha = typeof arg3 === 'number' ? arg3 : 0.05;
+
+        // Validate inputs
+        if (!dataObjects || !Array.isArray(dataObjects) || dataObjects.length === 0) {
+            return { error: 'Veri objesi boş veya geçersiz', valid: false };
+        }
+        if (!multiVars || !Array.isArray(multiVars) || multiVars.length < 2) {
+            return { error: 'En az 2 değişken seçilmelidir', valid: false };
+        }
+
+        // Convert data objects to measurements matrix
+        measurements = [];
+        for (let i = 0; i < dataObjects.length; i++) {
+            const row = dataObjects[i];
+            const subjectMeasurements = [];
+            let hasValidData = true;
+
+            for (const col of multiVars) {
+                const val = parseFloat(row[col]);
+                if (isNaN(val) || val === null || val === undefined) {
+                    hasValidData = false;
+                    break;
+                }
+                subjectMeasurements.push(val);
+            }
+
+            // Only include rows with all valid measurements
+            if (hasValidData && subjectMeasurements.length === multiVars.length) {
+                measurements.push(subjectMeasurements);
+            }
+        }
+
+        if (measurements.length < 3) {
+            return { error: `Geçerli veri satırı yetersiz (${measurements.length} < 3). Eksik değer içeren satırlar atlandı.`, valid: false };
+        }
+    } else {
+        // Legacy format: runFriedmanTest(measurementsMatrix, alpha)
+        measurements = arg1;
+        alpha = typeof arg2 === 'number' ? arg2 : 0.05;
+    }
+
+    // Validate measurements matrix
     if (!measurements || measurements.length < 3) {
         return { error: 'En az 3 denek gereklidir', valid: false };
     }
 
     const n = measurements.length; // Number of subjects
-    const k = measurements[0].length; // Number of conditions
+    const k = measurements[0]?.length; // Number of conditions
 
-    if (k < 2) {
+    if (!k || k < 2) {
         return { error: 'En az 2 koşul gereklidir', valid: false };
+    }
+
+    // Validate all rows have same length
+    for (let i = 0; i < measurements.length; i++) {
+        if (!Array.isArray(measurements[i]) || measurements[i].length !== k) {
+            return { error: `Satır ${i + 1} geçersiz uzunlukta`, valid: false };
+        }
     }
 
     // Rank within each subject
@@ -2057,12 +2121,14 @@ export function runFriedmanTest(measurements, alpha = 0.05) {
         rankSums: rankSums,
         meanRanks: rankSums.map(r => r / n),
         chi2Statistic: chi2,
+        chiSquare: chi2, // Alias for compatibility
         degreesOfFreedom: df,
         chiCritical: chiCritical,
         pValue: pValue,
+        W: kendallW, // Alias for compatibility
+        kendallW: kendallW,
         alpha: alpha,
         significant: significant,
-        kendallW: kendallW,
         interpretation: significant
             ? (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between conditions (p < ${alpha})`)
             : (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between conditions (p >= ${alpha})`)
