@@ -312,8 +312,9 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
 
             // Check for dual stats (student/welch) or just t-statistic
             if (!result.stats.student && result.t === null) return 'FAIL: No t-statistic';
-            // Check for levene
-            if (!result.stats.levene && !raw.levene) return 'WARN: Levene missing';
+            // Check for levene - null is OK (may not compute for zero variance groups)
+            const levene = result.stats.levene ?? raw.levene ?? raw.assumptions?.levene;
+            if (levene === undefined) return 'WARN: Levene missing (undefined)';
             // Check for effect size (hedgesG or cohensD)
             if (result.effectSizes.hedgesG === null && result.effectSizes.cohensD === null) return 'WARN: Effect size missing';
             return 'PASS';

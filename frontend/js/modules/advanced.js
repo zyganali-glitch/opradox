@@ -2112,6 +2112,241 @@ function removeCrossFilterIndicator() {
 }
 
 // -----------------------------------------------------
+// VIRAL-4: BEFORE/AFTER DELTA INSIGHTS
+// Shows metric changes when filters are applied
+// -----------------------------------------------------
+
+/**
+ * Calculate stats for a single column in dataset
+ */
+function calculateColumnStats(data, column) {
+    const values = data.map(r => parseFloat(r[column])).filter(v => !isNaN(v));
+    if (values.length === 0) return null;
+
+    const sorted = [...values].sort((a, b) => a - b);
+    const sum = values.reduce((a, b) => a + b, 0);
+    const mean = sum / values.length;
+    const median = sorted.length % 2 === 0
+        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+        : sorted[Math.floor(sorted.length / 2)];
+    const variance = values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    const anomalyCount = values.filter(v => Math.abs(v - mean) > 2 * stdDev).length;
+
+    return { count: values.length, mean, median, stdDev, anomalyCount };
+}
+
+/**
+ * Generate delta insights comparing baseline to current filtered data
+ * @param {object} baseline - Baseline snapshot from captureBaseline()
+ * @param {Array} currentData - Current filtered dataset
+ * @param {Array} columns - Column names
+ * @returns {Array} Array of delta insight objects
+ */
+export function getDeltaInsights(baseline, currentData, columns) {
+    if (!baseline || !currentData || currentData.length === 0) return [];
+
+    const insights = [];
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Check each column that has baseline stats
+    Object.keys(baseline.columnStats).forEach(col => {
+        if (!columns.includes(col)) return;
+
+        const before = baseline.columnStats[col];
+        const after = calculateColumnStats(currentData, col);
+        if (!after) return;
+
+        // Calculate deltas
+        const deltaMean = after.mean - before.mean;
+        const deltaMedian = after.median - before.median;
+        const deltaMeanPercent = before.mean !== 0 ? (deltaMean / before.mean) * 100 : 0;
+        const deltaMedianPercent = before.median !== 0 ? (deltaMedian / before.median) * 100 : 0;
+        const deltaAnomaly = after.anomalyCount - before.anomalyCount;
+
+        // Only show significant changes (>5% or anomaly change)
+        if (Math.abs(deltaMeanPercent) > 5) {
+            insights.push({
+                type: 'mean',
+                column: col,
+                before: before.mean,
+                after: after.mean,
+                delta: deltaMean,
+                deltaPercent: deltaMeanPercent,
+                direction: deltaMean > 0 ? 'up' : 'down',
+                message: lang === 'tr'
+                    ? `Ortalama ${col}: ${before.mean.toFixed(1)} → ${after.mean.toFixed(1)} (${deltaMeanPercent > 0 ? '+' : ''}${deltaMeanPercent.toFixed(1)}%)`
+                    : `Mean ${col}: ${before.mean.toFixed(1)} → ${after.mean.toFixed(1)} (${deltaMeanPercent > 0 ? '+' : ''}${deltaMeanPercent.toFixed(1)}%)`
+            });
+        }
+
+        if (Math.abs(deltaMedianPercent) > 5 && Math.abs(deltaMedianPercent - deltaMeanPercent) > 3) {
+            insights.push({
+                type: 'median',
+                column: col,
+                before: before.median,
+                after: after.median,
+                delta: deltaMedian,
+                deltaPercent: deltaMedianPercent,
+                direction: deltaMedian > 0 ? 'up' : 'down',
+                message: lang === 'tr'
+                    ? `Medyan ${col}: ${before.median.toFixed(1)} → ${after.median.toFixed(1)} (${deltaMedianPercent > 0 ? '+' : ''}${deltaMedianPercent.toFixed(1)}%)`
+                    : `Median ${col}: ${before.median.toFixed(1)} → ${after.median.toFixed(1)} (${deltaMedianPercent > 0 ? '+' : ''}${deltaMedianPercent.toFixed(1)}%)`
+            });
+        }
+
+        if (Math.abs(deltaAnomaly) > 0) {
+            insights.push({
+                type: 'anomaly',
+                column: col,
+                before: before.anomalyCount,
+                after: after.anomalyCount,
+                delta: deltaAnomaly,
+                direction: deltaAnomaly > 0 ? 'up' : 'down',
+                message: lang === 'tr'
+                    ? `Anomaliler ${col}: ${before.anomalyCount} → ${after.anomalyCount} (${deltaAnomaly > 0 ? '+' : ''}${deltaAnomaly})`
+                    : `Anomalies ${col}: ${before.anomalyCount} → ${after.anomalyCount} (${deltaAnomaly > 0 ? '+' : ''}${deltaAnomaly})`
+            });
+        }
+    });
+
+    // Sort by significance (largest percent change first)
+    insights.sort((a, b) => Math.abs(b.deltaPercent || b.delta) - Math.abs(a.deltaPercent || a.delta));
+
+    // Return top 5 most significant
+    return insights.slice(0, 5);
+}
+
+/**
+ * Show delta insights panel (floating, bottom-right)
+ */
+export function showDeltaInsightsPanel(insights) {
+    if (!insights || insights.length === 0) {
+        hideDeltaInsightsPanel();
+        return;
+    }
+
+    // Remove existing panel
+    hideDeltaInsightsPanel();
+
+    const lang = VIZ_STATE?.lang || 'tr';
+    const title = lang === 'tr' ? 'Filtre Değişimleri' : 'Filter Changes';
+
+    const panel = document.createElement('div');
+    panel.id = 'deltaInsightsPanel';
+    panel.innerHTML = `
+        <div class="delta-insights-header">
+            <span><i class="fas fa-exchange-alt"></i> ${title}</span>
+            <button onclick="hideDeltaInsightsPanel()" title="${lang === 'tr' ? 'Kapat' : 'Close'}">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="delta-insights-body">
+            ${insights.map(insight => `
+                <div class="delta-insight-card ${insight.direction}">
+                    <span class="delta-icon">${insight.direction === 'up' ? '↑' : '↓'}</span>
+                    <span class="delta-message">${insight.message}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    document.body.appendChild(panel);
+    injectDeltaInsightsStyles();
+
+    // Auto-hide after 15 seconds
+    setTimeout(() => {
+        const panelEl = document.getElementById('deltaInsightsPanel');
+        if (panelEl) panelEl.classList.add('fade-out');
+        setTimeout(hideDeltaInsightsPanel, 500);
+    }, 15000);
+}
+
+/**
+ * Hide delta insights panel
+ */
+export function hideDeltaInsightsPanel() {
+    document.getElementById('deltaInsightsPanel')?.remove();
+}
+
+/**
+ * Inject styles for delta insights panel
+ */
+function injectDeltaInsightsStyles() {
+    if (document.getElementById('delta-insights-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'delta-insights-styles';
+    style.textContent = `
+        #deltaInsightsPanel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #deltaInsightsPanel.fade-out {
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .delta-insights-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .delta-insights-header i { margin-right: 8px; color: #4a90d9; }
+        .delta-insights-header button {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            padding: 5px;
+        }
+        .delta-insights-header button:hover { color: #fff; }
+        .delta-insights-body { padding: 10px; }
+        .delta-insight-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid;
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+        }
+        .delta-insight-card.up { border-color: #27ae60; }
+        .delta-insight-card.down { border-color: #e74c3c; }
+        .delta-icon {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .delta-insight-card.up .delta-icon { color: #27ae60; }
+        .delta-insight-card.down .delta-icon { color: #e74c3c; }
+        .delta-message { flex: 1; }
+    `;
+    document.head.appendChild(style);
+}
+
+// -----------------------------------------------------
 // WINDOW BINDINGS (COMPLETE)
 // -----------------------------------------------------
 // Part 1: Map System
@@ -2148,5 +2383,10 @@ window.applyCrossFilter = applyCrossFilter;
 window.clearCrossFilter = clearCrossFilter;
 window.disableCrossFilter = disableCrossFilter;
 
-console.log('✅ advanced.js (Complete: Part 1 + Part 2) loaded');
+// Part 3: VIRAL-4 Delta Insights
+window.getDeltaInsights = getDeltaInsights;
+window.showDeltaInsightsPanel = showDeltaInsightsPanel;
+window.hideDeltaInsightsPanel = hideDeltaInsightsPanel;
+
+console.log('✅ advanced.js (Complete: Part 1 + Part 2 + VIRAL-4) loaded');
 

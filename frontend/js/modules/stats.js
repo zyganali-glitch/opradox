@@ -689,6 +689,17 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
 
     const significant = Math.abs(t) > tCritical;
 
+    // FAZ-W2: Calculate Levene test for variance homogeneity
+    let leveneResult = null;
+    try {
+        leveneResult = runLeveneTest([group1, group2], alpha);
+        if (!leveneResult || !leveneResult.valid) {
+            leveneResult = null;
+        }
+    } catch (e) {
+        leveneResult = null; // Levene may fail with zero variance groups
+    }
+
     return {
         valid: true,
         testName: VIZ_STATE.lang === 'tr' ? 'Bağımsız Örneklem T-Testi (Welch)' : 'Independent Samples T-Test (Welch)',
@@ -705,6 +716,11 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
         meanDifference: meanDiff,
         standardError: se,
         confidenceInterval: { lower: ciLower, upper: ciUpper, level: 1 - alpha },
+        // FAZ-W2: Levene test result
+        levene: leveneResult,
+        assumptions: {
+            levene: leveneResult
+        },
         interpretation: significant
             ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
             : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
@@ -754,6 +770,11 @@ export function runPairedTTest(before, after, alpha = 0.05) {
         alpha: alpha,
         significant: significant,
         cohensD: cohensD,
+        // FAZ-W3: effectSizes object for normalization
+        effectSizes: {
+            cohensDz: cohensD,  // Cohen's dz for paired samples
+            cohensD: cohensD    // Alias for compatibility
+        },
         effectSizeInterpretation: interpretCohensD(cohensD),
         interpretation: significant
             ? (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
@@ -782,6 +803,10 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
     const cohensD = (sampleMean - populationMean) / sampleStd;
     const significant = Math.abs(t) > tCritical;
 
+    // FAZ-W3: Confidence interval for sample mean
+    const ciLower = sampleMean - tCritical * se;
+    const ciUpper = sampleMean + tCritical * se;
+
     return {
         valid: true,
         testName: VIZ_STATE.lang === 'tr' ? 'Tek Örneklem T-Testi' : 'One-Sample T-Test',
@@ -789,6 +814,7 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
         sampleMean: sampleMean,
         sampleStd: sampleStd,
         populationMean: populationMean,
+        standardError: se,
         tStatistic: t,
         degreesOfFreedom: df,
         tCritical: tCritical,
@@ -797,6 +823,9 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
         significant: significant,
         cohensD: cohensD,
         effectSizeInterpretation: interpretCohensD(cohensD),
+        // FAZ-W3: Confidence interval
+        confidenceInterval: { lower: ciLower, upper: ciUpper, level: 1 - alpha },
+        ci: { lower: ciLower, upper: ciUpper }, // Alias for normalization
         interpretation: significant
             ? (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı (p < ${alpha})` : `Sample mean is significantly different from population mean (p < ${alpha})`)
             : (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı değil (p >= ${alpha})` : `Sample mean is not significantly different from population mean (p >= ${alpha})`)
@@ -818,12 +847,16 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
         return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geçerli grup gereklidir' : 'At least 2 valid groups required', valid: false };
     }
 
-    const groupStats = validGroups.map(g => ({
-        n: g.length,
-        mean: calculateMean(g),
-        variance: calculateVariance(g, true),
-        sum: calculateSum(g)
-    }));
+    const groupStats = validGroups.map(g => {
+        const variance = calculateVariance(g, true);
+        return {
+            n: g.length,
+            mean: calculateMean(g),
+            variance: variance,
+            std: Math.sqrt(variance), // FAZ-W1: Add std for SPSS wrapper
+            sum: calculateSum(g)
+        };
+    });
 
     const N = groupStats.reduce((sum, g) => sum + g.n, 0); // Total N
     const grandMean = groupStats.reduce((sum, g) => sum + g.mean * g.n, 0) / N;

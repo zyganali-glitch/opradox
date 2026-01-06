@@ -7,6 +7,88 @@ console.log('[BUILD_ID]', '20241228-2051', 'data.js');
 import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 
 // -----------------------------------------------------
+// VIRAL-4: BASELINE SNAPSHOT FOR DELTA INSIGHTS
+// -----------------------------------------------------
+let BASELINE_SNAPSHOT = null;
+
+/**
+ * Capture baseline statistics before filtering
+ * Called when data is first loaded or reset
+ * Uses sampling for large datasets (>10K rows)
+ */
+export function captureBaseline() {
+    const data = VIZ_STATE.data;
+    const columns = VIZ_STATE.columns;
+
+    if (!data || data.length === 0 || !columns) {
+        BASELINE_SNAPSHOT = null;
+        return;
+    }
+
+    // Sampling for large datasets
+    const sampleSize = 5000;
+    const useData = data.length > 10000
+        ? data.filter(() => Math.random() < sampleSize / data.length)
+        : data;
+
+    const snapshot = {
+        timestamp: Date.now(),
+        rowCount: data.length,
+        columnStats: {}
+    };
+
+    // Process only numeric columns (max 10)
+    const numericCols = columns.filter(col => {
+        const sample = data.slice(0, 20).map(r => r[col]);
+        return sample.some(v => !isNaN(parseFloat(v)) && v !== null && v !== '');
+    }).slice(0, 10);
+
+    numericCols.forEach(col => {
+        const values = useData.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+        if (values.length === 0) return;
+
+        const sorted = [...values].sort((a, b) => a - b);
+        const sum = values.reduce((a, b) => a + b, 0);
+        const mean = sum / values.length;
+        const median = sorted.length % 2 === 0
+            ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+            : sorted[Math.floor(sorted.length / 2)];
+        const variance = values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / values.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Count anomalies (>2σ from mean)
+        const anomalyCount = values.filter(v => Math.abs(v - mean) > 2 * stdDev).length;
+
+        snapshot.columnStats[col] = {
+            count: values.length,
+            mean,
+            median,
+            stdDev,
+            min: sorted[0],
+            max: sorted[sorted.length - 1],
+            anomalyCount
+        };
+    });
+
+    BASELINE_SNAPSHOT = snapshot;
+    console.log('[VIRAL-4] Baseline captured:', Object.keys(snapshot.columnStats).length, 'numeric columns');
+}
+
+/**
+ * Get current baseline snapshot
+ */
+export function getBaselineSnapshot() {
+    return BASELINE_SNAPSHOT;
+}
+
+/**
+ * Clear baseline (on data reload)
+ */
+export function clearBaseline() {
+    BASELINE_SNAPSHOT = null;
+}
+
+// -----------------------------------------------------
 // FILE HANDLING
 // -----------------------------------------------------
 export function handleFileSelect(e) {
@@ -184,6 +266,9 @@ export async function loadDataWithOptions() {
         renderColumnsList();
         updateDropdowns();
         updateDataProfile();
+
+        // VIRAL-4: Capture baseline for delta insights
+        captureBaseline();
 
         console.log(`✅ ${file.name} yüklendi: ${VIZ_STATE.data.length} satır, ${VIZ_STATE.columns.length} sütun`);
 
@@ -1024,6 +1109,14 @@ export function applyFilters() {
     updateDropdowns();
     updateDataProfile();
     if (typeof rerenderAllCharts === 'function') rerenderAllCharts();
+
+    // VIRAL-4: Show delta insights after filtering
+    if (BASELINE_SNAPSHOT && typeof window.getDeltaInsights === 'function') {
+        const insights = window.getDeltaInsights(BASELINE_SNAPSHOT, VIZ_STATE.data, VIZ_STATE.columns);
+        if (insights.length > 0 && typeof window.showDeltaInsightsPanel === 'function') {
+            window.showDeltaInsightsPanel(insights);
+        }
+    }
 }
 
 // -----------------------------------------------------
@@ -2346,4 +2439,9 @@ window.showSQLModal = showSQLModal;
 window.testSQLConnection = testSQLConnection;
 // Note: executeSQLQuery should be exported if defined in this file
 
-console.log('📦 data.js module loaded (with filter, sort, clean, all show modals)');
+// VIRAL-4: Baseline snapshot functions
+window.captureBaseline = captureBaseline;
+window.getBaselineSnapshot = getBaselineSnapshot;
+window.clearBaseline = clearBaseline;
+
+console.log('📦 data.js module loaded (with filter, sort, clean, all show modals + VIRAL-4)');
