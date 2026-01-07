@@ -84,6 +84,14 @@ export function showSettings(config) {
 
     const dataLimitInput = document.getElementById('chartDataLimit');
     if (dataLimitInput) dataLimitInput.value = config.dataLimit || 20;
+
+    // R-like Katman Sistemi: Panel inject et ve mevcut katmanları göster
+    if (typeof injectLayerPanel === 'function') {
+        injectLayerPanel();
+    }
+    if (typeof renderLayerList === 'function') {
+        renderLayerList(config);
+    }
 }
 
 export function hideSettings() {
@@ -773,6 +781,183 @@ window.showVideoHelpModal = showVideoHelpModal;
 window.playHelpVideo = playHelpVideo;
 window.showFeedbackModal = showFeedbackModal;
 window.submitFeedback = submitFeedback;
+
+// -----------------------------------------------------
+// R-LIKE KATMAN SİSTEMİ UI
+// Grafik ayar paneline katlanabilir katman bölümü ekler
+// -----------------------------------------------------
+
+/**
+ * Katman panelini aç/kapat
+ */
+function toggleLayerPanel() {
+    const panel = document.getElementById('vizLayerPanel');
+    const content = panel?.querySelector('.viz-layer-content');
+    const chevron = panel?.querySelector('.viz-layer-chevron');
+
+    if (panel && content) {
+        const isCollapsed = panel.classList.contains('viz-collapsed');
+        panel.classList.toggle('viz-collapsed');
+        content.style.display = isCollapsed ? 'block' : 'none';
+        if (chevron) chevron.style.transform = isCollapsed ? 'rotate(180deg)' : '';
+    }
+}
+
+/**
+ * Seçili grafiğe yeni katman ekle
+ */
+function addChartLayer() {
+    if (!VIZ_STATE.selectedChart) {
+        showToast('Önce bir grafik seçin', 'warning');
+        return;
+    }
+
+    const config = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
+    if (!config) return;
+
+    if (!config.layers) config.layers = [];
+
+    config.layers.push({
+        geom: 'geom_point',
+        aes: { y: config.yAxis },
+        name: `Katman ${config.layers.length + 1}`
+    });
+
+    renderLayerList(config);
+
+    if (typeof window.renderChart === 'function') {
+        window.renderChart(config);
+    }
+
+    showToast('Katman eklendi', 'success');
+}
+
+/**
+ * Katman listesini render et
+ */
+function renderLayerList(config) {
+    const list = document.getElementById('vizLayerList');
+    if (!list) return;
+
+    if (!config.layers || config.layers.length === 0) {
+        list.innerHTML = '<div class="viz-layer-empty">Henüz katman yok</div>';
+        return;
+    }
+
+    const layerTypes = window.LAYER_REGISTRY ? Object.keys(window.LAYER_REGISTRY) : [
+        'geom_point', 'geom_line', 'geom_bar', 'geom_area', 'stat_mean', 'stat_median'
+    ];
+
+    list.innerHTML = config.layers.map((layer, idx) => `
+        <div class="viz-layer-item" data-index="${idx}">
+            <select class="viz-layer-type" onchange="updateLayerType(${idx}, this.value)">
+                ${layerTypes.map(t =>
+        `<option value="${t}" ${(layer.geom === t || layer.stat === t) ? 'selected' : ''}>${t}</option>`
+    ).join('')}
+            </select>
+            <button class="viz-btn-icon" onclick="removeChartLayer(${idx})" title="Katmanı Sil">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+/**
+ * Katman tipini güncelle
+ */
+function updateLayerType(index, type) {
+    if (!VIZ_STATE.selectedChart) return;
+
+    const config = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
+    if (!config?.layers?.[index]) return;
+
+    // Tip stat_ ile başlıyorsa stat olarak ata, değilse geom
+    if (type.startsWith('stat_')) {
+        config.layers[index].stat = type;
+        delete config.layers[index].geom;
+    } else {
+        config.layers[index].geom = type;
+        delete config.layers[index].stat;
+    }
+
+    if (typeof window.renderChart === 'function') {
+        window.renderChart(config);
+    }
+}
+
+/**
+ * Katmanı sil
+ */
+function removeChartLayer(index) {
+    if (!VIZ_STATE.selectedChart) return;
+
+    const config = VIZ_STATE.charts.find(c => c.id === VIZ_STATE.selectedChart);
+    if (!config?.layers) return;
+
+    config.layers.splice(index, 1);
+    renderLayerList(config);
+
+    if (typeof window.renderChart === 'function') {
+        window.renderChart(config);
+    }
+
+    showToast('Katman silindi', 'info');
+}
+
+/**
+ * Ayar paneline katman bölümünü ekle (bir kez)
+ * "İkinci seriyi sağ eksende göster" tikinin hemen altına yerleştirir
+ */
+function injectLayerPanel() {
+    if (document.getElementById('vizLayerPanel')) return;
+
+    // Öncelikle y2AxisWrapper'ı bul (İkinci seri sağ eksen toggle'ı)
+    const y2AxisWrapper = document.getElementById('y2AxisWrapper');
+    const settingsForm = document.getElementById('vizSettingsForm');
+
+    if (!settingsForm) return;
+
+    const layerPanel = document.createElement('div');
+    layerPanel.id = 'vizLayerPanel';
+    layerPanel.className = 'viz-layer-panel viz-collapsed';
+    layerPanel.innerHTML = `
+        <div class="viz-layer-header" onclick="toggleLayerPanel()">
+            <i class="fas fa-layer-group"></i>
+            <span>Katmanlar (Gelişmiş)</span>
+            <i class="fas fa-chevron-down viz-layer-chevron"></i>
+        </div>
+        <div class="viz-layer-content" style="display: none;">
+            <p class="viz-layer-hint">R/ggplot2 tarzı katman sistemi. Grafiğe ek görsel katmanlar ekleyin.</p>
+            <button class="viz-btn viz-btn-small viz-btn-primary" onclick="addChartLayer()">
+                <i class="fas fa-plus"></i> Katman Ekle
+            </button>
+            <div id="vizLayerList" class="viz-layer-list"></div>
+        </div>
+    `;
+
+    // y2AxisWrapper varsa onun hemen sonrasına ekle, yoksa form sonuna
+    if (y2AxisWrapper && y2AxisWrapper.parentNode) {
+        y2AxisWrapper.parentNode.insertBefore(layerPanel, y2AxisWrapper.nextSibling);
+    } else {
+        // Fallback: Dual axis grubunun parent'ını bul
+        const dualAxisGroup = settingsForm.querySelector('.viz-dual-axis-group');
+        if (dualAxisGroup) {
+            dualAxisGroup.parentNode.insertBefore(layerPanel, dualAxisGroup.nextSibling);
+        } else {
+            // Son çare: form sonuna ekle
+            settingsForm.appendChild(layerPanel);
+        }
+    }
+}
+
+// Katman UI Window Bindings
+window.toggleLayerPanel = toggleLayerPanel;
+window.addChartLayer = addChartLayer;
+window.renderLayerList = renderLayerList;
+window.updateLayerType = updateLayerType;
+window.removeChartLayer = removeChartLayer;
+window.injectLayerPanel = injectLayerPanel;
+
 
 // -----------------------------------------------------
 // ANNOTATION MODE (From viz_SOURCE.js:4531-4620)

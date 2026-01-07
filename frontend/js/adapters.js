@@ -103,7 +103,12 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 aggregation: c.aggregation,
                 color: c.color,
                 dataLimit: c.dataLimit,
-                useDualAxis: c.useDualAxis
+                useDualAxis: c.useDualAxis,
+                // PROMPT-4: Layer system fields (Golden Suite backward compat)
+                stylePreset: c.stylePreset || 'default',
+                layers: c.layers || [],
+                mapping: c.mapping || null,
+                layerVersion: c.layerVersion || 1
             })),
             selectedChart: window.VIZ_STATE?.selectedChart || null,
             filters: window.VIZ_STATE?.filters || [],
@@ -193,6 +198,12 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
             // Yeni chartları oluştur
             config.charts.forEach(chartConfig => {
+                // PROMPT-4: Apply defaults for missing layer fields (backward compat)
+                chartConfig.stylePreset = chartConfig.stylePreset || 'default';
+                chartConfig.layers = chartConfig.layers || [];
+                chartConfig.mapping = chartConfig.mapping || null;
+                chartConfig.layerVersion = chartConfig.layerVersion || 1;
+
                 window.VIZ_STATE.charts.push(chartConfig);
                 if (typeof window.createChartWidget === 'function') {
                     window.createChartWidget(chartConfig);
@@ -692,7 +703,12 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 yAxes: c.yAxes,
                 aggregation: c.aggregation,
                 color: c.color,
-                dataLimit: c.dataLimit
+                dataLimit: c.dataLimit,
+                // PROMPT-4: Layer system fields (Golden Suite backward compat)
+                stylePreset: c.stylePreset || 'default',
+                layers: c.layers || [],
+                mapping: c.mapping || null,
+                layerVersion: c.layerVersion || 1
             })),
             theme: document.body.classList.contains('day-mode') ? 'light' : 'dark'
         };

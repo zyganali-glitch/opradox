@@ -8,6 +8,308 @@ import { VIZ_STATE, VIZ_TEXTS, getText } from './core.js';
 import { showToast, showSettings, hideSettings, updateEmptyState, createModal } from './ui.js';
 import { aggregateData, updateDataProfile } from './data.js';
 
+// =====================================================
+// R-LIKE LAYER SYSTEM (OPT-IN)
+// ggplot2-inspired layer/aesthetic composition
+// =====================================================
+
+/**
+ * Layer type registry - defines available geom/stat types
+ * Similar to ggplot2's geom_* and stat_* functions
+ */
+const LAYER_REGISTRY = {
+    // Geometrik katmanlar
+    'geom_point': { type: 'scatter', symbol: 'circle', symbolSize: 8, label: 'Points (Scatter)' },
+    'geom_line': { type: 'line', smooth: false, label: 'Line' },
+    'geom_bar': { type: 'bar', label: 'Bar' },
+    'geom_area': { type: 'line', areaStyle: { opacity: 0.3 }, label: 'Area' },
+    'geom_step': { type: 'line', step: 'middle', label: 'Step Line' },
+    'geom_boxplot': { type: 'boxplot', label: 'Boxplot' },
+    'geom_mean_line': {
+        markLine: { data: [{ type: 'average', name: 'Mean' }], lineStyle: { color: '#e74c3c', type: 'solid', width: 2 } },
+        label: 'Mean Line (H)'
+    },
+    'geom_error_bars': {
+        errorBar: true,
+        label: 'Error Bars (SD/SEM)'
+    },
+    'geom_label_outliers': {
+        outlierLabels: true,
+        label: 'Label Outliers (IQR)'
+    },
+
+    // İstatistik katmanları
+    'stat_smooth': { type: 'line', smooth: true, lineStyle: { type: 'dashed', width: 2 }, label: 'Smooth Line' },
+    'stat_smooth_linear': {
+        regression: 'linear',
+        lineStyle: { type: 'dashed', width: 2, color: '#e74c3c' },
+        label: 'Trend Line (Linear)'
+    },
+    'stat_smooth_poly2': {
+        regression: 'polynomial',
+        regressionDegree: 2,
+        lineStyle: { type: 'dashed', width: 2, color: '#9b59b6' },
+        label: 'Trend Line (Poly 2°)'
+    },
+    'stat_ci95_band': {
+        confidenceBand: true,
+        confidenceLevel: 0.95,
+        areaStyle: { opacity: 0.2, color: '#3498db' },
+        label: 'CI 95% Band'
+    },
+    'stat_mean': {
+        markLine: { data: [{ type: 'average', name: 'Mean' }], lineStyle: { color: '#e74c3c' } },
+        label: 'Mean Reference'
+    },
+    'stat_median': {
+        markLine: { data: [{ type: 'median', name: 'Median' }], lineStyle: { color: '#3498db' } },
+        label: 'Median Reference'
+    },
+    'stat_stddev': {
+        markArea: { data: [[{ name: '±1σ' }]] },
+        label: 'Std Dev Band'
+    }
+};
+
+/**
+ * Layer tipleri UI için (dropdown)
+ */
+const LAYER_TYPES = [
+    { value: 'geom_point', label: 'Points (Scatter)', category: 'geom' },
+    { value: 'geom_line', label: 'Line', category: 'geom' },
+    { value: 'geom_mean_line', label: 'Mean Line (Horizontal)', category: 'geom' },
+    { value: 'geom_error_bars', label: 'Error Bars (SD/SEM)', category: 'geom' },
+    { value: 'geom_label_outliers', label: 'Label Outliers (IQR)', category: 'geom' },
+    { value: 'stat_smooth_linear', label: 'Trend Line (Linear)', category: 'stat' },
+    { value: 'stat_smooth_poly2', label: 'Trend Line (Poly 2°)', category: 'stat' },
+    { value: 'stat_ci95_band', label: 'CI 95% Band', category: 'stat' },
+    { value: 'stat_mean', label: 'Mean Reference', category: 'stat' },
+    { value: 'stat_median', label: 'Median Reference', category: 'stat' }
+];
+
+/**
+ * Varsayılan mapping objesi (R/ggplot aes benzeri)
+ */
+const DEFAULT_MAPPING = {
+    x: null,
+    y: null,
+    color: null,
+    group: null
+};
+
+/**
+ * Aesthetic mapping defaults
+ * Maps data columns to visual properties
+ */
+const AES_DEFAULTS = {
+    x: null,        // Category/continuous X axis
+    y: null,        // Numeric Y value
+    color: null,    // Series color (discrete) or gradient (continuous)
+    fill: null,     // Fill color for areas/bars
+    size: null,     // Point/line size
+    alpha: 1,       // Opacity (0-1)
+    shape: 'circle',// Point shape: circle, rect, triangle, diamond
+    linetype: 'solid' // Line type: solid, dashed, dotted
+};
+
+/**
+ * Helper to create aesthetic mapping object
+ * Similar to ggplot2's aes() function
+ * @param {object} mappings - Column to aesthetic mappings
+ * @returns {object} Merged aesthetic object
+ */
+function aes(mappings = {}) {
+    return { ...AES_DEFAULTS, ...mappings };
+
+}
+
+// =====================================================
+// ACADEMIC / R-MODE THEME SYSTEM (OPT-IN)
+// ggplot2-inspired visual aesthetics for publication quality
+// =====================================================
+
+/**
+ * ggplot2 Light Theme - Akademik yayın kalitesi
+ * Açık arka plan, minimal gridline, modern tipografi
+ */
+const GGPLOT_LIGHT_THEME = {
+    color: ['#F8766D', '#00BA38', '#619CFF', '#F564E3', '#00BFC4', '#B79F00', '#FF61CC', '#00B0F6'],
+    backgroundColor: '#FAFAFA',
+    textStyle: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        color: '#333333'
+    },
+    title: {
+        textStyle: {
+            color: '#1a1a1a',
+            fontSize: 16,
+            fontWeight: 600
+        },
+        subtextStyle: {
+            color: '#666666',
+            fontSize: 12
+        }
+    },
+    legend: {
+        textStyle: { color: '#333333', fontSize: 11 },
+        pageTextStyle: { color: '#666666' }
+    },
+    tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
+        borderColor: '#e0e0e0',
+        borderWidth: 1,
+        textStyle: { color: '#333333', fontSize: 12 },
+        extraCssText: 'box-shadow: 0 2px 12px rgba(0,0,0,0.12); border-radius: 6px;'
+    },
+    axisPointer: {
+        lineStyle: { color: '#cccccc' },
+        crossStyle: { color: '#cccccc' }
+    },
+    xAxis: {
+        axisLine: { lineStyle: { color: '#cccccc' } },
+        axisTick: { lineStyle: { color: '#cccccc' } },
+        axisLabel: { color: '#666666', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } },
+        nameTextStyle: { color: '#333333', fontSize: 12 }
+    },
+    yAxis: {
+        axisLine: { lineStyle: { color: '#cccccc' } },
+        axisTick: { lineStyle: { color: '#cccccc' } },
+        axisLabel: { color: '#666666', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } },
+        nameTextStyle: { color: '#333333', fontSize: 12 }
+    },
+    grid: {
+        borderColor: '#e8e8e8'
+    },
+    categoryAxis: {
+        axisLine: { lineStyle: { color: '#cccccc' } },
+        axisTick: { lineStyle: { color: '#cccccc' } },
+        axisLabel: { color: '#666666' },
+        splitLine: { show: false }
+    },
+    valueAxis: {
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#666666' },
+        splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+    },
+    line: {
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6
+    },
+    bar: {
+        barMaxWidth: 40,
+        itemStyle: { borderRadius: [4, 4, 0, 0] }
+    },
+    pie: {
+        itemStyle: { borderColor: '#FAFAFA', borderWidth: 2 }
+    },
+    scatter: {
+        symbol: 'circle',
+        symbolSize: 8
+    }
+};
+
+/**
+ * ggplot2 Dark Theme - Akademik yayın kalitesi (koyu mod)
+ * Koyu arka plan, yumuşak gridline, modern tipografi
+ */
+const GGPLOT_DARK_THEME = {
+    color: ['#F8766D', '#00BA38', '#619CFF', '#F564E3', '#00BFC4', '#B79F00', '#FF61CC', '#00B0F6'],
+    backgroundColor: '#2d2d2d',
+    textStyle: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        color: '#e0e0e0'
+    },
+    title: {
+        textStyle: {
+            color: '#ffffff',
+            fontSize: 16,
+            fontWeight: 600
+        },
+        subtextStyle: {
+            color: '#aaaaaa',
+            fontSize: 12
+        }
+    },
+    legend: {
+        textStyle: { color: '#e0e0e0', fontSize: 11 },
+        pageTextStyle: { color: '#aaaaaa' }
+    },
+    tooltip: {
+        backgroundColor: 'rgba(45, 45, 45, 0.96)',
+        borderColor: '#555555',
+        borderWidth: 1,
+        textStyle: { color: '#e0e0e0', fontSize: 12 },
+        extraCssText: 'box-shadow: 0 2px 12px rgba(0,0,0,0.4); border-radius: 6px;'
+    },
+    axisPointer: {
+        lineStyle: { color: '#555555' },
+        crossStyle: { color: '#555555' }
+    },
+    xAxis: {
+        axisLine: { lineStyle: { color: '#555555' } },
+        axisTick: { lineStyle: { color: '#555555' } },
+        axisLabel: { color: '#aaaaaa', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#3d3d3d', type: 'dashed' } },
+        nameTextStyle: { color: '#e0e0e0', fontSize: 12 }
+    },
+    yAxis: {
+        axisLine: { lineStyle: { color: '#555555' } },
+        axisTick: { lineStyle: { color: '#555555' } },
+        axisLabel: { color: '#aaaaaa', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#3d3d3d', type: 'dashed' } },
+        nameTextStyle: { color: '#e0e0e0', fontSize: 12 }
+    },
+    grid: {
+        borderColor: '#444444'
+    },
+    categoryAxis: {
+        axisLine: { lineStyle: { color: '#555555' } },
+        axisTick: { lineStyle: { color: '#555555' } },
+        axisLabel: { color: '#aaaaaa' },
+        splitLine: { show: false }
+    },
+    valueAxis: {
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#aaaaaa' },
+        splitLine: { lineStyle: { color: '#3d3d3d', type: 'dashed' } }
+    },
+    line: {
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6
+    },
+    bar: {
+        barMaxWidth: 40,
+        itemStyle: { borderRadius: [4, 4, 0, 0] }
+    },
+    pie: {
+        itemStyle: { borderColor: '#2d2d2d', borderWidth: 2 }
+    },
+    scatter: {
+        symbol: 'circle',
+        symbolSize: 8
+    }
+};
+
+/**
+ * ECharts tema kaydı - sayfa yüklendiğinde çalışır
+ */
+function registerGGPlotThemes() {
+    if (typeof echarts !== 'undefined') {
+        echarts.registerTheme('ggplot_light', GGPLOT_LIGHT_THEME);
+        echarts.registerTheme('ggplot_dark', GGPLOT_DARK_THEME);
+        console.log('📊 ggplot themes registered');
+    }
+}
+
+// Tema kaydını hemen çalıştır
+registerGGPlotThemes();
+
 // -----------------------------------------------------
 // CHART CREATION & MANAGEMENT
 // -----------------------------------------------------
@@ -41,7 +343,12 @@ export function addChart(type = 'bar') {
         minLength: 3,
         maxWords: 100,
         minCol: null,
-        maxCol: null
+        maxCol: null,
+        // R-like Layer System (PROMPT-2)
+        layers: [],                 // Layer dizisi (opt-in)
+        mapping: { ...DEFAULT_MAPPING }, // Base mapping (x, y, color, group)
+        stylePreset: 'default',     // 'default' | 'ggplot'
+        layerVersion: 1             // Versiyon takibi
     };
 
     VIZ_STATE.charts.push(config);
@@ -154,15 +461,26 @@ export function showWidgetMenu(chartId, event) {
     const widget = document.getElementById(chartId);
     const isFullscreen = widget && widget.classList.contains('viz-widget-fullscreen');
 
+    // Academic style durumunu kontrol et
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    const isAcademic = config?.stylePreset === 'ggplot';
+
     const menu = document.createElement('div');
     menu.id = 'widgetActionMenu';
     menu.className = 'viz-widget-menu';
+    const layerCount = config?.layers?.length || 0;
     menu.innerHTML = `
         <div class="viz-widget-menu-item" onclick="editWidget('${chartId}'); closeWidgetMenu();">
             <i class="fas fa-edit"></i> Düzenle
         </div>
         <div class="viz-widget-menu-item" onclick="toggleWidgetFullscreen('${chartId}'); closeWidgetMenu();">
             <i class="fas ${isFullscreen ? 'fa-compress' : 'fa-expand'}"></i> ${isFullscreen ? 'Küçült' : 'Büyüt'}
+        </div>
+        <div class="viz-widget-menu-item" onclick="showLayersModal('${chartId}'); closeWidgetMenu();">
+            <i class="fas fa-layer-group"></i> Layers (R/ggplot) ${layerCount > 0 ? `(${layerCount})` : ''}
+        </div>
+        <div class="viz-widget-menu-item" onclick="toggleAcademicStyle('${chartId}'); closeWidgetMenu();">
+            <i class="fas fa-graduation-cap"></i> Academic Style: ${isAcademic ? 'ON' : 'OFF'}
         </div>
         <div class="viz-widget-menu-item" onclick="duplicateWidget('${chartId}'); closeWidgetMenu();">
             <i class="fas fa-copy"></i> Kopyala
@@ -506,8 +824,22 @@ export function renderChart(config) {
         VIZ_STATE.echartsInstances[config.id].dispose();
     }
 
-    const theme = document.body.classList.contains('day-mode') ? 'light' : 'dark';
-    const chart = echarts.init(chartDom, theme);
+    // Tema seçimi: stylePreset 'ggplot' ise akademik tema, yoksa varsayılan
+    const isDayMode = document.body.classList.contains('day-mode');
+    let themeName;
+
+    if (config.stylePreset === 'ggplot') {
+        // Academic/R-Mode tema
+        themeName = isDayMode ? 'ggplot_light' : 'ggplot_dark';
+    } else {
+        // Varsayılan ECharts teması (mevcut davranış korunur)
+        themeName = isDayMode ? 'light' : 'dark';
+    }
+
+    // High-DPI / anti-alias desteği ile init
+    const chart = echarts.init(chartDom, themeName, {
+        devicePixelRatio: window.devicePixelRatio || 1
+    });
     VIZ_STATE.echartsInstances[config.id] = chart;
 
     // Multi-Dataset Desteği: Widget kendi dataset'ini kullanır
@@ -2848,6 +3180,11 @@ export function renderChart(config) {
         }
     }
 
+    // R-like Layer System: Ek katmanları uygula (opt-in)
+    if (config.layers && Array.isArray(config.layers) && config.layers.length > 0) {
+        setTimeout(() => applyLayers(chart, config, chartData, xData, yData), 150);
+    }
+
     // Resize handler
     const resizeHandler = () => chart.resize();
     window.removeEventListener('resize', resizeHandler);
@@ -2858,6 +3195,367 @@ export function rerenderAllCharts() {
     VIZ_STATE.charts.forEach(config => {
         renderChart(config);
     });
+}
+
+// -----------------------------------------------------
+// R-LIKE LAYER SYSTEM FUNCTIONS
+// -----------------------------------------------------
+
+/**
+ * R-like katmanları mevcut grafiğe uygula
+ * @param {echarts.ECharts} chart - ECharts instance
+ * @param {object} config - Grafik config (layers dizisi içerir)
+ * @param {array} data - Kaynak veri
+ * @param {array} xData - X ekseni kategorileri
+ * @param {array} yData - Y ekseni değerleri (ana seri)
+ */
+function applyLayers(chart, config, data, xData, yData) {
+    if (!config.layers || !Array.isArray(config.layers)) return;
+
+    try {
+        const currentOption = chart.getOption();
+        const existingSeries = currentOption.series || [];
+        const additionalSeries = [];
+
+        config.layers.forEach((layer, idx) => {
+            // Disabled layer'ları atla
+            if (layer.enabled === false) return;
+
+            // layer.type (PROMPT-2) veya layer.geom/layer.stat (PROMPT-0)
+            const layerType = layer.type || layer.geom || layer.stat || 'geom_point';
+            const template = LAYER_REGISTRY[layerType];
+
+            if (!template) {
+                console.warn(`[Layer] Bilinmeyen katman tipi: ${layerType}`);
+                return;
+            }
+
+            const series = buildLayerSeries(layer, template, config, data, xData, yData, idx);
+            if (series) additionalSeries.push(series);
+        });
+
+        if (additionalSeries.length > 0) {
+            // Mevcut serileri koru, yeni katmanları ekle
+            chart.setOption({
+                series: [...existingSeries, ...additionalSeries]
+            });
+            console.log(`[Layer] ${additionalSeries.length} katman eklendi`);
+        }
+    } catch (err) {
+        console.error('[Layer] Katman uygulama hatası:', err);
+    }
+}
+
+/**
+ * Tek bir katman için ECharts series objesi oluştur
+ */
+function buildLayerSeries(layer, template, config, data, xData, yData, index) {
+    const aesthetic = layer.aes || {};
+
+    // Katman için Y değerleri - mevcut aggregated data kullan veya layer'ın kendi aes.y'si
+    let layerYData = yData || [];
+
+    // Eğer layer farklı bir Y sütunu belirtmişse ve veri varsa
+    if (aesthetic.y && aesthetic.y !== config.yAxis && data && data.length > 0) {
+        // Basit extraction - aggregation ana akışta zaten yapıldı
+        // İleri sürümde bu kısım genişletilebilir
+        layerYData = yData;
+    }
+
+    // stat_mean ve stat_median için markLine kullan
+    if (template.markLine) {
+        return {
+            name: layer.name || `${layer.geom || layer.stat} ${index + 1}`,
+            type: 'line',
+            data: [],
+            markLine: template.markLine,
+            silent: true
+        };
+    }
+
+    // Geom tipi için normal seri
+    const seriesColor = aesthetic.color || layer.color || getLayerColor(index);
+
+    return {
+        name: layer.name || `Katman ${index + 1}`,
+        type: template.type || 'scatter',
+        data: layerYData,
+        smooth: template.smooth || false,
+        step: template.step || false,
+        symbol: aesthetic.shape || template.symbol || 'circle',
+        symbolSize: aesthetic.size || template.symbolSize || 8,
+        itemStyle: {
+            color: seriesColor,
+            opacity: aesthetic.alpha ?? 1
+        },
+        lineStyle: template.lineStyle || {
+            width: 2,
+            type: aesthetic.linetype || 'solid'
+        },
+        ...(template.areaStyle ? { areaStyle: { opacity: aesthetic.alpha ?? 0.3 } } : {}),
+        z: 10 + index // Katmanları üst üste yerleştir
+    };
+}
+
+/**
+ * Katman için varsayılan renk paleti
+ */
+function getLayerColor(index) {
+    const palette = [
+        '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+        '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+    ];
+    return palette[index % palette.length];
+}
+
+// -----------------------------------------------------
+// ACADEMIC / R-MODE THEME FUNCTIONS
+// -----------------------------------------------------
+
+/**
+ * Tüm grafikları mevcut tema ile yeniden render et
+ * core.js toggleTheme tarafından çağrılır
+ */
+export function updateAllChartsTheme() {
+    console.log('🎨 updateAllChartsTheme çağrıldı');
+
+    VIZ_STATE.charts.forEach(config => {
+        try {
+            // Mevcut instance'dan option'ı al
+            const chart = VIZ_STATE.echartsInstances[config.id];
+            let savedOption = null;
+
+            if (chart) {
+                savedOption = chart.getOption();
+            }
+
+            // Yeniden render et (dispose + init + setOption renderChart içinde yapılıyor)
+            renderChart(config);
+
+            console.log(`✅ Chart ${config.id} tema güncellendi`);
+        } catch (err) {
+            console.warn(`Chart ${config.id} tema güncellenemedi:`, err);
+        }
+    });
+
+    if (typeof showToast === 'function') {
+        showToast('Grafikler güncellendi', 'info');
+    }
+}
+
+/**
+ * Seçili grafiğin Academic/R-Mode stilini aç/kapat
+ * Widget menüsünden çağrılır
+ */
+function toggleAcademicStyle(chartId) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config) return;
+
+    // Toggle stylePreset
+    if (config.stylePreset === 'ggplot') {
+        config.stylePreset = 'default';
+        if (typeof showToast === 'function') showToast('Standart stil aktif', 'info');
+    } else {
+        config.stylePreset = 'ggplot';
+        if (typeof showToast === 'function') showToast('Academic/R-Mode stil aktif', 'success');
+    }
+
+    // Yeniden render et
+    renderChart(config);
+}
+
+// -----------------------------------------------------
+// LAYERS MODAL (R/ggplot Layer Management)
+// -----------------------------------------------------
+
+/**
+ * Layer yönetimi modal'ını aç
+ */
+function showLayersModal(chartId) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config) return;
+
+    // Layers dizisi yoksa oluştur
+    if (!config.layers) config.layers = [];
+
+    // Dataset kolonlarını al
+    const dataset = config.datasetId
+        ? VIZ_STATE.getDatasetById(config.datasetId)
+        : VIZ_STATE.getActiveDataset();
+    const columns = dataset?.columns || Object.keys(dataset?.data?.[0] || {});
+
+    const columnOptions = columns.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    // Layer listesi HTML
+    const layersHTML = config.layers.map((layer, idx) => {
+        const layerDef = LAYER_REGISTRY[layer.type] || LAYER_REGISTRY['geom_point'];
+        const isEnabled = layer.enabled !== false;
+        return `
+            <div class="viz-layer-modal-item" data-index="${idx}">
+                <input type="checkbox" ${isEnabled ? 'checked' : ''} 
+                       onchange="toggleLayerEnabled('${chartId}', ${idx}, this.checked)">
+                <select class="viz-layer-select" onchange="changeLayerType('${chartId}', ${idx}, this.value)">
+                    ${LAYER_TYPES.map(t => `
+                        <option value="${t.value}" ${layer.type === t.value ? 'selected' : ''}>
+                            ${t.label}
+                        </option>
+                    `).join('')}
+                </select>
+                <button class="viz-btn-icon viz-btn-danger" onclick="removeLayerFromModal('${chartId}', ${idx})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }).join('') || '<p class="viz-layer-empty">Henüz layer eklenmedi</p>';
+
+    // Modal içeriği
+    const modalContent = `
+        <div class="viz-layers-modal">
+            <h3><i class="fas fa-layer-group"></i> Layers (R/ggplot Style)</h3>
+            <p class="viz-modal-hint">ggplot2 benzeri katman sistemi. Base grafiğin üzerine istatistiksel ve görsel katmanlar ekleyin.</p>
+            
+            <div class="viz-layer-add-section">
+                <select id="newLayerType" class="viz-layer-dropdown">
+                    <optgroup label="Geometrik">
+                        ${LAYER_TYPES.filter(t => t.category === 'geom').map(t =>
+        `<option value="${t.value}">${t.label}</option>`
+    ).join('')}
+                    </optgroup>
+                    <optgroup label="İstatistik">
+                        ${LAYER_TYPES.filter(t => t.category === 'stat').map(t =>
+        `<option value="${t.value}">${t.label}</option>`
+    ).join('')}
+                    </optgroup>
+                </select>
+                <button class="viz-btn viz-btn-primary" onclick="addLayerFromModal('${chartId}')">
+                    <i class="fas fa-plus"></i> Add Layer
+                </button>
+            </div>
+            
+            <div class="viz-layer-list-modal">
+                ${layersHTML}
+            </div>
+            
+            <div class="viz-modal-actions">
+                <button class="viz-btn viz-btn-secondary" onclick="closeModal('vizLayersModal')">
+                    Kapat
+                </button>
+                <button class="viz-btn viz-btn-primary" onclick="applyLayersAndClose('${chartId}')">
+                    <i class="fas fa-check"></i> Uygula
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (typeof createModal === 'function') {
+        createModal('vizLayersModal', '<i class="fas fa-layer-group"></i> Layers (R/ggplot)', modalContent, {
+            width: '500px',
+            headerStyle: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'
+        });
+    }
+}
+
+/**
+ * Layer modal'ını kapat (kendi overlay'ımız için)
+ */
+function closeLayersModalNow() {
+    const overlay = document.getElementById('vizLayersOverlay');
+    if (overlay) {
+        overlay.classList.remove('viz-overlay-visible');
+        setTimeout(() => overlay.remove(), 150);
+    }
+    // Fallback: createModal ile açıldıysa
+    if (typeof closeModal === 'function') closeModal();
+}
+
+/**
+ * Modal'dan layer ekle
+ */
+function addLayerFromModal(chartId) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config) return;
+
+    const select = document.getElementById('newLayerType');
+    const layerType = select?.value || 'geom_point';
+
+    if (!config.layers) config.layers = [];
+
+    config.layers.push({
+        type: layerType,
+        enabled: true,
+        aes: { y: config.yAxis }
+    });
+
+    // Modal'ı yeniden aç
+    showLayersModal(chartId);
+
+    if (typeof showToast === 'function') {
+        const layerLabel = LAYER_REGISTRY[layerType]?.label;
+        const displayName = (typeof layerLabel === 'string') ? layerLabel : layerType;
+        showToast(`${displayName} eklendi`, 'success');
+    }
+}
+
+/**
+ * Layer tipini değiştir
+ */
+function changeLayerType(chartId, index, newType) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config?.layers?.[index]) return;
+
+    config.layers[index].type = newType;
+}
+
+/**
+ * Layer enabled/disabled toggle
+ */
+function toggleLayerEnabled(chartId, index, enabled) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config?.layers?.[index]) return;
+
+    config.layers[index].enabled = enabled;
+}
+
+/**
+ * Modal'dan layer sil
+ */
+function removeLayerFromModal(chartId, index) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config?.layers) return;
+
+    config.layers.splice(index, 1);
+
+    // Modal'ı yeniden aç
+    showLayersModal(chartId);
+
+    if (typeof showToast === 'function') {
+        showToast('Layer silindi', 'info');
+    }
+}
+
+/**
+ * Layer'ları uygula ve modal'ı kapat
+ */
+function applyLayersAndClose(chartId) {
+    const config = VIZ_STATE.charts.find(c => c.id === chartId);
+    if (!config) return;
+
+    // Grafiği yeniden render et
+    renderChart(config);
+
+    // Modal'ı kapat - önce vizLayersModal id ile dene
+    const modal = document.getElementById('vizLayersModal');
+    if (modal) {
+        modal.remove();
+    } else {
+        // Fallback: closeLayersModalNow ve closeModal
+        closeLayersModalNow();
+    }
+
+    if (typeof showToast === 'function') {
+        const count = config.layers?.length || 0;
+        showToast(`${count} layer uygulandı`, 'success');
+    }
 }
 
 // -----------------------------------------------------
@@ -2879,6 +3577,31 @@ window.exportAllChartsPNG = exportAllChartsPNG;
 window.exportChartAsPDF = exportChartAsPDF;
 window.renderChart = renderChart;
 window.rerenderAllCharts = rerenderAllCharts;
+
+// R-like Layer System Bindings
+window.LAYER_REGISTRY = LAYER_REGISTRY;
+window.AES_DEFAULTS = AES_DEFAULTS;
+window.aes = aes;
+window.applyLayers = applyLayers;
+
+// Academic/R-Mode Theme Bindings
+window.updateAllChartsTheme = updateAllChartsTheme;
+window.toggleAcademicStyle = toggleAcademicStyle;
+window.GGPLOT_LIGHT_THEME = GGPLOT_LIGHT_THEME;
+window.GGPLOT_DARK_THEME = GGPLOT_DARK_THEME;
+
+// Layers Modal Bindings (PROMPT-2)
+window.showLayersModal = showLayersModal;
+window.closeLayersModalNow = closeLayersModalNow;
+window.addLayerFromModal = addLayerFromModal;
+window.changeLayerType = changeLayerType;
+window.toggleLayerEnabled = toggleLayerEnabled;
+window.removeLayerFromModal = removeLayerFromModal;
+window.applyLayersAndClose = applyLayersAndClose;
+window.LAYER_TYPES = LAYER_TYPES;
+window.DEFAULT_MAPPING = DEFAULT_MAPPING;
+
+
 
 // -----------------------------------------------------
 // ADVANCED CHART HELPERS
