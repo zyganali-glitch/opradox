@@ -270,6 +270,23 @@ export async function loadDataWithOptions() {
         // VIRAL-4: Capture baseline for delta insights
         captureBaseline();
 
+        // VIRAL-1: Auto-clear demo dashboard when real data is loaded
+        if (window._isDemoMode) {
+            console.log('[VIRAL-1] Demo mode detected, clearing demo dashboard');
+            if (typeof window.clearDashboard === 'function') {
+                window.clearDashboard();
+            } else if (VIZ_STATE.charts) {
+                VIZ_STATE.charts = [];
+            }
+            window._isDemoMode = false;
+            if (typeof showToast === 'function') {
+                const msg = VIZ_STATE.lang === 'en'
+                    ? 'Demo dashboard cleared, your data is ready!'
+                    : 'Demo dashboard temizlendi, veriniz hazır!';
+                showToast(msg, 'info');
+            }
+        }
+
         console.log(`✅ ${file.name} yüklendi: ${VIZ_STATE.data.length} satır, ${VIZ_STATE.columns.length} sütun`);
 
         // FAZ-4: Broadcast change

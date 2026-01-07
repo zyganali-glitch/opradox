@@ -67,13 +67,17 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
     }
 
     function runSelfTest() {
+        // FAZ-ST4: Set global flag to suppress toasts during selftest
+        window._selftestRunning = true;
+
         const results = {
             selftest: 'running',
             timestamp: new Date().toISOString(),
             checks: {},
             smokeTests: {},
             warnings: [],
-            errors: []
+            errors: [],
+            deferredItems: []  // FAZ-ST4: Track deferred chart types
         };
 
         // Critical window functions check
@@ -595,6 +599,14 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             }
 
             ALL_CHART_TYPES.forEach((type, idx) => {
+                // FAZ-ST4: Skip deferred types with DEFERRED status instead of running
+                const DEFERRED_TYPES = ['globe', 'graph'];
+                if (DEFERRED_TYPES.includes(type)) {
+                    results.chartTypeTests[type] = 'DEFERRED: Pro Pack / Yakında';
+                    results.deferredItems.push({ type, status: 'DEFERRED', reason: 'Pro Pack / Yakında' });
+                    return; // Skip actual test
+                }
+
                 const chartId = `selftest_type_${idx}`;
                 const chartDom = document.createElement('div');
                 chartDom.id = `${chartId}_chart`;
@@ -1625,6 +1637,14 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             ? ` | FAZ12: ${results.checks.faz12TestsPassed}/${results.checks.faz12TestsTotal}`
             : '';
         console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}`);
+
+        // FAZ-ST4: Log deferred items
+        if (results.deferredItems && results.deferredItems.length > 0) {
+            console.log(`[SELFTEST] Deferred items (${results.deferredItems.length}):`, results.deferredItems.map(d => d.type).join(', '));
+        }
+
+        // FAZ-ST4: Clear selftest flag
+        window._selftestRunning = false;
 
         return results;
     }

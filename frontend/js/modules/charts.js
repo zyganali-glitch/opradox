@@ -476,6 +476,28 @@ function exportChartAsSVG(chartId) {
 // RENDER CHART (SKELETON)
 // -----------------------------------------------------
 export function renderChart(config) {
+    // FAZ-ST4: Unsupported type fallback
+    const UNSUPPORTED_FALLBACKS = {
+        'globe': 'scatter',      // globe → scatter (geo data points)
+        'graph': 'sankey'        // graph → sankey (node-link relationship)
+    };
+
+    if (UNSUPPORTED_FALLBACKS[config.type]) {
+        const originalType = config.type;
+        const fallbackType = UNSUPPORTED_FALLBACKS[originalType];
+        config.type = fallbackType;
+
+        // Selftest modunda değilse toast göster
+        if (!window._selftestRunning) {
+            const lang = window.CURRENT_LANG || 'tr';
+            const msg = lang === 'tr'
+                ? `Desteklenmeyen tip "${originalType}", "${fallbackType}" olarak gösterildi.`
+                : `Unsupported type "${originalType}" converted to "${fallbackType}".`;
+            if (typeof showToast === 'function') showToast(msg, 'info');
+        }
+        console.log(`📊 FAZ-ST4: ${originalType} → ${fallbackType} fallback`);
+    }
+
     const chartDom = document.getElementById(`${config.id}_chart`);
     if (!chartDom) return;
 
@@ -647,13 +669,14 @@ export function renderChart(config) {
             break;
 
         case 'pie':
+        case 'donut':     // FAZ-ST4: donut alias
         case 'doughnut':
             option = {
                 title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
                 tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                 series: [{
                     type: 'pie',
-                    radius: config.type === 'doughnut' ? ['40%', '70%'] : '70%',
+                    radius: ['donut', 'doughnut'].includes(config.type) ? ['40%', '70%'] : '70%',
                     data: xData.map((name, i) => ({ value: yData[i], name })),
                     emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
                 }]
@@ -688,6 +711,87 @@ export function renderChart(config) {
                 },
                 grid: { bottom: 100, left: 80 },
                 series: [{ data: yData, type: 'line', areaStyle: { color: config.color + '40' }, itemStyle: { color: config.color } }]
+            };
+            break;
+
+        // FAZ-ST4: stepLine/step alias → line with step interpolation
+        case 'stepLine':
+        case 'step':
+            option = {
+                title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
+                tooltip: { trigger: 'axis' },
+                legend: multiSeriesData.length > 1 ? {
+                    top: 30,
+                    data: multiSeriesData.map(s => s.name)
+                } : undefined,
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 35,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 100, left: 80 },
+                series: multiSeriesData.map((s, idx) => ({
+                    name: s.name,
+                    type: 'line',
+                    data: s.values,
+                    step: 'middle',
+                    smooth: false,
+                    itemStyle: { color: s.color }
+                }))
+            };
+            break;
+
+        // FAZ-ST4: stepArea alias → area with step interpolation
+        case 'stepArea':
+            option = {
+                title: { text: config.title, left: 'center', textStyle: { fontSize: 14 } },
+                tooltip: { trigger: 'axis' },
+                xAxis: {
+                    type: 'category',
+                    data: xData,
+                    name: config.xAxis || '',
+                    nameLocation: 'center',
+                    nameGap: 35,
+                    boundaryGap: false,
+                    axisLabel: {
+                        rotate: 60,
+                        interval: 0,
+                        fontSize: 10,
+                        formatter: function (value) {
+                            return String(value).length > 8 ? String(value).slice(0, 6) + '..' : value;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: config.yAxis || '',
+                    nameLocation: 'middle',
+                    nameGap: 50
+                },
+                grid: { bottom: 100, left: 80 },
+                series: [{
+                    data: yData,
+                    type: 'line',
+                    step: 'middle',
+                    areaStyle: { color: config.color + '40' },
+                    itemStyle: { color: config.color }
+                }]
             };
             break;
 
@@ -2689,7 +2793,10 @@ export function renderChart(config) {
         default:
             // Unknown type - show friendly error instead of empty chart
             console.warn(`⚠️ Unknown chart type: ${config.type}`);
-            showToast(`"${config.type}" grafik tipi henüz desteklenmiyor`, 'warning');
+            // FAZ-ST4: Suppress toast during selftest
+            if (!window._selftestRunning && typeof showToast === 'function') {
+                showToast(`"${config.type}" grafik tipi henüz desteklenmiyor`, 'warning');
+            }
             option = {
                 title: { text: config.title || 'Bilinmeyen Tip', left: 'center' },
                 graphic: [{

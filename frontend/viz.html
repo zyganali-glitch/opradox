@@ -250,6 +250,13 @@
                         </div>
                     </div>
 
+                    <!-- VIRAL-1: Try Demo Button -->
+                    <button class="viz-try-demo-btn" id="tryDemoBtn"
+                        onclick="window.tryDemoWithDashboard && window.tryDemoWithDashboard()">
+                        <i class="fas fa-play-circle"></i>
+                        <span data-i18n="try_demo">Demo Dene</span>
+                    </button>
+
                     <!-- Yüklenen Dosya Bilgisi -->
                     <div class="viz-file-info" id="vizFileInfo" style="display:none;">
                         <div class="viz-file-name">
@@ -441,6 +448,23 @@
                             <div class="viz-chart-type viz-chart-3d" data-type="line3d" draggable="true">
                                 <i class="fas fa-project-diagram"></i>
                                 <span data-i18n="chart_line3d">3D Çizgi</span>
+                            </div>
+                        </div>
+
+                        <!-- FAZ-ST4: Yakında / Coming Soon -->
+                        <div class="viz-chart-category">
+                            <span class="viz-category-label" data-i18n="coming_soon_charts">Yakında</span>
+                        </div>
+                        <div class="viz-chart-grid">
+                            <div class="viz-chart-type viz-chart-disabled" data-type="globe" draggable="false">
+                                <i class="fas fa-globe"></i>
+                                <span data-i18n="chart_globe">Globe</span>
+                                <small class="viz-coming-soon" data-i18n="coming_soon">Yakında</small>
+                            </div>
+                            <div class="viz-chart-type viz-chart-disabled" data-type="graph" draggable="false">
+                                <i class="fas fa-project-diagram"></i>
+                                <span data-i18n="chart_graph">Graph</span>
+                                <small class="viz-coming-soon" data-i18n="coming_soon">Yakında</small>
                             </div>
                         </div>
 

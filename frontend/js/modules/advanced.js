@@ -60,7 +60,8 @@ export async function loadTurkeyGeoJson() {
             hideProgress();
         }
         console.error('GeoJSON yükleme hatası:', error);
-        showToast('Harita verisi yüklenemedi: ' + error.message, 'error');
+        // FAZ-ST4: Suppress toast during selftest
+        if (!window._selftestRunning) showToast('Harita verisi yüklenemedi: ' + error.message, 'error');
         throw error;
     }
 }
@@ -105,7 +106,8 @@ export async function loadCustomGeoJson(url, mapName = 'custom') {
             hideProgress();
         }
         console.error('GeoJSON yükleme hatası:', error);
-        showToast('Harita verisi yüklenemedi: ' + error.message, 'error');
+        // FAZ-ST4: Suppress toast during selftest
+        if (!window._selftestRunning) showToast('Harita verisi yüklenemedi: ' + error.message, 'error');
         throw error;
     }
 }

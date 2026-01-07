@@ -3061,6 +3061,120 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     };
 
     // =====================================================
+    // VIRAL-1: TRY DEMO WITH DASHBOARD (1-click wow)
+    // =====================================================
+    window.tryDemoWithDashboard = function () {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        // Mark as demo mode for auto-clear on real data load
+        window._isDemoMode = true;
+
+        // Step 1: Load demo data
+        if (typeof window.loadDemoData === 'function') {
+            window.loadDemoData();
+        }
+
+        // Step 2: Apply preset dashboard
+        const presetDashboard = {
+            charts: [
+                {
+                    id: 'demo_bar_1',
+                    type: 'bar',
+                    title: lang === 'tr' ? 'Grup Bazlı Ortalama Puan' : 'Average Score by Group',
+                    xAxis: 'Group',
+                    yAxis: 'Score',
+                    yAxes: ['Score'],
+                    aggregation: 'avg',
+                    color: '#4a90d9'
+                },
+                {
+                    id: 'demo_pie_1',
+                    type: 'pie',
+                    title: lang === 'tr' ? 'Cinsiyet Dağılımı' : 'Gender Distribution',
+                    xAxis: 'Gender',
+                    yAxis: 'Score',
+                    yAxes: ['Score'],
+                    aggregation: 'count',
+                    color: '#27ae60'
+                },
+                {
+                    id: 'demo_line_1',
+                    type: 'line',
+                    title: lang === 'tr' ? 'Ön Test vs Son Test' : 'PreTest vs PostTest',
+                    xAxis: 'Group',
+                    yAxis: 'PreTest',
+                    yAxes: ['PreTest', 'PostTest'],
+                    aggregation: 'avg',
+                    color: '#f39c12'
+                },
+                {
+                    id: 'demo_scatter_1',
+                    type: 'scatter',
+                    title: lang === 'tr' ? 'Yaş vs Puan' : 'Age vs Score',
+                    xAxis: 'Age',
+                    yAxis: 'Score',
+                    yAxes: ['Score'],
+                    aggregation: 'none',
+                    color: '#e74c3c'
+                }
+            ],
+            filters: [],
+            theme: document.body.classList.contains('day-mode') ? 'light' : 'dark'
+        };
+
+        // Apply preset using importJSONConfig if available
+        if (typeof window.importJSONConfig === 'function') {
+            try {
+                window.importJSONConfig(presetDashboard);
+            } catch (e) {
+                console.warn('[VIRAL-1] importJSONConfig failed, applying manually:', e);
+                applyPresetManually(presetDashboard);
+            }
+        } else {
+            applyPresetManually(presetDashboard);
+        }
+
+        // Toast notification
+        if (typeof window.showToast === 'function') {
+            const msg = lang === 'tr'
+                ? '🎉 Demo yüklendi: Hazır dashboard uygulandı!'
+                : '🎉 Demo loaded: Ready dashboard applied!';
+            window.showToast(msg, 'success');
+        }
+
+        console.log('✅ VIRAL-1: Demo with dashboard loaded');
+
+        // Helper: Manual preset application
+        function applyPresetManually(preset) {
+            if (!window.VIZ_STATE) return;
+
+            // Clear existing charts
+            window.VIZ_STATE.charts = [];
+
+            // Add each chart
+            preset.charts.forEach(chartConfig => {
+                if (typeof window.addChart === 'function') {
+                    // addChart creates a new chart, we need to customize it
+                    const chartId = window.addChart(chartConfig.type);
+                    if (chartId) {
+                        // Find and update the chart config
+                        const chartIdx = window.VIZ_STATE.charts.findIndex(c => c.id === chartId);
+                        if (chartIdx >= 0) {
+                            Object.assign(window.VIZ_STATE.charts[chartIdx], chartConfig);
+                            window.VIZ_STATE.charts[chartIdx].id = chartId; // Keep generated ID
+                        }
+                    }
+                }
+            });
+
+            // Render all charts
+            if (typeof window.rerenderAllCharts === 'function') {
+                window.rerenderAllCharts();
+            }
+        }
+    };
+
+    // =====================================================
     // FINAL_AUDIT_FIX: LOCK SECTION - Prevent Override
     // =====================================================
 
@@ -3387,7 +3501,8 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
 
             const element = targetElement || document.getElementById('statResultPanel');
             if (!element) {
-                if (window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak element bulunamadı' : 'Element not found', 'warning');
+                // FAZ-ST4: Suppress toast during selftest
+                if (!window._selftestRunning && window.showToast) window.showToast(lang === 'tr' ? 'Kopyalanacak element bulunamadı' : 'Element not found', 'warning');
                 return false;
             }
 

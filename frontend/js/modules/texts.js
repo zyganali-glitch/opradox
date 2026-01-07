@@ -291,6 +291,15 @@ export const VIZ_TEXTS = {
         chart_range_area: 'Range Area',
         chart_density: 'Yoğunluk',
 
+        // ===== FAZ-ST4: Coming Soon Charts =====
+        coming_soon_charts: 'Yakında',
+        coming_soon: 'Yakında',
+        chart_globe: 'Globe',
+        chart_graph: 'Graph',
+
+        // ===== VIRAL-1: Try Demo =====
+        try_demo: 'Demo Dene | Try Demo',
+
         // ===== NEW TRANSLATIONS - Map Charts =====
         chart_choropleth: 'Choropleth',
         chart_bubble_map: 'Bubble Map',
@@ -600,6 +609,15 @@ export const VIZ_TEXTS = {
         chart_parallel: 'Parallel',
         chart_range_area: 'Range Area',
         chart_density: 'Density',
+
+        // ===== FAZ-ST4: Coming Soon Charts =====
+        coming_soon_charts: 'Coming Soon',
+        coming_soon: 'Coming Soon',
+        chart_globe: 'Globe',
+        chart_graph: 'Graph',
+
+        // ===== VIRAL-1: Try Demo =====
+        try_demo: 'Try Demo | Demo Dene',
 
         // ===== NEW TRANSLATIONS - Map Charts =====
         chart_choropleth: 'Choropleth',
