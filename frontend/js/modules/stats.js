@@ -1,4 +1,4 @@
-// =====================================================
+﻿// =====================================================
 // STATS.JS - Opradox Visual Studio Statistics Module
 // Part 1: Mathematical Core & Distribution Tables
 // =====================================================
@@ -242,6 +242,103 @@ export function calculateIQR(values) {
     const q = calculateQuartiles(values);
     return q.q3 - q.q1;
 }
+// -----------------------------------------------------
+// MATRIX OPERATIONS (for multiple regression)
+// PROMPT-UPDATE-3: Required for VIF calculation
+// -----------------------------------------------------
+
+/**
+ * Transpose a matrix
+ * @param {Array<Array<number>>} matrix
+ * @returns {Array<Array<number>>}
+ */
+function transposeMatrix(matrix) {
+    if (!matrix || !matrix.length) return [];
+    const rows = matrix.length;
+    const cols = matrix[0].length;
+    const result = [];
+    for (let j = 0; j < cols; j++) {
+        result[j] = [];
+        for (let i = 0; i < rows; i++) {
+            result[j][i] = matrix[i][j];
+        }
+    }
+    return result;
+}
+
+/**
+ * Multiply two matrices
+ * @param {Array<Array<number>>} A - m x n matrix
+ * @param {Array<Array<number>>} B - n x p matrix
+ * @returns {Array<Array<number>>} - m x p matrix
+ */
+function multiplyMatrices(A, B) {
+    if (!A || !B || !A.length || !B.length) return null;
+    const m = A.length;
+    const n = A[0].length;
+    const p = B[0].length;
+
+    if (B.length !== n) return null; // Incompatible dimensions
+
+    const result = [];
+    for (let i = 0; i < m; i++) {
+        result[i] = [];
+        for (let j = 0; j < p; j++) {
+            let sum = 0;
+            for (let k = 0; k < n; k++) {
+                sum += A[i][k] * B[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+    return result;
+}
+
+/**
+ * Invert a square matrix using Gaussian elimination
+ * @param {Array<Array<number>>} A - n x n matrix
+ * @returns {Array<Array<number>>|null} - Inverse matrix or null if singular
+ */
+function invertMatrix(A) {
+    if (!A || !A.length || A.length !== A[0].length) return null;
+    const n = A.length;
+
+    // Create augmented matrix [A | I]
+    const aug = A.map((row, i) => [...row, ...new Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);
+
+    // Forward elimination with partial pivoting
+    for (let i = 0; i < n; i++) {
+        // Find pivot
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+        }
+        [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
+
+        // Check for singular matrix
+        if (Math.abs(aug[i][i]) < 1e-12) return null;
+
+        // Scale pivot row
+        const pivot = aug[i][i];
+        for (let j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
+
+        // Eliminate column
+        for (let k = 0; k < n; k++) {
+            if (k === i) continue;
+            const c = aug[k][i];
+            for (let j = 0; j < 2 * n; j++) {
+                aug[k][j] -= c * aug[i][j];
+            }
+        }
+    }
+
+    // Extract inverse from augmented matrix
+    return aug.map(row => row.slice(n));
+}
+
+
+// NOTE: getTCritical function is defined later in the file (line ~558) with lookup tables
+// Removed duplicate definition here to prevent SyntaxError
 
 // -----------------------------------------------------
 // T-SCORE & HYPOTHESIS TESTING HELPERS
@@ -479,11 +576,66 @@ export function getZCritical(alpha = 0.05) {
 // P-VALUE APPROXIMATIONS
 // -----------------------------------------------------
 
+// PROMPT-UPDATE-5: Exact p-value lookup table for small df
+// Format: EXACT_T_PVALUE[df] = [[t, pValue], ...] sorted by t ascending
+const EXACT_T_PVALUE = {
+    5: [[0, 1.0], [1, 0.3632], [2.015, 0.1], [2.571, 0.05], [3.365, 0.02], [4.032, 0.01], [5.893, 0.002]],
+    10: [[0, 1.0], [1, 0.3409], [1.812, 0.1], [2.228, 0.05], [2.764, 0.02], [3.169, 0.01], [4.587, 0.001]],
+    15: [[0, 1.0], [1, 0.3332], [1.753, 0.1], [2.131, 0.05], [2.602, 0.02], [2.947, 0.01]],
+    20: [[0, 1.0], [1, 0.3297], [1.725, 0.1], [2.086, 0.05], [2.528, 0.02], [2.845, 0.01]],
+    25: [[0, 1.0], [1, 0.3273], [1.708, 0.1], [2.06, 0.05], [2.485, 0.02], [2.787, 0.01]],
+    30: [[0, 1.0], [1, 0.3253], [1.697, 0.1], [2.042, 0.05], [2.457, 0.02], [2.75, 0.01]]
+};
+
+/**
+ * Get exact p-value from lookup table by interpolation
+ * PROMPT-UPDATE-5
+ * @param {number} t - absolute t-statistic
+ * @param {number} df - degrees of freedom
+ * @returns {number|null} - exact p-value or null if not available
+ */
+function getExactTPValue(t, df) {
+    // Find closest df
+    const availableDfs = Object.keys(EXACT_T_PVALUE).map(Number).sort((a, b) => a - b);
+    let closestDf = availableDfs[0];
+    for (const d of availableDfs) {
+        if (Math.abs(d - df) < Math.abs(closestDf - df)) closestDf = d;
+    }
+    if (Math.abs(closestDf - df) > 5) return null; // Too far from table
+
+    const table = EXACT_T_PVALUE[closestDf];
+    const absT = Math.abs(t);
+
+    // Find bracketing entries
+    for (let i = 0; i < table.length - 1; i++) {
+        const [t1, p1] = table[i];
+        const [t2, p2] = table[i + 1];
+        if (absT >= t1 && absT <= t2) {
+            // Linear interpolation in log space for p-values
+            if (p1 === p2) return p1;
+            const ratio = (absT - t1) / (t2 - t1);
+            // Interpolate in log space for better accuracy
+            const logP = Math.log(p1) + ratio * (Math.log(p2) - Math.log(p1));
+            return Math.exp(logP);
+        }
+    }
+    // Beyond table range
+    if (absT > table[table.length - 1][0]) return table[table.length - 1][1];
+    return null;
+}
+
 /**
  * Approximate p-value from t-statistic (two-tailed)
+ * PROMPT-UPDATE-5: Added options.exactMode for lookup-based p-value
  */
-export function approximateTTestPValue(t, df) {
-    // Using approximation formula
+export function approximateTTestPValue(t, df, options = {}) {
+    // PROMPT-UPDATE-5: exactMode for small df lookup
+    if (options.exactMode && df <= 30) {
+        const exactP = getExactTPValue(t, df);
+        if (exactP !== null) return exactP;
+    }
+
+    // Default: Using approximation formula
     const x = df / (df + t * t);
     // Beta function approximation
     const a = df / 2;
@@ -661,7 +813,7 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
     const n2 = group2.length;
 
     if (n1 < 2 || n2 < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Her grup en az 2 gözlem içermelidir' : 'Each group must contain at least 2 observations', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Her grup en az 2 gÃ¶zlem iÃ§ermelidir' : 'Each group must contain at least 2 observations', valid: false };
     }
 
     const mean1 = calculateMean(group1);
@@ -702,7 +854,7 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Bağımsız Örneklem T-Testi (Welch)' : 'Independent Samples T-Test (Welch)',
+        testName: VIZ_STATE.lang === 'tr' ? 'BaÄŸÄ±msÄ±z Ã–rneklem T-Testi (Welch)' : 'Independent Samples T-Test (Welch)',
         group1Stats: { n: n1, mean: mean1, std: std1, variance: var1 },
         group2Stats: { n: n2, mean: mean2, std: std2, variance: var2 },
         tStatistic: t,
@@ -722,8 +874,8 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
             levene: leveneResult
         },
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -732,12 +884,12 @@ export function runIndependentTTest(group1, group2, alpha = 0.05) {
  */
 export function runPairedTTest(before, after, alpha = 0.05) {
     if (before.length !== after.length) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır' : 'Paired groups must be of equal length', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ gruplar eÅŸit uzunlukta olmalÄ±dÄ±r' : 'Paired groups must be of equal length', valid: false };
     }
 
     const n = before.length;
     if (n < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 eşleştirilmiş gözlem gereklidir' : 'At least 2 paired observations required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 eÅŸleÅŸtirilmiÅŸ gÃ¶zlem gereklidir' : 'At least 2 paired observations required', valid: false };
     }
 
     // Calculate differences
@@ -745,6 +897,60 @@ export function runPairedTTest(before, after, alpha = 0.05) {
     const meanDiff = calculateMean(differences);
     const stdDiff = calculateStdDev(differences, true);
     const seDiff = stdDiff / Math.sqrt(n);
+
+    // GÃ–REV A2: Infinity guard - stdDiff=0 durumu iÃ§in deterministik sonuÃ§
+    if (stdDiff === 0 || seDiff === 0 || !isFinite(stdDiff)) {
+        // TÃ¼m farklar aynÄ± (varyans yok)
+        if (meanDiff === 0) {
+            // Fark yok â†’ t=0, p=1, anlamlÄ± deÄŸil
+            return {
+                valid: true,
+                testName: VIZ_STATE.lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem T-Testi' : 'Paired Samples T-Test',
+                n: n,
+                meanDifference: 0,
+                stdDifference: 0,
+                seDifference: 0,
+                tStatistic: 0,
+                degreesOfFreedom: n - 1,
+                tCritical: getTCritical(n - 1, alpha),
+                pValue: 1,
+                alpha: alpha,
+                significant: false,
+                cohensD: 0,
+                effectSizes: { cohensDz: 0, cohensD: 0 },
+                effectSizeInterpretation: interpretCohensD(0),
+                interpretation: VIZ_STATE.lang === 'tr'
+                    ? 'Ã–lÃ§Ã¼mler arasÄ±nda fark yok (tÃ¼m farklar sÄ±fÄ±r)'
+                    : 'No difference between measurements (all differences zero)',
+                _zeroVarianceHandled: true
+            };
+        } else {
+            // Sabit bir fark var ama stdDiff=0 â†’ her Ã§ift aynÄ± sabit farkla deÄŸiÅŸmiÅŸ
+            // Bu durumda p matematiksel olarak 0 (mÃ¼kemmel tutarlÄ±lÄ±k) ama t=infinity
+            // Deterministik Ã§Ã¶zÃ¼m: p=0, significant=true, cohensD=Infinity yerine bÃ¼yÃ¼k deÄŸer
+            return {
+                valid: true,
+                testName: VIZ_STATE.lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem T-Testi' : 'Paired Samples T-Test',
+                n: n,
+                meanDifference: meanDiff,
+                stdDifference: 0,
+                seDifference: 0,
+                tStatistic: meanDiff > 0 ? 1e10 : -1e10, // BÃ¼yÃ¼k ama sonlu
+                degreesOfFreedom: n - 1,
+                tCritical: getTCritical(n - 1, alpha),
+                pValue: 0, // MÃ¼kemmel tutarlÄ±lÄ±k = p=0
+                alpha: alpha,
+                significant: true,
+                cohensD: meanDiff > 0 ? 1e10 : -1e10, // BÃ¼yÃ¼k ama sonlu
+                effectSizes: { cohensDz: meanDiff > 0 ? 1e10 : -1e10, cohensD: meanDiff > 0 ? 1e10 : -1e10 },
+                effectSizeInterpretation: { tr: 'Ã‡ok bÃ¼yÃ¼k', en: 'Very large' },
+                interpretation: VIZ_STATE.lang === 'tr'
+                    ? `TÃ¼m Ã§iftlerde sabit ${meanDiff.toFixed(2)} birim fark (mÃ¼kemmel tutarlÄ±lÄ±k)`
+                    : `Constant ${meanDiff.toFixed(2)} unit difference in all pairs (perfect consistency)`,
+                _zeroVarianceHandled: true
+            };
+        }
+    }
 
     const t = meanDiff / seDiff;
     const df = n - 1;
@@ -758,7 +964,7 @@ export function runPairedTTest(before, after, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş Örneklem T-Testi' : 'Paired Samples T-Test',
+        testName: VIZ_STATE.lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem T-Testi' : 'Paired Samples T-Test',
         n: n,
         meanDifference: meanDiff,
         stdDifference: stdDiff,
@@ -777,8 +983,8 @@ export function runPairedTTest(before, after, alpha = 0.05) {
         },
         effectSizeInterpretation: interpretCohensD(cohensD),
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Ã–lÃ§Ã¼mler arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Ã–lÃ§Ã¼mler arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
     };
 }
 
@@ -788,12 +994,52 @@ export function runPairedTTest(before, after, alpha = 0.05) {
 export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
     const n = sample.length;
     if (n < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 gözlem gereklidir' : 'At least 2 observations required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 gÃ¶zlem gereklidir' : 'At least 2 observations required', valid: false };
     }
 
     const sampleMean = calculateMean(sample);
     const sampleStd = calculateStdDev(sample, true);
     const se = sampleStd / Math.sqrt(n);
+
+    // GÃ–REV A1: Infinity guard - sd=0 durumu iÃ§in deterministik sonuÃ§
+    if (sampleStd === 0 || se === 0 || !isFinite(sampleStd)) {
+        // TÃ¼m deÄŸerler aynÄ± (varyans yok)
+        if (sampleMean === populationMean) {
+            // Ã–rneklem ortalamasÄ± = popÃ¼lasyon ortalamasÄ± â†’ t=0, p=1, anlamlÄ± deÄŸil
+            return {
+                valid: true,
+                testName: VIZ_STATE.lang === 'tr' ? 'Tek Ã–rneklem T-Testi' : 'One-Sample T-Test',
+                n: n,
+                sampleMean: sampleMean,
+                sampleStd: 0,
+                populationMean: populationMean,
+                standardError: 0,
+                tStatistic: 0,
+                degreesOfFreedom: n - 1,
+                tCritical: getTCritical(n - 1, alpha),
+                pValue: 1,
+                alpha: alpha,
+                significant: false,
+                cohensD: 0,
+                effectSizeInterpretation: interpretCohensD(0),
+                confidenceInterval: { lower: sampleMean, upper: sampleMean, level: 1 - alpha },
+                ci: { lower: sampleMean, upper: sampleMean },
+                interpretation: VIZ_STATE.lang === 'tr'
+                    ? 'Ã–rneklem ortalamasÄ± popÃ¼lasyon ortalamasÄ±na eÅŸit (varyans yok)'
+                    : 'Sample mean equals population mean (no variance)',
+                _zeroVarianceHandled: true
+            };
+        } else {
+            // Ã–rneklem ortalamasÄ± â‰  popÃ¼lasyon ortalamasÄ± ama sd=0 â†’ matematiksel olarak tanÄ±msÄ±z
+            return {
+                error: VIZ_STATE.lang === 'tr'
+                    ? 'Veri varyansÄ± sÄ±fÄ±r (tÃ¼m deÄŸerler aynÄ±). T-testi hesaplanamaz.'
+                    : 'Data variance is zero (all values identical). T-test cannot be computed.',
+                valid: false,
+                _zeroVarianceHandled: true
+            };
+        }
+    }
 
     const t = (sampleMean - populationMean) / se;
     const df = n - 1;
@@ -809,7 +1055,7 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Tek Örneklem T-Testi' : 'One-Sample T-Test',
+        testName: VIZ_STATE.lang === 'tr' ? 'Tek Ã–rneklem T-Testi' : 'One-Sample T-Test',
         n: n,
         sampleMean: sampleMean,
         sampleStd: sampleStd,
@@ -827,8 +1073,8 @@ export function runOneSampleTTest(sample, populationMean, alpha = 0.05) {
         confidenceInterval: { lower: ciLower, upper: ciUpper, level: 1 - alpha },
         ci: { lower: ciLower, upper: ciUpper }, // Alias for normalization
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı (p < ${alpha})` : `Sample mean is significantly different from population mean (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Örneklem ortalaması popülasyon ortalamasından anlamlı farklı değil (p >= ${alpha})` : `Sample mean is not significantly different from population mean (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Ã–rneklem ortalamasÄ± popÃ¼lasyon ortalamasÄ±ndan anlamlÄ± farklÄ± (p < ${alpha})` : `Sample mean is significantly different from population mean (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Ã–rneklem ortalamasÄ± popÃ¼lasyon ortalamasÄ±ndan anlamlÄ± farklÄ± deÄŸil (p >= ${alpha})` : `Sample mean is not significantly different from population mean (p >= ${alpha})`)
     };
 }
 
@@ -844,7 +1090,7 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
     // Filter out empty groups
     const validGroups = groups.filter(g => g && g.length > 0);
     if (validGroups.length < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geçerli grup gereklidir' : 'At least 2 valid groups required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geÃ§erli grup gereklidir' : 'At least 2 valid groups required', valid: false };
     }
 
     const groupStats = validGroups.map(g => {
@@ -964,7 +1210,7 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Tek Yönlü ANOVA' : 'One-Way ANOVA',
+        testName: VIZ_STATE.lang === 'tr' ? 'Tek YÃ¶nlÃ¼ ANOVA' : 'One-Way ANOVA',
         numberOfGroups: validGroups.length,
         totalN: N,
         grandMean: grandMean,
@@ -989,14 +1235,14 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
             comparisons: postHocComparisons
         },
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
 /**
  * Two-Way Factorial ANOVA
- * Calculates main effects (Factor A, Factor B) and interaction (A×B)
+ * Calculates main effects (Factor A, Factor B) and interaction (AÃ—B)
  * @param {Array} data - Array of objects with factor columns and value column
  * @param {string} factorAColumn - Name of Factor A column
  * @param {string} factorBColumn - Name of Factor B column
@@ -1007,10 +1253,10 @@ export function runOneWayANOVA(groups, alpha = 0.05) {
 export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, alpha = 0.05) {
     // 1. Validate inputs
     if (!data || data.length < 4) {
-        return { error: 'En az 4 gözlem gereklidir', valid: false };
+        return { error: 'En az 4 gÃ¶zlem gereklidir', valid: false };
     }
     if (!factorAColumn || !factorBColumn || !valueColumn) {
-        return { error: 'Faktör A, Faktör B ve bağımlı değişken belirtilmelidir', valid: false };
+        return { error: 'FaktÃ¶r A, FaktÃ¶r B ve baÄŸÄ±mlÄ± deÄŸiÅŸken belirtilmelidir', valid: false };
     }
 
     // 2. Extract and validate data
@@ -1027,7 +1273,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     });
 
     if (validData.length < 4) {
-        return { error: 'Yeterli geçerli veri yok (min 4)', valid: false };
+        return { error: 'Yeterli geÃ§erli veri yok (min 4)', valid: false };
     }
 
     // 3. Get unique levels
@@ -1037,7 +1283,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     const b = levelsB.length;
 
     if (a < 2 || b < 2) {
-        return { error: 'Her faktör en az 2 seviyeye sahip olmalı', valid: false };
+        return { error: 'Her faktÃ¶r en az 2 seviyeye sahip olmalÄ±', valid: false };
     }
 
     // 4. Build cell structure: cells[levelA][levelB] = [values]
@@ -1061,14 +1307,14 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         });
     });
     if (hasEmptyCell) {
-        return { error: 'Tüm hücrelerde en az 1 gözlem olmalı (boş hücre var)', valid: false };
+        return { error: 'TÃ¼m hÃ¼crelerde en az 1 gÃ¶zlem olmalÄ± (boÅŸ hÃ¼cre var)', valid: false };
     }
 
     // 5. Calculate means
     const N = validData.length;
     const grandMean = validData.reduce((s, d) => s + d.value, 0) / N;
 
-    // Cell means: Ȳij
+    // Cell means: È²ij
     const cellMeans = {};
     const cellN = {};
     levelsA.forEach(la => {
@@ -1081,7 +1327,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         });
     });
 
-    // Marginal means for Factor A: Ȳi.
+    // Marginal means for Factor A: È²i.
     const marginalA = {};
     levelsA.forEach(la => {
         let sum = 0, n = 0;
@@ -1092,7 +1338,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         marginalA[la] = { mean: sum / n, n: n };
     });
 
-    // Marginal means for Factor B: Ȳ.j
+    // Marginal means for Factor B: È².j
     const marginalB = {};
     levelsB.forEach(lb => {
         let sum = 0, n = 0;
@@ -1104,19 +1350,19 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     });
 
     // 6. Calculate Sum of Squares
-    // SS_A = Σ ni. × (Ȳi. - Ȳ..)²
+    // SS_A = Î£ ni. Ã— (È²i. - È²..)Â²
     let SS_A = 0;
     levelsA.forEach(la => {
         SS_A += marginalA[la].n * Math.pow(marginalA[la].mean - grandMean, 2);
     });
 
-    // SS_B = Σ n.j × (Ȳ.j - Ȳ..)²
+    // SS_B = Î£ n.j Ã— (È².j - È²..)Â²
     let SS_B = 0;
     levelsB.forEach(lb => {
         SS_B += marginalB[lb].n * Math.pow(marginalB[lb].mean - grandMean, 2);
     });
 
-    // SS_AB (Interaction) = Σ nij × (Ȳij - Ȳi. - Ȳ.j + Ȳ..)²
+    // SS_AB (Interaction) = Î£ nij Ã— (È²ij - È²i. - È².j + È²..)Â²
     let SS_AB = 0;
     levelsA.forEach(la => {
         levelsB.forEach(lb => {
@@ -1126,7 +1372,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         });
     });
 
-    // SS_Error = Σ (Yijk - Ȳij)²
+    // SS_Error = Î£ (Yijk - È²ij)Â²
     let SS_Error = 0;
     levelsA.forEach(la => {
         levelsB.forEach(lb => {
@@ -1137,7 +1383,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         });
     });
 
-    // SS_Total = Σ (Yijk - Ȳ..)²
+    // SS_Total = Î£ (Yijk - È²..)Â²
     const SS_Total = validData.reduce((s, d) => s + Math.pow(d.value - grandMean, 2), 0);
 
     // Corrected Model SS = SS_A + SS_B + SS_AB
@@ -1152,7 +1398,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     const df_Model = df_A + df_B + df_AB;
 
     if (df_Error <= 0) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Hata serbestlik derecesi ≤ 0 (hücre başına daha fazla gözlem gerekli)' : 'Error degrees of freedom ≤ 0 (more observations per cell required)', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Hata serbestlik derecesi â‰¤ 0 (hÃ¼cre baÅŸÄ±na daha fazla gÃ¶zlem gerekli)' : 'Error degrees of freedom â‰¤ 0 (more observations per cell required)', valid: false };
     }
 
     // 8. Mean Squares
@@ -1254,11 +1500,11 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     const significantEffects = [];
     if (p_A < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorAColumn} ana etkisi` : `${factorAColumn} main effect`);
     if (p_B < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorBColumn} ana etkisi` : `${factorBColumn} main effect`);
-    if (p_AB < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorAColumn}×${factorBColumn} etkileşimi` : `${factorAColumn}×${factorBColumn} interaction`);
+    if (p_AB < alpha) significantEffects.push(VIZ_STATE.lang === 'tr' ? `${factorAColumn}Ã—${factorBColumn} etkileÅŸimi` : `${factorAColumn}Ã—${factorBColumn} interaction`);
 
     const interpretation = significantEffects.length > 0
-        ? (VIZ_STATE.lang === 'tr' ? `Anlamlı etkiler: ${significantEffects.join(', ')} (p < ${alpha})` : `Significant effects: ${significantEffects.join(', ')} (p < ${alpha})`)
-        : (VIZ_STATE.lang === 'tr' ? `Hiçbir etki istatistiksel olarak anlamlı değil (p >= ${alpha})` : `No effect is statistically significant (p >= ${alpha})`);
+        ? (VIZ_STATE.lang === 'tr' ? `AnlamlÄ± etkiler: ${significantEffects.join(', ')} (p < ${alpha})` : `Significant effects: ${significantEffects.join(', ')} (p < ${alpha})`)
+        : (VIZ_STATE.lang === 'tr' ? `HiÃ§bir etki istatistiksel olarak anlamlÄ± deÄŸil (p >= ${alpha})` : `No effect is statistically significant (p >= ${alpha})`);
 
     // FAZ-ADV-3: Post-hoc comparisons (Bonferroni)
     const postHoc = calculateTwoWayPostHoc(
@@ -1274,7 +1520,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
     return {
         valid: true,
         testType: 'twoWayANOVA',
-        testName: VIZ_STATE.lang === 'tr' ? 'İki Yönlü ANOVA (Faktöriyel)' : 'Two-Way ANOVA (Factorial)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Ä°ki YÃ¶nlÃ¼ ANOVA (FaktÃ¶riyel)' : 'Two-Way ANOVA (Factorial)',
         alpha: alpha,
         N: N,
         grandMean: grandMean,
@@ -1323,7 +1569,7 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
 
         interpretation: interpretation,
         interpretationEN: significantEffects.length > 0
-            ? `Significant effects: ${significantEffects.join(', ').replace('ana etkisi', 'main effect').replace('etkileşimi', 'interaction')} (p < ${alpha})`
+            ? `Significant effects: ${significantEffects.join(', ').replace('ana etkisi', 'main effect').replace('etkileÅŸimi', 'interaction')} (p < ${alpha})`
             : `No statistically significant effects (p >= ${alpha})`
     };
 }
@@ -1506,12 +1752,12 @@ function approximateFTestPValue(F, df1, df2) {
 export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
     // 1. Validate inputs
     if (!measureColumns || measureColumns.length < 2) {
-        return { error: 'En az 2 ölçüm/koşul gereklidir', valid: false };
+        return { error: 'En az 2 Ã¶lÃ§Ã¼m/koÅŸul gereklidir', valid: false };
     }
 
     const k = measureColumns.length; // Number of conditions/measurements
 
-    // 2. Build subject × measurement matrix
+    // 2. Build subject Ã— measurement matrix
     let matrix = [];
 
     if (Array.isArray(data) && data.length > 0) {
@@ -1531,7 +1777,7 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
 
     const n = matrix.length; // Number of subjects
     if (n < 3) {
-        return { error: 'En az 3 denek/katılımcı gereklidir', valid: false };
+        return { error: 'En az 3 denek/katÄ±lÄ±mcÄ± gereklidir', valid: false };
     }
 
     // 3. Calculate means
@@ -1556,7 +1802,7 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
     }
 
     // 4. Calculate Sum of Squares
-    // SS_Total = Σ (Yij - Ȳ..)²
+    // SS_Total = Î£ (Yij - È²..)Â²
     let SS_Total = 0;
     matrix.forEach(row => {
         row.forEach(v => {
@@ -1564,14 +1810,14 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
         });
     });
 
-    // SS_Subjects = k × Σ (Ȳi. - Ȳ..)²
+    // SS_Subjects = k Ã— Î£ (È²i. - È²..)Â²
     let SS_Subjects = 0;
     subjectMeans.forEach(sm => {
         SS_Subjects += Math.pow(sm - grandMean, 2);
     });
     SS_Subjects *= k;
 
-    // SS_Treatment = n × Σ (Ȳ.j - Ȳ..)²
+    // SS_Treatment = n Ã— Î£ (È².j - È²..)Â²
     let SS_Treatment = 0;
     conditionMeans.forEach(cm => {
         SS_Treatment += Math.pow(cm - grandMean, 2);
@@ -1717,12 +1963,12 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
     let interpretation = '';
     if (sphericityAssumed) {
         interpretation = significant
-            ? `Mauchly testi sağlandı (p = ${mauchlyP.toFixed(3)}). Koşullar arasında anlamlı fark var, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}, η²p = ${partialEtaSq.toFixed(3)}`
-            : `Mauchly testi sağlandı (p = ${mauchlyP.toFixed(3)}). Koşullar arasında anlamlı fark yok, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}`;
+            ? `Mauchly testi saÄŸlandÄ± (p = ${mauchlyP.toFixed(3)}). KoÅŸullar arasÄ±nda anlamlÄ± fark var, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}, Î·Â²p = ${partialEtaSq.toFixed(3)}`
+            : `Mauchly testi saÄŸlandÄ± (p = ${mauchlyP.toFixed(3)}). KoÅŸullar arasÄ±nda anlamlÄ± fark yok, F(${df_Treatment}, ${df_Error}) = ${F.toFixed(2)}, p = ${pValue.toFixed(4)}`;
     } else {
         interpretation = significant
-            ? `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser düzeltmesi kullanıldı. Koşullar arasında anlamlı fark var, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}, η²p = ${partialEtaSq.toFixed(3)}`
-            : `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser düzeltmesi kullanıldı. Koşullar arasında anlamlı fark yok, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}`;
+            ? `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser dÃ¼zeltmesi kullanÄ±ldÄ±. KoÅŸullar arasÄ±nda anlamlÄ± fark var, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}, Î·Â²p = ${partialEtaSq.toFixed(3)}`
+            : `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser dÃ¼zeltmesi kullanÄ±ldÄ±. KoÅŸullar arasÄ±nda anlamlÄ± fark yok, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}`;
     }
 
     // FAZ-ADV-4: Post-hoc pairwise paired t-tests with Bonferroni correction
@@ -1776,7 +2022,7 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
     return {
         valid: true,
         testType: 'repeatedMeasuresANOVA',
-        testName: VIZ_STATE.lang === 'tr' ? 'Tekrarlı Ölçümler ANOVA' : 'Repeated Measures ANOVA',
+        testName: VIZ_STATE.lang === 'tr' ? 'TekrarlÄ± Ã–lÃ§Ã¼mler ANOVA' : 'Repeated Measures ANOVA',
         alpha: alpha,
         n: n,
         k: k,
@@ -1820,7 +2066,7 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
         postHoc: postHoc,
 
         interpretation: interpretation,
-        interpretationEN: interpretation.replace('anlamlı fark var', 'significant difference').replace('anlamlı fark yok', 'no significant difference').replace('Mauchly testi sağlandı', 'Sphericity assumed').replace('Mauchly testi ihlal edildi', 'Sphericity violated').replace('düzeltmesi kullanıldı', 'correction applied').replace('Koşullar arasında', 'Between conditions')
+        interpretationEN: interpretation.replace('anlamlÄ± fark var', 'significant difference').replace('anlamlÄ± fark yok', 'no significant difference').replace('Mauchly testi saÄŸlandÄ±', 'Sphericity assumed').replace('Mauchly testi ihlal edildi', 'Sphericity violated').replace('dÃ¼zeltmesi kullanÄ±ldÄ±', 'correction applied').replace('KoÅŸullar arasÄ±nda', 'Between conditions')
     };
 }
 
@@ -1898,7 +2144,7 @@ function calculateGreenhouseGeisser(covMatrix, k) {
     const p = covMatrix.length;
     if (p < 2) return 1;
 
-    // Calculate trace of S and trace of S²
+    // Calculate trace of S and trace of SÂ²
     let traceS = 0;
     let traceS2 = 0;
 
@@ -1964,7 +2210,7 @@ function chiSquareCDF(x, df) {
  */
 export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
     if (!x || !y || x.length !== y.length) {
-        return { error: 'Eşit uzunlukta iki dizi gereklidir', valid: false };
+        return { error: 'EÅŸit uzunlukta iki dizi gereklidir', valid: false };
     }
 
     // Parse options
@@ -1980,7 +2226,7 @@ export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
 
     const n = x.length;
     if (n < 3) {
-        return { error: 'En az 3 gözlem gereklidir', valid: false };
+        return { error: 'En az 3 gÃ¶zlem gereklidir', valid: false };
     }
 
     // Calculate correlation based on method
@@ -2002,7 +2248,7 @@ export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
     const significant = Math.abs(t) > tCritical;
 
     const testName = method === 'spearman'
-        ? 'Spearman Sıra Korelasyonu Testi'
+        ? 'Spearman SÄ±ra Korelasyonu Testi'
         : 'Pearson Korelasyon Testi';
 
     return {
@@ -2020,8 +2266,8 @@ export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
         correlationInterpretation: interpretCorrelation(r),
         stats: { r: r, method: method }, // For selftest compatibility
         interpretation: significant
-            ? `Korelasyon istatistiksel olarak anlamlı (p < ${alpha})`
-            : `Korelasyon istatistiksel olarak anlamlı değil (p >= ${alpha})`
+            ? `Korelasyon istatistiksel olarak anlamlÄ± (p < ${alpha})`
+            : `Korelasyon istatistiksel olarak anlamlÄ± deÄŸil (p >= ${alpha})`
     };
 }
 
@@ -2030,7 +2276,7 @@ export function runCorrelationTest(x, y, alphaOrOptions = 0.05) {
  */
 export function runChiSquareTest(contingencyTable, alpha = 0.05) {
     if (!contingencyTable || !Array.isArray(contingencyTable) || contingencyTable.length < 2) {
-        return { error: 'Geçerli bir çapraz tablo gereklidir', valid: false };
+        return { error: 'GeÃ§erli bir Ã§apraz tablo gereklidir', valid: false };
     }
 
     const rows = contingencyTable.length;
@@ -2075,7 +2321,7 @@ export function runChiSquareTest(contingencyTable, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Ki-Kare Bağımsızlık Testi' : 'Chi-Square Test of Independence',
+        testName: VIZ_STATE.lang === 'tr' ? 'Ki-Kare BaÄŸÄ±msÄ±zlÄ±k Testi' : 'Chi-Square Test of Independence',
         observed: contingencyTable,
         expected: expected,
         rowTotals: rowTotals,
@@ -2091,8 +2337,8 @@ export function runChiSquareTest(contingencyTable, alpha = 0.05) {
         effectSizes: { cramersV: cramersV, phi: rows === 2 && cols === 2 ? cramersV : null },
         effectSizeInterpretation: interpretCramersV(cramersV),
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki var (p < ${alpha})` : `There is a statistically significant relationship between variables (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Değişkenler arasında istatistiksel olarak anlamlı ilişki yok (p >= ${alpha})` : `There is no statistically significant relationship between variables (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `DeÄŸiÅŸkenler arasÄ±nda istatistiksel olarak anlamlÄ± iliÅŸki var (p < ${alpha})` : `There is a statistically significant relationship between variables (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `DeÄŸiÅŸkenler arasÄ±nda istatistiksel olarak anlamlÄ± iliÅŸki yok (p >= ${alpha})` : `There is no statistically significant relationship between variables (p >= ${alpha})`)
     };
 }
 
@@ -2108,7 +2354,7 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
     const n2 = group2.length;
 
     if (n1 < 2 || n2 < 2) {
-        return { error: 'Her grup en az 2 gözlem içermelidir', valid: false };
+        return { error: 'Her grup en az 2 gÃ¶zlem iÃ§ermelidir', valid: false };
     }
 
     // Combine and rank all values
@@ -2146,7 +2392,7 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
 
     // APA format strings
     const lang = VIZ_STATE?.lang || 'tr';
-    const apaTR = `Mann-Whitney U testi sonuçlarına göre, gruplar arasında ${significant ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, U = ${U.toFixed(2)}, z = ${z.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, r = ${effectR.toFixed(2)}.`;
+    const apaTR = `Mann-Whitney U testi sonuÃ§larÄ±na gÃ¶re, gruplar arasÄ±nda ${significant ? 'istatistiksel olarak anlamlÄ± fark bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± fark bulunamamÄ±ÅŸtÄ±r'}, U = ${U.toFixed(2)}, z = ${z.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, r = ${effectR.toFixed(2)}.`;
     const apaEN = `A Mann-Whitney U test ${significant ? 'revealed a statistically significant difference' : 'revealed no statistically significant difference'} between groups, U = ${U.toFixed(2)}, z = ${z.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, r = ${effectR.toFixed(2)}.`;
 
     return {
@@ -2173,8 +2419,8 @@ export function runMannWhitneyU(group1, group2, alpha = 0.05) {
         apaTR: apaTR,
         apaEN: apaEN,
         interpretation: significant
-            ? (lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
-            : (lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
+            ? (lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
+            : (lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -2189,7 +2435,7 @@ export function runKruskalWallis(groups, alpha = 0.05) {
 
     const validGroups = groups.filter(g => g && g.length > 0);
     if (validGroups.length < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geçerli grup gereklidir' : 'At least 2 valid groups required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 2 geÃ§erli grup gereklidir' : 'At least 2 valid groups required', valid: false };
     }
 
     // Combine all values with group labels
@@ -2228,14 +2474,101 @@ export function runKruskalWallis(groups, alpha = 0.05) {
     const chiCritical = getChiCritical(df, alpha);
     const pValue = approximateChiSquarePValue(H, df);
 
-    // Effect size (Epsilon-squared)
-    const epsilonSquared = H / (N - 1);
+    // PROMPT-3 GÃ–REV A: Effect sizes with guards
+    // Epsilon-squared: H / (N - 1)
+    const epsilonSquared = (N > 1 && isFinite(H)) ? H / (N - 1) : 0;
+    // Eta-squared H: H / (N - 1)  (same formula, different name in literature)
+    const etaSquaredH = epsilonSquared;
+
+    // Effect size interpretation
+    let effectInterpretation;
+    if (epsilonSquared < 0.01) {
+        effectInterpretation = { tr: 'Ä°hmal edilebilir', en: 'Negligible' };
+    } else if (epsilonSquared < 0.06) {
+        effectInterpretation = { tr: 'KÃ¼Ã§Ã¼k', en: 'Small' };
+    } else if (epsilonSquared < 0.14) {
+        effectInterpretation = { tr: 'Orta', en: 'Medium' };
+    } else {
+        effectInterpretation = { tr: 'BÃ¼yÃ¼k', en: 'Large' };
+    }
 
     const significant = H > chiCritical;
+
+    // PROMPT-3 GÃ–REV B: Dunn post-hoc with Bonferroni correction
+    const dunnComparisons = [];
+    const numComparisons = (validGroups.length * (validGroups.length - 1)) / 2;
+    const bonferroniAlpha = alpha / numComparisons;
+
+    for (let i = 0; i < validGroups.length; i++) {
+        for (let j = i + 1; j < validGroups.length; j++) {
+            const ni = groupStats[i].n;
+            const nj = groupStats[j].n;
+            const rankDiff = Math.abs(groupStats[i].meanRank - groupStats[j].meanRank);
+
+            // Standard error for Dunn test
+            const se = Math.sqrt((N * (N + 1) / 12) * (1 / ni + 1 / nj));
+
+            // z-statistic
+            const z = se > 0 && isFinite(se) ? rankDiff / se : 0;
+
+            // p-value (2-tailed)
+            const pRaw = 2 * (1 - normalCDF(Math.abs(z)));
+
+            // Bonferroni adjusted p-value
+            const pAdjusted = Math.min(1, pRaw * numComparisons);
+
+            dunnComparisons.push({
+                comparison: `Group ${i + 1} vs Group ${j + 1}`,
+                groupI: i,
+                groupJ: j,
+                meanRankI: groupStats[i].meanRank,
+                meanRankJ: groupStats[j].meanRank,
+                rankDiff: rankDiff,
+                se: se,
+                z: z,
+                pValue: pRaw,
+                pAdjusted: pAdjusted,
+                significant: pAdjusted < alpha
+            });
+        }
+    }
+
+    // SPSS-style tables
+    const lang = VIZ_STATE?.lang || 'tr';
+    const tables = [
+        {
+            title: lang === 'tr' ? 'Kruskal-Wallis Testi' : 'Kruskal-Wallis Test',
+            columns: ['H', 'df', 'Asymp. Sig.', 'ÎµÂ²', lang === 'tr' ? 'Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼' : 'Effect Size'],
+            rows: [
+                [H.toFixed(3), df, pValue.toFixed(4), epsilonSquared.toFixed(4), lang === 'tr' ? effectInterpretation.tr : effectInterpretation.en]
+            ]
+        },
+        {
+            title: lang === 'tr' ? 'Grup Ä°statistikleri' : 'Group Statistics',
+            columns: [lang === 'tr' ? 'Grup' : 'Group', 'N', lang === 'tr' ? 'SÄ±ra OrtalamasÄ±' : 'Mean Rank', lang === 'tr' ? 'Medyan' : 'Median'],
+            rows: groupStats.map((g, i) => [`Group ${i + 1}`, g.n, g.meanRank.toFixed(2), g.median.toFixed(2)])
+        }
+    ];
+
+    // Add post-hoc table if significant
+    if (significant && dunnComparisons.length > 0) {
+        tables.push({
+            title: lang === 'tr' ? 'Ã‡oklu KarÅŸÄ±laÅŸtÄ±rma (Dunn-Bonferroni)' : 'Pairwise Comparisons (Dunn-Bonferroni)',
+            columns: [lang === 'tr' ? 'KarÅŸÄ±laÅŸtÄ±rma' : 'Comparison', 'z', 'p', lang === 'tr' ? 'DÃ¼z. p' : 'Adj. p', 'Sig.'],
+            rows: dunnComparisons.map(d => [
+                d.comparison,
+                d.z.toFixed(3),
+                d.pValue.toFixed(4),
+                d.pAdjusted.toFixed(4),
+                d.significant ? '*' : ''
+            ])
+        });
+    }
 
     return {
         valid: true,
         testName: VIZ_STATE.lang === 'tr' ? 'Kruskal-Wallis H Testi' : 'Kruskal-Wallis H Test',
+        testType: 'kruskal-wallis',
         numberOfGroups: validGroups.length,
         totalN: N,
         groupStats: groupStats,
@@ -2245,10 +2578,24 @@ export function runKruskalWallis(groups, alpha = 0.05) {
         pValue: pValue,
         alpha: alpha,
         significant: significant,
+        // PROMPT-3: Effect sizes
         epsilonSquared: epsilonSquared,
+        etaSquaredH: etaSquaredH,
+        effectSizes: {
+            epsilonSquared: epsilonSquared,
+            etaSquaredH: etaSquaredH,
+            interpretation: effectInterpretation
+        },
+        // PROMPT-3: Dunn post-hoc
+        postHoc: {
+            method: 'Dunn-Bonferroni',
+            comparisons: dunnComparisons,
+            bonferroniAlpha: bonferroniAlpha
+        },
+        tables: tables,
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between groups (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha}). ÎµÂ² = ${epsilonSquared.toFixed(3)} (${effectInterpretation.tr})` : `There is a statistically significant difference between groups (p < ${alpha}). ÎµÂ² = ${epsilonSquared.toFixed(3)} (${effectInterpretation.en})`)
+            : (VIZ_STATE.lang === 'tr' ? `Gruplar arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between groups (p >= ${alpha})`)
     };
 }
 
@@ -2257,12 +2604,12 @@ export function runKruskalWallis(groups, alpha = 0.05) {
  */
 export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
     if (before.length !== after.length) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Eşleştirilmiş gruplar eşit uzunlukta olmalıdır' : 'Paired groups must be of equal length', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ gruplar eÅŸit uzunlukta olmalÄ±dÄ±r' : 'Paired groups must be of equal length', valid: false };
     }
 
     const n = before.length;
     if (n < 5) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 5 eşleştirilmiş gözlem gereklidir' : 'At least 5 paired observations required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 5 eÅŸleÅŸtirilmiÅŸ gÃ¶zlem gereklidir' : 'At least 5 paired observations required', valid: false };
     }
 
     // Calculate differences and remove zeros
@@ -2276,7 +2623,7 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
 
     const nNonZero = differences.length;
     if (nNonZero < 5) {
-        return { error: 'Sıfır olmayan en az 5 fark gereklidir', valid: false };
+        return { error: 'SÄ±fÄ±r olmayan en az 5 fark gereklidir', valid: false };
     }
 
     // Sort by absolute difference and assign ranks
@@ -2305,7 +2652,7 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
 
     return {
         valid: true,
-        testName: VIZ_STATE.lang === 'tr' ? 'Wilcoxon İşaretli Sıralar Testi' : 'Wilcoxon Signed-Rank Test',
+        testName: VIZ_STATE.lang === 'tr' ? 'Wilcoxon Ä°ÅŸaretli SÄ±ralar Testi' : 'Wilcoxon Signed-Rank Test',
         n: n,
         nNonZero: nNonZero,
         Wplus: Wplus,
@@ -2319,8 +2666,8 @@ export function runWilcoxonSignedRank(before, after, alpha = 0.05) {
         effectSizeR: effectR,
         effectSizeInterpretation: interpretEffectR(effectR),
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Ölçümler arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Ã–lÃ§Ã¼mler arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between measurements (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Ã–lÃ§Ã¼mler arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between measurements (p >= ${alpha})`)
     };
 }
 
@@ -2348,10 +2695,10 @@ export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
 
         // Validate inputs
         if (!dataObjects || !Array.isArray(dataObjects) || dataObjects.length === 0) {
-            return { error: 'Veri objesi boş veya geçersiz', valid: false };
+            return { error: 'Veri objesi boÅŸ veya geÃ§ersiz', valid: false };
         }
         if (!multiVars || !Array.isArray(multiVars) || multiVars.length < 2) {
-            return { error: 'En az 2 değişken seçilmelidir', valid: false };
+            return { error: 'En az 2 deÄŸiÅŸken seÃ§ilmelidir', valid: false };
         }
 
         // Convert data objects to measurements matrix
@@ -2377,7 +2724,7 @@ export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
         }
 
         if (measurements.length < 3) {
-            return { error: `Geçerli veri satırı yetersiz (${measurements.length} < 3). Eksik değer içeren satırlar atlandı.`, valid: false };
+            return { error: `GeÃ§erli veri satÄ±rÄ± yetersiz (${measurements.length} < 3). Eksik deÄŸer iÃ§eren satÄ±rlar atlandÄ±.`, valid: false };
         }
     } else {
         // Legacy format: runFriedmanTest(measurementsMatrix, alpha)
@@ -2394,13 +2741,13 @@ export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
     const k = measurements[0]?.length; // Number of conditions
 
     if (!k || k < 2) {
-        return { error: 'En az 2 koşul gereklidir', valid: false };
+        return { error: 'En az 2 koÅŸul gereklidir', valid: false };
     }
 
     // Validate all rows have same length
     for (let i = 0; i < measurements.length; i++) {
         if (!Array.isArray(measurements[i]) || measurements[i].length !== k) {
-            return { error: `Satır ${i + 1} geçersiz uzunlukta`, valid: false };
+            return { error: `SatÄ±r ${i + 1} geÃ§ersiz uzunlukta`, valid: false };
         }
     }
 
@@ -2448,8 +2795,8 @@ export function runFriedmanTest(arg1, arg2 = 0.05, arg3 = 0.05) {
         alpha: alpha,
         significant: significant,
         interpretation: significant
-            ? (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark var (p < ${alpha})` : `There is a statistically significant difference between conditions (p < ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Koşullar arasında istatistiksel olarak anlamlı fark yok (p >= ${alpha})` : `There is no statistically significant difference between conditions (p >= ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `KoÅŸullar arasÄ±nda istatistiksel olarak anlamlÄ± fark var (p < ${alpha})` : `There is a statistically significant difference between conditions (p < ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `KoÅŸullar arasÄ±nda istatistiksel olarak anlamlÄ± fark yok (p >= ${alpha})` : `There is no statistically significant difference between conditions (p >= ${alpha})`)
     };
 }
 // =====================================================
@@ -2660,24 +3007,161 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
     // -2LL
     const minus2LL = -2 * logLikelihood;
 
-    // Pseudo R² metrics
+    // Pseudo RÂ² metrics
     const mcFaddenR2 = 1 - (logLikelihood / logLikelihoodNull);
     const nagelkerkeR2 = (1 - Math.exp(-2 * (logLikelihood - logLikelihoodNull) / n)) /
         (1 - Math.exp(2 * logLikelihoodNull / n));
     const coxSnellR2 = 1 - Math.exp(-2 * (logLikelihood - logLikelihoodNull) / n);
 
-    // Accuracy
-    const predictedClasses = predictions.map(p => p >= 0.5 ? 1 : 0);
+    // PROMPT-UPDATE-1 GÃ–REV A: Cutoff-adjustable Classification
+    const cutoff = typeof options.cutoff === 'number' && options.cutoff >= 0 && options.cutoff <= 1
+        ? options.cutoff : 0.5;
+
+    // Accuracy using cutoff
+    const predictedClasses = predictions.map(p => p >= cutoff ? 1 : 0);
     const correct = predictedClasses.reduce((sum, pred, i) => sum + (pred === y[i] ? 1 : 0), 0);
     const accuracy = correct / n;
 
-    // Confusion matrix
+    // Confusion matrix (using cutoff)
     let TP = 0, TN = 0, FP = 0, FN = 0;
     for (let i = 0; i < n; i++) {
         if (y[i] === 1 && predictedClasses[i] === 1) TP++;
         else if (y[i] === 0 && predictedClasses[i] === 0) TN++;
         else if (y[i] === 0 && predictedClasses[i] === 1) FP++;
         else FN++;
+    }
+
+    // PROMPT-UPDATE-1 GÃ–REV A: Classification metrics
+    const sensitivity = (TP + FN) > 0 ? TP / (TP + FN) : 0;
+    const specificity = (TN + FP) > 0 ? TN / (TN + FP) : 0;
+    const ppv = (TP + FP) > 0 ? TP / (TP + FP) : 0; // Positive Predictive Value
+    const npv = (TN + FN) > 0 ? TN / (TN + FN) : 0; // Negative Predictive Value
+
+    const classificationMetrics = {
+        accuracy: accuracy,
+        sensitivity: sensitivity,
+        specificity: specificity,
+        ppv: ppv,
+        npv: npv
+    };
+
+    // PROMPT-UPDATE-1 GÃ–REV B: ROC Curve + AUC
+    // Generate ROC points using all unique probability thresholds
+    const uniqueProbs = [...new Set(predictions)].sort((a, b) => b - a);
+    // Add boundary thresholds
+    const thresholds = [1.0001, ...uniqueProbs, -0.0001];
+
+    const rocPoints = [];
+    for (const threshold of thresholds) {
+        let tpCount = 0, fpCount = 0, tnCount = 0, fnCount = 0;
+        for (let i = 0; i < n; i++) {
+            const pred = predictions[i] >= threshold ? 1 : 0;
+            if (y[i] === 1 && pred === 1) tpCount++;
+            else if (y[i] === 0 && pred === 0) tnCount++;
+            else if (y[i] === 0 && pred === 1) fpCount++;
+            else fnCount++;
+        }
+        const tpr = (tpCount + fnCount) > 0 ? tpCount / (tpCount + fnCount) : 0;
+        const fpr = (fpCount + tnCount) > 0 ? fpCount / (fpCount + tnCount) : 0;
+        rocPoints.push({ fpr, tpr, threshold });
+    }
+
+    // Sort by FPR for AUC calculation
+    rocPoints.sort((a, b) => a.fpr - b.fpr);
+
+    // AUC using trapezoidal integration
+    let auc = 0;
+    for (let i = 1; i < rocPoints.length; i++) {
+        const width = rocPoints[i].fpr - rocPoints[i - 1].fpr;
+        const avgHeight = (rocPoints[i].tpr + rocPoints[i - 1].tpr) / 2;
+        auc += width * avgHeight;
+    }
+    auc = Math.max(0, Math.min(1, auc)); // Bound to [0, 1]
+
+    // Optimal threshold using Youden J index (max sensitivity + specificity - 1)
+    let optimalThreshold = 0.5;
+    let maxYoudenJ = -Infinity;
+    for (const point of rocPoints) {
+        const youdenJ = point.tpr - point.fpr; // Equivalent to sens + spec - 1
+        if (youdenJ > maxYoudenJ && point.threshold >= 0 && point.threshold <= 1) {
+            maxYoudenJ = youdenJ;
+            optimalThreshold = point.threshold;
+        }
+    }
+
+    const roc = {
+        points: rocPoints.filter(p => p.threshold >= 0 && p.threshold <= 1),
+        auc: auc,
+        optimalThreshold: optimalThreshold,
+        youdenJ: maxYoudenJ
+    };
+
+    // PROMPT-UPDATE-1 GÃ–REV C: Hosmer-Lemeshow Goodness of Fit Test
+    const hlGroups = typeof options.hlGroups === 'number' && options.hlGroups >= 2
+        ? options.hlGroups : 10;
+
+    let hosmerLemeshow;
+    if (n < hlGroups * 2) {
+        // Graceful degradation for small n
+        hosmerLemeshow = {
+            valid: false,
+            noteTR: `Ã–rneklem bÃ¼yÃ¼klÃ¼ÄŸÃ¼ (n=${n}) Hosmer-Lemeshow testi iÃ§in yetersiz (min ${hlGroups * 2} gerekli)`,
+            noteEN: `Sample size (n=${n}) insufficient for Hosmer-Lemeshow test (min ${hlGroups * 2} required)`
+        };
+    } else {
+        // Sort observations by predicted probability
+        const sorted = predictions.map((p, i) => ({ prob: p, actual: y[i] }))
+            .sort((a, b) => a.prob - b.prob);
+
+        // Create decile groups
+        const groupSize = Math.floor(n / hlGroups);
+        const groups = [];
+
+        for (let g = 0; g < hlGroups; g++) {
+            const start = g * groupSize;
+            const end = g === hlGroups - 1 ? n : (g + 1) * groupSize;
+            const groupData = sorted.slice(start, end);
+
+            const observedEvents = groupData.filter(d => d.actual === 1).length;
+            const observedNonEvents = groupData.filter(d => d.actual === 0).length;
+            const expectedEvents = groupData.reduce((sum, d) => sum + d.prob, 0);
+            const expectedNonEvents = groupData.length - expectedEvents;
+
+            groups.push({
+                n: groupData.length,
+                observedEvents,
+                observedNonEvents,
+                expectedEvents,
+                expectedNonEvents,
+                meanPredicted: groupData.reduce((s, d) => s + d.prob, 0) / groupData.length
+            });
+        }
+
+        // Chi-square calculation
+        let chiSquare = 0;
+        for (const g of groups) {
+            if (g.expectedEvents > 0) {
+                chiSquare += Math.pow(g.observedEvents - g.expectedEvents, 2) / g.expectedEvents;
+            }
+            if (g.expectedNonEvents > 0) {
+                chiSquare += Math.pow(g.observedNonEvents - g.expectedNonEvents, 2) / g.expectedNonEvents;
+            }
+        }
+
+        const hlDf = hlGroups - 2; // df = g - 2
+        const hlPValue = approximateChiSquarePValue(chiSquare, hlDf);
+
+        hosmerLemeshow = {
+            valid: true,
+            chiSquare: chiSquare,
+            df: hlDf,
+            pValue: hlPValue,
+            nGroups: hlGroups,
+            groups: groups,
+            interpretation: hlPValue > 0.05
+                ? (VIZ_STATE.lang === 'tr' ? 'Model uyumu iyi (p > 0.05)' : 'Good model fit (p > 0.05)')
+                : (VIZ_STATE.lang === 'tr' ? 'Model uyumu zayÄ±f (p â‰¤ 0.05)' : 'Poor model fit (p â‰¤ 0.05)')
+        };
     }
 
     // Coefficients output
@@ -2759,7 +3243,7 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         const expBVal = Math.exp(b);
         expB.push(isFinite(expBVal) ? expBVal : NaN);
 
-        // 95% CI for Exp(B): exp(B ± z*SE)
+        // 95% CI for Exp(B): exp(B Â± z*SE)
         const lowerCI = Math.exp(b - zCritical * se);
         const upperCI = Math.exp(b + zCritical * se);
         expBCI.lower.push(isFinite(lowerCI) ? lowerCI : NaN);
@@ -2785,7 +3269,7 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
     }
 
     const spssTable = {
-        title: VIZ_STATE.lang === 'tr' ? 'Denklemdeki Değişkenler' : 'Variables in the Equation',
+        title: VIZ_STATE.lang === 'tr' ? 'Denklemdeki DeÄŸiÅŸkenler' : 'Variables in the Equation',
         columns: ['Variable', 'B', 'S.E.', 'Wald', 'df', 'Sig.', 'Exp(B)', '95% CI Lower', '95% CI Upper'],
         rows: spssTableRows.map(row => [
             row.variable,
@@ -2802,8 +3286,8 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
 
     // Model summary table
     const modelSummaryTable = {
-        title: VIZ_STATE.lang === 'tr' ? 'Model Özeti' : 'Model Summary',
-        columns: ['-2LL', 'Cox & Snell R²', 'Nagelkerke R²'],
+        title: VIZ_STATE.lang === 'tr' ? 'Model Ã–zeti' : 'Model Summary',
+        columns: ['-2LL', 'Cox & Snell RÂ²', 'Nagelkerke RÂ²'],
         rows: [[
             isFinite(minus2LL) ? minus2LL.toFixed(3) : '-',
             isFinite(coxSnellR2) ? coxSnellR2.toFixed(3) : '-',
@@ -2811,9 +3295,11 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         ]]
     };
 
-    // Classification table
+    // Classification table (updated to show cutoff)
     const classificationTable = {
-        title: VIZ_STATE.lang === 'tr' ? 'Sınıflandırma Tablosu' : 'Classification Table',
+        title: VIZ_STATE.lang === 'tr'
+            ? `SÄ±nÄ±flandÄ±rma Tablosu (Kesim NoktasÄ±: ${cutoff.toFixed(2)})`
+            : `Classification Table (Cutoff: ${cutoff.toFixed(2)})`,
         columns: ['', 'Predicted 0', 'Predicted 1', '% Correct'],
         rows: [
             ['Observed 0', TN, FP, isFinite(TN / (TN + FP) * 100) ? (TN / (TN + FP) * 100).toFixed(1) + '%' : '-'],
@@ -2822,11 +3308,38 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         ]
     };
 
+    // PROMPT-UPDATE-1: ROC/AUC Summary Table
+    const rocSummaryTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'ROC EÄŸrisi Ã–zeti' : 'ROC Curve Summary',
+        columns: ['AUC', VIZ_STATE.lang === 'tr' ? 'Optimal Kesim' : 'Optimal Cutoff', 'Youden J'],
+        rows: [[
+            isFinite(roc.auc) ? roc.auc.toFixed(4) : '-',
+            isFinite(roc.optimalThreshold) ? roc.optimalThreshold.toFixed(4) : '-',
+            isFinite(roc.youdenJ) ? roc.youdenJ.toFixed(4) : '-'
+        ]]
+    };
+
+    // PROMPT-UPDATE-1: Hosmer-Lemeshow Table
+    const hlTable = hosmerLemeshow.valid ? {
+        title: VIZ_STATE.lang === 'tr' ? 'Hosmer-Lemeshow Testi' : 'Hosmer-Lemeshow Test',
+        columns: ['Ï‡Â²', 'df', 'Sig.', VIZ_STATE.lang === 'tr' ? 'Yorum' : 'Interpretation'],
+        rows: [[
+            isFinite(hosmerLemeshow.chiSquare) ? hosmerLemeshow.chiSquare.toFixed(3) : '-',
+            hosmerLemeshow.df,
+            isFinite(hosmerLemeshow.pValue) ? (hosmerLemeshow.pValue < 0.001 ? '<.001' : hosmerLemeshow.pValue.toFixed(3)) : '-',
+            hosmerLemeshow.interpretation
+        ]]
+    } : {
+        title: VIZ_STATE.lang === 'tr' ? 'Hosmer-Lemeshow Testi' : 'Hosmer-Lemeshow Test',
+        columns: [VIZ_STATE.lang === 'tr' ? 'Not' : 'Note'],
+        rows: [[hosmerLemeshow.noteTR || hosmerLemeshow.noteEN]]
+    };
+
     // Notes about SE calculation method
     const seNotes = [];
     if (method === 'GD') {
         seNotes.push(VIZ_STATE.lang === 'tr'
-            ? 'SE hesabı yaklaşık (gradient descent kullanıldı)'
+            ? 'SE hesabÄ± yaklaÅŸÄ±k (gradient descent kullanÄ±ldÄ±)'
             : 'SE calculated approximately (gradient descent used)');
     }
 
@@ -2872,7 +3385,7 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         minus2LL: minus2LL,
         deviance: minus2LL,
 
-        // Pseudo R²
+        // Pseudo RÂ²
         mcFaddenR2: mcFaddenR2,
         coxSnellR2: coxSnellR2,
         nagelkerkeR2: nagelkerkeR2,
@@ -2881,23 +3394,33 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         // Classification metrics
         accuracy: accuracy,
         confusionMatrix: { TP, TN, FP, FN },
-        sensitivity: TP / (TP + FN) || 0,
-        specificity: TN / (TN + FP) || 0,
+        sensitivity: sensitivity,
+        specificity: specificity,
+
+        // PROMPT-UPDATE-1 GÃ–REV A: Cutoff and metrics
+        cutoffUsed: cutoff,
+        metrics: classificationMetrics,
+
+        // PROMPT-UPDATE-1 GÃ–REV B: ROC/AUC
+        roc: roc,
+
+        // PROMPT-UPDATE-1 GÃ–REV C: Hosmer-Lemeshow
+        hosmerLemeshow: hosmerLemeshow,
 
         // Predictions
         predictedProbabilities: predictions,
         predictedClasses: predictedClasses,
 
-        // FAZ-ADV-1: SPSS tables
-        tables: [spssTable, modelSummaryTable, classificationTable],
+        // FAZ-ADV-1: SPSS tables (+ ROC + HL)
+        tables: [spssTable, modelSummaryTable, classificationTable, rocSummaryTable, hlTable],
 
         // Notes
         notes: seNotes.length > 0 ? seNotes : undefined,
         warnings: warnings.length > 0 ? warnings : undefined,
 
         interpretation: VIZ_STATE.lang === 'tr'
-            ? `Lojistik regresyon analizi ${method} yöntemiyle tamamlandı. Model doğruluğu: %${(accuracy * 100).toFixed(1)}, Nagelkerke R² = ${nagelkerkeR2.toFixed(3)}`
-            : `Logistic regression analysis completed using ${method}. Model accuracy: ${(accuracy * 100).toFixed(1)}%, Nagelkerke R² = ${nagelkerkeR2.toFixed(3)}`
+            ? `Lojistik regresyon analizi ${method} yÃ¶ntemiyle tamamlandÄ±. Model doÄŸruluÄŸu: %${(accuracy * 100).toFixed(1)}, Nagelkerke RÂ² = ${nagelkerkeR2.toFixed(3)}, AUC = ${roc.auc.toFixed(3)}`
+            : `Logistic regression analysis completed using ${method}. Model accuracy: ${(accuracy * 100).toFixed(1)}%, Nagelkerke RÂ² = ${nagelkerkeR2.toFixed(3)}, AUC = ${roc.auc.toFixed(3)}`
     };
 }
 
@@ -2947,50 +3470,8 @@ function solveLinearSystem(A, b) {
     return x;
 }
 
-/**
- * Simple matrix inversion for small matrices
- */
-function invertMatrix(A) {
-    const n = A.length;
-    const aug = A.map((row, i) => {
-        const newRow = [...row];
-        for (let j = 0; j < n; j++) {
-            newRow.push(i === j ? 1 : 0);
-        }
-        return newRow;
-    });
-
-    // Forward elimination
-    for (let col = 0; col < n; col++) {
-        let maxRow = col;
-        for (let row = col + 1; row < n; row++) {
-            if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) {
-                maxRow = row;
-            }
-        }
-        [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
-
-        if (Math.abs(aug[col][col]) < 1e-10) {
-            return null;
-        }
-
-        const pivot = aug[col][col];
-        for (let j = 0; j < 2 * n; j++) {
-            aug[col][j] /= pivot;
-        }
-
-        for (let row = 0; row < n; row++) {
-            if (row !== col) {
-                const factor = aug[row][col];
-                for (let j = 0; j < 2 * n; j++) {
-                    aug[row][j] -= factor * aug[col][j];
-                }
-            }
-        }
-    }
-
-    return aug.map(row => row.slice(n));
-}
+// NOTE: invertMatrix function is already defined earlier in the file (line ~302)
+// Removed duplicate definition here to prevent SyntaxError
 
 // =====================================================
 // NORMALITY TESTS
@@ -3003,7 +3484,7 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     const n = data.length;
 
     if (n < 3) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'En az 3 gözlem gereklidir' : 'At least 3 observations required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'En az 3 gÃ¶zlem gereklidir' : 'At least 3 observations required', valid: false };
     }
 
     if (n > 5000) {
@@ -3025,17 +3506,20 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
         // Approximate p-value for K-S test
         const sqrtN = Math.sqrt(n);
         const lambda = (sqrtN + 0.12 + 0.11 / sqrtN) * D;
-        let pValue = 0;
+        let pValueKS = 0;
         for (let k = 1; k <= 100; k++) {
-            pValue += 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * lambda * lambda);
+            pValueKS += 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * lambda * lambda);
         }
-        pValue = Math.max(0, Math.min(1, pValue));
+        pValueKS = Math.max(0, Math.min(1, pValueKS));
 
+        // PROMPT-UPDATE-4: Use Lilliefors-corrected p-value (mean/sd estimated)
+        const pValueLilliefors = calculateLillieforsP(D, n);
+        const pValue = pValueLilliefors;
         const significant = pValue < alpha;
 
         return {
             valid: true,
-            testName: 'Kolmogorov-Smirnov Normality Test',
+            testName: 'Kolmogorov-Smirnov (Lilliefors) Normality Test',
             testType: 'kolmogorov-smirnov',
             n: n,
             D: D,
@@ -3045,10 +3529,17 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
             isNormal: !significant,
             warning: true,
             interpretation: VIZ_STATE.lang === 'tr'
-                ? `Shapiro-Wilk n ≤ 5000 ile sınırlı olduğundan Kolmogorov-Smirnov testi kullanıldı (n = ${n}).`
-                : `Kolmogorov-Smirnov test used because Shapiro-Wilk is limited to n ≤ 5000 (n = ${n}).`,
+                ? `Shapiro-Wilk n <= 5000 ile sinirli oldugundan K-S (Lilliefors) testi kullanildi (n = ${n}).`
+                : `K-S (Lilliefors) test used because Shapiro-Wilk is limited to n <= 5000 (n = ${n}).`,
             W: NaN,
-            wStatistic: NaN
+            wStatistic: NaN,
+            // PROMPT-UPDATE-4: K-S output object
+            ks: {
+                D: D,
+                pValue: pValue,
+                pValueKS: pValueKS,
+                method: 'lilliefors'
+            }
         };
     }
 
@@ -3081,6 +3572,19 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
     const pValue = 1 - normalCDF(z);
     const significant = pValue < alpha;
 
+    // PROMPT-UPDATE-4: Calculate supplementary tests for n >= 50
+    let supplementary = null;
+    if (n >= 50) {
+        try {
+            const adResult = runAndersonDarlingTest(data, alpha);
+            if (adResult.valid) {
+                supplementary = {
+                    andersonDarling: { A2: adResult.A2, pValue: adResult.pValue, isNormal: adResult.isNormal }
+                };
+            }
+        } catch (e) { /* Supplementary only - silent fail */ }
+    }
+
     return {
         valid: true,
         testName: VIZ_STATE.lang === 'tr' ? 'Shapiro-Wilk Normallik Testi' : 'Shapiro-Wilk Normality Test',
@@ -3093,9 +3597,10 @@ export function runShapiroWilkTest(data, alpha = 0.05) {
         alpha: alpha,
         significant: significant,
         isNormal: !significant,
+        supplementary: supplementary,
         interpretation: !significant
-            ? (VIZ_STATE.lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapmıyor (p >= ${alpha})` : `Data does not significantly deviate from normal distribution (p >= ${alpha})`)
-            : (VIZ_STATE.lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapıyor (p < ${alpha})` : `Data significantly deviates from normal distribution (p < ${alpha})`)
+            ? (VIZ_STATE.lang === 'tr' ? `Veri normal daÄŸÄ±lÄ±mdan anlamlÄ± ÅŸekilde sapmÄ±yor (p >= ${alpha})` : `Data does not significantly deviate from normal distribution (p >= ${alpha})`)
+            : (VIZ_STATE.lang === 'tr' ? `Veri normal daÄŸÄ±lÄ±mdan anlamlÄ± ÅŸekilde sapÄ±yor (p < ${alpha})` : `Data significantly deviates from normal distribution (p < ${alpha})`)
     };
 }
 
@@ -3123,6 +3628,132 @@ function approximateSWCoefficient(i, n) {
 
     return z / Math.sqrt(n);
 }
+
+// =====================================================
+// PROMPT-UPDATE-4: LILLIEFORS & ANDERSON-DARLING
+// =====================================================
+
+/**
+ * Calculate Lilliefors-corrected p-value for K-S test
+ * When mean and sd are estimated from data (not known)
+ * Uses Dallal-Wilkinson approximation (1986)
+ * @param {number} D - K-S D statistic
+ * @param {number} n - sample size
+ * @returns {number} - approximate p-value
+ */
+function calculateLillieforsP(D, n) {
+    if (n < 4) return 1; // Too small for reliable estimate
+
+    // Dallal-Wilkinson (1986) approximation for Lilliefors test
+    // Valid for 4 <= n <= 100, reasonable approximation beyond
+    const sqrtN = Math.sqrt(n);
+    const Dstar = D * (sqrtN - 0.01 + 0.85 / sqrtN);
+
+    // Approximate p-value using exponential formula
+    if (Dstar <= 0.302) {
+        return 1; // Not significant
+    } else if (Dstar >= 1.035) {
+        return 0; // Highly significant
+    }
+
+    // Interpolation formula from Dallal-Wilkinson
+    const pValue = Math.exp(-7.01256 * Dstar * Dstar * (1 + 2.78019 * Dstar + 2.99587 * Dstar * Dstar));
+    return Math.max(0, Math.min(1, pValue));
+}
+
+/**
+ * Anderson-Darling Normality Test
+ * PROMPT-UPDATE-4 GÖREV B
+ * @param {number[]} data - numeric data array
+ * @param {number} alpha - significance level (default 0.05)
+ * @returns {object} - test result with A2, pValue, isNormal
+ */
+export function runAndersonDarlingTest(data, alpha = 0.05) {
+    const lang = VIZ_STATE?.lang || 'tr';
+    const n = data.length;
+
+    if (n < 8) {
+        return {
+            valid: false,
+            error: lang === 'tr' ? 'En az 8 gözlem gereklidir' : 'At least 8 observations required',
+            testType: 'anderson-darling'
+        };
+    }
+
+    // Calculate mean and standard deviation
+    const mean = data.reduce((s, v) => s + v, 0) / n;
+    const variance = data.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (n - 1);
+    const sd = Math.sqrt(variance);
+
+    if (sd === 0 || !isFinite(sd)) {
+        return {
+            valid: false,
+            error: lang === 'tr' ? 'Varyans sıfır veya geçersiz' : 'Zero or invalid variance',
+            testType: 'anderson-darling'
+        };
+    }
+
+    // Sort and standardize data
+    const sorted = [...data].sort((a, b) => a - b);
+    const z = sorted.map(x => (x - mean) / sd);
+
+    // Calculate A² statistic
+    let sumTerm = 0;
+    for (let i = 0; i < n; i++) {
+        const p1 = normalCDF(z[i]);
+        const p2 = normalCDF(z[n - 1 - i]);
+
+        // Avoid log(0) issues
+        const p1Safe = Math.max(1e-10, Math.min(1 - 1e-10, p1));
+        const p2Safe = Math.max(1e-10, Math.min(1 - 1e-10, p2));
+
+        sumTerm += (2 * (i + 1) - 1) * (Math.log(p1Safe) + Math.log(1 - p2Safe));
+    }
+
+    const A2 = -n - sumTerm / n;
+
+    // Stephens (1974) adjustment for estimated parameters
+    const A2star = A2 * (1 + 0.75 / n + 2.25 / (n * n));
+
+    // Approximate p-value using D'Agostino & Stephens (1986)
+    // For composite hypothesis (normal with estimated mean/variance)
+    let pValue;
+    if (A2star < 0.2) {
+        pValue = 1 - Math.exp(-13.436 + 101.14 * A2star - 223.73 * A2star * A2star);
+    } else if (A2star < 0.34) {
+        pValue = 1 - Math.exp(-8.318 + 42.796 * A2star - 59.938 * A2star * A2star);
+    } else if (A2star < 0.6) {
+        pValue = Math.exp(0.9177 - 4.279 * A2star - 1.38 * A2star * A2star);
+    } else if (A2star < 13) {
+        pValue = Math.exp(1.2937 - 5.709 * A2star + 0.0186 * A2star * A2star);
+    } else {
+        pValue = 0; // A2* >= 13: essentially p < 0.0001
+    }
+
+    pValue = Math.max(0, Math.min(1, pValue));
+    const significant = pValue < alpha;
+
+    return {
+        valid: true,
+        testName: lang === 'tr' ? 'Anderson-Darling Normallik Testi' : 'Anderson-Darling Normality Test',
+        testType: 'anderson-darling',
+        n: n,
+        A2: A2,
+        A2adjusted: A2star,
+        pValue: pValue,
+        alpha: alpha,
+        significant: significant,
+        isNormal: !significant,
+        interpretation: significant
+            ? (lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapıyor (A² = ${A2.toFixed(4)}, p < ${alpha})`
+                : `Data significantly deviates from normal distribution (A² = ${A2.toFixed(4)}, p < ${alpha})`)
+            : (lang === 'tr' ? `Veri normal dağılımdan anlamlı şekilde sapmıyor (A² = ${A2.toFixed(4)}, p >= ${alpha})`
+                : `Data does not significantly deviate from normal distribution (A² = ${A2.toFixed(4)}, p >= ${alpha})`)
+    };
+}
+
+// Window binding for Anderson-Darling
+window.runAndersonDarlingTest = runAndersonDarlingTest;
 
 // =====================================================
 // HELPER FUNCTIONS
@@ -3189,19 +3820,19 @@ function interpretCohensD(d, lang = null) {
         threshold = '|d| < 0.2';
     }
     else if (absD < 0.5) {
-        magnitude_tr = 'küçük';
+        magnitude_tr = 'kÃ¼Ã§Ã¼k';
         magnitude_en = 'small';
-        threshold = '0.2 ≤ |d| < 0.5';
+        threshold = '0.2 â‰¤ |d| < 0.5';
     }
     else if (absD < 0.8) {
         magnitude_tr = 'orta';
         magnitude_en = 'medium';
-        threshold = '0.5 ≤ |d| < 0.8';
+        threshold = '0.5 â‰¤ |d| < 0.8';
     }
     else {
-        magnitude_tr = 'büyük';
+        magnitude_tr = 'bÃ¼yÃ¼k';
         magnitude_en = 'large';
-        threshold = '|d| ≥ 0.8';
+        threshold = '|d| â‰¥ 0.8';
     }
 
     const tr = `${magnitude_tr.charAt(0).toUpperCase() + magnitude_tr.slice(1)} ${direction} etki (d = ${d.toFixed(2)}, ${threshold})`;
@@ -3217,7 +3848,7 @@ function interpretCohensD(d, lang = null) {
  * Interpret Eta-squared effect size
  * FAZ-ST4: Returns bilingual interpretation {tr, en}
  * FAZ-10: Enhanced with SPSS thresholds (Cohen, 1988)
- * Thresholds: η² < 0.01 = negligible, 0.01-0.06 = small, 0.06-0.14 = medium, > 0.14 = large
+ * Thresholds: Î·Â² < 0.01 = negligible, 0.01-0.06 = small, 0.06-0.14 = medium, > 0.14 = large
  */
 function interpretEtaSquared(eta2, lang = null) {
     let magnitude_tr, magnitude_en, threshold;
@@ -3226,26 +3857,26 @@ function interpretEtaSquared(eta2, lang = null) {
     if (eta2 < 0.01) {
         magnitude_tr = 'ihmal edilebilir';
         magnitude_en = 'negligible';
-        threshold = 'η² < 0.01';
+        threshold = 'Î·Â² < 0.01';
     }
     else if (eta2 < 0.06) {
-        magnitude_tr = 'küçük';
+        magnitude_tr = 'kÃ¼Ã§Ã¼k';
         magnitude_en = 'small';
-        threshold = '0.01 ≤ η² < 0.06';
+        threshold = '0.01 â‰¤ Î·Â² < 0.06';
     }
     else if (eta2 < 0.14) {
         magnitude_tr = 'orta';
         magnitude_en = 'medium';
-        threshold = '0.06 ≤ η² < 0.14';
+        threshold = '0.06 â‰¤ Î·Â² < 0.14';
     }
     else {
-        magnitude_tr = 'büyük';
+        magnitude_tr = 'bÃ¼yÃ¼k';
         magnitude_en = 'large';
-        threshold = 'η² ≥ 0.14';
+        threshold = 'Î·Â² â‰¥ 0.14';
     }
 
-    const tr = `${magnitude_tr.charAt(0).toUpperCase() + magnitude_tr.slice(1)} etki (η² = ${eta2.toFixed(3)}, %${varianceExplained} varyans açıklandı, ${threshold})`;
-    const en = `${magnitude_en.charAt(0).toUpperCase() + magnitude_en.slice(1)} effect (η² = ${eta2.toFixed(3)}, ${varianceExplained}% variance explained, ${threshold})`;
+    const tr = `${magnitude_tr.charAt(0).toUpperCase() + magnitude_tr.slice(1)} etki (Î·Â² = ${eta2.toFixed(3)}, %${varianceExplained} varyans aÃ§Ä±klandÄ±, ${threshold})`;
+    const en = `${magnitude_en.charAt(0).toUpperCase() + magnitude_en.slice(1)} effect (Î·Â² = ${eta2.toFixed(3)}, ${varianceExplained}% variance explained, ${threshold})`;
 
     // If specific language requested, return string; otherwise return object
     if (lang === 'tr') return tr;
@@ -3260,21 +3891,21 @@ function interpretEtaSquared(eta2, lang = null) {
 function interpretCorrelation(r) {
     const absR = Math.abs(r);
     const direction = r >= 0 ? 'Pozitif' : 'Negatif';
-    if (absR < 0.1) return 'İhmal edilebilir';
-    if (absR < 0.3) return `Zayıf ${direction.toLowerCase()}`;
+    if (absR < 0.1) return 'Ä°hmal edilebilir';
+    if (absR < 0.3) return `ZayÄ±f ${direction.toLowerCase()}`;
     if (absR < 0.5) return `Orta ${direction.toLowerCase()}`;
-    if (absR < 0.7) return `Güçlü ${direction.toLowerCase()}`;
-    return `Çok güçlü ${direction.toLowerCase()}`;
+    if (absR < 0.7) return `GÃ¼Ã§lÃ¼ ${direction.toLowerCase()}`;
+    return `Ã‡ok gÃ¼Ã§lÃ¼ ${direction.toLowerCase()}`;
 }
 
 /**
  * Interpret Cramer's V effect size
  */
 function interpretCramersV(v) {
-    if (v < 0.1) return 'Çok zayıf';
-    if (v < 0.3) return 'Zayıf';
+    if (v < 0.1) return 'Ã‡ok zayÄ±f';
+    if (v < 0.3) return 'ZayÄ±f';
     if (v < 0.5) return 'Orta';
-    return 'Güçlü';
+    return 'GÃ¼Ã§lÃ¼';
 }
 
 /**
@@ -3282,10 +3913,10 @@ function interpretCramersV(v) {
  */
 function interpretEffectR(r) {
     const absR = Math.abs(r);
-    if (absR < 0.1) return 'Çok küçük';
-    if (absR < 0.3) return 'Küçük';
+    if (absR < 0.1) return 'Ã‡ok kÃ¼Ã§Ã¼k';
+    if (absR < 0.3) return 'KÃ¼Ã§Ã¼k';
     if (absR < 0.5) return 'Orta';
-    return 'Büyük';
+    return 'BÃ¼yÃ¼k';
 }
 
 // -----------------------------------------------------
@@ -3301,29 +3932,29 @@ function interpretEffectR(r) {
  */
 export function getStatTitle(type) {
     const titles = {
-        'ttest': 'Bağımsız Örneklem T-Testi',
-        'ttest-independent': 'Bağımsız Örneklem T-Testi',
-        'ttest-paired': 'Eşleştirilmiş Örneklem T-Testi',
-        'ttest-one': 'Tek Örneklem T-Testi',
-        'anova': 'Tek Yönlü ANOVA',
-        'anova-oneway': 'Tek Yönlü ANOVA',
+        'ttest': 'BaÄŸÄ±msÄ±z Ã–rneklem T-Testi',
+        'ttest-independent': 'BaÄŸÄ±msÄ±z Ã–rneklem T-Testi',
+        'ttest-paired': 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem T-Testi',
+        'ttest-one': 'Tek Ã–rneklem T-Testi',
+        'anova': 'Tek YÃ¶nlÃ¼ ANOVA',
+        'anova-oneway': 'Tek YÃ¶nlÃ¼ ANOVA',
         'correlation': 'Pearson Korelasyon',
         'chi-square': 'Ki-Kare Testi',
         'chi2': 'Ki-Kare Testi',
         'mann-whitney': 'Mann-Whitney U Testi',
         'kruskal-wallis': 'Kruskal-Wallis H Testi',
-        'wilcoxon': 'Wilcoxon İşaretli Sıralar',
+        'wilcoxon': 'Wilcoxon Ä°ÅŸaretli SÄ±ralar',
         'friedman': 'Friedman Testi',
         'shapiro-wilk': 'Shapiro-Wilk Normallik',
         'normality': 'Normallik Testi',
         'regression': 'Regresyon Analizi',
-        'descriptive': 'Betimsel İstatistikler'
+        'descriptive': 'Betimsel Ä°statistikler'
     };
     return titles[type] || type;
 }
 
 /**
- * FAZ-2: Safe number formatting - NaN/null → '-'
+ * FAZ-2: Safe number formatting - NaN/null â†’ '-'
  */
 function fmtNum(val, digits = 4) {
     if (val === null || val === undefined) return '-';
@@ -3332,7 +3963,7 @@ function fmtNum(val, digits = 4) {
 }
 
 /**
- * FAZ-2: Safe p-value formatting - NaN/null → 'N/A'
+ * FAZ-2: Safe p-value formatting - NaN/null â†’ 'N/A'
  */
 function fmtP(p) {
     if (p === null || p === undefined || typeof p !== 'number' || !isFinite(p)) return 'N/A';
@@ -3340,7 +3971,7 @@ function fmtP(p) {
 }
 
 /**
- * FAZ-2: Safe text rendering - [object Object] → localized string
+ * FAZ-2: Safe text rendering - [object Object] â†’ localized string
  */
 function renderText(val) {
     if (val === null || val === undefined) return '';
@@ -3355,7 +3986,7 @@ function renderText(val) {
         if (val.summary) return val.summary;
         if (val.message) return val.message;
         // Table/array data - don't stringify, return placeholder
-        if (Array.isArray(val)) return `[${val.length} öğe]`;
+        if (Array.isArray(val)) return `[${val.length} Ã¶ÄŸe]`;
         // Last resort: key-value pairs
         const keys = Object.keys(val).slice(0, 3);
         if (keys.length > 0) {
@@ -3371,7 +4002,7 @@ function renderText(val) {
  */
 export function renderStatResults(result, type) {
     if (!result) {
-        return '<div class="stat-error">Sonuç bulunamadı</div>';
+        return '<div class="stat-error">SonuÃ§ bulunamadÄ±</div>';
     }
 
     if (result.error) {
@@ -3380,8 +4011,8 @@ export function renderStatResults(result, type) {
 
     const title = result.testName || getStatTitle(type);
 
-    // FAZ-2: Significance rozeti SADECE anlamlılık testlerinde
-    // Descriptive, Frequency, PCA, KMeans, TimeSeries, APA için rozet yok
+    // FAZ-2: Significance rozeti SADECE anlamlÄ±lÄ±k testlerinde
+    // Descriptive, Frequency, PCA, KMeans, TimeSeries, APA iÃ§in rozet yok
     const noSignificanceTests = ['descriptive', 'frequency', 'pca', 'kmeans', 'timeseries', 'apa', 'cronbach', 'power'];
     const showSignificance = result.significant !== undefined &&
         result.significant !== null &&
@@ -3390,8 +4021,8 @@ export function renderStatResults(result, type) {
     let sigHtml = '';
     if (showSignificance) {
         const sigClass = result.significant ? 'significant' : 'not-significant';
-        // GATE-14: Akademik dile uygun - "Anlamsız" yerine "Anlamlı Değil"
-        const sigText = result.significant ? 'Anlamlı' : 'Anlamlı Değil';
+        // GATE-14: Akademik dile uygun - "AnlamsÄ±z" yerine "AnlamlÄ± DeÄŸil"
+        const sigText = result.significant ? 'AnlamlÄ±' : 'AnlamlÄ± DeÄŸil';
         const sigIcon = result.significant ? 'fa-check-circle' : 'fa-times-circle';
         sigHtml = `
             <span class="stat-significance ${sigClass}">
@@ -3415,7 +4046,7 @@ export function renderStatResults(result, type) {
             <table class="stat-table stat-descriptive-table">
                 <thead>
                     <tr>
-                        <th>Değişken</th>
+                        <th>DeÄŸiÅŸken</th>
                         <th>N</th>
                         <th>Ortalama</th>
                         <th>Std. Sapma</th>
@@ -3451,17 +4082,17 @@ export function renderStatResults(result, type) {
         html += `
             <div class="stat-freq-summary">
                 <div class="stat-freq-stat"><strong>Toplam N:</strong> ${result.validCount || result.total}</div>
-                <div class="stat-freq-stat"><strong>Benzersiz Değer:</strong> ${result.uniqueCount}</div>
+                <div class="stat-freq-stat"><strong>Benzersiz DeÄŸer:</strong> ${result.uniqueCount}</div>
                 <div class="stat-freq-stat"><strong>Mod:</strong> "${result.mode}" (n=${result.modeCount}, %${result.modePercent})</div>
                 <div class="stat-freq-stat"><strong>Eksik:</strong> ${result.missingCount || 0}</div>
             </div>
             <table class="stat-table stat-freq-table">
                 <thead>
                     <tr>
-                        <th>Değer</th>
+                        <th>DeÄŸer</th>
                         <th>n</th>
                         <th>%</th>
-                        <th>Kümülatif %</th>
+                        <th>KÃ¼mÃ¼latif %</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3475,7 +4106,7 @@ export function renderStatResults(result, type) {
                     `).join('')}
                     ${result.otherCount > 0 ? `
                         <tr class="stat-freq-other">
-                            <td><em>Diğer (${result.uniqueCount - result.topResults.length} değer)</em></td>
+                            <td><em>DiÄŸer (${result.uniqueCount - result.topResults.length} deÄŸer)</em></td>
                             <td>${result.otherCount}</td>
                             <td>${result.otherPercent}%</td>
                             <td>100.0%</td>
@@ -3495,16 +4126,16 @@ export function renderStatResults(result, type) {
     if (result.testType === 'pca' && result.eigenvalues) {
         html += `
             <div class="stat-pca-summary">
-                <div class="stat-pca-stat"><strong>Değişken Sayısı:</strong> ${result.variableCount || result.eigenvalues.length}</div>
+                <div class="stat-pca-stat"><strong>DeÄŸiÅŸken SayÄ±sÄ±:</strong> ${result.variableCount || result.eigenvalues.length}</div>
             </div>
-            <h5>Açıklanan Varyans</h5>
+            <h5>AÃ§Ä±klanan Varyans</h5>
             <table class="stat-table stat-pca-table">
                 <thead>
                     <tr>
-                        <th>Bileşen</th>
-                        <th>Özdeğer</th>
-                        <th>Açıklanan %</th>
-                        <th>Kümülatif %</th>
+                        <th>BileÅŸen</th>
+                        <th>Ã–zdeÄŸer</th>
+                        <th>AÃ§Ä±klanan %</th>
+                        <th>KÃ¼mÃ¼latif %</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3530,14 +4161,14 @@ export function renderStatResults(result, type) {
     if (result.testType === 'kmeans' && result.clusters) {
         html += `
             <div class="stat-kmeans-summary">
-                <div class="stat-kmeans-stat"><strong>Küme Sayısı (k):</strong> ${result.k || result.clusters.length}</div>
+                <div class="stat-kmeans-stat"><strong>KÃ¼me SayÄ±sÄ± (k):</strong> ${result.k || result.clusters.length}</div>
                 <div class="stat-kmeans-stat"><strong>Toplam N:</strong> ${result.totalN || result.n}</div>
             </div>
-            <h5>Küme Boyutları</h5>
+            <h5>KÃ¼me BoyutlarÄ±</h5>
             <table class="stat-table stat-kmeans-table">
                 <thead>
                     <tr>
-                        <th>Küme</th>
+                        <th>KÃ¼me</th>
                         <th>N</th>
                         <th>%</th>
                     </tr>
@@ -3545,7 +4176,7 @@ export function renderStatResults(result, type) {
                 <tbody>
                     ${result.clusters.map((c, i) => `
                         <tr>
-                            <td>Küme ${i + 1}</td>
+                            <td>KÃ¼me ${i + 1}</td>
                             <td>${c.size || c.n || c.count}</td>
                             <td>${fmtNum((c.size || c.n || c.count) / (result.totalN || result.n) * 100, 1)}%</td>
                         </tr>
@@ -3566,7 +4197,7 @@ export function renderStatResults(result, type) {
             <div class="stat-apa-container">
                 ${result.html}
                 <div class="stat-apa-actions">
-                    <button class="viz-btn viz-btn-sm" onclick="navigator.clipboard.writeText(this.closest('.stat-apa-container').querySelector('.apa-report').innerText); showToast('APA raporu kopyalandı', 'success');">
+                    <button class="viz-btn viz-btn-sm" onclick="navigator.clipboard.writeText(this.closest('.stat-apa-container').querySelector('.apa-report').innerText); showToast('APA raporu kopyalandÄ±', 'success');">
                         <i class="fas fa-copy"></i> APA Kopyala
                     </button>
                 </div>
@@ -3605,12 +4236,12 @@ export function renderStatResults(result, type) {
         // Effect sizes section
         if (result.effectSizes) {
             html += '<div class="stat-effect-sizes">';
-            html += '<h5>Etki Büyüklüğü</h5>';
+            html += '<h5>Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼</h5>';
             if (result.effectSizes.omegaSquared !== undefined) {
-                html += `<div class="stat-effect-item"><strong>ω² (Omega Squared):</strong> ${fmtNum(result.effectSizes.omegaSquared, 4)} <span class="stat-effect-interp">(${result.effectSizes.interpretation || 'N/A'})</span></div>`;
+                html += `<div class="stat-effect-item"><strong>Ï‰Â² (Omega Squared):</strong> ${fmtNum(result.effectSizes.omegaSquared, 4)} <span class="stat-effect-interp">(${result.effectSizes.interpretation || 'N/A'})</span></div>`;
             }
             if (result.effectSizes.etaSquared !== undefined) {
-                html += `<div class="stat-effect-item"><strong>η² (Eta Squared):</strong> ${fmtNum(result.effectSizes.etaSquared, 4)}</div>`;
+                html += `<div class="stat-effect-item"><strong>Î·Â² (Eta Squared):</strong> ${fmtNum(result.effectSizes.etaSquared, 4)}</div>`;
             }
             if (result.effectSizes.cramersV !== undefined) {
                 html += `<div class="stat-effect-item"><strong>Cramer's V:</strong> ${fmtNum(result.effectSizes.cramersV, 4)}</div>`;
@@ -3630,12 +4261,12 @@ export function renderStatResults(result, type) {
             const leveneClass = leveneOk ? 'stat-assumption-ok' : 'stat-assumption-violated';
             const leveneIcon = leveneOk ? 'fa-check-circle' : 'fa-exclamation-triangle';
             const leveneMsg = leveneOk
-                ? 'Varyanslar homojen (Levene p > α)'
-                : 'Varyanslar homojen DEĞİL (Levene p < α)';
+                ? 'Varyanslar homojen (Levene p > Î±)'
+                : 'Varyanslar homojen DEÄÄ°L (Levene p < Î±)';
             html += `<div class="stat-assumption ${leveneClass}"><i class="fas ${leveneIcon}"></i> ${leveneMsg}</div>`;
         }
 
-        html += `</div><div class="stat-result-footer"><small>α = ${result.alpha || 0.05}</small><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
+        html += `</div><div class="stat-result-footer"><small>Î± = ${result.alpha || 0.05}</small><small>${new Date().toLocaleDateString('tr-TR')}</small></div></div>`;
         return html;
     }
 
@@ -3648,7 +4279,7 @@ export function renderStatResults(result, type) {
                 <div class="stat-timeseries-summary">
                     <div class="stat-ts-stat"><strong>Trend:</strong> ${result.trend || '-'}</div>
                     <div class="stat-ts-stat"><strong>Ortalama:</strong> ${fmtNum(result.mean, 2)}</div>
-                    <div class="stat-ts-stat"><strong>Veri Noktası:</strong> ${result.n || result.dataPoints || '-'}</div>
+                    <div class="stat-ts-stat"><strong>Veri NoktasÄ±:</strong> ${result.n || result.dataPoints || '-'}</div>
                 </div>
             `;
             if (result.forecast) {
@@ -3667,44 +4298,44 @@ export function renderStatResults(result, type) {
 
     // Add statistics based on test type
     if (result.tStatistic !== undefined) {
-        html += formatStatRow('t İstatistiği', fmtNum(result.tStatistic));
+        html += formatStatRow('t Ä°statistiÄŸi', fmtNum(result.tStatistic));
     }
     if (result.fStatistic !== undefined) {
-        html += formatStatRow('F İstatistiği', fmtNum(result.fStatistic));
+        html += formatStatRow('F Ä°statistiÄŸi', fmtNum(result.fStatistic));
     }
     if (result.chiSquare !== undefined) {
-        html += formatStatRow('χ² İstatistiği', fmtNum(result.chiSquare));
+        html += formatStatRow('Ï‡Â² Ä°statistiÄŸi', fmtNum(result.chiSquare));
     }
     if (result.chi2Statistic !== undefined) {
-        html += formatStatRow('χ² İstatistiği', fmtNum(result.chi2Statistic));
+        html += formatStatRow('Ï‡Â² Ä°statistiÄŸi', fmtNum(result.chi2Statistic));
     }
     if (result.U !== undefined) {
-        html += formatStatRow('U İstatistiği', fmtNum(result.U, 2));
+        html += formatStatRow('U Ä°statistiÄŸi', fmtNum(result.U, 2));
     }
     if (result.hStatistic !== undefined) {
-        html += formatStatRow('H İstatistiği', fmtNum(result.hStatistic));
+        html += formatStatRow('H Ä°statistiÄŸi', fmtNum(result.hStatistic));
     }
     if (result.W !== undefined) {
-        html += formatStatRow('W İstatistiği', fmtNum(result.W, 2));
+        html += formatStatRow('W Ä°statistiÄŸi', fmtNum(result.W, 2));
     }
     if (result.wStatistic !== undefined) {
-        html += formatStatRow('W İstatistiği', fmtNum(result.wStatistic));
+        html += formatStatRow('W Ä°statistiÄŸi', fmtNum(result.wStatistic));
     }
     if (result.zStatistic !== undefined) {
-        html += formatStatRow('z İstatistiği', fmtNum(result.zStatistic));
+        html += formatStatRow('z Ä°statistiÄŸi', fmtNum(result.zStatistic));
     }
     if (result.correlation !== undefined) {
         html += formatStatRow('Korelasyon (r)', fmtNum(result.correlation));
     }
     if (result.rSquared !== undefined) {
-        html += formatStatRow('R²', fmtNum(result.rSquared));
+        html += formatStatRow('RÂ²', fmtNum(result.rSquared));
     }
 
     // Degrees of freedom
     if (result.degreesOfFreedom !== undefined) {
         if (typeof result.degreesOfFreedom === 'object') {
-            html += formatStatRow('sd (gruplar arası)', result.degreesOfFreedom.between);
-            html += formatStatRow('sd (grup içi)', result.degreesOfFreedom.within);
+            html += formatStatRow('sd (gruplar arasÄ±)', result.degreesOfFreedom.between);
+            html += formatStatRow('sd (grup iÃ§i)', result.degreesOfFreedom.within);
         } else {
             html += formatStatRow('Serbestlik Derecesi',
                 typeof result.degreesOfFreedom === 'number' ? result.degreesOfFreedom.toFixed(2) : result.degreesOfFreedom);
@@ -3715,29 +4346,29 @@ export function renderStatResults(result, type) {
     if (result.pValue !== undefined) {
         const pClass = (result.pValue !== null && result.pValue < 0.001) ? 'p-very-sig' :
             (result.pValue !== null && result.pValue < 0.05) ? 'p-sig' : 'p-not-sig';
-        html += `<tr><td>p-değeri</td><td class="${pClass}">${fmtP(result.pValue)}</td></tr>`;
+        html += `<tr><td>p-deÄŸeri</td><td class="${pClass}">${fmtP(result.pValue)}</td></tr>`;
     }
 
     // Alpha level
     if (result.alpha !== undefined) {
-        html += formatStatRow('α (Anlamlılık Düzeyi)', result.alpha);
+        html += formatStatRow('Î± (AnlamlÄ±lÄ±k DÃ¼zeyi)', result.alpha);
     }
 
     // Effect sizes - FAZ-2: fmtNum guard
     if (result.cohensD !== undefined) {
         html += formatStatRow('Cohen\'s d', fmtNum(result.cohensD));
         if (result.effectSizeInterpretation) {
-            html += formatStatRow('Etki Büyüklüğü', renderText(result.effectSizeInterpretation));
+            html += formatStatRow('Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼', renderText(result.effectSizeInterpretation));
         }
     }
     if (result.etaSquared !== undefined) {
-        html += formatStatRow('η² (Eta Kare)', fmtNum(result.etaSquared));
+        html += formatStatRow('Î·Â² (Eta Kare)', fmtNum(result.etaSquared));
     }
     if (result.cramersV !== undefined) {
         html += formatStatRow('Cramer\'s V', fmtNum(result.cramersV));
     }
     if (result.effectSizeR !== undefined) {
-        html += formatStatRow('Etki Büyüklüğü (r)', fmtNum(result.effectSizeR));
+        html += formatStatRow('Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼ (r)', fmtNum(result.effectSizeR));
     }
     if (result.kendallW !== undefined) {
         html += formatStatRow('Kendall\'s W', fmtNum(result.kendallW));
@@ -3745,7 +4376,7 @@ export function renderStatResults(result, type) {
 
     // Mean difference
     if (result.meanDifference !== undefined) {
-        html += formatStatRow('Ortalama Farkı', fmtNum(result.meanDifference));
+        html += formatStatRow('Ortalama FarkÄ±', fmtNum(result.meanDifference));
     }
 
     // Sample sizes
@@ -3762,7 +4393,7 @@ export function renderStatResults(result, type) {
     if (result.group1Stats && result.group2Stats) {
         html += `
             <div class="stat-groups">
-                <h5>Grup İstatistikleri</h5>
+                <h5>Grup Ä°statistikleri</h5>
                 <table class="stat-table stat-groups-table">
                     <tr>
                         <th></th>
@@ -3795,7 +4426,7 @@ export function renderStatResults(result, type) {
     if (result.groupStats && Array.isArray(result.groupStats)) {
         html += `
             <div class="stat-groups">
-                <h5>Grup İstatistikleri</h5>
+                <h5>Grup Ä°statistikleri</h5>
                 <table class="stat-table">
                     <tr>
                         <th>Grup</th>
@@ -3831,7 +4462,7 @@ export function renderStatResults(result, type) {
         html += `
             <div class="stat-interpretation correlation">
                 <i class="fas fa-chart-line"></i>
-                <span>İlişki: ${result.correlationInterpretation}</span>
+                <span>Ä°liÅŸki: ${result.correlationInterpretation}</span>
             </div>
         `;
     }
@@ -3839,7 +4470,7 @@ export function renderStatResults(result, type) {
     // Normality result
     if (result.isNormal !== undefined) {
         const normalClass = result.isNormal ? 'normal' : 'not-normal';
-        const normalText = result.isNormal ? 'Veri normal dağılımlı' : 'Veri normal dağılımlı değil';
+        const normalText = result.isNormal ? 'Veri normal daÄŸÄ±lÄ±mlÄ±' : 'Veri normal daÄŸÄ±lÄ±mlÄ± deÄŸil';
         html += `
             <div class="stat-normality ${normalClass}">
                 <i class="fas ${result.isNormal ? 'fa-check' : 'fa-times'}"></i>
@@ -3857,7 +4488,7 @@ export function renderStatResults(result, type) {
     html += `
             </div>
             <div class="stat-result-footer">
-                <small>α = ${result.alpha || 0.05}</small>
+                <small>Î± = ${result.alpha || 0.05}</small>
                 <small>${new Date().toLocaleDateString('tr-TR')}</small>
             </div>
         </div>
@@ -3892,7 +4523,7 @@ export function renderColumnDiagnostics(widgetId) {
         { data: VIZ_STATE.data || [], columns: VIZ_STATE.columns || [] };
 
     if (!dataset || !dataset.data || dataset.data.length === 0) {
-        return '<div class="stat-diagnostics stat-warning"><i class="fas fa-info-circle"></i> Veri yüklenmemiş</div>';
+        return '<div class="stat-diagnostics stat-warning"><i class="fas fa-info-circle"></i> Veri yÃ¼klenmemiÅŸ</div>';
     }
 
     const data = dataset.data;
@@ -3921,7 +4552,7 @@ export function renderColumnDiagnostics(widgetId) {
         const xMissing = xVals.filter(v => v === null || v === '' || v === undefined).length;
         const xUnique = new Set(xVals.filter(v => v !== null && v !== '')).size;
         const xNumeric = xVals.filter(v => v !== null && v !== '' && !isNaN(parseFloat(v))).length;
-        const xType = xNumeric > xVals.length * 0.7 ? 'Sayısal' : 'Kategorik';
+        const xType = xNumeric > xVals.length * 0.7 ? 'SayÄ±sal' : 'Kategorik';
 
         xDiag = `<span class="diag-item"><b>X (${xCol}):</b> ${xType}, ${xUnique} benzersiz, ${xMissing} eksik</span>`;
     }
@@ -3934,7 +4565,7 @@ export function renderColumnDiagnostics(widgetId) {
         const yValid = yVals.filter(v => v !== null && v !== '' && !isNaN(parseFloat(v))).length;
         const yNumeric = yValid > 0;
 
-        yDiag = `<span class="diag-item"><b>Y (${yCol}):</b> ${yNumeric ? 'Sayısal' : 'Kategorik'}, n=${yValid}, ${yMissing} eksik</span>`;
+        yDiag = `<span class="diag-item"><b>Y (${yCol}):</b> ${yNumeric ? 'SayÄ±sal' : 'Kategorik'}, n=${yValid}, ${yMissing} eksik</span>`;
     }
 
     return `
@@ -3945,7 +4576,7 @@ export function renderColumnDiagnostics(widgetId) {
             </div>
             <div class="diag-summary">
                 <i class="fas fa-database"></i> 
-                ${data.length} satır, ${numericCount} sayısal, ${categoricalCount} kategorik sütun
+                ${data.length} satÄ±r, ${numericCount} sayÄ±sal, ${categoricalCount} kategorik sÃ¼tun
             </div>
         </div>
     `;
@@ -3966,7 +4597,7 @@ export function generateMissingDataNote(result, lang = 'tr') {
     let note = '<div class="stat-missing-note">';
     note += '<i class="fas fa-info-circle"></i> ';
 
-    // ✅ USE RESULT VALUES DIRECTLY (injected by runStatWidgetAnalysis)
+    // âœ… USE RESULT VALUES DIRECTLY (injected by runStatWidgetAnalysis)
     const missingX = result.xMissing || 0;
     const missingY = result.yMissing || 0;
     const totalMissing = missingX + missingY;
@@ -3976,7 +4607,7 @@ export function generateMissingDataNote(result, lang = 'tr') {
     // Use result.imputationActions (pre-filtered for these columns)
     let relevantActions = result.imputationActions || [];
 
-    // ✅ FALLBACK: If no column-specific actions, check global VIZ_STATE.dataActions
+    // âœ… FALLBACK: If no column-specific actions, check global VIZ_STATE.dataActions
     if (relevantActions.length === 0 && typeof VIZ_STATE !== 'undefined') {
         const allActions = VIZ_STATE.dataActions || [];
         // Check if any imputation was done on yCol (main analysis column)
@@ -3994,15 +4625,15 @@ export function generateMissingDataNote(result, lang = 'tr') {
     const texts = {
         tr: {
             imputed: (col, count, method, value) =>
-                `${col} değişkeninde ${count} eksik gözlem ${method}${value ? ` (${value})` : ''} ile tamamlanmıştır.`,
+                `${col} deÄŸiÅŸkeninde ${count} eksik gÃ¶zlem ${method}${value ? ` (${value})` : ''} ile tamamlanmÄ±ÅŸtÄ±r.`,
             noAction: (x, y, xName, yName) => {
                 let msg = '';
-                if (y > 0) msg += `${yName} değişkeninde n=${y} eksik gözlem tespit edilmiştir; `;
-                if (x > 0) msg += `${xName} değişkeninde n=${x} eksik gözlem tespit edilmiştir; `;
-                msg += 'eksik veri için herhangi bir doldurma işlemi uygulanmamıştır. Analiz listwise deletion ile yürütülmüştür.';
+                if (y > 0) msg += `${yName} deÄŸiÅŸkeninde n=${y} eksik gÃ¶zlem tespit edilmiÅŸtir; `;
+                if (x > 0) msg += `${xName} deÄŸiÅŸkeninde n=${x} eksik gÃ¶zlem tespit edilmiÅŸtir; `;
+                msg += 'eksik veri iÃ§in herhangi bir doldurma iÅŸlemi uygulanmamÄ±ÅŸtÄ±r. Analiz listwise deletion ile yÃ¼rÃ¼tÃ¼lmÃ¼ÅŸtÃ¼r.';
                 return msg;
             },
-            noMissing: 'Analize dahil edilen değişkenlerde eksik veri bulunmamaktadır.'
+            noMissing: 'Analize dahil edilen deÄŸiÅŸkenlerde eksik veri bulunmamaktadÄ±r.'
         },
         en: {
             imputed: (col, count, method, value) =>
@@ -4020,7 +4651,7 @@ export function generateMissingDataNote(result, lang = 'tr') {
 
     const t = texts[lang] || texts.tr;
 
-    // ✅ Filter out any actions with missing/invalid data - accepts both 'column' and 'col' field names
+    // âœ… Filter out any actions with missing/invalid data - accepts both 'column' and 'col' field names
     const validActions = relevantActions.filter(a => {
         const colName = a?.column || a?.col;
         return a && colName && a.type === 'imputation';
@@ -4031,10 +4662,10 @@ export function generateMissingDataNote(result, lang = 'tr') {
         // Imputation was applied - show what was done
         validActions.forEach(action => {
             // Safe access to methodName with multiple fallbacks
-            let methodName = 'bilinmeyen yöntem';
+            let methodName = 'bilinmeyen yÃ¶ntem';
             if (action.methodName) {
                 if (typeof action.methodName === 'object') {
-                    methodName = action.methodName[lang] || action.methodName.tr || action.method || 'yöntem';
+                    methodName = action.methodName[lang] || action.methodName.tr || action.method || 'yÃ¶ntem';
                 } else {
                     methodName = action.methodName;
                 }
@@ -4042,7 +4673,7 @@ export function generateMissingDataNote(result, lang = 'tr') {
                 methodName = action.method;
             }
 
-            const colName = action.column || 'sütun';
+            const colName = action.column || 'sÃ¼tun';
             const count = action.count || '?';
             const value = action.value || '';
 
@@ -4072,7 +4703,7 @@ export function generateMissingDataNote(result, lang = 'tr') {
 export function copyStatAsTable(widgetId) {
     const widget = document.getElementById(widgetId);
     if (!widget) {
-        showToast('Widget bulunamadı', 'error');
+        showToast('Widget bulunamadÄ±', 'error');
         return;
     }
 
@@ -4111,10 +4742,10 @@ export function copyStatAsTable(widgetId) {
     }
 
     navigator.clipboard.writeText(tsv).then(() => {
-        showToast('Tablo olarak kopyalandı (Excel/Sheets uyumlu)', 'success');
+        showToast('Tablo olarak kopyalandÄ± (Excel/Sheets uyumlu)', 'success');
     }).catch(err => {
         console.error('Copy error:', err);
-        showToast('Kopyalama başarısız', 'error');
+        showToast('Kopyalama baÅŸarÄ±sÄ±z', 'error');
     });
 }
 
@@ -4137,7 +4768,7 @@ export function formatStatResultForWidget(result, type) {
     let statValue = '';
     if (result.tStatistic !== undefined) statValue = `t = ${result.tStatistic.toFixed(2)}`;
     else if (result.fStatistic !== undefined) statValue = `F = ${result.fStatistic.toFixed(2)}`;
-    else if (result.chiSquare !== undefined) statValue = `χ² = ${result.chiSquare.toFixed(2)}`;
+    else if (result.chiSquare !== undefined) statValue = `Ï‡Â² = ${result.chiSquare.toFixed(2)}`;
     else if (result.correlation !== undefined) statValue = `r = ${result.correlation.toFixed(2)}`;
     else if (result.U !== undefined) statValue = `U = ${result.U.toFixed(0)}`;
     else if (result.hStatistic !== undefined) statValue = `H = ${result.hStatistic.toFixed(2)}`;
@@ -4164,7 +4795,7 @@ let statWidgetCounter = 0;
 // NOTE: getStatTitle is already defined above (line 1477), using that version.
 
 /**
- * UI tipine göre parametre seçicileri oluşturur
+ * UI tipine gÃ¶re parametre seÃ§icileri oluÅŸturur
  */
 export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) {
     const columns = dataset.columns || [];
@@ -4176,16 +4807,16 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
 
     const allCols = columns.length > 0 ? columns : (numericCols.length > 0 ? numericCols : ['Col1', 'Col2']);
 
-    // FAZ-1: "Seçiniz" default - kullanıcı seçmeden çalışmayacak
+    // FAZ-1: "SeÃ§iniz" default - kullanÄ±cÄ± seÃ§meden Ã§alÄ±ÅŸmayacak
     const makeOptions = (cols, selected, includeEmpty = true) => {
-        let opts = includeEmpty ? '<option value="">-- Seçiniz --</option>' : '';
+        let opts = includeEmpty ? '<option value="">-- SeÃ§iniz --</option>' : '';
         opts += cols.map(c =>
             `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`
         ).join('');
         return opts;
     };
 
-    // FAZ-1: Varsayılan seçim kapalı - defaultChecked boş
+    // FAZ-1: VarsayÄ±lan seÃ§im kapalÄ± - defaultChecked boÅŸ
     const makeCheckboxes = (cols, idPrefix, defaultChecked = []) => cols.map((c, i) =>
         `<label class="viz-checkbox-item">
             <input type="checkbox" id="${idPrefix}_${i}" name="${idPrefix}" value="${c}" 
@@ -4196,7 +4827,7 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
     ).join('');
 
     let html = `<div class="viz-stat-info">${analysisInfo.description}</div>`;
-    html += `<div class="viz-stat-default-info"><small><i class="fas fa-info-circle"></i> Değişken seçin ve Yenile butonuna basın.</small></div>`;
+    html += `<div class="viz-stat-default-info"><small><i class="fas fa-info-circle"></i> DeÄŸiÅŸken seÃ§in ve Yenile butonuna basÄ±n.</small></div>`;
 
     switch (analysisInfo.uiType) {
         case 'TYPE_A':
@@ -4209,7 +4840,7 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
                         </select>
                     </div>
                     <div class="viz-param-group">
-                        <label>Y (Değer/Sayısal):</label>
+                        <label>Y (DeÄŸer/SayÄ±sal):</label>
                         <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(numericCols.length > 0 ? numericCols : allCols)}
                         </select>
@@ -4217,19 +4848,19 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
                 </div>
                 <div class="viz-group-selector" id="${widgetId}_groupSelector">
                     <div class="viz-group-selector-title">
-                        <i class="fas fa-users"></i> Karşılaştırılacak Gruplar:
+                        <i class="fas fa-users"></i> KarÅŸÄ±laÅŸtÄ±rÄ±lacak Gruplar:
                     </div>
                     <div class="viz-group-selectors-row">
                         <div class="viz-param-group">
                             <label>Grup 1:</label>
                             <select id="${widgetId}_group1" onchange="refreshStatWidget('${widgetId}')">
-                                <option value="">-- Grup seçin --</option>
+                                <option value="">-- Grup seÃ§in --</option>
                             </select>
                         </div>
                         <div class="viz-param-group">
                             <label>Grup 2:</label>
                             <select id="${widgetId}_group2" onchange="refreshStatWidget('${widgetId}')">
-                                <option value="">-- Grup seçin --</option>
+                                <option value="">-- Grup seÃ§in --</option>
                             </select>
                         </div>
                     </div>
@@ -4243,14 +4874,14 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group viz-multi-select">
-                        <label>Sütunlar (en az ${minCols}, en fazla ${maxCols}):</label>
+                        <label>SÃ¼tunlar (en az ${minCols}, en fazla ${maxCols}):</label>
                         <div class="viz-checkbox-grid" id="${widgetId}_columns">
                             ${makeCheckboxes(numericCols.length > 0 ? numericCols : allCols, `${widgetId}_col`, defaultSelected)}
                         </div>
                     </div>
                     ${analysisInfo.extraParams?.includes('k') ? `
                     <div class="viz-param-group">
-                        <label>K (Küme Sayısı):</label>
+                        <label>K (KÃ¼me SayÄ±sÄ±):</label>
                         <input type="number" id="${widgetId}_k" value="${analysisInfo.defaultK || 3}" 
                                min="2" max="10" onchange="refreshStatWidget('${widgetId}')">
                     </div>` : ''}
@@ -4261,13 +4892,13 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>Ölçüm 1 (Öncesi/İlk):</label>
+                        <label>Ã–lÃ§Ã¼m 1 (Ã–ncesi/Ä°lk):</label>
                         <select id="${widgetId}_col1" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(numericCols.length > 0 ? numericCols : allCols, numericCols[0])}
                         </select>
                     </div>
                     <div class="viz-param-group">
-                        <label>Ölçüm 2 (Sonrası/İkinci):</label>
+                        <label>Ã–lÃ§Ã¼m 2 (SonrasÄ±/Ä°kinci):</label>
                         <select id="${widgetId}_col2" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(numericCols.length > 0 ? numericCols : allCols, numericCols[1] || numericCols[0])}
                         </select>
@@ -4278,7 +4909,7 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
         case 'TYPE_D':
             const targetCols = analysisInfo.targetType === 'binary' ? categoricalCols : categoricalCols;
             const predictorCols = numericCols;
-            // GATE-9: Varsayılan seçim YOK - kullanıcı seçmeli
+            // GATE-9: VarsayÄ±lan seÃ§im YOK - kullanÄ±cÄ± seÃ§meli
             const defaultPredictors = [];
             html += `
                 <div class="viz-stat-selectors">
@@ -4289,7 +4920,7 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
                         </select>
                     </div>
                     <div class="viz-param-group viz-multi-select">
-                        <label>Bağımsız Değişkenler:</label>
+                        <label>BaÄŸÄ±msÄ±z DeÄŸiÅŸkenler:</label>
                         <div class="viz-checkbox-grid" id="${widgetId}_predictors">
                             ${makeCheckboxes(predictorCols.length > 0 ? predictorCols : allCols, `${widgetId}_pred`, defaultPredictors)}
                         </div>
@@ -4303,20 +4934,20 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             if (analysisInfo.columnTypes?.includes('categorical') && analysisInfo.columnTypes?.includes('numeric')) colsToUse = allCols;
 
             // Determine appropriate type hint
-            const typeEHint = analysisInfo.columnTypes?.includes('numeric') ? 'Sayısal' :
-                analysisInfo.columnTypes?.includes('categorical') ? 'Kategori' : 'Sayısal';
+            const typeEHint = analysisInfo.columnTypes?.includes('numeric') ? 'SayÄ±sal' :
+                analysisInfo.columnTypes?.includes('categorical') ? 'Kategori' : 'SayÄ±sal';
 
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>Sütun (${typeEHint}):</label>
+                        <label>SÃ¼tun (${typeEHint}):</label>
                         <select id="${widgetId}_${useX ? 'xCol' : 'yCol'}" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(colsToUse)}
                         </select>
                     </div>
                     ${analysisInfo.extraParams?.includes('effectSize') ? `
                     <div class="viz-param-group">
-                        <label>Etki Büyüklüğü (d):</label>
+                        <label>Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼ (d):</label>
                         <input type="number" id="${widgetId}_effectSize" value="0.5" step="0.1" onchange="refreshStatWidget('${widgetId}')">
                     </div>` : ''}
                 </div>`;
@@ -4326,13 +4957,13 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
             html += `
                 <div class="viz-stat-selectors">
                     <div class="viz-param-group">
-                        <label>${statType === 'survival' ? 'Süre (Sayısal/Tarih):' : 'Zaman (Tarih/Sayısal):'}</label>
+                        <label>${statType === 'survival' ? 'SÃ¼re (SayÄ±sal/Tarih):' : 'Zaman (Tarih/SayÄ±sal):'}</label>
                         <select id="${widgetId}_xCol" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(dateCols.length > 0 ? dateCols : allCols)}
                         </select>
                     </div>
                     <div class="viz-param-group">
-                        <label>${statType === 'survival' ? 'Olay (0/1 Sayısal):' : 'Değer (Sayısal):'}</label>
+                        <label>${statType === 'survival' ? 'Olay (0/1 SayÄ±sal):' : 'DeÄŸer (SayÄ±sal):'}</label>
                         <select id="${widgetId}_yCol" onchange="refreshStatWidget('${widgetId}')">
                             ${makeOptions(numericCols.length > 0 ? numericCols : allCols)}
                         </select>
@@ -4344,12 +4975,12 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
         case 'TYPE_H':
         default:
             // Define data type hints based on stat type requirements
-            const xTypeHint = analysisInfo.xColumnType === 'numeric' ? 'Sayısal' :
+            const xTypeHint = analysisInfo.xColumnType === 'numeric' ? 'SayÄ±sal' :
                 analysisInfo.xColumnType === 'categorical' ? 'Grup/Kategori' :
                     statType.includes('chi') ? 'Kategori' : 'Grup/Kategori';
-            const yTypeHint = analysisInfo.yColumnType === 'numeric' ? 'Değer/Sayısal' :
+            const yTypeHint = analysisInfo.yColumnType === 'numeric' ? 'DeÄŸer/SayÄ±sal' :
                 analysisInfo.yColumnType === 'categorical' ? 'Kategori' :
-                    statType.includes('chi') ? 'Kategori' : 'Değer/Sayısal';
+                    statType.includes('chi') ? 'Kategori' : 'DeÄŸer/SayÄ±sal';
 
             html += `
                 <div class="viz-stat-selectors">
@@ -4370,14 +5001,14 @@ export function generateStatUIByType(widgetId, statType, analysisInfo, dataset) 
                         </select>
                     </div>
                 </div>`;
-            if (analysisInfo.uiType === 'TYPE_G') html += `<div class="viz-stat-note"><i class="fas fa-check-circle"></i> Tüm gruplar karşılaştırılacak.</div>`;
+            if (analysisInfo.uiType === 'TYPE_G') html += `<div class="viz-stat-note"><i class="fas fa-check-circle"></i> TÃ¼m gruplar karÅŸÄ±laÅŸtÄ±rÄ±lacak.</div>`;
     }
     return html;
 }
 
 export async function createStatWidget(statType, options = {}) {
     if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) {
-        showToast('Önce veri yükleyin', 'warning');
+        showToast('Ã–nce veri yÃ¼kleyin', 'warning');
         return;
     }
 
@@ -4385,9 +5016,9 @@ export async function createStatWidget(statType, options = {}) {
     const datasetId = VIZ_STATE.activeDatasetId;
     const dataset = VIZ_STATE.getDatasetById(datasetId);
 
-    if (!dataset) { showToast('Veri seti bulunamadı', 'error'); return; }
+    if (!dataset) { showToast('Veri seti bulunamadÄ±', 'error'); return; }
 
-    console.log(`📊 Stat widget: ${widgetId}, tip: ${statType}`);
+    console.log(`ğŸ“Š Stat widget: ${widgetId}, tip: ${statType}`);
 
     // Default columns
     let defaultX = dataset.columns[0] || '';
@@ -4418,16 +5049,16 @@ export async function createStatWidget(statType, options = {}) {
                 <button class="viz-widget-btn" onclick="copyStatAsAPA('${widgetId}')" title="APA Kopyala"><i class="fas fa-graduation-cap"></i></button>
                 <button class="viz-widget-btn" onclick="copyStatAsTable('${widgetId}')" title="Tablo Kopyala"><i class="fas fa-table"></i></button>
                 <button class="viz-widget-btn" onclick="copyStatAsImage('${widgetId}')" title="Resim Kopyala"><i class="fas fa-image"></i></button>
-                <button class="viz-widget-btn" onclick="toggleFormula('${widgetId}')" title="Formüller"><i class="fas fa-square-root-alt"></i></button>
+                <button class="viz-widget-btn" onclick="toggleFormula('${widgetId}')" title="FormÃ¼ller"><i class="fas fa-square-root-alt"></i></button>
                 <button class="viz-widget-btn" onclick="refreshStatWidget('${widgetId}')" title="Yenile"><i class="fas fa-sync-alt"></i></button>
-                <button class="viz-widget-btn" onclick="embedStatToChart('${widgetId}')" title="Grafiğe Göm"><i class="fas fa-compress-arrows-alt"></i></button>
+                <button class="viz-widget-btn" onclick="embedStatToChart('${widgetId}')" title="GrafiÄŸe GÃ¶m"><i class="fas fa-compress-arrows-alt"></i></button>
                 <button class="viz-widget-close" onclick="removeWidget('${widgetId}')"><i class="fas fa-times"></i></button>
             </div>
         </div>
         <div class="viz-stat-params" id="${widgetId}_params">${paramsHTML}</div>
         <div class="viz-stat-diagnostics" id="${widgetId}_diagnostics"></div>
         <div class="viz-widget-body viz-stat-body" id="${widgetId}_body">
-            <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hazır</div>
+            <div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> HazÄ±r</div>
         </div>
         <div class="viz-widget-resize-handle" onmousedown="startWidgetResize(event, '${widgetId}')"></div>
     `;
@@ -4435,9 +5066,9 @@ export async function createStatWidget(statType, options = {}) {
     dashboard.appendChild(widget);
     if (window.updateEmptyState) window.updateEmptyState();
 
-    // GATE-9: Varsayılan seçim KAPATILDI - kullanıcı seçmeli
+    // GATE-9: VarsayÄ±lan seÃ§im KAPATILDI - kullanÄ±cÄ± seÃ§meli
     // xColSelect.value = defaultX ve yColSelect.value = defaultY KALDIRILDI
-    // Dropdown'lar "Seçiniz" ile açılacak
+    // Dropdown'lar "SeÃ§iniz" ile aÃ§Ä±lacak
 
     // P1.3: Populate diagnostics div
     const diagEl = document.getElementById(`${widgetId}_diagnostics`);
@@ -4445,41 +5076,41 @@ export async function createStatWidget(statType, options = {}) {
         diagEl.innerHTML = renderColumnDiagnostics(widgetId);
     }
 
-    // FAZ-0: Legacy runStatForWidget kaldırıldı
-    // İlk render'da analiz çalıştırılmaz - kullanıcı seçim yapıp Yenile basmalı
+    // FAZ-0: Legacy runStatForWidget kaldÄ±rÄ±ldÄ±
+    // Ä°lk render'da analiz Ã§alÄ±ÅŸtÄ±rÄ±lmaz - kullanÄ±cÄ± seÃ§im yapÄ±p Yenile basmalÄ±
     const bodyEl = document.getElementById(`${widgetId}_body`);
     if (analysisInfo.needsGroupSelection) {
         populateGroupSelectors(widgetId);
-        if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> Karşılaştırılacak grupları seçin ve Yenile butonuna basın.</div>';
+        if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> KarÅŸÄ±laÅŸtÄ±rÄ±lacak gruplarÄ± seÃ§in ve Yenile butonuna basÄ±n.</div>';
     } else {
-        // FAZ-1: Varsayılan seçim kapalı - kullanıcı seçmeli
-        if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> Değişken(ler)i seçin ve Yenile butonuna basın.</div>';
+        // FAZ-1: VarsayÄ±lan seÃ§im kapalÄ± - kullanÄ±cÄ± seÃ§meli
+        if (bodyEl) bodyEl.innerHTML = '<div class="viz-stat-info"><i class="fas fa-info-circle"></i> DeÄŸiÅŸken(ler)i seÃ§in ve Yenile butonuna basÄ±n.</div>';
     }
 }
 
 export function getAnalysisRequirements(statType) {
     const requirements = {
-        'descriptive': { uiType: 'TYPE_E', needsX: false, needsY: true, columnTypes: ['numeric'], description: 'Seçili sütun(lar)ın istatistiklerini hesaplar.' },
-        'ttest': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'İki grup seçip ortalamalarını karşılaştırır.' },
-        'anova': { uiType: 'TYPE_G', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'numeric', autoUseAllGroups: true, description: 'Tüm grupları otomatik karşılaştırır.' },
-        'chi-square': { uiType: 'TYPE_H', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'categorical', description: 'Bağımsızlık testi uygular.' },
+        'descriptive': { uiType: 'TYPE_E', needsX: false, needsY: true, columnTypes: ['numeric'], description: 'SeÃ§ili sÃ¼tun(lar)Ä±n istatistiklerini hesaplar.' },
+        'ttest': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'Ä°ki grup seÃ§ip ortalamalarÄ±nÄ± karÅŸÄ±laÅŸtÄ±rÄ±r.' },
+        'anova': { uiType: 'TYPE_G', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'numeric', autoUseAllGroups: true, description: 'TÃ¼m gruplarÄ± otomatik karÅŸÄ±laÅŸtÄ±rÄ±r.' },
+        'chi-square': { uiType: 'TYPE_H', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'categorical', description: 'BaÄŸÄ±msÄ±zlÄ±k testi uygular.' },
         'correlation': { uiType: 'TYPE_B', needsX: false, needsY: true, minColumns: 2, columnTypes: ['numeric'], description: 'Korelasyon matrisini hesaplar.' },
         'normality': { uiType: 'TYPE_E', needsX: false, needsY: true, columnTypes: ['numeric'], description: 'Normallik testi.' },
-        'mann-whitney': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'Medyanları karşılaştırır.' },
-        'wilcoxon': { uiType: 'TYPE_C', needsX: false, needsY: true, paired: true, columnTypes: ['numeric'], description: 'Eşleştirilmiş örneklem testi.' },
+        'mann-whitney': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'MedyanlarÄ± karÅŸÄ±laÅŸtÄ±rÄ±r.' },
+        'wilcoxon': { uiType: 'TYPE_C', needsX: false, needsY: true, paired: true, columnTypes: ['numeric'], description: 'EÅŸleÅŸtirilmiÅŸ Ã¶rneklem testi.' },
         'kruskal': { uiType: 'TYPE_G', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'numeric', autoUseAllGroups: true, description: 'Non-parametrik ANOVA.' },
-        'levene': { uiType: 'TYPE_G', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'numeric', autoUseAllGroups: true, description: 'Varyans homojenliği testi.' },
-        'effect-size': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'Etki büyüklüğü hesaplar.' },
+        'levene': { uiType: 'TYPE_G', needsX: true, needsY: true, xColumnType: 'categorical', yColumnType: 'numeric', autoUseAllGroups: true, description: 'Varyans homojenliÄŸi testi.' },
+        'effect-size': { uiType: 'TYPE_A', needsX: true, needsY: true, needsGroupSelection: true, xColumnType: 'categorical', yColumnType: 'numeric', description: 'Etki bÃ¼yÃ¼klÃ¼ÄŸÃ¼ hesaplar.' },
         'frequency': { uiType: 'TYPE_E', needsX: true, needsY: false, columnTypes: ['categorical'], description: 'Frekans hesaplar.' },
         'pca': { uiType: 'TYPE_B', needsX: false, needsY: true, minColumns: 3, columnTypes: ['numeric'], description: 'PCA uygular.' },
-        'kmeans': { uiType: 'TYPE_B', needsX: false, needsY: true, minColumns: 2, columnTypes: ['numeric'], extraParams: ['k'], defaultK: 3, description: 'K-Means kümeleme.' },
-        'regression-coef': { uiType: 'TYPE_H', needsX: true, needsY: true, xColumnType: 'numeric', yColumnType: 'numeric', description: 'Regresyon katsayıları.' },
+        'kmeans': { uiType: 'TYPE_B', needsX: false, needsY: true, minColumns: 2, columnTypes: ['numeric'], extraParams: ['k'], defaultK: 3, description: 'K-Means kÃ¼meleme.' },
+        'regression-coef': { uiType: 'TYPE_H', needsX: true, needsY: true, xColumnType: 'numeric', yColumnType: 'numeric', description: 'Regresyon katsayÄ±larÄ±.' },
         'logistic': { uiType: 'TYPE_D', needsX: true, needsY: true, targetType: 'binary', predictorTypes: ['numeric', 'categorical'], description: 'Lojistik regresyon.' },
         'timeseries': { uiType: 'TYPE_F', needsX: true, needsY: true, xColumnType: 'date', yColumnType: 'numeric', description: 'Trend analizi.' },
         'apa': { uiType: 'TYPE_E', needsX: false, needsY: true, useFullData: true, description: 'APA raporu.' },
-        'power': { uiType: 'TYPE_E', needsX: false, needsY: true, columnTypes: ['numeric'], extraParams: ['effectSize', 'alpha'], description: 'Güç analizi.' }
+        'power': { uiType: 'TYPE_E', needsX: false, needsY: true, columnTypes: ['numeric'], extraParams: ['effectSize', 'alpha'], description: 'GÃ¼Ã§ analizi.' }
     };
-    return requirements[statType] || { uiType: 'TYPE_G', needsX: true, needsY: true, description: 'Analiz için X ve Y sütunları seçin.' };
+    return requirements[statType] || { uiType: 'TYPE_G', needsX: true, needsY: true, description: 'Analiz iÃ§in X ve Y sÃ¼tunlarÄ± seÃ§in.' };
 }
 
 export function onStatXColumnChange(widgetId, statType) {
@@ -4522,7 +5153,7 @@ export async function refreshStatWidget(widgetId) {
 }
 
 export function embedStatToChart(widgetId) {
-    if (!VIZ_STATE.selectedChart) { showToast('Grafik seçin', 'warning'); return; }
+    if (!VIZ_STATE.selectedChart) { showToast('Grafik seÃ§in', 'warning'); return; }
     const statWidget = document.getElementById(widgetId);
     const chartWidget = document.getElementById(VIZ_STATE.selectedChart);
     const statBody = document.getElementById(`${widgetId}_body`);
@@ -4538,10 +5169,10 @@ export function embedStatToChart(widgetId) {
 export async function runStatForWidget(widgetId, statType, datasetId, xCol, yCol) {
     const bodyEl = document.getElementById(`${widgetId}_body`);
     if (!bodyEl) return;
-    bodyEl.innerHTML = '<div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> Hesaplanıyor...</div>';
+    bodyEl.innerHTML = '<div class="viz-loading"><i class="fas fa-spinner fa-spin"></i> HesaplanÄ±yor...</div>';
 
     const dataset = VIZ_STATE.getDatasetById(datasetId);
-    if (!dataset) { bodyEl.innerHTML = 'Veri bulunamadı'; return; }
+    if (!dataset) { bodyEl.innerHTML = 'Veri bulunamadÄ±'; return; }
 
     // Attempt local calculation using existing math functions if possible
     try {
@@ -4579,7 +5210,7 @@ export async function runStatForWidget(widgetId, statType, datasetId, xCol, yCol
             renderStatResults(widgetId, statType, result); // Use existing render if available
         } else {
             // Fallback UI if math binding missing or not implemented in this patch
-            bodyEl.innerHTML = `<div class="viz-stat-result-box"><h4>${getStatTitle(statType)}</h4><p>X: ${xCol || '-'}</p><p>Y: ${yCol || '-'}</p><div class="viz-stat-value">Hesaplama Hazır</div></div>`;
+            bodyEl.innerHTML = `<div class="viz-stat-result-box"><h4>${getStatTitle(statType)}</h4><p>X: ${xCol || '-'}</p><p>Y: ${yCol || '-'}</p><div class="viz-stat-value">Hesaplama HazÄ±r</div></div>`;
         }
     } catch (e) {
         console.error(e);
@@ -4613,7 +5244,7 @@ export function runStatWidgetAnalysis(widgetId) {
     }
 
     // Show loading
-    resultsContainer.innerHTML = '<div class="viz-stat-loading"><i class="fas fa-spinner fa-spin"></i> Analiz yapılıyor...</div>';
+    resultsContainer.innerHTML = '<div class="viz-stat-loading"><i class="fas fa-spinner fa-spin"></i> Analiz yapÄ±lÄ±yor...</div>';
 
     try {
         // FIX: Get configuration values using CORRECT element IDs (widgets use _xCol/_yCol, not _var1/_var2)
@@ -4646,10 +5277,10 @@ export function runStatWidgetAnalysis(widgetId) {
         const activeDataset = VIZ_STATE.getActiveDataset ? VIZ_STATE.getActiveDataset() : null;
         const data = activeDataset?.data || VIZ_STATE.data || [];
         if (data.length === 0) {
-            throw new Error('Veri yüklenmemiş');
+            throw new Error('Veri yÃ¼klenmemiÅŸ');
         }
 
-        // ✅ CALCULATE MISSING COUNTS FOR ACADEMIC NOTE
+        // âœ… CALCULATE MISSING COUNTS FOR ACADEMIC NOTE
         const xCol = group || var1 || document.getElementById(`${widgetId}_xCol`)?.value;
         const yCol = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
 
@@ -4672,7 +5303,7 @@ export function runStatWidgetAnalysis(widgetId) {
                 if (group1 && group2 && group && var2) {
                     const g1Data = data.filter(r => r[group] === group1).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
                     const g2Data = data.filter(r => r[group] === group2).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
-                    if (g1Data.length < 2 || g2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    if (g1Data.length < 2 || g2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalÄ±');
                     result = runIndependentTTest(g1Data, g2Data, alpha);
                 } else if (var1 && var2) {
                     result = runIndependentTTest(
@@ -4681,21 +5312,23 @@ export function runStatWidgetAnalysis(widgetId) {
                         alpha
                     );
                 } else {
-                    throw new Error('Grup veya değişken seçmelisiniz');
+                    throw new Error('Grup veya deÄŸiÅŸken seÃ§melisiniz');
                 }
                 break;
 
             case 'ttest-paired':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
-                result = runPairedTTest(
+                // GÃ–REV C: Route to SPSS wrapper for complete output
+                if (!var1 || !var2) throw new Error('Ä°ki deÄŸiÅŸken seÃ§melisiniz');
+                result = runPairedTTest_SPSS(
                     data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
                     data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
-                    alpha
+                    alpha,
+                    [var1, var2] // Use variable names as pair names
                 );
                 break;
 
             case 'ttest-one':
-                if (!var1) throw new Error('Değişken seçmelisiniz');
+                if (!var1) throw new Error('DeÄŸiÅŸken seÃ§melisiniz');
                 result = runOneSampleTTest(
                     data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
                     popMean,
@@ -4706,11 +5339,11 @@ export function runStatWidgetAnalysis(widgetId) {
             // ==================== ANOVA ====================
             case 'anova':
             case 'anova-oneway':
-                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                // TYPE_G: xCol=kategori(group), yCol=sayÄ±sal(value)
                 // FAZ-2: Route to SPSS wrapper for complete output
                 const anovaGroup = group || var1;
                 const anovaValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
-                if (!anovaValue || !anovaGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                if (!anovaValue || !anovaGroup) throw new Error('Grup (X) ve deÄŸer (Y) sÃ¼tunlarÄ±nÄ± seÃ§melisiniz');
                 // Get group names for SPSS output
                 const anovaGroupNames = [...new Set(data.map(r => r[anovaGroup]).filter(v => v !== null && v !== '' && v !== undefined))].sort();
                 result = runOneWayANOVA_SPSS(groupDataByColumn(data, anovaGroup, anovaValue), alpha, anovaGroupNames);
@@ -4718,7 +5351,7 @@ export function runStatWidgetAnalysis(widgetId) {
 
             // ==================== CHI-SQUARE ====================
             case 'chi-square':
-                if (!var1 || !var2) throw new Error('İki kategorik değişken seçmelisiniz');
+                if (!var1 || !var2) throw new Error('Ä°ki kategorik deÄŸiÅŸken seÃ§melisiniz');
                 result = runChiSquareFromData(data, var1, var2, alpha);
                 break;
 
@@ -4731,18 +5364,18 @@ export function runStatWidgetAnalysis(widgetId) {
                     corrVar1 = multiVars[0];
                     corrVar2 = multiVars[1];
                 } else if (var1 && var2) {
-                    // Fallback: dropdown seçimi
+                    // Fallback: dropdown seÃ§imi
                     corrVar1 = var1;
                     corrVar2 = var2;
                 } else {
-                    throw new Error('En az 2 değişken seçmelisiniz');
+                    throw new Error('En az 2 deÄŸiÅŸken seÃ§melisiniz');
                 }
                 result = runCorrelationTest(
                     data.map(r => parseFloat(r[corrVar1])).filter(v => !isNaN(v)),
                     data.map(r => parseFloat(r[corrVar2])).filter(v => !isNaN(v)),
                     alpha
                 );
-                // Hangi değişkenler kullanıldığını kaydet
+                // Hangi deÄŸiÅŸkenler kullanÄ±ldÄ±ÄŸÄ±nÄ± kaydet
                 result.variables = [corrVar1, corrVar2];
                 break;
 
@@ -4751,7 +5384,7 @@ export function runStatWidgetAnalysis(widgetId) {
             case 'shapiro-wilk':
                 // FIX: Use var2 (yCol) as the numeric column, var1 (xCol) is typically categorical
                 const normalityCol = var2 || var1;
-                if (!normalityCol) throw new Error('Değişken seçmelisiniz');
+                if (!normalityCol) throw new Error('DeÄŸiÅŸken seÃ§melisiniz');
                 result = runShapiroWilkTest(
                     data.map(r => parseFloat(r[normalityCol])).filter(v => !isNaN(v)),
                     alpha
@@ -4767,7 +5400,7 @@ export function runStatWidgetAnalysis(widgetId) {
 
             // ==================== NON-PARAMETRIC TESTS ====================
             case 'mann-whitney':
-                // TYPE_A: grup bazlı karşılaştırma (xCol=kategori, yCol=sayısal)
+                // TYPE_A: grup bazlÄ± karÅŸÄ±laÅŸtÄ±rma (xCol=kategori, yCol=sayÄ±sal)
                 const mwGroup = group || var1;
                 const mwValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
                 if (group1 && group2 && mwGroup && mwValue) {
@@ -4775,15 +5408,15 @@ export function runStatWidgetAnalysis(widgetId) {
                         .map(r => parseFloat(r[mwValue])).filter(v => !isNaN(v));
                     const mw2Data = data.filter(r => String(r[mwGroup]).trim() === String(group2).trim())
                         .map(r => parseFloat(r[mwValue])).filter(v => !isNaN(v));
-                    if (mw1Data.length < 2 || mw2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    if (mw1Data.length < 2 || mw2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalÄ±');
                     result = runMannWhitneyU(mw1Data, mw2Data, alpha);
                 } else {
-                    throw new Error('Grup (X), değer (Y) ve karşılaştırılacak 2 grup seçmelisiniz');
+                    throw new Error('Grup (X), deÄŸer (Y) ve karÅŸÄ±laÅŸtÄ±rÄ±lacak 2 grup seÃ§melisiniz');
                 }
                 break;
 
             case 'wilcoxon':
-                if (!var1 || !var2) throw new Error('İki değişken seçmelisiniz');
+                if (!var1 || !var2) throw new Error('Ä°ki deÄŸiÅŸken seÃ§melisiniz');
                 result = runWilcoxonSignedRank(
                     data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v)),
                     data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v)),
@@ -4793,30 +5426,30 @@ export function runStatWidgetAnalysis(widgetId) {
 
             case 'kruskal':
             case 'kruskal-wallis':
-                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                // TYPE_G: xCol=kategori(group), yCol=sayÄ±sal(value)
                 const kruskalGroup = group || var1;
                 const kruskalValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
-                if (!kruskalValue || !kruskalGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                if (!kruskalValue || !kruskalGroup) throw new Error('Grup (X) ve deÄŸer (Y) sÃ¼tunlarÄ±nÄ± seÃ§melisiniz');
                 result = runKruskalWallis(groupDataByColumn(data, kruskalGroup, kruskalValue), alpha);
                 break;
 
             case 'friedman':
-                if (multiVars.length < 2) throw new Error('En az 2 değişken seçmelisiniz');
+                if (multiVars.length < 2) throw new Error('En az 2 deÄŸiÅŸken seÃ§melisiniz');
                 result = runFriedmanTest(data, multiVars, alpha);
                 break;
 
             // ==================== LEVENE (HOMOGENEITY) ====================
             case 'levene':
-                // TYPE_G: xCol=kategori(group), yCol=sayısal(value)
+                // TYPE_G: xCol=kategori(group), yCol=sayÄ±sal(value)
                 const leveneGroup = group || var1;
                 const leveneValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
-                if (!leveneValue || !leveneGroup) throw new Error('Grup (X) ve değer (Y) sütunlarını seçmelisiniz');
+                if (!leveneValue || !leveneGroup) throw new Error('Grup (X) ve deÄŸer (Y) sÃ¼tunlarÄ±nÄ± seÃ§melisiniz');
                 result = runLeveneTest(groupDataByColumn(data, leveneGroup, leveneValue), alpha);
                 break;
 
             // ==================== EFFECT SIZE ====================
             case 'effect-size':
-                // TYPE_A: grup bazlı etki büyüklüğü (xCol=kategori, yCol=sayısal)
+                // TYPE_A: grup bazlÄ± etki bÃ¼yÃ¼klÃ¼ÄŸÃ¼ (xCol=kategori, yCol=sayÄ±sal)
                 const esGroup = group || var1;
                 const esValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
                 if (group1 && group2 && esGroup && esValue) {
@@ -4824,43 +5457,43 @@ export function runStatWidgetAnalysis(widgetId) {
                         .map(r => parseFloat(r[esValue])).filter(v => !isNaN(v));
                     const es2Data = data.filter(r => String(r[esGroup]).trim() === String(group2).trim())
                         .map(r => parseFloat(r[esValue])).filter(v => !isNaN(v));
-                    if (es1Data.length < 2 || es2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalı');
+                    if (es1Data.length < 2 || es2Data.length < 2) throw new Error('Her grupta en az 2 veri olmalÄ±');
                     result = calculateEffectSize(es1Data, es2Data);
                 } else {
-                    throw new Error('Grup (X), değer (Y) ve karşılaştırılacak 2 grup seçmelisiniz');
+                    throw new Error('Grup (X), deÄŸer (Y) ve karÅŸÄ±laÅŸtÄ±rÄ±lacak 2 grup seÃ§melisiniz');
                 }
                 break;
 
             // ==================== FREQUENCY ====================
             case 'frequency':
-                if (!var1) throw new Error('Değişken seçmelisiniz');
+                if (!var1) throw new Error('DeÄŸiÅŸken seÃ§melisiniz');
                 result = runFrequencyAnalysis(data, var1);
                 break;
 
             // ==================== ADVANCED ANALYSES ====================
             case 'pca':
-                if (multiVars.length < 2) throw new Error('En az 2 değişken seçmelisiniz');
+                if (multiVars.length < 2) throw new Error('En az 2 deÄŸiÅŸken seÃ§melisiniz');
                 result = runPCAAnalysis(data, multiVars);
                 break;
 
             case 'kmeans':
-                if (multiVars.length < 2) throw new Error('En az 2 değişken seçmelisiniz');
+                if (multiVars.length < 2) throw new Error('En az 2 deÄŸiÅŸken seÃ§melisiniz');
                 const k = parseInt(document.getElementById(`${widgetId}_clusters`)?.value) || 3;
                 result = runKMeansAnalysis(data, multiVars, k);
                 break;
 
             case 'cronbach':
-                if (multiVars.length < 2) throw new Error('En az 2 madde seçmelisiniz');
+                if (multiVars.length < 2) throw new Error('En az 2 madde seÃ§melisiniz');
                 result = runCronbachAlpha(data, multiVars);
                 break;
 
             case 'logistic':
-                if (!var1 || multiVars.length < 1) throw new Error('Bağımlı ve bağımsız değişken seçmelisiniz');
+                if (!var1 || multiVars.length < 1) throw new Error('BaÄŸÄ±mlÄ± ve baÄŸÄ±msÄ±z deÄŸiÅŸken seÃ§melisiniz');
                 result = runLogisticRegression(data, var1, multiVars);
                 break;
 
             case 'timeseries':
-                if (!var1 || !var2) throw new Error('Zaman ve değer değişkeni seçmelisiniz');
+                if (!var1 || !var2) throw new Error('Zaman ve deÄŸer deÄŸiÅŸkeni seÃ§melisiniz');
                 result = runTimeSeriesAnalysis(data, var2, var1);
                 break;
 
@@ -4871,17 +5504,17 @@ export function runStatWidgetAnalysis(widgetId) {
                 break;
 
             case 'regression-coef':
-                if (!var1 || !var2) throw new Error('Bağımlı ve bağımsız değişken seçmelisiniz');
+                if (!var1 || !var2) throw new Error('BaÄŸÄ±mlÄ± ve baÄŸÄ±msÄ±z deÄŸiÅŸken seÃ§melisiniz');
                 result = runLinearRegression(data, var1, var2);
                 break;
 
             case 'discriminant':
-                if (!group || multiVars.length < 1) throw new Error('Grup ve değişken seçmelisiniz');
+                if (!group || multiVars.length < 1) throw new Error('Grup ve deÄŸiÅŸken seÃ§melisiniz');
                 result = runDiscriminantAnalysis(data, group, multiVars);
                 break;
 
             case 'survival':
-                if (!var1 || !var2) throw new Error('Zaman ve olay değişkeni seçmelisiniz');
+                if (!var1 || !var2) throw new Error('Zaman ve olay deÄŸiÅŸkeni seÃ§melisiniz');
                 result = runSurvivalAnalysis(data, var1, var2, group);
                 break;
 
@@ -4894,10 +5527,10 @@ export function runStatWidgetAnalysis(widgetId) {
                 throw new Error(`Desteklenmeyen test tipi: ${type}`);
         }
 
-        // ✅ INJECT MISSING DATA INFO INTO RESULT FOR ACADEMIC NOTE
-        // KRİTİK: Her test tipi için GERÇEK kullanılan sütunları belirle
+        // âœ… INJECT MISSING DATA INFO INTO RESULT FOR ACADEMIC NOTE
+        // KRÄ°TÄ°K: Her test tipi iÃ§in GERÃ‡EK kullanÄ±lan sÃ¼tunlarÄ± belirle
         if (result && typeof result === 'object') {
-            // Test tipine göre actualColumns belirle
+            // Test tipine gÃ¶re actualColumns belirle
             let actualColumns = [];
 
             switch (type) {
@@ -4909,12 +5542,12 @@ export function runStatWidgetAnalysis(widgetId) {
                     actualColumns = multiVars || [];
                     break;
 
-                // TYPE_B (correlation): iki değişken
+                // TYPE_B (correlation): iki deÄŸiÅŸken
                 case 'correlation':
                     actualColumns = [var1, var2].filter(Boolean);
                     break;
 
-                // TYPE_E: tek sütun kullanan testler
+                // TYPE_E: tek sÃ¼tun kullanan testler
                 case 'normality':
                 case 'shapiro-wilk':
                 case 'descriptive':
@@ -4925,7 +5558,7 @@ export function runStatWidgetAnalysis(widgetId) {
                     actualColumns = [var1].filter(Boolean);
                     break;
 
-                // TYPE_A/G: grup + değer sütunu
+                // TYPE_A/G: grup + deÄŸer sÃ¼tunu
                 case 'ttest':
                 case 'ttest-independent':
                 case 'anova':
@@ -4940,7 +5573,7 @@ export function runStatWidgetAnalysis(widgetId) {
                     actualColumns = [grpCol, valCol].filter(Boolean);
                     break;
 
-                // TYPE_C: iki sütun (paired)
+                // TYPE_C: iki sÃ¼tun (paired)
                 case 'ttest-paired':
                 case 'wilcoxon':
                     actualColumns = [var1, var2].filter(Boolean);
@@ -4971,7 +5604,7 @@ export function runStatWidgetAnalysis(widgetId) {
 
                 case 'power':
                 case 'apa':
-                    actualColumns = []; // Parametre bazlı, sütun yok
+                    actualColumns = []; // Parametre bazlÄ±, sÃ¼tun yok
                     break;
 
                 default:
@@ -5013,10 +5646,10 @@ export function runStatWidgetAnalysis(widgetId) {
             result.imputationActions = imputationActions;
             result.selectedColumns = actualColumns;
 
-            // ✅ FAZ-1: Inject engine metadata
+            // âœ… FAZ-1: Inject engine metadata
             result.engine = getEngineMetadata(type);
 
-            // ✅ FAZ-6: Generate academic report sentences
+            // âœ… FAZ-6: Generate academic report sentences
             result.report = generateAcademicReport(result, type);
         }
 
@@ -5095,7 +5728,7 @@ export function runStatWidgetAnalysis(widgetId) {
                         background: ${wizardResult.severity === 'warn' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(74, 144, 217, 0.1)'};
                         border-left: 3px solid ${wizardResult.severity === 'warn' ? '#f59e0b' : '#4a90d9'};
                     ">
-                        <span style="font-size: 1.1rem;">🧠</span>
+                        <span style="font-size: 1.1rem;">ğŸ§ </span>
                         <span><strong>${prefix}</strong> ${message}</span>
                     </div>
                 `;
@@ -5194,8 +5827,8 @@ function getEngineMetadata(statType) {
     };
 
     const limitationMap = {
-        'normality': 'n ≤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
-        'shapiro-wilk': 'n ≤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
+        'normality': 'n â‰¤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
+        'shapiro-wilk': 'n â‰¤ 5000 for accuracy; consider D\'Agostino-Pearson for larger samples',
         'logistic': 'Gradient descent may not converge for highly collinear predictors',
         'pca': 'Power iteration may be slow for many variables',
         'kmeans': 'Results depend on initialization; run multiple times for stability',
@@ -5229,58 +5862,58 @@ function generateAcademicReport(result, statType) {
     switch (statType) {
         case 'ttest':
         case 'ttest-independent':
-            tr = `Bağımsız örneklem t-testi sonucunda gruplar arasında ${result.significant ? 'istatistiksel olarak anlamlı' : 'anlamlı olmayan'} bir fark saptanmıştır, t(${formatN(result.degreesOfFreedom)}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}, Cohen's d = ${formatN(result.cohensD)}.`;
+            tr = `BaÄŸÄ±msÄ±z Ã¶rneklem t-testi sonucunda gruplar arasÄ±nda ${result.significant ? 'istatistiksel olarak anlamlÄ±' : 'anlamlÄ± olmayan'} bir fark saptanmÄ±ÅŸtÄ±r, t(${formatN(result.degreesOfFreedom)}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}, Cohen's d = ${formatN(result.cohensD)}.`;
             en = `An independent samples t-test revealed a ${result.significant ? 'statistically significant' : 'non-significant'} difference between groups, t(${formatN(result.degreesOfFreedom)}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}, Cohen's d = ${formatN(result.cohensD)}.`;
             break;
 
         case 'ttest-paired':
-            tr = `Eşleştirilmiş örneklem t-testi sonucunda ölçümler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark bulunmuştur, t(${result.degreesOfFreedom}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}.`;
+            tr = `EÅŸleÅŸtirilmiÅŸ Ã¶rneklem t-testi sonucunda Ã¶lÃ§Ã¼mler arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} fark bulunmuÅŸtur, t(${result.degreesOfFreedom}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}.`;
             en = `A paired samples t-test showed a ${result.significant ? 'significant' : 'non-significant'} difference between measurements, t(${result.degreesOfFreedom}) = ${formatN(result.tStatistic)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'anova':
-            tr = `Tek yönlü ANOVA sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark saptanmıştır, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, η² = ${formatN(result.etaSquared)}.`;
-            en = `A one-way ANOVA revealed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, η² = ${formatN(result.etaSquared)}.`;
+            tr = `Tek yÃ¶nlÃ¼ ANOVA sonucu gruplar arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} fark saptanmÄ±ÅŸtÄ±r, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, Î·Â² = ${formatN(result.etaSquared)}.`;
+            en = `A one-way ANOVA revealed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, F(${result.dfBetween}, ${result.dfWithin}) = ${formatN(result.fStatistic)}, p ${formatP(result.pValue)}, Î·Â² = ${formatN(result.etaSquared)}.`;
             break;
 
         case 'correlation':
-            tr = `Pearson korelasyon analizi sonucu değişkenler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} ${result.interpretation || ''} ilişki bulunmuştur, r = ${formatN(result.correlation)}, p ${formatP(result.pValue)}.`;
+            tr = `Pearson korelasyon analizi sonucu deÄŸiÅŸkenler arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} ${result.interpretation || ''} iliÅŸki bulunmuÅŸtur, r = ${formatN(result.correlation)}, p ${formatP(result.pValue)}.`;
             en = `Pearson correlation analysis revealed a ${result.significant ? 'significant' : 'non-significant'} ${result.interpretation || ''} relationship between variables, r = ${formatN(result.correlation)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'chi-square':
-            tr = `Ki-kare bağımsızlık testi sonucu değişkenler arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} ilişki saptanmıştır, χ²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
-            en = `A chi-square test of independence showed a ${result.significant ? 'significant' : 'non-significant'} association between variables, χ²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
+            tr = `Ki-kare baÄŸÄ±msÄ±zlÄ±k testi sonucu deÄŸiÅŸkenler arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} iliÅŸki saptanmÄ±ÅŸtÄ±r, Ï‡Â²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
+            en = `A chi-square test of independence showed a ${result.significant ? 'significant' : 'non-significant'} association between variables, Ï‡Â²(${result.degreesOfFreedom}) = ${formatN(result.chiSquare)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'normality':
         case 'shapiro-wilk':
-            tr = `Shapiro-Wilk normallik testi sonucu dağılım ${result.isNormal ? 'normal' : 'normal değil'}, W = ${formatN(result.wStatistic)}, p ${formatP(result.pValue)}.`;
+            tr = `Shapiro-Wilk normallik testi sonucu daÄŸÄ±lÄ±m ${result.isNormal ? 'normal' : 'normal deÄŸil'}, W = ${formatN(result.wStatistic)}, p ${formatP(result.pValue)}.`;
             en = `Shapiro-Wilk normality test indicated the distribution is ${result.isNormal ? 'normal' : 'non-normal'}, W = ${formatN(result.wStatistic)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'mann-whitney':
-            tr = `Mann-Whitney U testi sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark bulunmuştur, U = ${formatN(result.uStatistic)}, p ${formatP(result.pValue)}.`;
+            tr = `Mann-Whitney U testi sonucu gruplar arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} fark bulunmuÅŸtur, U = ${formatN(result.uStatistic)}, p ${formatP(result.pValue)}.`;
             en = `A Mann-Whitney U test revealed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, U = ${formatN(result.uStatistic)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'kruskal':
-            tr = `Kruskal-Wallis testi sonucu gruplar arasında ${result.significant ? 'anlamlı' : 'anlamlı olmayan'} fark saptanmıştır, H = ${formatN(result.hStatistic)}, p ${formatP(result.pValue)}.`;
+            tr = `Kruskal-Wallis testi sonucu gruplar arasÄ±nda ${result.significant ? 'anlamlÄ±' : 'anlamlÄ± olmayan'} fark saptanmÄ±ÅŸtÄ±r, H = ${formatN(result.hStatistic)}, p ${formatP(result.pValue)}.`;
             en = `A Kruskal-Wallis test showed a ${result.significant ? 'significant' : 'non-significant'} difference between groups, H = ${formatN(result.hStatistic)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'levene':
-            tr = `Levene testi sonucu varyanslar ${result.significant ? 'homojen değil' : 'homojen'}, W = ${formatN(result.wStatistic || result.fStatistic)}, p ${formatP(result.pValue)}.`;
+            tr = `Levene testi sonucu varyanslar ${result.significant ? 'homojen deÄŸil' : 'homojen'}, W = ${formatN(result.wStatistic || result.fStatistic)}, p ${formatP(result.pValue)}.`;
             en = `Levene's test indicated variances are ${result.significant ? 'heterogeneous' : 'homogeneous'}, W = ${formatN(result.wStatistic || result.fStatistic)}, p ${formatP(result.pValue)}.`;
             break;
 
         case 'descriptive':
-            tr = 'Betimsel istatistikler hesaplanmıştır.';
+            tr = 'Betimsel istatistikler hesaplanmÄ±ÅŸtÄ±r.';
             en = 'Descriptive statistics have been computed.';
             break;
 
         default:
-            tr = 'Analiz tamamlanmıştır.';
+            tr = 'Analiz tamamlanmÄ±ÅŸtÄ±r.';
             en = 'Analysis completed.';
     }
 
@@ -5337,7 +5970,7 @@ export function removeStatWidget(widgetId) {
     if (widget) {
         widget.remove();
         if (typeof showToast === 'function') {
-            showToast('Widget kaldırıldı', 'info');
+            showToast('Widget kaldÄ±rÄ±ldÄ±', 'info');
         }
     }
 }
@@ -5370,7 +6003,7 @@ export function initStatDragDropSystem() {
         return;
     }
 
-    console.log(`📊 Initializing stat drag-drop for ${statButtons.length} buttons`);
+    console.log(`ğŸ“Š Initializing stat drag-drop for ${statButtons.length} buttons`);
 
     // Make stat items draggable
     statButtons.forEach(item => {
@@ -5388,7 +6021,7 @@ export function initStatDragDropSystem() {
         dashboard.addEventListener('dragover', handleStatDragOver);
         dashboard.addEventListener('dragleave', handleStatDragLeave);
         dashboard.addEventListener('drop', handleStatDrop);
-        console.log('📊 Stat drop zone initialized:', dashboard.id || dashboard.className);
+        console.log('ğŸ“Š Stat drop zone initialized:', dashboard.id || dashboard.className);
     } else {
         console.error('Dashboard drop zone not found');
     }
@@ -5443,7 +6076,7 @@ function handleStatDrop(e) {
     }
 
     if (statType && isValidStatType(statType)) {
-        console.log('📊 Creating stat widget:', statType);
+        console.log('ğŸ“Š Creating stat widget:', statType);
         createStatWidget(statType);
     }
 }
@@ -5477,7 +6110,7 @@ export async function callSpssApi(endpoint, params) {
 
     try {
         if (typeof showProgress === 'function') {
-            showProgress('Analiz yapılıyor...');
+            showProgress('Analiz yapÄ±lÄ±yor...');
         }
 
         const response = await fetch(url, {
@@ -5489,7 +6122,7 @@ export async function callSpssApi(endpoint, params) {
         });
 
         if (!response.ok) {
-            throw new Error(`API hatası: ${response.status}`);
+            throw new Error(`API hatasÄ±: ${response.status}`);
         }
 
         const result = await response.json();
@@ -5931,9 +6564,9 @@ export function runDescriptiveStats(data, columns) {
 
     return {
         testType: 'descriptive',
-        testName: VIZ_STATE.lang === 'tr' ? 'Betimsel İstatistikler' : 'Descriptive Statistics',
+        testName: VIZ_STATE.lang === 'tr' ? 'Betimsel Ä°statistikler' : 'Descriptive Statistics',
         results: results,
-        interpretation: VIZ_STATE.lang === 'tr' ? `${results.length} değişken analiz edildi.` : `${results.length} variables analyzed.`
+        interpretation: VIZ_STATE.lang === 'tr' ? `${results.length} deÄŸiÅŸken analiz edildi.` : `${results.length} variables analyzed.`
     };
 }
 
@@ -5975,11 +6608,11 @@ export function runLeveneTest(groups, alpha = 0.05) {
     const df1 = k - 1;
     const df2 = N - k;
 
-    // NaN koruması
+    // NaN korumasÄ±
     if (isNaN(W) || !isFinite(W) || ssw === 0) {
         return {
             valid: false,
-            error: 'Varyans hesaplanamadı (gruplar çok benzer veya veri yetersiz)',
+            error: 'Varyans hesaplanamadÄ± (gruplar Ã§ok benzer veya veri yetersiz)',
             testName: "Levene's Test"
         };
     }
@@ -6000,8 +6633,8 @@ export function runLeveneTest(groups, alpha = 0.05) {
         significant: significant,
         isSignificant: significant,
         interpretation: significant
-            ? 'Varyanslar eşit değil (homojenlik varsayımı karşılanmıyor)'
-            : 'Varyanslar eşit (homojenlik varsayımı karşılanıyor)'
+            ? 'Varyanslar eÅŸit deÄŸil (homojenlik varsayÄ±mÄ± karÅŸÄ±lanmÄ±yor)'
+            : 'Varyanslar eÅŸit (homojenlik varsayÄ±mÄ± karÅŸÄ±lanÄ±yor)'
     };
 }
 
@@ -6013,7 +6646,7 @@ export function calculateEffectSize(group1, group2) {
     if (!group1 || !group2 || group1.length < 2 || group2.length < 2) {
         return {
             valid: false,
-            error: 'Her grupta en az 2 değer olmalı',
+            error: 'Her grupta en az 2 deÄŸer olmalÄ±',
             testName: "Cohen's d"
         };
     }
@@ -6022,11 +6655,11 @@ export function calculateEffectSize(group1, group2) {
     const mean2 = calculateMean(group2);
     const pooledSD = calculatePooledStdDev(group1, group2);
 
-    // FAZ-4: SD=0 guard - tüm değerler aynıysa Cohen's d tanımsız
+    // FAZ-4: SD=0 guard - tÃ¼m deÄŸerler aynÄ±ysa Cohen's d tanÄ±msÄ±z
     if (pooledSD === 0 || !isFinite(pooledSD)) {
         return {
             valid: false,
-            error: 'Varyans 0 olduğu için Cohen\'s d tanımsız (tüm değerler aynı veya çok benzer)',
+            error: 'Varyans 0 olduÄŸu iÃ§in Cohen\'s d tanÄ±msÄ±z (tÃ¼m deÄŸerler aynÄ± veya Ã§ok benzer)',
             testName: "Cohen's d",
             group1Mean: mean1,
             group2Mean: mean2,
@@ -6040,17 +6673,17 @@ export function calculateEffectSize(group1, group2) {
     if (!isFinite(d)) {
         return {
             valid: false,
-            error: 'Etki büyüklüğü hesaplanamadı',
+            error: 'Etki bÃ¼yÃ¼klÃ¼ÄŸÃ¼ hesaplanamadÄ±',
             testName: "Cohen's d"
         };
     }
 
     let interpretation;
     const absD = Math.abs(d);
-    if (absD < 0.2) interpretation = 'Çok küçük etki';
-    else if (absD < 0.5) interpretation = 'Küçük etki';
+    if (absD < 0.2) interpretation = 'Ã‡ok kÃ¼Ã§Ã¼k etki';
+    else if (absD < 0.5) interpretation = 'KÃ¼Ã§Ã¼k etki';
     else if (absD < 0.8) interpretation = 'Orta etki';
-    else interpretation = 'Büyük etki';
+    else interpretation = 'BÃ¼yÃ¼k etki';
 
     return {
         valid: true,
@@ -6104,7 +6737,7 @@ export function runFrequencyAnalysis(data, column) {
         r.cumPercent = cumulative.toFixed(1);
     });
 
-    // Top 10 for display (rest grouped as "Diğer")
+    // Top 10 for display (rest grouped as "DiÄŸer")
     const topN = 10;
     const topResults = results.slice(0, topN);
     const otherCount = results.slice(topN).reduce((sum, r) => sum + r.count, 0);
@@ -6129,7 +6762,7 @@ export function runFrequencyAnalysis(data, column) {
         otherPercent: validCount > 0 ? (otherCount / validCount * 100).toFixed(1) : '0.0',
         frequencies: results, // Full list for export
         interpretation: {
-            tr: `${column} sütununda ${results.length} farklı değer bulundu. En sık değer: "${mode}" (n=${modeCount}, %${validCount > 0 ? (modeCount / validCount * 100).toFixed(1) : 0}). Eksik: ${missingCount}.`,
+            tr: `${column} sÃ¼tununda ${results.length} farklÄ± deÄŸer bulundu. En sÄ±k deÄŸer: "${mode}" (n=${modeCount}, %${validCount > 0 ? (modeCount / validCount * 100).toFixed(1) : 0}). Eksik: ${missingCount}.`,
             en: `${results.length} unique values found in ${column}. Mode: "${mode}" (n=${modeCount}, ${validCount > 0 ? (modeCount / validCount * 100).toFixed(1) : 0}%). Missing: ${missingCount}.`
         }
     };
@@ -6148,7 +6781,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
     const rotation = opts.rotation || 'none';
 
     if (columns.length < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'PCA için en az 2 değişken gerekli' : 'At least 2 variables required for PCA', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'PCA iÃ§in en az 2 deÄŸiÅŸken gerekli' : 'At least 2 variables required for PCA', valid: false };
     }
 
     // 1. Extract and validate data
@@ -6159,7 +6792,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
     columns.forEach(col => {
         const values = data.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
         if (values.length === 0) {
-            return { error: `${col} sütununda geçerli veri yok`, valid: false };
+            return { error: `${col} sÃ¼tununda geÃ§erli veri yok`, valid: false };
         }
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
         const std = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length) || 1;
@@ -6181,7 +6814,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
     }
 
     if (matrix.length < columns.length) {
-        return { error: 'Yeterli geçerli satır yok', valid: false };
+        return { error: 'Yeterli geÃ§erli satÄ±r yok', valid: false };
     }
 
     const p = columns.length;
@@ -6278,7 +6911,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
 
     // Component Matrix (Unrotated)
     const componentMatrixTable = {
-        title: VIZ_STATE.lang === 'tr' ? 'Bileşen Matrisi' : 'Component Matrix',
+        title: VIZ_STATE.lang === 'tr' ? 'BileÅŸen Matrisi' : 'Component Matrix',
         columns: ['Variable', ...eigenResults.map((_, i) => `PC${i + 1}`)],
         rows: columns.map((col, i) => [
             col,
@@ -6290,7 +6923,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
     // Rotated Component Matrix (if rotation applied)
     if (rotatedLoadings) {
         const rotatedMatrixTable = {
-            title: VIZ_STATE.lang === 'tr' ? 'Döndürülmüş Bileşen Matrisi (Varimax)' : 'Rotated Component Matrix (Varimax)',
+            title: VIZ_STATE.lang === 'tr' ? 'DÃ¶ndÃ¼rÃ¼lmÃ¼ÅŸ BileÅŸen Matrisi (Varimax)' : 'Rotated Component Matrix (Varimax)',
             columns: ['Variable', ...eigenResults.map((_, i) => `PC${i + 1}`)],
             rows: columns.map((col, i) => [
                 col,
@@ -6302,7 +6935,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
 
     // Total Variance Explained table
     const varianceTable = {
-        title: VIZ_STATE.lang === 'tr' ? 'Açıklanan Toplam Varyans' : 'Total Variance Explained',
+        title: VIZ_STATE.lang === 'tr' ? 'AÃ§Ä±klanan Toplam Varyans' : 'Total Variance Explained',
         columns: ['Component', 'Eigenvalue', '% Variance', 'Cumulative %'],
         rows: []
     };
@@ -6321,7 +6954,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
 
     return {
         testType: 'pca',
-        testName: VIZ_STATE.lang === 'tr' ? 'Temel Bileşenler Analizi (PCA)' : 'Principal Component Analysis (PCA)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Temel BileÅŸenler Analizi (PCA)' : 'Principal Component Analysis (PCA)',
         valid: true,
         nVariables: p,
         nObservations: validN,
@@ -6337,7 +6970,7 @@ export function runPCAAnalysis(data, columns, opts = {}) {
         tables: tables,
 
         interpretation: {
-            tr: `${p} değişkenle PCA yapıldı. İlk ${components.length} bileşen toplam varyansın %${cumulativeVar}'ini açıklıyor.${rotation === 'varimax' ? ' Varimax rotasyon uygulandı.' : ''}`,
+            tr: `${p} deÄŸiÅŸkenle PCA yapÄ±ldÄ±. Ä°lk ${components.length} bileÅŸen toplam varyansÄ±n %${cumulativeVar}'ini aÃ§Ä±klÄ±yor.${rotation === 'varimax' ? ' Varimax rotasyon uygulandÄ±.' : ''}`,
             en: `PCA performed on ${p} variables. First ${components.length} components explain ${cumulativeVar}% of total variance.${rotation === 'varimax' ? ' Varimax rotation applied.' : ''}`
         }
     };
@@ -6382,7 +7015,7 @@ function varimaxRotation(loadings, nVars, nComps, maxIter = 100, tol = 1e-6) {
                     v += 2 * x * y;
                 }
 
-                // Sum of (x² - y²)² and (2xy)² for varimax
+                // Sum of (xÂ² - yÂ²)Â² and (2xy)Â² for varimax
                 let a = 0, b = 0, c = 0, d = 0;
                 for (let i = 0; i < nVars; i++) {
                     const x = A[i][c1];
@@ -6444,13 +7077,33 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
     // FAZ-P2-1: Parse options
     let k = 3;
     let writeBack = true; // Default: mutate data
+    let seed = null; // PROMPT-3: Optional seed for determinism
 
     if (typeof kOrOpts === 'object' && kOrOpts !== null) {
         k = kOrOpts.k || 3;
         writeBack = kOrOpts.writeBack !== false; // default true
+        seed = kOrOpts.seed !== undefined ? kOrOpts.seed : null;
     } else {
         k = kOrOpts || 3;
     }
+
+    // PROMPT-3 GÃ–REV C: Seeded RNG using LCG (Linear Congruential Generator)
+    // Creates a deterministic pseudo-random number generator when seed is provided
+    function createSeededRNG(seedValue) {
+        let state = seedValue;
+        // LCG parameters (same as glibc)
+        const a = 1103515245;
+        const c = 12345;
+        const m = Math.pow(2, 31);
+
+        return function () {
+            state = (a * state + c) % m;
+            return state / m;
+        };
+    }
+
+    // Use seeded RNG if seed is provided, otherwise Math.random
+    const rng = seed !== null ? createSeededRNG(seed) : Math.random.bind(Math);
 
     // FAZ-P2-1: Handle null columns or array input format (e.g., [[1,2], [3,4]])
     if (!columns || !Array.isArray(columns) || columns.length === 0) {
@@ -6465,17 +7118,17 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
                 return obj;
             });
         } else {
-            return { error: VIZ_STATE.lang === 'tr' ? 'K-Means için sütun listesi gerekli' : 'Column list required for K-Means', valid: false };
+            return { error: VIZ_STATE.lang === 'tr' ? 'K-Means iÃ§in sÃ¼tun listesi gerekli' : 'Column list required for K-Means', valid: false };
         }
     }
 
     if (columns.length < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'K-Means için en az 2 değişken gerekli' : 'At least 2 variables required for K-Means', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'K-Means iÃ§in en az 2 deÄŸiÅŸken gerekli' : 'At least 2 variables required for K-Means', valid: false };
     }
 
     // FAZ-P2-1: k<2 must return error, not silently fix
     if (k < 2) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'K değeri en az 2 olmalıdır' : 'K must be at least 2', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'K deÄŸeri en az 2 olmalÄ±dÄ±r' : 'K must be at least 2', valid: false };
     }
     if (k > data.length) k = Math.min(data.length, 10);
 
@@ -6527,19 +7180,19 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
     });
 
     if (matrix.length < k) {
-        return { error: `En az ${k} geçerli satır gerekli`, valid: false };
+        return { error: `En az ${k} geÃ§erli satÄ±r gerekli`, valid: false };
     }
 
-    // 2. K-means++ initialization
+    // 2. K-means++ initialization (using seeded RNG)
     const centroids = [];
     const usedIdx = new Set();
 
-    // First centroid: random
-    let firstIdx = Math.floor(Math.random() * matrix.length);
+    // First centroid: random (seeded)
+    let firstIdx = Math.floor(rng() * matrix.length);
     centroids.push([...matrix[firstIdx].values]);
     usedIdx.add(firstIdx);
 
-    // Remaining centroids: weighted by distance
+    // Remaining centroids: weighted by distance (seeded)
     while (centroids.length < k) {
         const distances = matrix.map((p, i) => {
             if (usedIdx.has(i)) return 0;
@@ -6552,7 +7205,7 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
             return minDist;
         });
         const totalDist = distances.reduce((a, b) => a + b, 0);
-        let r = Math.random() * totalDist;
+        let r = rng() * totalDist;
         let selected = 0;
         for (let i = 0; i < distances.length; i++) {
             r -= distances[i];
@@ -6656,7 +7309,7 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
 
     return {
         testType: 'kmeans',
-        testName: VIZ_STATE.lang === 'tr' ? 'K-Means Kümeleme' : 'K-Means Clustering',
+        testName: VIZ_STATE.lang === 'tr' ? 'K-Means KÃ¼meleme' : 'K-Means Clustering',
         valid: true,
         k: k,
         nObservations: matrix.length,
@@ -6675,7 +7328,7 @@ export function runKMeansAnalysis(data, columns, kOrOpts = 3) {
         clusters: clusterStats,
         assignmentColumn: writeBack ? '_cluster' : null,
         interpretation: {
-            tr: `${matrix.length} gözlem ${k} kümeye ayrıldı (${iterations} iterasyon${converged ? ', yakınsadı' : ''}). Toplam SSE: ${totalSSE}`,
+            tr: `${matrix.length} gÃ¶zlem ${k} kÃ¼meye ayrÄ±ldÄ± (${iterations} iterasyon${converged ? ', yakÄ±nsadÄ±' : ''}). Toplam SSE: ${totalSSE}`,
             en: `${matrix.length} observations clustered into ${k} groups (${iterations} iterations${converged ? ', converged' : ''}). Total SSE: ${totalSSE}`
         }
     };
@@ -6708,11 +7361,11 @@ export function runCronbachAlpha(data, columns) {
     const totalVar = calculateVariance(totals);
     const totalMean = totals.reduce((a, b) => a + b, 0) / totals.length;
 
-    // FAZ-4: Guard - totalVar = 0 durumunda alpha tanımsız
+    // FAZ-4: Guard - totalVar = 0 durumunda alpha tanÄ±msÄ±z
     if (totalVar === 0 || !isFinite(totalVar)) {
         return {
             valid: false,
-            error: 'Toplam varyans 0 - tüm skorlar aynı',
+            error: 'Toplam varyans 0 - tÃ¼m skorlar aynÄ±',
             testName: "Cronbach's Alpha"
         };
     }
@@ -6724,7 +7377,7 @@ export function runCronbachAlpha(data, columns) {
     if (!isFinite(alpha)) {
         return {
             valid: false,
-            error: 'Alpha hesaplanamadı',
+            error: 'Alpha hesaplanamadÄ±',
             testName: "Cronbach's Alpha"
         };
     }
@@ -6758,31 +7411,31 @@ export function runCronbachAlpha(data, columns) {
     });
 
     let interpretation;
-    if (alpha >= 0.9) interpretation = 'Mükemmel güvenilirlik';
-    else if (alpha >= 0.8) interpretation = 'İyi güvenilirlik';
-    else if (alpha >= 0.7) interpretation = 'Kabul edilebilir güvenilirlik';
-    else if (alpha >= 0.6) interpretation = 'Sorgulanabilir güvenilirlik';
-    else interpretation = 'Zayıf güvenilirlik';
+    if (alpha >= 0.9) interpretation = 'MÃ¼kemmel gÃ¼venilirlik';
+    else if (alpha >= 0.8) interpretation = 'Ä°yi gÃ¼venilirlik';
+    else if (alpha >= 0.7) interpretation = 'Kabul edilebilir gÃ¼venilirlik';
+    else if (alpha >= 0.6) interpretation = 'Sorgulanabilir gÃ¼venilirlik';
+    else interpretation = 'ZayÄ±f gÃ¼venilirlik';
 
     // FAZ-P2-2: SPSS-like tables format
     const tables = [
         {
-            title: VIZ_STATE.lang === 'tr' ? 'Güvenilirlik İstatistikleri' : 'Reliability Statistics',
+            title: VIZ_STATE.lang === 'tr' ? 'GÃ¼venilirlik Ä°statistikleri' : 'Reliability Statistics',
             columns: [
                 VIZ_STATE.lang === 'tr' ? "Cronbach's Alpha" : "Cronbach's Alpha",
-                VIZ_STATE.lang === 'tr' ? 'Madde Sayısı' : 'N of Items'
+                VIZ_STATE.lang === 'tr' ? 'Madde SayÄ±sÄ±' : 'N of Items'
             ],
             rows: [
                 [alpha.toFixed(3), k]
             ]
         },
         {
-            title: VIZ_STATE.lang === 'tr' ? 'Madde-Toplam İstatistikleri' : 'Item-Total Statistics',
+            title: VIZ_STATE.lang === 'tr' ? 'Madde-Toplam Ä°statistikleri' : 'Item-Total Statistics',
             columns: [
                 VIZ_STATE.lang === 'tr' ? 'Madde' : 'Item',
                 VIZ_STATE.lang === 'tr' ? 'Ortalama' : 'Mean',
-                VIZ_STATE.lang === 'tr' ? 'Düzeltilmiş Madde-Toplam Korelasyonu' : 'Corrected Item-Total Correlation',
-                VIZ_STATE.lang === 'tr' ? 'Madde Çıkarıldığında Alpha' : "Cronbach's Alpha if Item Deleted"
+                VIZ_STATE.lang === 'tr' ? 'DÃ¼zeltilmiÅŸ Madde-Toplam Korelasyonu' : 'Corrected Item-Total Correlation',
+                VIZ_STATE.lang === 'tr' ? 'Madde Ã‡Ä±karÄ±ldÄ±ÄŸÄ±nda Alpha' : "Cronbach's Alpha if Item Deleted"
             ],
             rows: itemTotalStats.map(item => [
                 item.item,
@@ -6823,157 +7476,306 @@ export function runCronbachAlpha(data, columns) {
 }
 
 /**
- * Run simple linear regression
+ * Run linear regression (simple or multiple)
  * FAZ-P2-2: SPSS tables format added
+ * PROMPT-2: Added 95% CI, Durbin-Watson, VIF/Tolerance
+ * PROMPT-UPDATE-3: Extended for multiple predictors with VIF collinearity and influence diagnostics
  */
 export function runLinearRegression(data, yColumn, xColumn) {
-    const pairs = data.map(r => ({
-        x: parseFloat(r[xColumn]),
-        y: parseFloat(r[yColumn])
-    })).filter(p => !isNaN(p.x) && !isNaN(p.y));
+    const lang = VIZ_STATE?.lang || 'tr';
 
-    const n = pairs.length;
+    // PROMPT-UPDATE-3: Support both single predictor (string) and multiple predictors (array)
+    const xColumns = Array.isArray(xColumn) ? xColumn : [xColumn];
+    const p = xColumns.length; // Number of predictors
 
-    if (n < 3) {
+    // Parse data for all predictors
+    const observations = [];
+    for (const row of data) {
+        const y = parseFloat(row[yColumn]);
+        if (isNaN(y)) continue;
+
+        const x = [];
+        let valid = true;
+        for (const col of xColumns) {
+            const val = parseFloat(row[col]);
+            if (isNaN(val)) {
+                valid = false;
+                break;
+            }
+            x.push(val);
+        }
+        if (valid) {
+            observations.push({ y, x });
+        }
+    }
+
+    const n = observations.length;
+
+    if (n < p + 2) {
         return {
             valid: false,
-            error: VIZ_STATE.lang === 'tr' ? 'En az 3 veri noktası gerekli' : 'At least 3 data points required',
-            testName: VIZ_STATE.lang === 'tr' ? 'Doğrusal Regresyon' : 'Linear Regression'
+            error: lang === 'tr' ? `En az ${p + 2} veri noktasi gerekli` : `At least ${p + 2} data points required`,
+            testName: lang === 'tr' ? 'Dogrusal Regresyon' : 'Linear Regression'
         };
     }
 
-    const sumX = pairs.reduce((s, p) => s + p.x, 0);
-    const sumY = pairs.reduce((s, p) => s + p.y, 0);
-    const sumXY = pairs.reduce((s, p) => s + p.x * p.y, 0);
-    const sumX2 = pairs.reduce((s, p) => s + p.x * p.x, 0);
-    const sumY2 = pairs.reduce((s, p) => s + p.y * p.y, 0);
+    // Build design matrix X (with intercept) and Y vector
+    const Y = observations.map(o => o.y);
+    const X = observations.map(o => [1, ...o.x]); // Include intercept
+    const meanY = Y.reduce((s, y) => s + y, 0) / n;
 
-    const meanX = sumX / n;
-    const meanY = sumY / n;
+    // Use matrix operations for multiple regression: beta = (X'X)^(-1) X'Y
+    const Xt = transposeMatrix(X);
+    const XtX = multiplyMatrices(Xt, X);
+    const XtXInv = invertMatrix(XtX);
 
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    const r = calculateCorrelation(pairs.map(p => p.x), pairs.map(p => p.y));
-    const r2 = r * r;
+    if (!XtXInv) {
+        return {
+            valid: false,
+            error: lang === 'tr' ? 'Matris tekil - coklu dogrusallık sorunu' : 'Singular matrix - multicollinearity issue',
+            testName: lang === 'tr' ? 'Dogrusal Regresyon' : 'Linear Regression',
+            collinearityError: true
+        };
+    }
 
-    // Calculate additional statistics for SPSS output
+    const XtY = multiplyMatrices(Xt, Y.map(y => [y]));
+    const beta = multiplyMatrices(XtXInv, XtY).map(b => b[0]);
+
     // Predicted values and residuals
-    const predicted = pairs.map(p => intercept + slope * p.x);
-    const residuals = pairs.map((p, i) => p.y - predicted[i]);
+    const predicted = X.map(xi => xi.reduce((s, xij, j) => s + xij * beta[j], 0));
+    const residuals = Y.map((yi, i) => yi - predicted[i]);
 
     // Sum of Squares
-    const ssTotal = pairs.reduce((s, p) => s + Math.pow(p.y - meanY, 2), 0);
-    const ssRegression = pairs.reduce((s, p, i) => s + Math.pow(predicted[i] - meanY, 2), 0);
-    const ssResidual = residuals.reduce((s, r) => s + r * r, 0);
+    const ssTotal = Y.reduce((s, yi) => s + Math.pow(yi - meanY, 2), 0);
+    const ssResidual = residuals.reduce((s, e) => s + e * e, 0);
+    const ssRegression = ssTotal - ssResidual;
 
     // Degrees of freedom
-    const dfRegression = 1; // Simple linear regression has 1 predictor
-    const dfResidual = n - 2;
+    const dfRegression = p;
+    const dfResidual = n - p - 1;
     const dfTotal = n - 1;
 
     // Mean Squares
-    const msRegression = ssRegression / dfRegression;
-    const msResidual = ssResidual / dfResidual;
+    const msRegression = dfRegression > 0 ? ssRegression / dfRegression : 0;
+    const msResidual = dfResidual > 0 ? ssResidual / dfResidual : 0;
+    const seResidual = Math.sqrt(msResidual);
 
     // F-statistic and p-value
-    const fStatistic = msRegression / msResidual;
-    const pValueF = 1 - approximateFTestPValue(fStatistic, dfRegression, dfResidual);
+    const fStatistic = msResidual > 0 ? msRegression / msResidual : 0;
+    const pValueF = fStatistic > 0 ? (1 - approximateFTestPValue(fStatistic, dfRegression, dfResidual)) : 1;
+
+    // R-squared and Adjusted R-squared
+    const r2 = ssTotal > 0 ? ssRegression / ssTotal : 0;
+    const r = Math.sqrt(r2) * (beta[1] >= 0 ? 1 : -1);
+    const r2Adjusted = 1 - ((1 - r2) * (n - 1) / Math.max(n - p - 1, 1));
 
     // Standard errors for coefficients
-    const seResidual = Math.sqrt(msResidual);
-    const ssX = pairs.reduce((s, p) => s + Math.pow(p.x - meanX, 2), 0);
-    const seSlope = seResidual / Math.sqrt(ssX);
-    const seIntercept = seResidual * Math.sqrt((1 / n) + (meanX * meanX) / ssX);
+    const varBeta = XtXInv.map(row => row.map(v => v * msResidual));
+    const seBeta = varBeta.map((row, i) => Math.sqrt(Math.abs(row[i])));
 
     // t-statistics and p-values for coefficients
-    const tSlope = slope / seSlope;
-    const tIntercept = intercept / seIntercept;
-    const pSlope = 2 * (1 - approximateTTestPValue(Math.abs(tSlope), dfResidual));
-    const pIntercept = 2 * (1 - approximateTTestPValue(Math.abs(tIntercept), dfResidual));
+    const tBeta = beta.map((b, i) => seBeta[i] > 0 ? b / seBeta[i] : 0);
+    const pBeta = tBeta.map(t => approximateTTestPValue(Math.abs(t), Math.max(dfResidual, 1)));
 
-    // Adjusted R-squared
-    const r2Adjusted = 1 - ((1 - r2) * (n - 1) / (n - 2));
+    // 95% Confidence Intervals
+    const tCritical = getTCritical(Math.max(dfResidual, 1), 0.05);
+    const ciLower = beta.map((b, i) => b - tCritical * seBeta[i]);
+    const ciUpper = beta.map((b, i) => b + tCritical * seBeta[i]);
 
-    // FAZ-P2-2: SPSS-like tables
+    // Durbin-Watson
+    let dwNumerator = 0;
+    for (let i = 1; i < residuals.length; i++) {
+        dwNumerator += Math.pow(residuals[i] - residuals[i - 1], 2);
+    }
+    const durbinWatson = ssResidual > 0 ? dwNumerator / ssResidual : 0;
+
+    // =================================================
+    // PROMPT-UPDATE-3 GOREV A: Collinearity Diagnostics (VIF/Tolerance)
+    // =================================================
+    const collinearity = [];
+
+    if (p === 1) {
+        // Single predictor: VIF = 1 always
+        collinearity.push({ name: xColumns[0], vif: 1, tolerance: 1, valid: true });
+    } else {
+        // Multiple predictors: Calculate VIF for each
+        for (let j = 0; j < p; j++) {
+            try {
+                // Regress X_j on all other X predictors
+                const Yj = observations.map(o => o.x[j]);
+                const Xj = observations.map(o => {
+                    const row = [1];
+                    for (let k = 0; k < p; k++) {
+                        if (k !== j) row.push(o.x[k]);
+                    }
+                    return row;
+                });
+
+                const XjT = transposeMatrix(Xj);
+                const XjTXj = multiplyMatrices(XjT, Xj);
+                const XjTXjInv = invertMatrix(XjTXj);
+
+                if (!XjTXjInv) {
+                    collinearity.push({ name: xColumns[j], vif: Infinity, tolerance: 0, valid: false, note: 'Singular' });
+                    continue;
+                }
+
+                const XjTYj = multiplyMatrices(XjT, Yj.map(y => [y]));
+                const betaJ = multiplyMatrices(XjTXjInv, XjTYj).map(b => b[0]);
+
+                // Calculate R^2_j
+                const meanYj = Yj.reduce((s, y) => s + y, 0) / n;
+                const predictedJ = Xj.map(xi => xi.reduce((s, xik, k) => s + xik * betaJ[k], 0));
+                const ssTotalJ = Yj.reduce((s, y) => s + Math.pow(y - meanYj, 2), 0);
+                const ssResidJ = Yj.reduce((s, y, i) => s + Math.pow(y - predictedJ[i], 2), 0);
+                const r2j = ssTotalJ > 0 ? 1 - (ssResidJ / ssTotalJ) : 0;
+
+                // VIF = 1 / (1 - R^2_j)
+                const vifJ = r2j < 1 ? 1 / (1 - r2j) : Infinity;
+                const toleranceJ = r2j < 1 ? 1 - r2j : 0;
+
+                collinearity.push({ name: xColumns[j], vif: isFinite(vifJ) ? vifJ : Infinity, tolerance: toleranceJ, r2: r2j, valid: isFinite(vifJ) });
+            } catch (e) {
+                collinearity.push({ name: xColumns[j], vif: NaN, tolerance: NaN, valid: false, note: 'Error' });
+            }
+        }
+    }
+
+    // =================================================
+    // PROMPT-UPDATE-3 GOREV B: Influence Diagnostics (Leverage + Cook's D)
+    // =================================================
+    const leverage = [];
+    const cooksD = [];
+    const highLeverageIdx = [];
+    const highCooksIdx = [];
+    const leverageThreshold = 2 * (p + 1) / n;
+    const cooksDThreshold = 4 / n;
+
+    for (let i = 0; i < n; i++) {
+        // h_ii = X_i' (X'X)^(-1) X_i
+        const Xi = X[i];
+        const temp = [];
+        for (let jj = 0; jj < p + 1; jj++) {
+            let sum = 0;
+            for (let kk = 0; kk < p + 1; kk++) {
+                sum += XtXInv[jj][kk] * Xi[kk];
+            }
+            temp.push(sum);
+        }
+        const hii = Xi.reduce((s, xij, jj) => s + xij * temp[jj], 0);
+        leverage.push(hii);
+        if (hii > leverageThreshold) highLeverageIdx.push(i);
+
+        // Cook's D
+        const ei = residuals[i];
+        const denom = (p + 1) * msResidual * Math.pow(1 - hii, 2);
+        const cooksDi = denom > 0 ? (ei * ei * hii) / denom : 0;
+        cooksD.push(cooksDi);
+        if (cooksDi > cooksDThreshold) highCooksIdx.push(i);
+    }
+
+    const influence = {
+        leverage: leverage,
+        cooksD: cooksD,
+        flags: { highLeverageIdx, highCooksIdx, leverageThreshold, cooksDThreshold },
+        summary: { maxLeverage: Math.max(...leverage), maxCooksD: Math.max(...cooksD), nHighLeverage: highLeverageIdx.length, nHighCooksD: highCooksIdx.length }
+    };
+
+    // =================================================
+    // Build SPSS-like tables
+    // =================================================
     const tables = [
         {
-            title: VIZ_STATE.lang === 'tr' ? 'Model Özeti' : 'Model Summary',
-            columns: ['R', 'R²', VIZ_STATE.lang === 'tr' ? 'Düzeltilmiş R²' : 'Adjusted R²', VIZ_STATE.lang === 'tr' ? 'Std. Hata' : 'Std. Error'],
-            rows: [
-                [r.toFixed(3), r2.toFixed(3), r2Adjusted.toFixed(3), seResidual.toFixed(3)]
-            ]
+            title: lang === 'tr' ? 'Model Ozeti' : 'Model Summary',
+            columns: ['R', 'R2', lang === 'tr' ? 'Duzeltilmis R2' : 'Adjusted R2', lang === 'tr' ? 'Std. Hata' : 'Std. Error', 'Durbin-Watson'],
+            rows: [[Math.abs(r).toFixed(3), r2.toFixed(3), r2Adjusted.toFixed(3), seResidual.toFixed(3), durbinWatson.toFixed(3)]]
         },
         {
             title: 'ANOVA',
-            columns: [
-                VIZ_STATE.lang === 'tr' ? 'Kaynak' : 'Source',
-                VIZ_STATE.lang === 'tr' ? 'Kareler Toplamı' : 'Sum of Squares',
-                'df',
-                VIZ_STATE.lang === 'tr' ? 'Ort. Kare' : 'Mean Square',
-                'F',
-                VIZ_STATE.lang === 'tr' ? 'Anlamlılık' : 'Sig.'
-            ],
+            columns: [lang === 'tr' ? 'Kaynak' : 'Source', lang === 'tr' ? 'Kareler Toplami' : 'Sum of Squares', 'df', lang === 'tr' ? 'Ort. Kare' : 'Mean Square', 'F', lang === 'tr' ? 'Anlamlilik' : 'Sig.'],
             rows: [
-                [VIZ_STATE.lang === 'tr' ? 'Regresyon' : 'Regression', ssRegression.toFixed(3), dfRegression, msRegression.toFixed(3), fStatistic.toFixed(3), pValueF.toFixed(4)],
-                [VIZ_STATE.lang === 'tr' ? 'Kalıntı' : 'Residual', ssResidual.toFixed(3), dfResidual, msResidual.toFixed(3), '', ''],
-                [VIZ_STATE.lang === 'tr' ? 'Toplam' : 'Total', ssTotal.toFixed(3), dfTotal, '', '', '']
+                [lang === 'tr' ? 'Regresyon' : 'Regression', ssRegression.toFixed(3), dfRegression, msRegression.toFixed(3), fStatistic.toFixed(3), pValueF < 0.001 ? '<.001' : pValueF.toFixed(4)],
+                [lang === 'tr' ? 'Kalinti' : 'Residual', ssResidual.toFixed(3), dfResidual, msResidual.toFixed(3), '', ''],
+                [lang === 'tr' ? 'Toplam' : 'Total', ssTotal.toFixed(3), dfTotal, '', '', '']
             ]
         },
         {
-            title: VIZ_STATE.lang === 'tr' ? 'Katsayılar' : 'Coefficients',
-            columns: [
-                VIZ_STATE.lang === 'tr' ? 'Model' : 'Model',
-                'B',
-                VIZ_STATE.lang === 'tr' ? 'Std. Hata' : 'Std. Error',
-                'Beta',
-                't',
-                VIZ_STATE.lang === 'tr' ? 'Anlamlılık' : 'Sig.'
-            ],
+            title: lang === 'tr' ? 'Katsayilar' : 'Coefficients',
+            columns: [lang === 'tr' ? 'Model' : 'Model', 'B', lang === 'tr' ? 'Std. Hata' : 'Std. Error', 't', lang === 'tr' ? 'Anlamlilik' : 'Sig.', '95% CI Lower', '95% CI Upper', 'VIF'],
             rows: [
-                [VIZ_STATE.lang === 'tr' ? '(Sabit)' : '(Constant)', intercept.toFixed(4), seIntercept.toFixed(4), '', tIntercept.toFixed(3), pIntercept.toFixed(4)],
-                [xColumn, slope.toFixed(4), seSlope.toFixed(4), r.toFixed(3), tSlope.toFixed(3), pSlope.toFixed(4)]
+                [lang === 'tr' ? '(Sabit)' : '(Constant)', beta[0].toFixed(4), seBeta[0].toFixed(4), tBeta[0].toFixed(3), pBeta[0] < 0.001 ? '<.001' : pBeta[0].toFixed(4), ciLower[0].toFixed(4), ciUpper[0].toFixed(4), ''],
+                ...xColumns.map((col, j) => [col, beta[j + 1].toFixed(4), seBeta[j + 1].toFixed(4), tBeta[j + 1].toFixed(3), pBeta[j + 1] < 0.001 ? '<.001' : pBeta[j + 1].toFixed(4), ciLower[j + 1].toFixed(4), ciUpper[j + 1].toFixed(4), collinearity[j]?.vif && isFinite(collinearity[j].vif) ? collinearity[j].vif.toFixed(3) : '-'])
             ]
         }
     ];
 
-    // FAZ-P2-2: Legacy format
+    // Collinearity Diagnostics Table (multiple predictors only)
+    if (p > 1) {
+        tables.push({
+            title: lang === 'tr' ? 'Coklu Dogrusallık Tanilari' : 'Collinearity Diagnostics',
+            columns: [lang === 'tr' ? 'Degisken' : 'Variable', 'Tolerance', 'VIF', lang === 'tr' ? 'Durum' : 'Status'],
+            rows: collinearity.map(c => [c.name, c.valid ? c.tolerance.toFixed(4) : '-', c.valid && isFinite(c.vif) ? c.vif.toFixed(3) : (c.note || 'N/A'), c.vif > 10 ? 'HIGH' : (c.valid ? 'OK' : 'ERR')])
+        });
+    }
+
+    // Influence Summary Table
+    tables.push({
+        title: lang === 'tr' ? 'Etki Ozeti' : 'Influence Summary',
+        columns: [lang === 'tr' ? 'Istatistik' : 'Statistic', lang === 'tr' ? 'Deger' : 'Value'],
+        rows: [
+            ['Max Leverage', influence.summary.maxLeverage.toFixed(4)],
+            ['Max Cooks D', influence.summary.maxCooksD.toFixed(4)],
+            ['High Leverage (n)', String(influence.summary.nHighLeverage)],
+            ['High Cooks D (n)', String(influence.summary.nHighCooksD)]
+        ]
+    });
+
+    // Legacy format (backward compatibility)
     const legacy = {
         columns: ['Statistic', 'Value'],
-        rows: [
-            ['R', r.toFixed(4)],
-            ['R²', r2.toFixed(4)],
-            ['Adjusted R²', r2Adjusted.toFixed(4)],
-            ['Slope (B)', slope.toFixed(4)],
-            ['Intercept', intercept.toFixed(4)],
-            ['F', fStatistic.toFixed(4)],
-            ['Sig.', pValueF.toFixed(4)]
-        ]
+        rows: [['R', Math.abs(r).toFixed(4)], ['R2', r2.toFixed(4)], ['Adjusted R2', r2Adjusted.toFixed(4)], ['Slope (B)', beta[1].toFixed(4)], ['Intercept', beta[0].toFixed(4)], ['F', fStatistic.toFixed(4)], ['Sig.', pValueF.toFixed(4)], ['Durbin-Watson', durbinWatson.toFixed(4)]]
     };
+
+    // Build coefficients object (backward compatible + extended)
+    const coefficients = {
+        intercept: { B: beta[0], SE: seBeta[0], t: tBeta[0], p: pBeta[0], CI: { lower: ciLower[0], upper: ciUpper[0], level: 0.95 } }
+    };
+
+    if (p === 1) {
+        coefficients.slope = { B: beta[1], SE: seBeta[1], Beta: r, t: tBeta[1], p: pBeta[1], variable: xColumns[0], CI: { lower: ciLower[1], upper: ciUpper[1], level: 0.95 }, VIF: 1, tolerance: 1 };
+    } else {
+        coefficients.predictors = xColumns.map((col, j) => ({ name: col, B: beta[j + 1], SE: seBeta[j + 1], t: tBeta[j + 1], p: pBeta[j + 1], CI: { lower: ciLower[j + 1], upper: ciUpper[j + 1], level: 0.95 }, VIF: collinearity[j]?.vif || NaN, tolerance: collinearity[j]?.tolerance || NaN }));
+    }
 
     return {
         valid: true,
         testType: 'regression',
-        testName: VIZ_STATE.lang === 'tr' ? 'Doğrusal Regresyon' : 'Linear Regression',
+        testName: lang === 'tr' ? 'Dogrusal Regresyon' : 'Linear Regression',
         n: n,
-        slope: slope,
-        intercept: intercept,
+        p: p,
+        slope: beta[1],
+        intercept: beta[0],
         r: r,
         rSquared: r2,
         r2Adjusted: r2Adjusted,
         fStatistic: fStatistic,
         pValue: pValueF,
-        equation: `y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}`,
-        // Coefficients with SE and t
-        coefficients: {
-            intercept: { B: intercept, SE: seIntercept, t: tIntercept, p: pIntercept },
-            slope: { B: slope, SE: seSlope, Beta: r, t: tSlope, p: pSlope, variable: xColumn }
-        },
-        // FAZ-P2-2: SPSS format
+        equation: p === 1 ? `y = ${beta[1].toFixed(4)}x + ${beta[0].toFixed(4)}` : `y = ${beta[0].toFixed(4)} + ${xColumns.map((col, j) => `${beta[j + 1].toFixed(4)}*${col}`).join(' + ')}`,
+        durbinWatson: durbinWatson,
+        coefficients: coefficients,
+        beta: beta,
+        seBeta: seBeta,
+        tBeta: tBeta,
+        pBeta: pBeta,
+        collinearity: collinearity,
+        influence: influence,
+        residuals: residuals,
+        predicted: predicted,
         tables: tables,
         legacy: legacy,
-        interpretation: VIZ_STATE.lang === 'tr'
-            ? `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn}, ${yColumn}'deki varyansın %${(r2 * 100).toFixed(1)}'ini açıklıyor. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF.toFixed(4)}`
-            : `R² = ${(r2 * 100).toFixed(1)}% - ${xColumn} explains ${(r2 * 100).toFixed(1)}% of variance in ${yColumn}. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF.toFixed(4)}`
+        interpretation: lang === 'tr'
+            ? `R2 = ${(r2 * 100).toFixed(1)}% - Model varyansın %${(r2 * 100).toFixed(1)}'ini acikliyor. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF < 0.001 ? '<.001' : pValueF.toFixed(4)}. DW = ${durbinWatson.toFixed(3)}.`
+            : `R2 = ${(r2 * 100).toFixed(1)}% - Model explains ${(r2 * 100).toFixed(1)}% of variance. F(${dfRegression},${dfResidual}) = ${fStatistic.toFixed(2)}, p = ${pValueF < 0.001 ? '<.001' : pValueF.toFixed(4)}. DW = ${durbinWatson.toFixed(3)}.`
     };
 }
 
@@ -6994,13 +7796,13 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05, testType = 't-test
     // FAZ-P2-3: SPSS-like tables
     const tables = [
         {
-            title: VIZ_STATE.lang === 'tr' ? 'Güç Analizi Sonuçları' : 'Power Analysis Results',
+            title: VIZ_STATE.lang === 'tr' ? 'GÃ¼Ã§ Analizi SonuÃ§larÄ±' : 'Power Analysis Results',
             columns: [
                 VIZ_STATE.lang === 'tr' ? 'Test Tipi' : 'Test Type',
-                VIZ_STATE.lang === 'tr' ? 'Etki Büyüklüğü' : 'Effect Size',
+                VIZ_STATE.lang === 'tr' ? 'Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼' : 'Effect Size',
                 'Alpha',
                 'N',
-                VIZ_STATE.lang === 'tr' ? 'Güç' : 'Power'
+                VIZ_STATE.lang === 'tr' ? 'GÃ¼Ã§' : 'Power'
             ],
             rows: [
                 [testType, effectSize.toFixed(2), alpha.toFixed(2), n, (clampedPower * 100).toFixed(1) + '%']
@@ -7017,7 +7819,7 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05, testType = 't-test
     return {
         valid: true,
         testType: 'power',
-        testName: VIZ_STATE.lang === 'tr' ? 'Güç Analizi' : 'Power Analysis',
+        testName: VIZ_STATE.lang === 'tr' ? 'GÃ¼Ã§ Analizi' : 'Power Analysis',
         effectSize: effectSize,
         sampleSize: n,
         alpha: alpha,
@@ -7026,8 +7828,8 @@ export function runPowerAnalysis(effectSize, n, alpha = 0.05, testType = 't-test
         tables: tables,
         legacy: legacy,
         interpretation: clampedPower > 0.8
-            ? (VIZ_STATE.lang === 'tr' ? `Yeterli güç (%${(clampedPower * 100).toFixed(0)}). Bu örneklem büyüklüğü yeterli.` : `Adequate power (${(clampedPower * 100).toFixed(0)}%). Sample size is sufficient.`)
-            : (VIZ_STATE.lang === 'tr' ? `Düşük güç (%${(clampedPower * 100).toFixed(0)}). Daha büyük örneklem önerilir.` : `Low power (${(clampedPower * 100).toFixed(0)}%). Larger sample recommended.`)
+            ? (VIZ_STATE.lang === 'tr' ? `Yeterli gÃ¼Ã§ (%${(clampedPower * 100).toFixed(0)}). Bu Ã¶rneklem bÃ¼yÃ¼klÃ¼ÄŸÃ¼ yeterli.` : `Adequate power (${(clampedPower * 100).toFixed(0)}%). Sample size is sufficient.`)
+            : (VIZ_STATE.lang === 'tr' ? `DÃ¼ÅŸÃ¼k gÃ¼Ã§ (%${(clampedPower * 100).toFixed(0)}). Daha bÃ¼yÃ¼k Ã¶rneklem Ã¶nerilir.` : `Low power (${(clampedPower * 100).toFixed(0)}%). Larger sample recommended.`)
     };
 }
 
@@ -7073,14 +7875,14 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
             testType: 'timeseries',
             testName: VIZ_STATE.lang === 'tr' ? 'Zaman Serisi Analizi' : 'Time Series Analysis',
             valid: false,
-            error: VIZ_STATE.lang === 'tr' ? `${timeColumn} sütunu geçerli tarih formatında değil` : `${timeColumn} column is not in valid date format`,
+            error: VIZ_STATE.lang === 'tr' ? `${timeColumn} sÃ¼tunu geÃ§erli tarih formatÄ±nda deÄŸil` : `${timeColumn} column is not in valid date format`,
             parseReport: {
                 parsed: parsedDates,
                 failed: failedDates,
                 ratio: (parseRatio * 100).toFixed(1) + '%'
             },
             degrade: true,
-            reason: VIZ_STATE.lang === 'tr' ? 'Zaman serisi analizi için tarih sütunu gereklidir' : 'Date column required for time series analysis'
+            reason: VIZ_STATE.lang === 'tr' ? 'Zaman serisi analizi iÃ§in tarih sÃ¼tunu gereklidir' : 'Date column required for time series analysis'
         };
     }
 
@@ -7103,7 +7905,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
         sumXX += i * i;
     });
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const trendDirection = slope > 0.01 ? (VIZ_STATE.lang === 'tr' ? 'Artış' : 'Increasing') : slope < -0.01 ? (VIZ_STATE.lang === 'tr' ? 'Azalış' : 'Decreasing') : (VIZ_STATE.lang === 'tr' ? 'Sabit' : 'Stable');
+    const trendDirection = slope > 0.01 ? (VIZ_STATE.lang === 'tr' ? 'ArtÄ±ÅŸ' : 'Increasing') : slope < -0.01 ? (VIZ_STATE.lang === 'tr' ? 'AzalÄ±ÅŸ' : 'Decreasing') : (VIZ_STATE.lang === 'tr' ? 'Sabit' : 'Stable');
 
     // 5. Moving average (window = 5 or n/10)
     const windowSize = Math.max(3, Math.min(5, Math.floor(n / 10)));
@@ -7128,7 +7930,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
         trend: { slope: slope.toFixed(4), direction: trendDirection },
         movingAverageWindow: windowSize,
         interpretation: {
-            tr: `${n} gözlem analiz edildi (${parsedDates} tarih parse edildi). Seri ${trendDirection.toLowerCase()} eğilimi gösteriyor (eğim: ${slope.toFixed(4)}).`,
+            tr: `${n} gÃ¶zlem analiz edildi (${parsedDates} tarih parse edildi). Seri ${trendDirection.toLowerCase()} eÄŸilimi gÃ¶steriyor (eÄŸim: ${slope.toFixed(4)}).`,
             en: `${n} observations analyzed (${parsedDates} dates parsed). Series shows ${trendDirection.toLowerCase()} trend (slope: ${slope.toFixed(4)}).`
         }
     };
@@ -7141,7 +7943,7 @@ export function runTimeSeriesAnalysis(data, valueColumn, timeColumn) {
  */
 export function runDiscriminantAnalysis(data, groupColumn, columns) {
     if (!groupColumn || columns.length < 1) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Grup ve en az 1 değişken gerekli' : 'Group and at least 1 variable required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Grup ve en az 1 deÄŸiÅŸken gerekli' : 'Group and at least 1 variable required', valid: false };
     }
 
     // 1. Group data
@@ -7208,7 +8010,7 @@ export function runDiscriminantAnalysis(data, groupColumn, columns) {
         })),
         classificationAccuracy: accuracy,
         interpretation: {
-            tr: `${groupNames.length} grup ile LDA yapıldı. En yakın merkez sınıflandırma doğruluğu: %${accuracy}`,
+            tr: `${groupNames.length} grup ile LDA yapÄ±ldÄ±. En yakÄ±n merkez sÄ±nÄ±flandÄ±rma doÄŸruluÄŸu: %${accuracy}`,
             en: `LDA performed with ${groupNames.length} groups. Nearest centroid classification accuracy: ${accuracy}%`
         }
     };
@@ -7219,12 +8021,12 @@ export function runDiscriminantAnalysis(data, groupColumn, columns) {
  * Requires: time (numeric), event (binary: 1=event, 0=censored)
  * 
  * Enhanced features:
- * - Log-rank test for comparing 2+ groups (χ², df, pValue)
+ * - Log-rank test for comparing 2+ groups (Ï‡Â², df, pValue)
  * - Median survival with 95% CI (Greenwood SE + log-log transform)
  */
 export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) {
     if (!timeColumn || !eventColumn) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Zaman ve olay değişkeni gerekli' : 'Time and event variable required', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Zaman ve olay deÄŸiÅŸkeni gerekli' : 'Time and event variable required', valid: false };
     }
 
     // 1. Parse data
@@ -7240,7 +8042,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
     });
 
     if (observations.length < 5) {
-        return { error: VIZ_STATE.lang === 'tr' ? 'Yeterli veri yok (min 5 gözlem)' : 'Insufficient data (min 5 observations)', valid: false };
+        return { error: VIZ_STATE.lang === 'tr' ? 'Yeterli veri yok (min 5 gÃ¶zlem)' : 'Insufficient data (min 5 observations)', valid: false };
     }
 
     // 2. Kaplan-Meier by group (with Greenwood variance for CI)
@@ -7253,7 +8055,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         const survivalTable = [];
         let atRisk = n;
         let survival = 1;
-        let greenwoodSum = 0; // Σ d_j / (n_j * (n_j - d_j))
+        let greenwoodSum = 0; // Î£ d_j / (n_j * (n_j - d_j))
 
         const timePoints = [...new Set(sortedObs.map(o => o.time))].sort((a, b) => a - b);
 
@@ -7308,15 +8110,15 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
             return { median, ciLower: null, ciUpper: null, level, method: 'KM', ciMethod: 'log-log' };
         }
 
-        // θ = -log(-log(S))
+        // Î¸ = -log(-log(S))
         const theta = -Math.log(-Math.log(S));
-        // SE(θ) = SE / (S * |log(S)|)
+        // SE(Î¸) = SE / (S * |log(S)|)
         const seTheta = SE / (S * Math.abs(Math.log(S)));
 
         const thetaLower = theta - z * seTheta;
         const thetaUpper = theta + z * seTheta;
 
-        // Invert: S = exp(-exp(-θ))
+        // Invert: S = exp(-exp(-Î¸))
         const sLower = Math.exp(-Math.exp(-thetaUpper)); // Note: swap for CI
         const sUpper = Math.exp(-Math.exp(-thetaLower));
 
@@ -7443,7 +8245,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         });
 
         // Calculate chi-square statistic
-        // χ² = Σ (O_i - E_i)² / V_i (for each group except last, to maintain df = k-1)
+        // Ï‡Â² = Î£ (O_i - E_i)Â² / V_i (for each group except last, to maintain df = k-1)
         // Alternative: use pooled formula for better numerical stability
         let chiSquare = 0;
         let totalV = 0;
@@ -7474,7 +8276,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
             df: df,
             pValue: isFinite(pValue) ? pValue : NaN,
             valid: isFinite(chiSquare) && isFinite(pValue),
-            notes: VIZ_STATE.lang === 'tr' ? 'Breslow yaklaşımı (bağlı gözlemler için)' : 'Breslow approximation for ties'
+            notes: VIZ_STATE.lang === 'tr' ? 'Breslow yaklaÅŸÄ±mÄ± (baÄŸlÄ± gÃ¶zlemler iÃ§in)' : 'Breslow approximation for ties'
         };
     }
 
@@ -7486,8 +8288,8 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         tables.push({
             title: VIZ_STATE.lang === 'tr' ? 'Log-Rank Testi' : 'Log-Rank Test',
             columns: [
-                VIZ_STATE.lang === 'tr' ? 'İstatistik' : 'Statistic',
-                'χ²',
+                VIZ_STATE.lang === 'tr' ? 'Ä°statistik' : 'Statistic',
+                'Ï‡Â²',
                 'df',
                 'p'
             ],
@@ -7525,13 +8327,13 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
     });
 
     tables.push({
-        title: VIZ_STATE.lang === 'tr' ? 'Medyan Sağkalım' : 'Median Survival',
+        title: VIZ_STATE.lang === 'tr' ? 'Medyan SaÄŸkalÄ±m' : 'Median Survival',
         columns: [
             VIZ_STATE.lang === 'tr' ? 'Grup' : 'Group',
             'n',
             VIZ_STATE.lang === 'tr' ? 'Medyan' : 'Median',
             VIZ_STATE.lang === 'tr' ? '%95 GA Alt' : '95% CI Lower',
-            VIZ_STATE.lang === 'tr' ? '%95 GA Üst' : '95% CI Upper'
+            VIZ_STATE.lang === 'tr' ? '%95 GA Ãœst' : '95% CI Upper'
         ],
         rows: medianRows
     });
@@ -7544,7 +8346,7 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
 
     return {
         testType: 'survival',
-        testName: VIZ_STATE.lang === 'tr' ? 'Sağkalım Analizi (Kaplan-Meier)' : 'Survival Analysis (Kaplan-Meier)',
+        testName: VIZ_STATE.lang === 'tr' ? 'SaÄŸkalÄ±m Analizi (Kaplan-Meier)' : 'Survival Analysis (Kaplan-Meier)',
         valid: true,
         nObservations: observations.length,
         nGroups: groups.length,
@@ -7556,9 +8358,525 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         // New: SPSS-style tables
         tables: tables,
         interpretation: {
-            tr: `${observations.length} gözlem analiz edildi. ${groups.length > 1 ? `${groups.length} grup karşılaştırıldı.${logRankResult && logRankResult.valid ? ` Log-rank p = ${logRankResult.pValue.toFixed(4)}` : ''}` : ''} Medyan sağkalım tablodan görülebilir.`,
+            tr: `${observations.length} gÃ¶zlem analiz edildi. ${groups.length > 1 ? `${groups.length} grup karÅŸÄ±laÅŸtÄ±rÄ±ldÄ±.${logRankResult && logRankResult.valid ? ` Log-rank p = ${logRankResult.pValue.toFixed(4)}` : ''}` : ''} Medyan saÄŸkalÄ±m tablodan gÃ¶rÃ¼lebilir.`,
             en: `${observations.length} observations analyzed. ${groups.length > 1 ? `${groups.length} groups compared.${logRankResult && logRankResult.valid ? ` Log-rank p = ${logRankResult.pValue.toFixed(4)}` : ''}` : ''} Median survival shown in table.`
         }
+    };
+}
+
+
+// =====================================================
+// COX PROPORTIONAL HAZARDS REGRESSION (PROMPT-UPDATE-2)
+// =====================================================
+
+/**
+ * Cox Proportional Hazards Regression
+ * SPSS Survival Parity Pack with Efron tie handling and Schoenfeld residuals
+ * 
+ * @param {Array} data - Array of objects with time, event, and covariate columns
+ * @param {string} timeColumn - Column name for survival time
+ * @param {string} eventColumn - Column name for event indicator (1=event, 0=censored)
+ * @param {Array<string>} covariates - Array of covariate column names
+ * @param {Object} options - { ties: 'breslow'|'efron', alpha: 0.05 }
+ */
+export function runCoxRegression(data, timeColumn, eventColumn, covariates, options = {}) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Validate inputs
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        return { valid: false, error: lang === 'tr' ? 'Veri gerekli' : 'Data required' };
+    }
+    if (!timeColumn || !eventColumn) {
+        return { valid: false, error: lang === 'tr' ? 'Zaman ve olay deÄŸiÅŸkeni gerekli' : 'Time and event columns required' };
+    }
+    if (!covariates || !Array.isArray(covariates) || covariates.length === 0) {
+        return { valid: false, error: lang === 'tr' ? 'En az bir kovariyat gerekli' : 'At least one covariate required' };
+    }
+
+    // Parse options
+    const tiesMethod = options.ties === 'efron' ? 'efron' : 'breslow';
+    const alpha = options.alpha || 0.05;
+
+    // 1. Parse and validate data
+    const observations = [];
+    for (const row of data) {
+        const time = parseFloat(row[timeColumn]);
+        const event = parseInt(row[eventColumn]);
+
+        if (isNaN(time) || time < 0 || (event !== 0 && event !== 1)) continue;
+
+        const covValues = [];
+        let validCovs = true;
+        for (const cov of covariates) {
+            const val = parseFloat(row[cov]);
+            if (isNaN(val)) {
+                validCovs = false;
+                break;
+            }
+            covValues.push(val);
+        }
+
+        if (validCovs) {
+            observations.push({ time, event, covs: covValues });
+        }
+    }
+
+    const n = observations.length;
+    const p = covariates.length;
+    const nEvents = observations.filter(o => o.event === 1).length;
+
+    if (n < 10) {
+        return { valid: false, error: lang === 'tr' ? 'Yeterli veri yok (min 10 gÃ¶zlem)' : 'Insufficient data (min 10 observations)' };
+    }
+    if (nEvents < 3) {
+        return { valid: false, error: lang === 'tr' ? 'Yeterli olay yok (min 3 olay)' : 'Insufficient events (min 3 events)' };
+    }
+
+    // Sort by time
+    observations.sort((a, b) => a.time - b.time);
+
+    // 2. Newton-Raphson optimization for Cox partial likelihood
+    let beta = new Array(p).fill(0);
+    const maxIter = 25;
+    const tolerance = 1e-6;
+    let converged = false;
+    let iterations = 0;
+    let logLikelihood = 0;
+
+    // Get unique event times with their tied events
+    const eventTimes = [];
+    const timeToIdx = {};
+    for (let i = 0; i < n; i++) {
+        if (observations[i].event === 1) {
+            const t = observations[i].time;
+            if (!(t in timeToIdx)) {
+                timeToIdx[t] = eventTimes.length;
+                eventTimes.push({ time: t, events: [], riskSetStart: i });
+            }
+            eventTimes[timeToIdx[t]].events.push(i);
+        }
+    }
+
+    // Calculate risk sets for each event time
+    for (const et of eventTimes) {
+        et.riskSet = [];
+        for (let i = 0; i < n; i++) {
+            if (observations[i].time >= et.time) {
+                et.riskSet.push(i);
+            }
+        }
+        // Actually, risk set should be those with time >= event time
+        // Fix: risk set at time t includes all with T >= t
+        et.riskSet = [];
+        for (let i = 0; i < n; i++) {
+            if (observations[i].time >= et.time) {
+                et.riskSet.push(i);
+            }
+        }
+    }
+
+    // Helper: exp(X*beta) with overflow protection
+    const expXb = (idx) => {
+        let xb = 0;
+        for (let j = 0; j < p; j++) {
+            xb += observations[idx].covs[j] * beta[j];
+        }
+        return Math.exp(Math.max(-20, Math.min(20, xb)));
+    };
+
+    // Newton-Raphson iteration
+    for (let iter = 0; iter < maxIter; iter++) {
+        iterations = iter + 1;
+
+        // Calculate gradient and Hessian
+        const gradient = new Array(p).fill(0);
+        const hessian = Array.from({ length: p }, () => new Array(p).fill(0));
+        logLikelihood = 0;
+
+        for (const et of eventTimes) {
+            const d = et.events.length; // Number of tied events
+
+            if (tiesMethod === 'efron' && d > 1) {
+                // Efron approximation for ties
+                // Sum over risk set
+                let S0 = 0, S1 = new Array(p).fill(0), S2 = Array.from({ length: p }, () => new Array(p).fill(0));
+                for (const i of et.riskSet) {
+                    const w = expXb(i);
+                    S0 += w;
+                    for (let j = 0; j < p; j++) {
+                        S1[j] += w * observations[i].covs[j];
+                        for (let k = 0; k < p; k++) {
+                            S2[j][k] += w * observations[i].covs[j] * observations[i].covs[k];
+                        }
+                    }
+                }
+
+                // Sum over tied events (for Efron adjustment)
+                let D0 = 0, D1 = new Array(p).fill(0), D2 = Array.from({ length: p }, () => new Array(p).fill(0));
+                for (const i of et.events) {
+                    const w = expXb(i);
+                    D0 += w;
+                    for (let j = 0; j < p; j++) {
+                        D1[j] += w * observations[i].covs[j];
+                        for (let k = 0; k < p; k++) {
+                            D2[j][k] += w * observations[i].covs[j] * observations[i].covs[k];
+                        }
+                    }
+                }
+
+                // Efron: average over m = 0, 1, ..., d-1
+                for (let m = 0; m < d; m++) {
+                    const frac = m / d;
+                    const denom = S0 - frac * D0;
+                    if (denom <= 0) continue;
+
+                    logLikelihood -= Math.log(denom);
+
+                    for (let j = 0; j < p; j++) {
+                        const mean_j = (S1[j] - frac * D1[j]) / denom;
+                        gradient[j] -= mean_j;
+
+                        for (let k = 0; k < p; k++) {
+                            const mean_jk = (S2[j][k] - frac * D2[j][k]) / denom;
+                            hessian[j][k] -= mean_jk - mean_j * ((S1[k] - frac * D1[k]) / denom);
+                        }
+                    }
+                }
+
+                // Add contribution from events
+                for (const i of et.events) {
+                    for (let j = 0; j < p; j++) {
+                        gradient[j] += observations[i].covs[j];
+                        logLikelihood += observations[i].covs[j] * beta[j];
+                    }
+                }
+
+            } else {
+                // Breslow approximation (default)
+                let S0 = 0, S1 = new Array(p).fill(0), S2 = Array.from({ length: p }, () => new Array(p).fill(0));
+
+                for (const i of et.riskSet) {
+                    const w = expXb(i);
+                    S0 += w;
+                    for (let j = 0; j < p; j++) {
+                        S1[j] += w * observations[i].covs[j];
+                        for (let k = 0; k < p; k++) {
+                            S2[j][k] += w * observations[i].covs[j] * observations[i].covs[k];
+                        }
+                    }
+                }
+
+                if (S0 <= 0) continue;
+
+                // Contribution from each event at this time
+                for (const i of et.events) {
+                    for (let j = 0; j < p; j++) {
+                        gradient[j] += observations[i].covs[j] - S1[j] / S0;
+                        logLikelihood += observations[i].covs[j] * beta[j];
+                    }
+                    logLikelihood -= Math.log(S0);
+
+                    // Hessian contribution
+                    for (let j = 0; j < p; j++) {
+                        for (let k = 0; k < p; k++) {
+                            hessian[j][k] -= S2[j][k] / S0 - (S1[j] / S0) * (S1[k] / S0);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Solve for delta: hessian * delta = gradient
+        const delta = solveLinearSystem(hessian.map(row => [...row]), gradient);
+
+        if (!delta || delta.some(d => !isFinite(d))) {
+            break; // Convergence failed
+        }
+
+        // Update beta
+        let maxChange = 0;
+        for (let j = 0; j < p; j++) {
+            const change = -delta[j];
+            beta[j] += change;
+            maxChange = Math.max(maxChange, Math.abs(change));
+        }
+
+        if (maxChange < tolerance) {
+            converged = true;
+            break;
+        }
+    }
+
+    // 3. Calculate final statistics
+    // Re-calculate Hessian at final beta for SE
+    const finalHessian = Array.from({ length: p }, () => new Array(p).fill(0));
+    logLikelihood = 0;
+
+    for (const et of eventTimes) {
+        const d = et.events.length;
+
+        let S0 = 0, S1 = new Array(p).fill(0), S2 = Array.from({ length: p }, () => new Array(p).fill(0));
+        for (const i of et.riskSet) {
+            const w = expXb(i);
+            S0 += w;
+            for (let j = 0; j < p; j++) {
+                S1[j] += w * observations[i].covs[j];
+                for (let k = 0; k < p; k++) {
+                    S2[j][k] += w * observations[i].covs[j] * observations[i].covs[k];
+                }
+            }
+        }
+
+        if (S0 <= 0) continue;
+
+        for (const i of et.events) {
+            for (let j = 0; j < p; j++) {
+                logLikelihood += observations[i].covs[j] * beta[j];
+            }
+            logLikelihood -= Math.log(S0);
+
+            for (let j = 0; j < p; j++) {
+                for (let k = 0; k < p; k++) {
+                    finalHessian[j][k] -= S2[j][k] / S0 - (S1[j] / S0) * (S1[k] / S0);
+                }
+            }
+        }
+    }
+
+    // Invert Hessian for variance-covariance matrix
+    const varCov = invertMatrix(finalHessian.map(row => row.map(v => -v)));
+
+    const standardErrors = [];
+    const waldChi2 = [];
+    const waldPValues = [];
+    const hazardRatios = [];
+    const hrCILower = [];
+    const hrCIUpper = [];
+    const zCritical = 1.96;
+
+    for (let j = 0; j < p; j++) {
+        const se = varCov ? Math.sqrt(Math.abs(varCov[j][j])) : 0;
+        standardErrors.push(se);
+
+        const wald = se > 0 ? Math.pow(beta[j] / se, 2) : NaN;
+        waldChi2.push(isFinite(wald) ? wald : NaN);
+
+        const waldP = isFinite(wald) ? approximateChiSquarePValue(wald, 1) : NaN;
+        waldPValues.push(isFinite(waldP) ? waldP : NaN);
+
+        const hr = Math.exp(beta[j]);
+        hazardRatios.push(isFinite(hr) ? hr : NaN);
+
+        hrCILower.push(Math.exp(beta[j] - zCritical * se));
+        hrCIUpper.push(Math.exp(beta[j] + zCritical * se));
+    }
+
+    // Null log-likelihood (beta = 0)
+    let logLikelihoodNull = 0;
+    for (const et of eventTimes) {
+        const riskSetSize = et.riskSet.length;
+        for (let i = 0; i < et.events.length; i++) {
+            logLikelihoodNull -= Math.log(riskSetSize);
+        }
+    }
+
+    const minus2LL = -2 * logLikelihood;
+    const modelChiSquare = -2 * (logLikelihoodNull - logLikelihood);
+    const modelPValue = approximateChiSquarePValue(modelChiSquare, p);
+
+    // 4. Schoenfeld Residuals & PH Test (GÃ–REV B)
+    const schoenfeldResiduals = [];
+    let phTest;
+
+    try {
+        // Calculate Schoenfeld residuals for each event
+        for (const et of eventTimes) {
+            let S0 = 0, S1 = new Array(p).fill(0);
+            for (const i of et.riskSet) {
+                const w = expXb(i);
+                S0 += w;
+                for (let j = 0; j < p; j++) {
+                    S1[j] += w * observations[i].covs[j];
+                }
+            }
+
+            if (S0 <= 0) continue;
+
+            const expectedCovs = S1.map(s => s / S0);
+
+            for (const eventIdx of et.events) {
+                const residual = {
+                    time: et.time,
+                    values: []
+                };
+                for (let j = 0; j < p; j++) {
+                    residual.values.push(observations[eventIdx].covs[j] - expectedCovs[j]);
+                }
+                schoenfeldResiduals.push(residual);
+            }
+        }
+
+        // PH Test: Correlate residuals with rank of time
+        if (schoenfeldResiduals.length >= 5) {
+            const times = schoenfeldResiduals.map(r => r.time);
+            const timeRanks = getRanks(times);
+
+            const covariateTests = [];
+            let globalChiSq = 0;
+
+            for (let j = 0; j < p; j++) {
+                const residuals = schoenfeldResiduals.map(r => r.values[j]);
+
+                // Spearman correlation with time rank
+                const rho = calculateSpearmanCorrelation(timeRanks, residuals);
+
+                // Test statistic (approximate)
+                const nResid = residuals.length;
+                const t = rho * Math.sqrt((nResid - 2) / (1 - rho * rho));
+                const pVal = approximateTTestPValue(Math.abs(t), nResid - 2);
+
+                // Chi-square contribution
+                const chi2 = isFinite(t) ? t * t : 0;
+                globalChiSq += chi2;
+
+                covariateTests.push({
+                    name: covariates[j],
+                    rho: isFinite(rho) ? rho : 0,
+                    stat: isFinite(chi2) ? chi2 : 0,
+                    pValue: isFinite(pVal) ? pVal : 1
+                });
+            }
+
+            const globalP = approximateChiSquarePValue(globalChiSq, p);
+
+            phTest = {
+                method: 'schoenfeld',
+                valid: true,
+                globalChiSq: globalChiSq,
+                df: p,
+                globalP: globalP,
+                covariates: covariateTests,
+                interpretation: globalP > 0.05
+                    ? (lang === 'tr' ? 'PH varsayÄ±mÄ± karÅŸÄ±lanÄ±yor (p > 0.05)' : 'PH assumption met (p > 0.05)')
+                    : (lang === 'tr' ? 'PH varsayÄ±mÄ± ihlal edilmiÅŸ olabilir (p â‰¤ 0.05)' : 'PH assumption may be violated (p â‰¤ 0.05)')
+            };
+        } else {
+            phTest = {
+                method: 'schoenfeld',
+                valid: false,
+                noteTR: 'Schoenfeld testi iÃ§in yeterli olay yok (min 5)',
+                noteEN: 'Insufficient events for Schoenfeld test (min 5)'
+            };
+        }
+    } catch (e) {
+        phTest = {
+            method: 'schoenfeld',
+            valid: false,
+            noteTR: 'PH testi hesaplanamadÄ±: ' + (e.message || '').slice(0, 30),
+            noteEN: 'PH test failed: ' + (e.message || '').slice(0, 30)
+        };
+    }
+
+    // 5. Build SPSS Tables (GÃ–REV C)
+    const variablesTable = {
+        title: lang === 'tr' ? 'Denklemdeki DeÄŸiÅŸkenler' : 'Variables in the Equation',
+        columns: ['Variable', 'B', 'SE', 'Wald', 'df', 'Sig.', 'Exp(B)', '95% CI Lower', '95% CI Upper'],
+        rows: covariates.map((cov, j) => [
+            cov,
+            isFinite(beta[j]) ? beta[j].toFixed(4) : '-',
+            isFinite(standardErrors[j]) ? standardErrors[j].toFixed(4) : '-',
+            isFinite(waldChi2[j]) ? waldChi2[j].toFixed(4) : '-',
+            1,
+            isFinite(waldPValues[j]) ? (waldPValues[j] < 0.001 ? '<.001' : waldPValues[j].toFixed(3)) : '-',
+            isFinite(hazardRatios[j]) ? hazardRatios[j].toFixed(4) : '-',
+            isFinite(hrCILower[j]) ? hrCILower[j].toFixed(4) : '-',
+            isFinite(hrCIUpper[j]) ? hrCIUpper[j].toFixed(4) : '-'
+        ])
+    };
+
+    const modelSummaryTable = {
+        title: lang === 'tr' ? 'Model Ã–zeti' : 'Model Summary',
+        columns: ['-2LL', lang === 'tr' ? 'Model Ï‡Â²' : 'Model Chi-Square', 'df', 'Sig.', lang === 'tr' ? 'BaÄŸ YÃ¶ntemi' : 'Ties Method'],
+        rows: [[
+            isFinite(minus2LL) ? minus2LL.toFixed(3) : '-',
+            isFinite(modelChiSquare) ? modelChiSquare.toFixed(3) : '-',
+            p,
+            isFinite(modelPValue) ? (modelPValue < 0.001 ? '<.001' : modelPValue.toFixed(3)) : '-',
+            tiesMethod.charAt(0).toUpperCase() + tiesMethod.slice(1)
+        ]]
+    };
+
+    const phTestTable = phTest.valid ? {
+        title: lang === 'tr' ? 'Oransal Tehlike Testi' : 'Proportional Hazards Test',
+        columns: [lang === 'tr' ? 'DeÄŸiÅŸken' : 'Variable', 'Chi-Square', 'df', 'Sig.'],
+        rows: [
+            ...phTest.covariates.map(c => [
+                c.name,
+                isFinite(c.stat) ? c.stat.toFixed(3) : '-',
+                1,
+                isFinite(c.pValue) ? (c.pValue < 0.001 ? '<.001' : c.pValue.toFixed(3)) : '-'
+            ]),
+            [
+                lang === 'tr' ? 'GLOBAL' : 'GLOBAL',
+                isFinite(phTest.globalChiSq) ? phTest.globalChiSq.toFixed(3) : '-',
+                phTest.df,
+                isFinite(phTest.globalP) ? (phTest.globalP < 0.001 ? '<.001' : phTest.globalP.toFixed(3)) : '-'
+            ]
+        ]
+    } : {
+        title: lang === 'tr' ? 'Oransal Tehlike Testi' : 'Proportional Hazards Test',
+        columns: [lang === 'tr' ? 'Not' : 'Note'],
+        rows: [[phTest.noteTR || phTest.noteEN]]
+    };
+
+    return {
+        valid: true,
+        testName: lang === 'tr' ? 'Cox Oransal Tehlike Regresyonu' : 'Cox Proportional Hazards Regression',
+        testType: 'cox-regression',
+        n: n,
+        nEvents: nEvents,
+        nCovariates: p,
+        converged: converged,
+        iterations: iterations,
+
+        // GÃ–REV A: Tie method
+        tiesMethodUsed: tiesMethod,
+
+        // Coefficients
+        coefficients: beta,
+        standardErrors: standardErrors,
+        wald: {
+            chi2: waldChi2,
+            df: new Array(p).fill(1),
+            pValues: waldPValues
+        },
+
+        // Hazard ratios
+        hazardRatios: hazardRatios,
+        hazardRatioCI: {
+            lower: hrCILower,
+            upper: hrCIUpper,
+            level: 0.95
+        },
+
+        // Model fit
+        logLikelihood: logLikelihood,
+        logLikelihoodNull: logLikelihoodNull,
+        minus2LL: minus2LL,
+        modelChiSquare: modelChiSquare,
+        modelDF: p,
+        modelPValue: modelPValue,
+
+        // GÃ–REV B: Schoenfeld residuals & PH test
+        schoenfeldResiduals: schoenfeldResiduals.length > 0 ? schoenfeldResiduals : undefined,
+        phTest: phTest,
+
+        // GÃ–REV C: SPSS tables
+        tables: [variablesTable, modelSummaryTable, phTestTable],
+
+        interpretation: lang === 'tr'
+            ? `Cox regresyon analizi ${tiesMethod} yÃ¶ntemiyle tamamlandÄ±. Model Ï‡Â² = ${modelChiSquare.toFixed(2)}, p ${modelPValue < 0.001 ? '< .001' : '= ' + modelPValue.toFixed(3)}. ${phTest.valid ? phTest.interpretation : ''}`
+            : `Cox regression completed using ${tiesMethod} method. Model Ï‡Â² = ${modelChiSquare.toFixed(2)}, p ${modelPValue < 0.001 ? '< .001' : '= ' + modelPValue.toFixed(3)}. ${phTest.valid ? phTest.interpretation : ''}`
     };
 }
 
@@ -7576,8 +8894,8 @@ export function generateAPAReport(data, columns) {
         return {
             testType: 'apa',
             testName: VIZ_STATE.lang === 'tr' ? 'APA Raporu' : 'APA Report',
-            error: VIZ_STATE.lang === 'tr' ? 'Veri bulunamadı. Önce bir dosya yükleyin.' : 'Data not found. Please load a file first.',
-            html: VIZ_STATE.lang === 'tr' ? '<div class="apa-report"><p class="error">Veri bulunamadı.</p></div>' : '<div class="apa-report"><p class="error">Data not found.</p></div>'
+            error: VIZ_STATE.lang === 'tr' ? 'Veri bulunamadÄ±. Ã–nce bir dosya yÃ¼kleyin.' : 'Data not found. Please load a file first.',
+            html: VIZ_STATE.lang === 'tr' ? '<div class="apa-report"><p class="error">Veri bulunamadÄ±.</p></div>' : '<div class="apa-report"><p class="error">Data not found.</p></div>'
         };
     }
 
@@ -7587,7 +8905,7 @@ export function generateAPAReport(data, columns) {
     });
 
     let report = '<div class="apa-report">';
-    report += '<h4>APA Formatında İstatistik Raporu</h4>';
+    report += '<h4>APA FormatÄ±nda Ä°statistik Raporu</h4>';
 
     numericCols.forEach(col => {
         const values = actualData.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
@@ -7606,7 +8924,7 @@ export function generateAPAReport(data, columns) {
         testType: 'apa',
         testName: VIZ_STATE.lang === 'tr' ? 'APA Raporu' : 'APA Report',
         html: report,
-        interpretation: VIZ_STATE.lang === 'tr' ? 'APA 7 formatında istatistik özeti oluşturuldu.' : 'Statistical summary generated in APA 7 format.'
+        interpretation: VIZ_STATE.lang === 'tr' ? 'APA 7 formatÄ±nda istatistik Ã¶zeti oluÅŸturuldu.' : 'Statistical summary generated in APA 7 format.'
     };
 }
 
@@ -7645,22 +8963,22 @@ export function showStatResultModal(title, content) {
  */
 export function showPCAModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 2) {
-        showToast('PCA için en az 2 sayısal sütun gerekli', 'warning');
+        showToast('PCA iÃ§in en az 2 sayÄ±sal sÃ¼tun gerekli', 'warning');
         return;
     }
 
     const numericCols = getNumericColumns();
     if (numericCols.length < 2) {
-        showToast('Sayısal sütun bulunamadı', 'warning');
+        showToast('SayÄ±sal sÃ¼tun bulunamadÄ±', 'warning');
         return;
     }
 
     const result = runPCAAnalysis(VIZ_STATE.data, numericCols.slice(0, 5));
     if (result) {
         const content = `
-            <h4>PCA Sonuçları</h4>
+            <h4>PCA SonuÃ§larÄ±</h4>
             <table class="viz-stat-table">
-                <tr><th>Sütun</th><th>Explained Variance %</th></tr>
+                <tr><th>SÃ¼tun</th><th>Explained Variance %</th></tr>
                 ${result.columns.map((c, i) => `<tr><td>${c}</td><td>${result.explained_variance[i]}%</td></tr>`).join('')}
             </table>
             <p>${result.interpretation}</p>
@@ -7674,7 +8992,7 @@ export function showPCAModal() {
  */
 export function showClusterModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 1) {
-        showToast('Kümeleme için en az 1 sayısal sütun gerekli', 'warning');
+        showToast('KÃ¼meleme iÃ§in en az 1 sayÄ±sal sÃ¼tun gerekli', 'warning');
         return;
     }
 
@@ -7683,14 +9001,14 @@ export function showClusterModal() {
 
     if (result) {
         const content = `
-            <h4>K-Means Sonuçları (k=${result.k})</h4>
+            <h4>K-Means SonuÃ§larÄ± (k=${result.k})</h4>
             <table class="viz-stat-table">
-                <tr><th>Küme</th><th>Eleman Sayısı</th></tr>
-                ${result.clusterSizes.map((s, i) => `<tr><td>Küme ${i}</td><td>${s}</td></tr>`).join('')}
+                <tr><th>KÃ¼me</th><th>Eleman SayÄ±sÄ±</th></tr>
+                ${result.clusterSizes.map((s, i) => `<tr><td>KÃ¼me ${i}</td><td>${s}</td></tr>`).join('')}
             </table>
-            <p>Veri setine "_cluster" sütunu eklendi.</p>
+            <p>Veri setine "_cluster" sÃ¼tunu eklendi.</p>
         `;
-        showStatResultModal('K-Means Kümeleme', content);
+        showStatResultModal('K-Means KÃ¼meleme', content);
 
         // Update UI
         if (typeof window.renderColumnsListWithTypes === 'function') {
@@ -7707,13 +9025,13 @@ export function showClusterModal() {
  */
 export function showCronbachModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 2) {
-        showToast("Cronbach's Alpha için en az 2 madde gerekli", 'warning');
+        showToast("Cronbach's Alpha iÃ§in en az 2 madde gerekli", 'warning');
         return;
     }
 
     const numericCols = getNumericColumns();
     if (numericCols.length < 2) {
-        showToast('En az 2 sayısal sütun gerekli', 'warning');
+        showToast('En az 2 sayÄ±sal sÃ¼tun gerekli', 'warning');
         return;
     }
 
@@ -7722,7 +9040,7 @@ export function showCronbachModal() {
         const content = `
             <h4>Cronbach's Alpha</h4>
             <div class="stat-big-value">${result.alpha.toFixed(3)}</div>
-            <p>Madde sayısı: ${result.itemCount}</p>
+            <p>Madde sayÄ±sÄ±: ${result.itemCount}</p>
             <p><strong>${result.interpretation}</strong></p>
         `;
         showStatResultModal("Cronbach's Alpha", content);
@@ -7733,11 +9051,11 @@ export function showCronbachModal() {
  * Show Logistic Regression Modal
  */
 export function showLogisticModal() {
-    showToast('Lojistik regresyon için backend API gerekli', 'info');
+    showToast('Lojistik regresyon iÃ§in backend API gerekli', 'info');
     const content = `
         <h4>Lojistik Regresyon</h4>
-        <p>Bu analiz binomial/multinomial sonuç değişkenleri için kullanılır.</p>
-        <p>Tam implementasyon için Python backend API gereklidir.</p>
+        <p>Bu analiz binomial/multinomial sonuÃ§ deÄŸiÅŸkenleri iÃ§in kullanÄ±lÄ±r.</p>
+        <p>Tam implementasyon iÃ§in Python backend API gereklidir.</p>
     `;
     showStatResultModal('Lojistik Regresyon', content);
 }
@@ -7747,13 +9065,13 @@ export function showLogisticModal() {
  */
 export function showTimeSeriesModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 2) {
-        showToast('Zaman serisi için zaman ve değer sütunu gerekli', 'warning');
+        showToast('Zaman serisi iÃ§in zaman ve deÄŸer sÃ¼tunu gerekli', 'warning');
         return;
     }
 
     const numericCols = getNumericColumns();
     if (numericCols.length < 1) {
-        showToast('Sayısal sütun bulunamadı', 'warning');
+        showToast('SayÄ±sal sÃ¼tun bulunamadÄ±', 'warning');
         return;
     }
 
@@ -7761,7 +9079,7 @@ export function showTimeSeriesModal() {
     if (result) {
         const content = `
             <h4>Zaman Serisi Analizi</h4>
-            <p>Gözlem sayısı: ${result.n}</p>
+            <p>GÃ¶zlem sayÄ±sÄ±: ${result.n}</p>
             <p>Ortalama: ${result.mean.toFixed(2)}</p>
             <p>Trend: <strong>${result.trendDirection}</strong></p>
             <p>${result.interpretation}</p>
@@ -7775,17 +9093,17 @@ export function showTimeSeriesModal() {
  */
 export function showPowerAnalysisModal() {
     const content = `
-        <h4>Güç Analizi</h4>
+        <h4>GÃ¼Ã§ Analizi</h4>
         <div style="margin-bottom:15px;">
-            <label>Etki Büyüklüğü (d):</label>
+            <label>Etki BÃ¼yÃ¼klÃ¼ÄŸÃ¼ (d):</label>
             <input type="number" id="powerEffectSize" value="0.5" step="0.1" min="0.1" max="2" style="width:100%;padding:8px;background:#2a2a3e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;">
         </div>
         <div style="margin-bottom:15px;">
-            <label>Örneklem Büyüklüğü:</label>
+            <label>Ã–rneklem BÃ¼yÃ¼klÃ¼ÄŸÃ¼:</label>
             <input type="number" id="powerSampleSize" value="30" min="5" max="1000" style="width:100%;padding:8px;background:#2a2a3e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;">
         </div>
         <div style="margin-bottom:15px;">
-            <label>Alpha Düzeyi:</label>
+            <label>Alpha DÃ¼zeyi:</label>
             <select id="powerAlpha" style="width:100%;padding:8px;background:#2a2a3e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;">
                 <option value="0.05">0.05</option>
                 <option value="0.01">0.01</option>
@@ -7795,7 +9113,7 @@ export function showPowerAnalysisModal() {
         <button onclick="runPowerFromModal()" style="width:100%;padding:10px;background:linear-gradient(135deg,#4a90d9,#357abd);border:none;border-radius:6px;color:#fff;cursor:pointer;">Hesapla</button>
         <div id="powerResult" style="margin-top:15px;"></div>
     `;
-    showStatResultModal('Güç Analizi', content);
+    showStatResultModal('GÃ¼Ã§ Analizi', content);
 }
 
 // Power analysis helper
@@ -7818,26 +9136,26 @@ window.runPowerFromModal = function () {
  */
 export function showRegressionModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 2) {
-        showToast('Regresyon için en az 2 sütun gerekli', 'warning');
+        showToast('Regresyon iÃ§in en az 2 sÃ¼tun gerekli', 'warning');
         return;
     }
 
     const numericCols = getNumericColumns();
     if (numericCols.length < 2) {
-        showToast('En az 2 sayısal sütun gerekli', 'warning');
+        showToast('En az 2 sayÄ±sal sÃ¼tun gerekli', 'warning');
         return;
     }
 
     const result = runLinearRegression(VIZ_STATE.data, numericCols[0], numericCols[1]);
     if (result) {
         const content = `
-            <h4>Doğrusal Regresyon</h4>
+            <h4>DoÄŸrusal Regresyon</h4>
             <p>Denklem: <strong>${result.equation}</strong></p>
-            <p>R² = ${(result.rSquared * 100).toFixed(1)}%</p>
+            <p>RÂ² = ${(result.rSquared * 100).toFixed(1)}%</p>
             <p>Pearson r = ${result.r.toFixed(3)}</p>
             <p>${result.interpretation}</p>
         `;
-        showStatResultModal('Doğrusal Regresyon', content);
+        showStatResultModal('DoÄŸrusal Regresyon', content);
     }
 }
 
@@ -7845,11 +9163,11 @@ export function showRegressionModal() {
  * Show Discriminant Modal
  */
 export function showDiscriminantModal() {
-    showToast('Diskriminant analizi için backend API gerekli', 'info');
+    showToast('Diskriminant analizi iÃ§in backend API gerekli', 'info');
     const content = `
         <h4>Diskriminant Analizi</h4>
-        <p>Bu analiz grup üyeliğini tahmin etmek için kullanılır.</p>
-        <p>Tam implementasyon için Python backend API gereklidir.</p>
+        <p>Bu analiz grup Ã¼yeliÄŸini tahmin etmek iÃ§in kullanÄ±lÄ±r.</p>
+        <p>Tam implementasyon iÃ§in Python backend API gereklidir.</p>
     `;
     showStatResultModal('Diskriminant Analizi', content);
 }
@@ -7858,13 +9176,13 @@ export function showDiscriminantModal() {
  * Show Survival Modal
  */
 export function showSurvivalModal() {
-    showToast('Sağkalım analizi için backend API gerekli', 'info');
+    showToast('SaÄŸkalÄ±m analizi iÃ§in backend API gerekli', 'info');
     const content = `
-        <h4>Sağkalım Analizi</h4>
-        <p>Bu analiz zaman-olay verisi için kullanılır (Kaplan-Meier, Cox regresyon).</p>
-        <p>Tam implementasyon için Python backend API gereklidir.</p>
+        <h4>SaÄŸkalÄ±m Analizi</h4>
+        <p>Bu analiz zaman-olay verisi iÃ§in kullanÄ±lÄ±r (Kaplan-Meier, Cox regresyon).</p>
+        <p>Tam implementasyon iÃ§in Python backend API gereklidir.</p>
     `;
-    showStatResultModal('Sağkalım Analizi', content);
+    showStatResultModal('SaÄŸkalÄ±m Analizi', content);
 }
 
 /**
@@ -7872,13 +9190,13 @@ export function showSurvivalModal() {
  */
 export function showFriedmanModal() {
     if (!VIZ_STATE.data || VIZ_STATE.columns.length < 3) {
-        showToast('Friedman testi için en az 3 ölçüm gerekli', 'warning');
+        showToast('Friedman testi iÃ§in en az 3 Ã¶lÃ§Ã¼m gerekli', 'warning');
         return;
     }
 
     const numericCols = getNumericColumns();
     if (numericCols.length < 3) {
-        showToast('En az 3 sayısal sütun gerekli', 'warning');
+        showToast('En az 3 sayÄ±sal sÃ¼tun gerekli', 'warning');
         return;
     }
 
@@ -7886,10 +9204,10 @@ export function showFriedmanModal() {
     if (result) {
         const content = `
             <h4>Friedman Testi</h4>
-            <p>χ² = ${result.chiSquare?.toFixed(3) || 'N/A'}</p>
+            <p>Ï‡Â² = ${result.chiSquare?.toFixed(3) || 'N/A'}</p>
             <p>df = ${result.df || 'N/A'}</p>
             <p>p = ${result.pValue?.toFixed(4) || 'N/A'}</p>
-            <p><strong>${result.interpretation || 'Analiz tamamlandı.'}</strong></p>
+            <p><strong>${result.interpretation || 'Analiz tamamlandÄ±.'}</strong></p>
         `;
         showStatResultModal('Friedman Testi', content);
     }
@@ -7920,13 +9238,13 @@ export function embedStatInChart(widgetId) {
 
     const resultsContainer = widget.querySelector('.viz-stat-widget-results');
     if (!resultsContainer) {
-        showToast('Önce analizi çalıştırın', 'warning');
+        showToast('Ã–nce analizi Ã§alÄ±ÅŸtÄ±rÄ±n', 'warning');
         return;
     }
 
     const resultHtml = resultsContainer.innerHTML;
     if (!resultHtml || resultHtml.includes('placeholder')) {
-        showToast('Önce analizi çalıştırın', 'warning');
+        showToast('Ã–nce analizi Ã§alÄ±ÅŸtÄ±rÄ±n', 'warning');
         return;
     }
 
@@ -7935,7 +9253,7 @@ export function embedStatInChart(widgetId) {
     const charts = document.querySelectorAll('.viz-chart-widget');
 
     if (charts.length === 0) {
-        showToast('Dashboard\'da grafik bulunamadı', 'warning');
+        showToast('Dashboard\'da grafik bulunamadÄ±', 'warning');
         return;
     }
 
@@ -7944,7 +9262,7 @@ export function embedStatInChart(widgetId) {
         : charts[0];
 
     if (!targetChart) {
-        showToast('Hedef grafik bulunamadı', 'warning');
+        showToast('Hedef grafik bulunamadÄ±', 'warning');
         return;
     }
 
@@ -7953,7 +9271,7 @@ export function embedStatInChart(widgetId) {
     overlay.className = 'viz-stat-overlay';
     overlay.innerHTML = `
         <div class="viz-stat-overlay-header">
-            <span>İstatistik Sonucu</span>
+            <span>Ä°statistik Sonucu</span>
             <button onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button>
         </div>
         <div class="viz-stat-overlay-content">${resultHtml}</div>
@@ -7977,7 +9295,7 @@ export function embedStatInChart(widgetId) {
     targetChart.style.position = 'relative';
     targetChart.appendChild(overlay);
 
-    showToast('İstatistik grafiğe yerleştirildi', 'success');
+    showToast('Ä°statistik grafiÄŸe yerleÅŸtirildi', 'success');
 }
 
 /**
@@ -8049,6 +9367,7 @@ window.runLogisticRegression = runLogisticRegression;
 window.runTimeSeriesAnalysis = runTimeSeriesAnalysis;
 window.runDiscriminantAnalysis = runDiscriminantAnalysis;
 window.runSurvivalAnalysis = runSurvivalAnalysis;
+window.runCoxRegression = runCoxRegression;
 window.generateAPAReport = generateAPAReport;
 
 // Part 5: Modal Functions (viz.html onclick handlers)
@@ -8173,7 +9492,7 @@ export function runStatTest(testType) {
     }
 
     if (typeof showToast === 'function') {
-        showToast('Test tamamlandı', 'success');
+        showToast('Test tamamlandÄ±', 'success');
     }
 
     return result;
@@ -8231,7 +9550,7 @@ export function runIndependentTTest_SPSS(group1, group2, alpha = 0.05, groupName
 
     // Build SPSS-style tables
     const groupStatsTable = {
-        name: lang === 'tr' ? 'Grup İstatistikleri' : 'Group Statistics',
+        name: lang === 'tr' ? 'Grup Ä°statistikleri' : 'Group Statistics',
         columns: [lang === 'tr' ? 'Grup' : 'Group', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata Ort.' : 'Std. Error Mean'],
         rows: [
             [groupNames[0], n1, mean1.toFixed(4), std1.toFixed(4), (std1 / Math.sqrt(n1)).toFixed(4)],
@@ -8240,17 +9559,17 @@ export function runIndependentTTest_SPSS(group1, group2, alpha = 0.05, groupName
     };
 
     const leveneTable = {
-        name: lang === 'tr' ? 'Varyans Homojenliği Testi (Levene)' : 'Test of Homogeneity of Variances (Levene)',
+        name: lang === 'tr' ? 'Varyans HomojenliÄŸi Testi (Levene)' : 'Test of Homogeneity of Variances (Levene)',
         columns: ['F', 'df1', 'df2', 'Sig.'],
         rows: [[leveneResult.F.toFixed(3), leveneResult.df1, leveneResult.df2, leveneResult.pValue.toFixed(4)]]
     };
 
     const tTestTable = {
-        name: lang === 'tr' ? 'Bağımsız Örneklem T-Testi' : 'Independent Samples T-Test',
-        columns: ['', 't', 'df', 'Sig. (2-tailed)', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata Fark' : 'Std. Error Diff.', lang === 'tr' ? '95% CI Alt' : '95% CI Lower', lang === 'tr' ? '95% CI Üst' : '95% CI Upper'],
+        name: lang === 'tr' ? 'BaÄŸÄ±msÄ±z Ã–rneklem T-Testi' : 'Independent Samples T-Test',
+        columns: ['', 't', 'df', 'Sig. (2-tailed)', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata Fark' : 'Std. Error Diff.', lang === 'tr' ? '95% CI Alt' : '95% CI Lower', lang === 'tr' ? '95% CI Ãœst' : '95% CI Upper'],
         rows: [
-            [lang === 'tr' ? 'Varyanslar Eşit' : 'Equal variances assumed', tStudent.toFixed(3), dfStudent, pStudent.toFixed(4), meanDiff.toFixed(4), pooledSE.toFixed(4), ciStudentLower.toFixed(4), ciStudentUpper.toFixed(4)],
-            [lang === 'tr' ? 'Varyanslar Eşit Değil' : 'Equal variances not assumed', welchResult.tStatistic.toFixed(3), welchResult.degreesOfFreedom.toFixed(2), welchResult.pValue.toFixed(4), meanDiff.toFixed(4), welchResult.standardError.toFixed(4), welchResult.confidenceInterval.lower.toFixed(4), welchResult.confidenceInterval.upper.toFixed(4)]
+            [lang === 'tr' ? 'Varyanslar EÅŸit' : 'Equal variances assumed', tStudent.toFixed(3), dfStudent, pStudent.toFixed(4), meanDiff.toFixed(4), pooledSE.toFixed(4), ciStudentLower.toFixed(4), ciStudentUpper.toFixed(4)],
+            [lang === 'tr' ? 'Varyanslar EÅŸit DeÄŸil' : 'Equal variances not assumed', welchResult.tStatistic.toFixed(3), welchResult.degreesOfFreedom.toFixed(2), welchResult.pValue.toFixed(4), meanDiff.toFixed(4), welchResult.standardError.toFixed(4), welchResult.confidenceInterval.lower.toFixed(4), welchResult.confidenceInterval.upper.toFixed(4)]
         ]
     };
 
@@ -8259,17 +9578,17 @@ export function runIndependentTTest_SPSS(group1, group2, alpha = 0.05, groupName
     const effectiveDf = equalVariances ? dfStudent : welchResult.degreesOfFreedom;
     const effectiveP = equalVariances ? pStudent : welchResult.pValue;
 
-    const apaTR = `Bağımsız örneklem t-testi sonucuna göre, ${groupNames[0]} (M = ${mean1.toFixed(2)}, SS = ${std1.toFixed(2)}) ile ${groupNames[1]} (M = ${mean2.toFixed(2)}, SS = ${std2.toFixed(2)}) arasında ${effectiveP < alpha ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, t(${typeof effectiveDf === 'number' && effectiveDf % 1 !== 0 ? effectiveDf.toFixed(2) : effectiveDf}) = ${effectiveT.toFixed(2)}, p ${effectiveP < 0.001 ? '< .001' : '= ' + effectiveP.toFixed(3)}, d = ${cohensD.toFixed(2)}.`;
+    const apaTR = `BaÄŸÄ±msÄ±z Ã¶rneklem t-testi sonucuna gÃ¶re, ${groupNames[0]} (M = ${mean1.toFixed(2)}, SS = ${std1.toFixed(2)}) ile ${groupNames[1]} (M = ${mean2.toFixed(2)}, SS = ${std2.toFixed(2)}) arasÄ±nda ${effectiveP < alpha ? 'istatistiksel olarak anlamlÄ± fark bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± fark bulunamamÄ±ÅŸtÄ±r'}, t(${typeof effectiveDf === 'number' && effectiveDf % 1 !== 0 ? effectiveDf.toFixed(2) : effectiveDf}) = ${effectiveT.toFixed(2)}, p ${effectiveP < 0.001 ? '< .001' : '= ' + effectiveP.toFixed(3)}, d = ${cohensD.toFixed(2)}.`;
 
     const apaEN = `An independent samples t-test revealed that the difference between ${groupNames[0]} (M = ${mean1.toFixed(2)}, SD = ${std1.toFixed(2)}) and ${groupNames[1]} (M = ${mean2.toFixed(2)}, SD = ${std2.toFixed(2)}) was ${effectiveP < alpha ? 'statistically significant' : 'not statistically significant'}, t(${typeof effectiveDf === 'number' && effectiveDf % 1 !== 0 ? effectiveDf.toFixed(2) : effectiveDf}) = ${effectiveT.toFixed(2)}, p ${effectiveP < 0.001 ? '< .001' : '= ' + effectiveP.toFixed(3)}, d = ${cohensD.toFixed(2)}.`;
 
-    const formulaTR = `t = (M₁ - M₂) / SE = (${mean1.toFixed(2)} - ${mean2.toFixed(2)}) / ${pooledSE.toFixed(4)} = ${tStudent.toFixed(3)}`;
+    const formulaTR = `t = (Mâ‚ - Mâ‚‚) / SE = (${mean1.toFixed(2)} - ${mean2.toFixed(2)}) / ${pooledSE.toFixed(4)} = ${tStudent.toFixed(3)}`;
     const formulaEN = formulaTR;
 
     return {
         valid: true,
         testType: 'independentTTest_SPSS',
-        testName: lang === 'tr' ? 'Bağımsız Örneklem T-Testi (SPSS)' : 'Independent Samples T-Test (SPSS)',
+        testName: lang === 'tr' ? 'BaÄŸÄ±msÄ±z Ã–rneklem T-Testi (SPSS)' : 'Independent Samples T-Test (SPSS)',
         pValue: effectiveP,
         significant: effectiveP < alpha,
         alpha,
@@ -8308,14 +9627,309 @@ export function runIndependentTTest_SPSS(group1, group2, alpha = 0.05, groupName
         interpretationTR: apaTR,
         interpretationEN: apaEN,
         recommendation: equalVariances
-            ? (lang === 'tr' ? 'Levene testi anlamsız (p > .05), varyanslar homojen. Student t-testi kullanılmalı.' : 'Levene test non-significant (p > .05), variances are homogeneous. Use Student t-test.')
-            : (lang === 'tr' ? 'Levene testi anlamlı (p < .05), varyanslar heterojen. Welch t-testi kullanılmalı.' : 'Levene test significant (p < .05), variances are heterogeneous. Use Welch t-test.')
+            ? (lang === 'tr' ? 'Levene testi anlamsÄ±z (p > .05), varyanslar homojen. Student t-testi kullanÄ±lmalÄ±.' : 'Levene test non-significant (p > .05), variances are homogeneous. Use Student t-test.')
+            : (lang === 'tr' ? 'Levene testi anlamlÄ± (p < .05), varyanslar heterojen. Welch t-testi kullanÄ±lmalÄ±.' : 'Levene test significant (p < .05), variances are heterogeneous. Use Welch t-test.')
+    };
+}
+
+/**
+ * Paired Samples T-Test with SPSS standard output
+ * Includes: Paired Stats, Correlations, Test table, CI, Cohen's dz, APA format
+ * GÃ–REV B: SPSS-style Paired T-Test wrapper
+ */
+export function runPairedTTest_SPSS(before, after, alpha = 0.05, pairNames = ['Before', 'After']) {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Get base result from existing function
+    const baseResult = runPairedTTest(before, after, alpha);
+    if (!baseResult.valid) {
+        return { ...baseResult, testType: 'pairedTTest_SPSS' };
+    }
+
+    const n = before.length;
+
+    // Calculate descriptive stats for both variables
+    const mean1 = calculateMean(before);
+    const mean2 = calculateMean(after);
+    const std1 = calculateStdDev(before, true);
+    const std2 = calculateStdDev(after, true);
+    const se1 = std1 / Math.sqrt(n);
+    const se2 = std2 / Math.sqrt(n);
+
+    // Calculate correlation between before and after
+    const r = calculateCorrelation(before, after);
+    const rDf = n - 2;
+    const rT = r * Math.sqrt((n - 2) / (1 - r * r));
+    const rP = rDf > 0 ? approximateTTestPValue(Math.abs(rT), rDf) : 1;
+
+    // Differences stats (from base result)
+    const meanDiff = baseResult.meanDifference;
+    const stdDiff = baseResult.stdDifference;
+    const seDiff = baseResult.seDifference;
+    const t = baseResult.tStatistic;
+    const df = baseResult.degreesOfFreedom;
+    const pValue = baseResult.pValue;
+
+    // 95% Confidence Interval for mean difference
+    const tCritical = getTCritical(df, alpha);
+    const ciLower = meanDiff - tCritical * seDiff;
+    const ciUpper = meanDiff + tCritical * seDiff;
+
+    // Effect size: Cohen's dz (with guard)
+    const cohensDz = stdDiff !== 0 && isFinite(stdDiff) ? meanDiff / stdDiff : (meanDiff === 0 ? 0 : 1e10);
+
+    // Build SPSS-style tables
+    const pairedStatsTable = {
+        name: lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem Ä°statistikleri' : 'Paired Samples Statistics',
+        columns: ['', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata Ort.' : 'Std. Error Mean'],
+        rows: [
+            [pairNames[0], n, mean1.toFixed(4), std1.toFixed(4), se1.toFixed(4)],
+            [pairNames[1], n, mean2.toFixed(4), std2.toFixed(4), se2.toFixed(4)]
+        ]
+    };
+
+    const correlationsTable = {
+        name: lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem KorelasyonlarÄ±' : 'Paired Samples Correlations',
+        columns: ['', 'N', lang === 'tr' ? 'Korelasyon' : 'Correlation', 'Sig.'],
+        rows: [
+            [`${pairNames[0]} & ${pairNames[1]}`, n, isFinite(r) ? r.toFixed(4) : 'N/A', isFinite(rP) ? rP.toFixed(4) : 'N/A']
+        ]
+    };
+
+    const testTable = {
+        name: lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem Testi' : 'Paired Samples Test',
+        columns: [
+            '',
+            lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.',
+            lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation',
+            lang === 'tr' ? 'Std. Hata Ort.' : 'Std. Error Mean',
+            lang === 'tr' ? '95% CI Alt' : '95% CI Lower',
+            lang === 'tr' ? '95% CI Ãœst' : '95% CI Upper',
+            't',
+            'df',
+            'Sig. (2-tailed)'
+        ],
+        rows: [
+            [
+                `${pairNames[0]} - ${pairNames[1]}`,
+                isFinite(meanDiff) ? meanDiff.toFixed(4) : 'N/A',
+                isFinite(stdDiff) ? stdDiff.toFixed(4) : '0.0000',
+                isFinite(seDiff) ? seDiff.toFixed(4) : '0.0000',
+                isFinite(ciLower) ? ciLower.toFixed(4) : 'N/A',
+                isFinite(ciUpper) ? ciUpper.toFixed(4) : 'N/A',
+                isFinite(t) ? t.toFixed(3) : (t > 0 ? 'âˆ' : '-âˆ'),
+                df,
+                isFinite(pValue) ? pValue.toFixed(4) : '<.0001'
+            ]
+        ]
+    };
+
+    // APA format
+    const significant = pValue < alpha;
+    const effectDesc = interpretCohensD(cohensDz);
+    const effectDescStr = typeof effectDesc === 'object' ? (lang === 'tr' ? effectDesc.tr : effectDesc.en) : effectDesc;
+
+    const apaTR = `EÅŸleÅŸtirilmiÅŸ Ã¶rneklem t-testi sonucuna gÃ¶re, ${pairNames[0]} (M = ${mean1.toFixed(2)}, SS = ${std1.toFixed(2)}) ile ${pairNames[1]} (M = ${mean2.toFixed(2)}, SS = ${std2.toFixed(2)}) arasÄ±nda ${significant ? 'istatistiksel olarak anlamlÄ± fark bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± fark bulunamamÄ±ÅŸtÄ±r'}, t(${df}) = ${isFinite(t) ? t.toFixed(2) : 'âˆ'}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, dz = ${isFinite(cohensDz) ? cohensDz.toFixed(2) : 'âˆ'} (${effectDescStr}).`;
+
+    const apaEN = `A paired samples t-test revealed that the difference between ${pairNames[0]} (M = ${mean1.toFixed(2)}, SD = ${std1.toFixed(2)}) and ${pairNames[1]} (M = ${mean2.toFixed(2)}, SD = ${std2.toFixed(2)}) was ${significant ? 'statistically significant' : 'not statistically significant'}, t(${df}) = ${isFinite(t) ? t.toFixed(2) : 'âˆ'}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, dz = ${isFinite(cohensDz) ? cohensDz.toFixed(2) : 'âˆ'} (${effectDescStr}).`;
+
+    const formulaTR = `t = Md / SEd = ${isFinite(meanDiff) ? meanDiff.toFixed(2) : 'N/A'} / ${isFinite(seDiff) ? seDiff.toFixed(4) : 'N/A'} = ${isFinite(t) ? t.toFixed(3) : 'âˆ'}`;
+    const formulaEN = formulaTR;
+
+    return {
+        valid: true,
+        testType: 'pairedTTest_SPSS',
+        testName: lang === 'tr' ? 'EÅŸleÅŸtirilmiÅŸ Ã–rneklem T-Testi (SPSS)' : 'Paired Samples T-Test (SPSS)',
+        pValue: pValue,
+        significant: significant,
+        alpha: alpha,
+        pairNames: pairNames,
+        n: n,
+        stats: {
+            n: n,
+            mean1: mean1,
+            mean2: mean2,
+            std1: std1,
+            std2: std2,
+            se1: se1,
+            se2: se2,
+            meanDifference: meanDiff,
+            stdDifference: stdDiff,
+            seDifference: seDiff,
+            t: t,
+            df: df,
+            correlation: r,
+            correlationP: rP
+        },
+        pValues: {
+            test: pValue,
+            correlation: rP
+        },
+        effectSizes: {
+            cohensDz: cohensDz,
+            cohensD: cohensDz, // Alias
+            interpretation: effectDesc
+        },
+        confidenceInterval: {
+            lower: ciLower,
+            upper: ciUpper,
+            level: 1 - alpha
+        },
+        correlation: {
+            r: r,
+            pValue: rP,
+            n: n
+        },
+        tables: [pairedStatsTable, correlationsTable, testTable],
+        apaTR: apaTR,
+        apaEN: apaEN,
+        formulaTR: formulaTR,
+        formulaEN: formulaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN,
+        // Preserve base result fields for backward compatibility
+        meanDifference: meanDiff,
+        stdDifference: stdDiff,
+        seDifference: seDiff,
+        tStatistic: t,
+        degreesOfFreedom: df,
+        tCritical: tCritical,
+        cohensD: cohensDz
+    };
+}
+
+/**
+ * One-Sample T-Test with SPSS standard output
+ * Includes: One-Sample Statistics, One-Sample Test table, CI, Cohen's d, APA format
+ * PROMPT-0: SPSS Parity Hardening - new wrapper
+ */
+export function runOneSampleTTest_SPSS(sample, testValue, alpha = 0.05, variableName = 'Variable') {
+    const lang = VIZ_STATE?.lang || 'tr';
+
+    // Get base result from existing function
+    const baseResult = runOneSampleTTest(sample, testValue, alpha);
+    if (!baseResult.valid) {
+        return { ...baseResult, testType: 'oneSampleTTest_SPSS' };
+    }
+
+    const n = baseResult.n;
+    const sampleMean = baseResult.sampleMean;
+    const sampleStd = baseResult.sampleStd;
+    const se = baseResult.standardError;
+    const t = baseResult.tStatistic;
+    const df = baseResult.degreesOfFreedom;
+    const pValue = baseResult.pValue;
+    const meanDiff = sampleMean - testValue;
+
+    // 95% Confidence Interval for the difference
+    const tCritical = getTCritical(df, alpha);
+    const ciLower = meanDiff - tCritical * se;
+    const ciUpper = meanDiff + tCritical * se;
+
+    // Effect size: Cohen's d (with guard)
+    const cohensD = sampleStd !== 0 && isFinite(sampleStd) ? meanDiff / sampleStd : (meanDiff === 0 ? 0 : 1e10);
+
+    // Build SPSS-style tables
+    const statsTable = {
+        name: lang === 'tr' ? 'Tek Örneklem İstatistikleri' : 'One-Sample Statistics',
+        columns: ['', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata Ort.' : 'Std. Error Mean'],
+        rows: [
+            [variableName, n, sampleMean.toFixed(4), sampleStd.toFixed(4), se.toFixed(4)]
+        ]
+    };
+
+    const testTable = {
+        name: lang === 'tr' ? 'Tek Örneklem Testi' : 'One-Sample Test',
+        columns: [
+            '',
+            lang === 'tr' ? 'Test Değeri' : 'Test Value',
+            't',
+            'df',
+            'Sig. (2-tailed)',
+            lang === 'tr' ? 'Ort. Fark' : 'Mean Difference',
+            lang === 'tr' ? '95% CI Alt' : '95% CI Lower',
+            lang === 'tr' ? '95% CI Üst' : '95% CI Upper'
+        ],
+        rows: [
+            [
+                variableName,
+                testValue,
+                isFinite(t) ? t.toFixed(3) : (t > 0 ? '∞' : '-∞'),
+                df,
+                isFinite(pValue) ? pValue.toFixed(4) : '<.0001',
+                isFinite(meanDiff) ? meanDiff.toFixed(4) : 'N/A',
+                isFinite(ciLower) ? ciLower.toFixed(4) : 'N/A',
+                isFinite(ciUpper) ? ciUpper.toFixed(4) : 'N/A'
+            ]
+        ]
+    };
+
+    // APA format
+    const significant = pValue < alpha;
+    const effectDesc = interpretCohensD(cohensD);
+    const effectDescStr = typeof effectDesc === 'object' ? (lang === 'tr' ? effectDesc.tr : effectDesc.en) : effectDesc;
+
+    const apaTR = `Tek örneklem t-testi sonucuna göre, ${variableName} değişkeninin ortalaması (M = ${sampleMean.toFixed(2)}, SS = ${sampleStd.toFixed(2)}) test değeri ${testValue}'${significant ? 'den istatistiksel olarak anlamlı farklıdır' : 'den istatistiksel olarak anlamlı farklı değildir'}, t(${df}) = ${isFinite(t) ? t.toFixed(2) : '∞'}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, d = ${isFinite(cohensD) ? cohensD.toFixed(2) : '∞'} (${effectDescStr}).`;
+
+    const apaEN = `A one-sample t-test indicated that the mean of ${variableName} (M = ${sampleMean.toFixed(2)}, SD = ${sampleStd.toFixed(2)}) was ${significant ? 'significantly different from' : 'not significantly different from'} the test value of ${testValue}, t(${df}) = ${isFinite(t) ? t.toFixed(2) : '∞'}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, d = ${isFinite(cohensD) ? cohensD.toFixed(2) : '∞'} (${effectDescStr}).`;
+
+    const formulaTR = `t = (M - μ₀) / SE = (${sampleMean.toFixed(2)} - ${testValue}) / ${se.toFixed(4)} = ${isFinite(t) ? t.toFixed(3) : '∞'}`;
+    const formulaEN = formulaTR;
+
+    return {
+        valid: true,
+        testType: 'oneSampleTTest_SPSS',
+        testName: lang === 'tr' ? 'Tek Örneklem T-Testi (SPSS)' : 'One-Sample T-Test (SPSS)',
+        pValue: pValue,
+        significant: significant,
+        alpha: alpha,
+        variableName: variableName,
+        testValue: testValue,
+        n: n,
+        stats: {
+            n: n,
+            mean: sampleMean,
+            std: sampleStd,
+            se: se,
+            meanDifference: meanDiff,
+            t: t,
+            df: df
+        },
+        pValues: {
+            test: pValue
+        },
+        effectSizes: {
+            cohensD: cohensD,
+            interpretation: effectDesc
+        },
+        confidenceInterval: {
+            lower: ciLower,
+            upper: ciUpper,
+            level: 1 - alpha
+        },
+        tables: [statsTable, testTable],
+        apaTR: apaTR,
+        apaEN: apaEN,
+        formulaTR: formulaTR,
+        formulaEN: formulaEN,
+        interpretationTR: apaTR,
+        interpretationEN: apaEN,
+        // Preserve base result fields for backward compatibility
+        sampleMean: sampleMean,
+        sampleStd: sampleStd,
+        standardError: se,
+        tStatistic: t,
+        degreesOfFreedom: df,
+        tCritical: tCritical,
+        cohensD: cohensD,
+        meanDifference: meanDiff,
+        ci: { lower: ciLower, upper: ciUpper }
     };
 }
 
 /**
  * One-Way ANOVA with SPSS standard output
- * Includes: Levene test, eta²/omega², Bonferroni post-hoc, ANOVA table
+ * Includes: Levene test, etaÂ²/omegaÂ², Bonferroni post-hoc, ANOVA table
  */
 export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
     const lang = VIZ_STATE?.lang || 'tr';
@@ -8380,7 +9994,7 @@ export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
 
     // Build SPSS-style tables
     const descriptivesTable = {
-        name: lang === 'tr' ? 'Tanımlayıcı İstatistikler' : 'Descriptives',
+        name: lang === 'tr' ? 'TanÄ±mlayÄ±cÄ± Ä°statistikler' : 'Descriptives',
         columns: [lang === 'tr' ? 'Grup' : 'Group', 'N', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Deviation', lang === 'tr' ? 'Std. Hata' : 'Std. Error', lang === 'tr' ? 'Min' : 'Min', lang === 'tr' ? 'Max' : 'Max'],
         rows: baseResult.groupStats.map((gs, i) => [
             groupNames[i],
@@ -8394,7 +10008,7 @@ export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
     };
 
     const leveneTable = {
-        name: lang === 'tr' ? 'Varyans Homojenliği Testi (Levene)' : 'Test of Homogeneity of Variances',
+        name: lang === 'tr' ? 'Varyans HomojenliÄŸi Testi (Levene)' : 'Test of Homogeneity of Variances',
         columns: ['Levene F', 'df1', 'df2', 'Sig.'],
         rows: [[leveneResult.F.toFixed(3), leveneResult.df1, leveneResult.df2, leveneResult.pValue.toFixed(4)]]
     };
@@ -8403,16 +10017,16 @@ export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
         name: 'ANOVA',
         columns: [lang === 'tr' ? 'Kaynak' : 'Source', lang === 'tr' ? 'Kareler Top.' : 'Sum of Squares', 'df', lang === 'tr' ? 'Kareler Ort.' : 'Mean Square', 'F', 'Sig.'],
         rows: [
-            [lang === 'tr' ? 'Gruplar Arası' : 'Between Groups', ssBetween.toFixed(3), dfBetween, msBetween.toFixed(3), baseResult.fStatistic.toFixed(3), baseResult.pValue.toFixed(4)],
-            [lang === 'tr' ? 'Gruplar İçi' : 'Within Groups', ssWithin.toFixed(3), baseResult.degreesOfFreedom.within, msWithin.toFixed(3), '', ''],
+            [lang === 'tr' ? 'Gruplar ArasÄ±' : 'Between Groups', ssBetween.toFixed(3), dfBetween, msBetween.toFixed(3), baseResult.fStatistic.toFixed(3), baseResult.pValue.toFixed(4)],
+            [lang === 'tr' ? 'Gruplar Ä°Ã§i' : 'Within Groups', ssWithin.toFixed(3), baseResult.degreesOfFreedom.within, msWithin.toFixed(3), '', ''],
             [lang === 'tr' ? 'Toplam' : 'Total', ssTotal.toFixed(3), baseResult.degreesOfFreedom.total, '', '', '']
         ]
     };
 
     const postHocTable = {
-        name: lang === 'tr' ? 'Çoklu Karşılaştırmalar (Bonferroni)' : 'Multiple Comparisons (Bonferroni)',
-        columns: [lang === 'tr' ? 'Karşılaştırma' : 'Comparison', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata' : 'Std. Error', 'Sig.', lang === 'tr' ? 'Anlamlı' : 'Significant'],
-        rows: postHocComparisons.map(c => [c.comparison, c.meanDiff.toFixed(4), c.se.toFixed(4), c.pBonferroni.toFixed(4), c.significant ? '✓' : ''])
+        name: lang === 'tr' ? 'Ã‡oklu KarÅŸÄ±laÅŸtÄ±rmalar (Bonferroni)' : 'Multiple Comparisons (Bonferroni)',
+        columns: [lang === 'tr' ? 'KarÅŸÄ±laÅŸtÄ±rma' : 'Comparison', lang === 'tr' ? 'Ort. Fark' : 'Mean Diff.', lang === 'tr' ? 'Std. Hata' : 'Std. Error', 'Sig.', lang === 'tr' ? 'AnlamlÄ±' : 'Significant'],
+        rows: postHocComparisons.map(c => [c.comparison, c.meanDiff.toFixed(4), c.se.toFixed(4), c.pBonferroni.toFixed(4), c.significant ? 'âœ“' : ''])
     };
 
     // APA format
@@ -8421,17 +10035,17 @@ export function runOneWayANOVA_SPSS(groups, alpha = 0.05, groupNames = null) {
     const dfW = baseResult.degreesOfFreedom.within;
     const p = baseResult.pValue;
 
-    const apaTR = `Tek yönlü ANOVA sonuçlarına göre, gruplar arasında ${p < alpha ? 'istatistiksel olarak anlamlı fark bulunmuştur' : 'istatistiksel olarak anlamlı fark bulunamamıştır'}, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, η² = ${etaSquared.toFixed(3)}, ω² = ${omegaSquared.toFixed(3)}.`;
+    const apaTR = `Tek yÃ¶nlÃ¼ ANOVA sonuÃ§larÄ±na gÃ¶re, gruplar arasÄ±nda ${p < alpha ? 'istatistiksel olarak anlamlÄ± fark bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± fark bulunamamÄ±ÅŸtÄ±r'}, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Î·Â² = ${etaSquared.toFixed(3)}, Ï‰Â² = ${omegaSquared.toFixed(3)}.`;
 
-    const apaEN = `A one-way ANOVA revealed ${p < alpha ? 'a statistically significant difference' : 'no statistically significant difference'} between groups, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, η² = ${etaSquared.toFixed(3)}, ω² = ${omegaSquared.toFixed(3)}.`;
+    const apaEN = `A one-way ANOVA revealed ${p < alpha ? 'a statistically significant difference' : 'no statistically significant difference'} between groups, F(${dfB}, ${dfW}) = ${F.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Î·Â² = ${etaSquared.toFixed(3)}, Ï‰Â² = ${omegaSquared.toFixed(3)}.`;
 
-    const formulaTR = `F = MS_gruplar arası / MS_gruplar içi = ${msBetween.toFixed(2)} / ${msWithin.toFixed(2)} = ${F.toFixed(3)}`;
+    const formulaTR = `F = MS_gruplar arasÄ± / MS_gruplar iÃ§i = ${msBetween.toFixed(2)} / ${msWithin.toFixed(2)} = ${F.toFixed(3)}`;
     const formulaEN = `F = MS_between / MS_within = ${msBetween.toFixed(2)} / ${msWithin.toFixed(2)} = ${F.toFixed(3)}`;
 
     return {
         valid: true,
         testType: 'oneWayANOVA_SPSS',
-        testName: lang === 'tr' ? 'Tek Yönlü ANOVA (SPSS)' : 'One-Way ANOVA (SPSS)',
+        testName: lang === 'tr' ? 'Tek YÃ¶nlÃ¼ ANOVA (SPSS)' : 'One-Way ANOVA (SPSS)',
         pValue: p,
         alpha,
         groupNames,
@@ -8521,7 +10135,7 @@ export function runChiSquareCrosstabs_SPSS(table, alpha = 0.05, rowNames = null,
 
     // Build crosstab table
     const crosstabTable = {
-        name: lang === 'tr' ? 'Çapraz Tablo' : 'Crosstabulation',
+        name: lang === 'tr' ? 'Ã‡apraz Tablo' : 'Crosstabulation',
         columns: ['', ...colNames, lang === 'tr' ? 'Toplam' : 'Total'],
         rows: table.map((row, i) => [rowNames[i], ...row.map(String), rowTotals[i].toString()])
             .concat([[lang === 'tr' ? 'Toplam' : 'Total', ...colTotals.map(String), grandTotal.toString()]])
@@ -8535,7 +10149,7 @@ export function runChiSquareCrosstabs_SPSS(table, alpha = 0.05, rowNames = null,
 
     const chi2Table = {
         name: lang === 'tr' ? 'Ki-Kare Testleri' : 'Chi-Square Tests',
-        columns: ['', lang === 'tr' ? 'Değer' : 'Value', 'df', 'Asymp. Sig. (2-sided)'],
+        columns: ['', lang === 'tr' ? 'DeÄŸer' : 'Value', 'df', 'Asymp. Sig. (2-sided)'],
         rows: [
             ['Pearson Chi-Square', chi2.toFixed(3), df, (baseResult.pValue ?? baseResult.pValues?.pValue ?? 0).toFixed(4)],
             ['Phi', phi.toFixed(3), '', ''],
@@ -8546,17 +10160,17 @@ export function runChiSquareCrosstabs_SPSS(table, alpha = 0.05, rowNames = null,
 
     const p = baseResult.pValue ?? baseResult.pValues?.pValue ?? 0;
 
-    const apaTR = `Ki-kare bağımsızlık testi sonucuna göre, değişkenler arasında ${p < alpha ? 'istatistiksel olarak anlamlı ilişki bulunmuştur' : 'istatistiksel olarak anlamlı ilişki bulunamamıştır'}, χ²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+    const apaTR = `Ki-kare baÄŸÄ±msÄ±zlÄ±k testi sonucuna gÃ¶re, deÄŸiÅŸkenler arasÄ±nda ${p < alpha ? 'istatistiksel olarak anlamlÄ± iliÅŸki bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± iliÅŸki bulunamamÄ±ÅŸtÄ±r'}, Ï‡Â²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
 
-    const apaEN = `A chi-square test of independence ${p < alpha ? 'revealed a statistically significant association' : 'revealed no statistically significant association'} between the variables, χ²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+    const apaEN = `A chi-square test of independence ${p < alpha ? 'revealed a statistically significant association' : 'revealed no statistically significant association'} between the variables, Ï‡Â²(${df}) = ${chi2.toFixed(2)}, p ${p < 0.001 ? '< .001' : '= ' + p.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
 
-    const formulaTR = `χ² = Σ[(O - E)² / E] = ${chi2.toFixed(3)}`;
+    const formulaTR = `Ï‡Â² = Î£[(O - E)Â² / E] = ${chi2.toFixed(3)}`;
     const formulaEN = formulaTR;
 
     return {
         valid: true,
         testType: 'chiSquareCrosstabs_SPSS',
-        testName: lang === 'tr' ? 'Ki-Kare Bağımsızlık Testi (SPSS)' : 'Chi-Square Test of Independence (SPSS)',
+        testName: lang === 'tr' ? 'Ki-Kare BaÄŸÄ±msÄ±zlÄ±k Testi (SPSS)' : 'Chi-Square Test of Independence (SPSS)',
         pValue: p,
         significant: p < alpha,
         alpha,
@@ -8581,7 +10195,7 @@ export function runChiSquareCrosstabs_SPSS(table, alpha = 0.05, rowNames = null,
         observed: table,
         expected,
         lowExpectedWarning: lowExpectedPercent > 20
-            ? (lang === 'tr' ? `Uyarı: Beklenen frekansların %${lowExpectedPercent.toFixed(0)}'i 5'ten küçük.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
+            ? (lang === 'tr' ? `UyarÄ±: Beklenen frekanslarÄ±n %${lowExpectedPercent.toFixed(0)}'i 5'ten kÃ¼Ã§Ã¼k.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
             : null,
         tables: [crosstabTable, expectedTable, chi2Table],
         apaTR,
@@ -8638,6 +10252,8 @@ function runLeveneTestInternal(groups) {
 
 // Window bindings for SPSS wrappers
 window.runIndependentTTest_SPSS = runIndependentTTest_SPSS;
+window.runPairedTTest_SPSS = runPairedTTest_SPSS;
+window.runOneSampleTTest_SPSS = runOneSampleTTest_SPSS;
 window.runOneWayANOVA_SPSS = runOneWayANOVA_SPSS;
 window.runChiSquareCrosstabs_SPSS = runChiSquareCrosstabs_SPSS;
 
@@ -8657,7 +10273,7 @@ export function runCrosstabsExtended(table, alpha = 0.05, rowVar = 'Row', colVar
 
     // Validate
     if (!table || !Array.isArray(table) || table.length < 2) {
-        return { valid: false, error: lang === 'tr' ? 'Geçersiz tablo' : 'Invalid table', testType: 'crosstabsExtended' };
+        return { valid: false, error: lang === 'tr' ? 'GeÃ§ersiz tablo' : 'Invalid table', testType: 'crosstabsExtended' };
     }
 
     const nRows = table.length;
@@ -8735,15 +10351,15 @@ export function runCrosstabsExtended(table, alpha = 0.05, rowVar = 'Row', colVar
 
     // Build tables
     const associationTable = {
-        name: lang === 'tr' ? 'İlişki Ölçüleri' : 'Association Measures',
-        columns: [lang === 'tr' ? 'Ölçü' : 'Measure', lang === 'tr' ? 'Değer' : 'Value', lang === 'tr' ? 'Yorum' : 'Interpretation'],
+        name: lang === 'tr' ? 'Ä°liÅŸki Ã–lÃ§Ã¼leri' : 'Association Measures',
+        columns: [lang === 'tr' ? 'Ã–lÃ§Ã¼' : 'Measure', lang === 'tr' ? 'DeÄŸer' : 'Value', lang === 'tr' ? 'Yorum' : 'Interpretation'],
         rows: [
-            ['Phi (φ)', phi.toFixed(4), interpretEffect(phi, 'phi')],
+            ['Phi (Ï†)', phi.toFixed(4), interpretEffect(phi, 'phi')],
             ["Cramer's V", cramersV.toFixed(4), interpretEffect(cramersV, 'cramersV')],
             ['Contingency C', contingencyC.toFixed(4), `Max: ${contingencyCMax.toFixed(3)}`],
             ['Adjusted C', adjustedC.toFixed(4), interpretEffect(adjustedC, 'cramersV')],
-            [`Lambda (${rowVar} | ${colVar})`, isFinite(lambdaRow) ? lambdaRow.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE ölçüsü' : 'PRE measure'],
-            [`Lambda (${colVar} | ${rowVar})`, isFinite(lambdaCol) ? lambdaCol.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE ölçüsü' : 'PRE measure'],
+            [`Lambda (${rowVar} | ${colVar})`, isFinite(lambdaRow) ? lambdaRow.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE Ã¶lÃ§Ã¼sÃ¼' : 'PRE measure'],
+            [`Lambda (${colVar} | ${rowVar})`, isFinite(lambdaCol) ? lambdaCol.toFixed(4) : 'N/A', lang === 'tr' ? 'PRE Ã¶lÃ§Ã¼sÃ¼' : 'PRE measure'],
             ['Lambda (Symmetric)', isFinite(lambdaSym) ? lambdaSym.toFixed(4) : 'N/A', ''],
             [`Tau (${rowVar} | ${colVar})`, isFinite(tauRow) ? tauRow.toFixed(4) : 'N/A', lang === 'tr' ? 'Goodman-Kruskal' : 'Goodman-Kruskal']
         ]
@@ -8751,21 +10367,21 @@ export function runCrosstabsExtended(table, alpha = 0.05, rowVar = 'Row', colVar
 
     const chi2TestTable = {
         name: lang === 'tr' ? 'Ki-Kare Testi' : 'Chi-Square Test',
-        columns: [lang === 'tr' ? 'Test' : 'Test', lang === 'tr' ? 'Değer' : 'Value', 'df', 'p'],
+        columns: [lang === 'tr' ? 'Test' : 'Test', lang === 'tr' ? 'DeÄŸer' : 'Value', 'df', 'p'],
         rows: [
-            ['Pearson χ²', chiSquare.toFixed(3), df, pValue.toFixed(4)]
+            ['Pearson Ï‡Â²', chiSquare.toFixed(3), df, pValue.toFixed(4)]
         ]
     };
 
     // APA format
-    const apaTR = `Ki-kare bağımsızlık testi sonucuna göre ${rowVar} ve ${colVar} değişkenleri arasında ${pValue < alpha ? 'istatistiksel olarak anlamlı ilişki bulunmuştur' : 'istatistiksel olarak anlamlı ilişki bulunamamıştır'}, χ²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+    const apaTR = `Ki-kare baÄŸÄ±msÄ±zlÄ±k testi sonucuna gÃ¶re ${rowVar} ve ${colVar} deÄŸiÅŸkenleri arasÄ±nda ${pValue < alpha ? 'istatistiksel olarak anlamlÄ± iliÅŸki bulunmuÅŸtur' : 'istatistiksel olarak anlamlÄ± iliÅŸki bulunamamÄ±ÅŸtÄ±r'}, Ï‡Â²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
 
-    const apaEN = `A chi-square test of independence ${pValue < alpha ? 'revealed a statistically significant association' : 'found no statistically significant association'} between ${rowVar} and ${colVar}, χ²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
+    const apaEN = `A chi-square test of independence ${pValue < alpha ? 'revealed a statistically significant association' : 'found no statistically significant association'} between ${rowVar} and ${colVar}, Ï‡Â²(${df}, N = ${N}) = ${chiSquare.toFixed(2)}, p ${pValue < 0.001 ? '< .001' : '= ' + pValue.toFixed(3)}, Cramer's V = ${cramersV.toFixed(3)}.`;
 
     return {
         valid: true,
         testType: 'crosstabsExtended',
-        testName: lang === 'tr' ? 'Çapraz Tablo Analizi (Genişletilmiş)' : 'Crosstabs Analysis (Extended)',
+        testName: lang === 'tr' ? 'Ã‡apraz Tablo Analizi (GeniÅŸletilmiÅŸ)' : 'Crosstabs Analysis (Extended)',
         alpha,
         nRows,
         nCols,
@@ -8792,7 +10408,7 @@ export function runCrosstabsExtended(table, alpha = 0.05, rowVar = 'Row', colVar
         observed: table,
         expected,
         lowExpectedWarning: lowExpectedPercent > 20
-            ? (lang === 'tr' ? `Uyarı: Beklenen frekansların %${lowExpectedPercent.toFixed(0)}'i 5'ten küçük.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
+            ? (lang === 'tr' ? `UyarÄ±: Beklenen frekanslarÄ±n %${lowExpectedPercent.toFixed(0)}'i 5'ten kÃ¼Ã§Ã¼k.` : `Warning: ${lowExpectedPercent.toFixed(0)}% of expected frequencies are less than 5.`)
             : null,
         tables: [chi2TestTable, associationTable],
         apaTR,
@@ -8810,10 +10426,10 @@ function interpretEffect(value, type) {
     const absVal = Math.abs(value);
 
     if (type === 'phi' || type === 'cramersV') {
-        if (absVal < 0.1) return lang === 'tr' ? 'İhmal edilebilir' : 'Negligible';
-        if (absVal < 0.3) return lang === 'tr' ? 'Küçük' : 'Small';
+        if (absVal < 0.1) return lang === 'tr' ? 'Ä°hmal edilebilir' : 'Negligible';
+        if (absVal < 0.3) return lang === 'tr' ? 'KÃ¼Ã§Ã¼k' : 'Small';
         if (absVal < 0.5) return lang === 'tr' ? 'Orta' : 'Medium';
-        return lang === 'tr' ? 'Büyük' : 'Large';
+        return lang === 'tr' ? 'BÃ¼yÃ¼k' : 'Large';
     }
     return '';
 }
@@ -8847,7 +10463,7 @@ export function runItemTotalAnalysis(data, columns, itemNames = null) {
 
     const n = cases.length;
     if (n < 3) {
-        return { valid: false, error: lang === 'tr' ? 'En az 3 geçerli vaka gerekli' : 'At least 3 valid cases required', testType: 'itemTotalAnalysis' };
+        return { valid: false, error: lang === 'tr' ? 'En az 3 geÃ§erli vaka gerekli' : 'At least 3 valid cases required', testType: 'itemTotalAnalysis' };
     }
 
     // Calculate item means and variances
@@ -8911,37 +10527,37 @@ export function runItemTotalAnalysis(data, columns, itemNames = null) {
             corrItemTotal,
             alphaIfDeleted,
             recommendation: alphaIfDeleted > overallAlpha + 0.01
-                ? (lang === 'tr' ? 'Çıkarılabilir' : 'Consider removing')
-                : (corrItemTotal < 0.3 ? (lang === 'tr' ? 'Zayıf' : 'Weak') : '')
+                ? (lang === 'tr' ? 'Ã‡Ä±karÄ±labilir' : 'Consider removing')
+                : (corrItemTotal < 0.3 ? (lang === 'tr' ? 'ZayÄ±f' : 'Weak') : '')
         };
     });
 
     // Build tables
     const itemStatsTable = {
-        name: lang === 'tr' ? 'Madde İstatistikleri' : 'Item Statistics',
+        name: lang === 'tr' ? 'Madde Ä°statistikleri' : 'Item Statistics',
         columns: [lang === 'tr' ? 'Madde' : 'Item', lang === 'tr' ? 'Ortalama' : 'Mean', lang === 'tr' ? 'Std. Sapma' : 'Std. Dev.', lang === 'tr' ? 'Varyans' : 'Variance'],
         rows: itemAnalysis.map(ia => [ia.item, ia.mean.toFixed(3), ia.std.toFixed(3), ia.variance.toFixed(3)])
     };
 
     const itemTotalTable = {
-        name: lang === 'tr' ? 'Madde-Toplam İstatistikleri' : 'Item-Total Statistics',
-        columns: [lang === 'tr' ? 'Madde' : 'Item', lang === 'tr' ? 'Düzeltilmiş M-T Kor.' : 'Corrected Item-Total Corr.', lang === 'tr' ? 'Silinirse Alpha' : 'Alpha if Deleted', lang === 'tr' ? 'Not' : 'Note'],
+        name: lang === 'tr' ? 'Madde-Toplam Ä°statistikleri' : 'Item-Total Statistics',
+        columns: [lang === 'tr' ? 'Madde' : 'Item', lang === 'tr' ? 'DÃ¼zeltilmiÅŸ M-T Kor.' : 'Corrected Item-Total Corr.', lang === 'tr' ? 'Silinirse Alpha' : 'Alpha if Deleted', lang === 'tr' ? 'Not' : 'Note'],
         rows: itemAnalysis.map(ia => [ia.item, ia.corrItemTotal.toFixed(3), ia.alphaIfDeleted.toFixed(3), ia.recommendation])
     };
 
     const reliabilityTable = {
-        name: lang === 'tr' ? 'Güvenilirlik İstatistikleri' : 'Reliability Statistics',
-        columns: ["Cronbach's Alpha", lang === 'tr' ? 'Madde Sayısı' : 'N of Items', 'N'],
+        name: lang === 'tr' ? 'GÃ¼venilirlik Ä°statistikleri' : 'Reliability Statistics',
+        columns: ["Cronbach's Alpha", lang === 'tr' ? 'Madde SayÄ±sÄ±' : 'N of Items', 'N'],
         rows: [[overallAlpha.toFixed(3), k, n]]
     };
 
     // Interpretation
     let reliabilityLevel;
-    if (overallAlpha >= 0.9) reliabilityLevel = lang === 'tr' ? 'mükemmel' : 'excellent';
+    if (overallAlpha >= 0.9) reliabilityLevel = lang === 'tr' ? 'mÃ¼kemmel' : 'excellent';
     else if (overallAlpha >= 0.8) reliabilityLevel = lang === 'tr' ? 'iyi' : 'good';
     else if (overallAlpha >= 0.7) reliabilityLevel = lang === 'tr' ? 'kabul edilebilir' : 'acceptable';
     else if (overallAlpha >= 0.6) reliabilityLevel = lang === 'tr' ? 'sorgulanabilir' : 'questionable';
-    else if (overallAlpha >= 0.5) reliabilityLevel = lang === 'tr' ? 'zayıf' : 'poor';
+    else if (overallAlpha >= 0.5) reliabilityLevel = lang === 'tr' ? 'zayÄ±f' : 'poor';
     else reliabilityLevel = lang === 'tr' ? 'kabul edilemez' : 'unacceptable';
 
     // Find problematic items
@@ -8949,9 +10565,9 @@ export function runItemTotalAnalysis(data, columns, itemNames = null) {
     const removableItems = itemAnalysis.filter(ia => ia.alphaIfDeleted > overallAlpha + 0.01);
 
     // APA format
-    const apaTR = `Ölçeğin iç tutarlılığı ${k} madde üzerinden Cronbach Alfa katsayısı ile değerlendirilmiştir. Analiz sonucunda α = ${overallAlpha.toFixed(3)} (${reliabilityLevel}) bulunmuştur. ${weakItems.length > 0 ? `${weakItems.length} madde düşük madde-toplam korelasyonuna (r < .30) sahiptir.` : ''} ${removableItems.length > 0 ? `${removableItems.length} maddenin çıkarılması güvenilirliği artırabilir.` : ''}`;
+    const apaTR = `Ã–lÃ§eÄŸin iÃ§ tutarlÄ±lÄ±ÄŸÄ± ${k} madde Ã¼zerinden Cronbach Alfa katsayÄ±sÄ± ile deÄŸerlendirilmiÅŸtir. Analiz sonucunda Î± = ${overallAlpha.toFixed(3)} (${reliabilityLevel}) bulunmuÅŸtur. ${weakItems.length > 0 ? `${weakItems.length} madde dÃ¼ÅŸÃ¼k madde-toplam korelasyonuna (r < .30) sahiptir.` : ''} ${removableItems.length > 0 ? `${removableItems.length} maddenin Ã§Ä±karÄ±lmasÄ± gÃ¼venilirliÄŸi artÄ±rabilir.` : ''}`;
 
-    const apaEN = `Internal consistency of the scale was assessed using Cronbach's alpha coefficient across ${k} items. The analysis revealed α = ${overallAlpha.toFixed(3)} (${reliabilityLevel}). ${weakItems.length > 0 ? `${weakItems.length} item(s) showed low item-total correlation (r < .30).` : ''} ${removableItems.length > 0 ? `Removing ${removableItems.length} item(s) could improve reliability.` : ''}`;
+    const apaEN = `Internal consistency of the scale was assessed using Cronbach's alpha coefficient across ${k} items. The analysis revealed Î± = ${overallAlpha.toFixed(3)} (${reliabilityLevel}). ${weakItems.length > 0 ? `${weakItems.length} item(s) showed low item-total correlation (r < .30).` : ''} ${removableItems.length > 0 ? `Removing ${removableItems.length} item(s) could improve reliability.` : ''}`;
 
     return {
         valid: true,
@@ -9143,358 +10759,7 @@ function runAssumptionWizard(statType, ctx) {
     }
 }
 
-// =====================================================
-// FAZ-ADV-5: COX PROPORTIONAL HAZARDS REGRESSION
-// Newton-Raphson optimization with Breslow tie-handling
-// =====================================================
-
-/**
- * Cox Proportional Hazards Regression
- * @param {Array} data - Array of objects with time, event, and covariate columns
- * @param {Object} opts - { timeCol, eventCol, xCols, ties: 'breslow', maxIter: 25, tol: 1e-6 }
- * @returns {Object} - Canonical output with coefficients, model fit, and SPSS-like tables
- */
-export function runCoxRegression(data, opts = {}) {
-    // Input validation
-    if (!data || !Array.isArray(data) || data.length < 5) {
-        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'En az 5 gözlem gerekli' : 'At least 5 observations required' };
-    }
-
-    const { timeCol, eventCol, xCols, ties = 'breslow', maxIter = 25, tol = 1e-6 } = opts;
-
-    if (!timeCol || !eventCol || !xCols || !Array.isArray(xCols) || xCols.length === 0) {
-        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'timeCol, eventCol ve xCols gerekli' : 'timeCol, eventCol and xCols required' };
-    }
-
-    // Extract and validate data
-    const cleanData = [];
-    for (const row of data) {
-        const t = parseFloat(row[timeCol]);
-        const e = parseInt(row[eventCol], 10);
-        if (isNaN(t) || t <= 0 || isNaN(e) || (e !== 0 && e !== 1)) continue;
-
-        const x = [];
-        let valid = true;
-        for (const col of xCols) {
-            const v = parseFloat(row[col]);
-            if (isNaN(v)) { valid = false; break; }
-            x.push(v);
-        }
-        if (valid) cleanData.push({ time: t, event: e, x });
-    }
-
-    if (cleanData.length < 5) {
-        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'Geçerli veri yetersiz' : 'Insufficient valid data' };
-    }
-
-    // Sort by time (ascending)
-    cleanData.sort((a, b) => a.time - b.time);
-
-    const n = cleanData.length;
-    const p = xCols.length;
-    const events = cleanData.filter(d => d.event === 1).length;
-
-    if (events < 2) {
-        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'En az 2 olay gerekli' : 'At least 2 events required' };
-    }
-
-    // Initialize coefficients to zero
-    let beta = new Array(p).fill(0);
-
-    // Newton-Raphson iteration
-    let converged = false;
-    let iter = 0;
-    let logLik = -Infinity;
-    let logLik0 = null; // Null model log-likelihood
-
-    // Calculate null model log-likelihood (beta = 0)
-    logLik0 = calcLogLikelihood(cleanData, new Array(p).fill(0));
-
-    for (iter = 0; iter < maxIter; iter++) {
-        const { ll, gradient, hessian } = calcDerivatives(cleanData, beta);
-
-        // Check for convergence
-        if (Math.abs(ll - logLik) < tol) {
-            converged = true;
-            logLik = ll;
-            break;
-        }
-        logLik = ll;
-
-        // Solve Hessian * delta = gradient
-        const delta = solveLinearSystem(hessian, gradient);
-        if (!delta) {
-            // Singular matrix - use gradient descent fallback
-            const step = 0.01;
-            for (let j = 0; j < p; j++) {
-                beta[j] += step * gradient[j];
-            }
-        } else {
-            for (let j = 0; j < p; j++) {
-                beta[j] += delta[j];
-            }
-        }
-    }
-
-    if (!converged) iter = maxIter;
-
-    // Calculate final Hessian for standard errors
-    const { hessian: finalHessian } = calcDerivatives(cleanData, beta);
-    const invHessian = invertMatrix(finalHessian);
-
-    // Build coefficients output
-    const coefficients = [];
-    for (let j = 0; j < p; j++) {
-        const B = beta[j];
-        const SE = invHessian ? Math.sqrt(-invHessian[j][j]) : NaN;
-        const Wald = SE > 0 ? Math.pow(B / SE, 2) : NaN;
-        const pValue = isNaN(Wald) ? NaN : approximateChiSquarePValue(Wald, 1);
-        const expB = Math.exp(B);
-        const ciLower = Math.exp(B - 1.96 * SE);
-        const ciUpper = Math.exp(B + 1.96 * SE);
-
-        coefficients.push({
-            name: xCols[j],
-            B: B,
-            SE: SE,
-            Wald: Wald,
-            df: 1,
-            pValue: pValue,
-            expB: expB,
-            ci95: { lower: ciLower, upper: ciUpper }
-        });
-    }
-
-    // Model fit statistics
-    const minus2LogLik = -2 * logLik;
-    const minus2LogLik0 = -2 * logLik0;
-    const omnibusChiSquare = minus2LogLik0 - minus2LogLik;
-    const dfModel = p;
-    const modelPValue = approximateChiSquarePValue(omnibusChiSquare, dfModel);
-
-    // Build SPSS-like tables
-    const tables = renderCoxRegressionSPSS({
-        n, events, converged, iter, tol,
-        minus2LogLik, minus2LogLik0, omnibusChiSquare, dfModel, modelPValue,
-        coefficients
-    }, VIZ_STATE.lang);
-
-    return {
-        testType: 'cox',
-        ok: true,
-        n: n,
-        events: events,
-        method: 'Cox PH (Partial Likelihood)',
-        ties: ties,
-        convergence: { converged, iter, tol },
-        modelFit: {
-            minus2LogLik: minus2LogLik,
-            minus2LogLikNull: minus2LogLik0,
-            omnibusChiSquare: omnibusChiSquare,
-            df: dfModel,
-            pValue: modelPValue
-        },
-        coefficients: coefficients,
-        tables: tables,
-        notesTR: converged ? ['Model başarıyla yakınsadı.'] : ['Model maksimum iterasyonda durdu, yakınsama sağlanamadı.'],
-        notesEN: converged ? ['Model converged successfully.'] : ['Model stopped at maximum iterations, convergence not achieved.']
-    };
-
-    // Helper: Calculate log-likelihood
-    function calcLogLikelihood(d, b) {
-        let ll = 0;
-        for (let i = 0; i < d.length; i++) {
-            if (d[i].event !== 1) continue;
-            const eta_i = dotProduct(b, d[i].x);
-            let sumExp = 0;
-            for (let j = i; j < d.length; j++) {
-                sumExp += Math.exp(dotProduct(b, d[j].x));
-            }
-            ll += eta_i - Math.log(sumExp);
-        }
-        return ll;
-    }
-
-    // Helper: Calculate gradient and hessian
-    function calcDerivatives(d, b) {
-        const grad = new Array(p).fill(0);
-        const hess = Array.from({ length: p }, () => new Array(p).fill(0));
-        let ll = 0;
-
-        for (let i = 0; i < d.length; i++) {
-            if (d[i].event !== 1) continue;
-
-            const eta_i = dotProduct(b, d[i].x);
-            let S0 = 0, S1 = new Array(p).fill(0), S2 = Array.from({ length: p }, () => new Array(p).fill(0));
-
-            for (let j = i; j < d.length; j++) {
-                const expEta_j = Math.exp(dotProduct(b, d[j].x));
-                S0 += expEta_j;
-                for (let k = 0; k < p; k++) {
-                    S1[k] += d[j].x[k] * expEta_j;
-                    for (let l = 0; l < p; l++) {
-                        S2[k][l] += d[j].x[k] * d[j].x[l] * expEta_j;
-                    }
-                }
-            }
-
-            ll += eta_i - Math.log(S0);
-
-            for (let k = 0; k < p; k++) {
-                grad[k] += d[i].x[k] - S1[k] / S0;
-                for (let l = 0; l < p; l++) {
-                    hess[k][l] -= S2[k][l] / S0 - (S1[k] * S1[l]) / (S0 * S0);
-                }
-            }
-        }
-
-        return { ll, gradient: grad, hessian: hess };
-    }
-
-    // Helper: Dot product
-    function dotProduct(a, b) {
-        let sum = 0;
-        for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
-        return sum;
-    }
-
-    // Helper: Solve linear system Ax = b using Gaussian elimination
-    function solveLinearSystem(A, b) {
-        const n = b.length;
-        const aug = A.map((row, i) => [...row, b[i]]);
-
-        for (let i = 0; i < n; i++) {
-            let maxRow = i;
-            for (let k = i + 1; k < n; k++) {
-                if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
-            }
-            [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
-
-            if (Math.abs(aug[i][i]) < 1e-12) return null;
-
-            for (let k = i + 1; k < n; k++) {
-                const c = aug[k][i] / aug[i][i];
-                for (let j = i; j <= n; j++) {
-                    aug[k][j] -= c * aug[i][j];
-                }
-            }
-        }
-
-        const x = new Array(n);
-        for (let i = n - 1; i >= 0; i--) {
-            x[i] = aug[i][n];
-            for (let j = i + 1; j < n; j++) {
-                x[i] -= aug[i][j] * x[j];
-            }
-            x[i] /= aug[i][i];
-        }
-        return x;
-    }
-
-    // Helper: Invert matrix
-    function invertMatrix(A) {
-        const n = A.length;
-        const aug = A.map((row, i) => [...row, ...new Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);
-
-        for (let i = 0; i < n; i++) {
-            let maxRow = i;
-            for (let k = i + 1; k < n; k++) {
-                if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
-            }
-            [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
-
-            if (Math.abs(aug[i][i]) < 1e-12) return null;
-
-            const pivot = aug[i][i];
-            for (let j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
-
-            for (let k = 0; k < n; k++) {
-                if (k === i) continue;
-                const c = aug[k][i];
-                for (let j = 0; j < 2 * n; j++) {
-                    aug[k][j] -= c * aug[i][j];
-                }
-            }
-        }
-
-        return aug.map(row => row.slice(n));
-    }
-}
-
-/**
- * Render SPSS-like tables for Cox Regression
- */
-function renderCoxRegressionSPSS(result, lang = 'tr') {
-    const isTR = lang === 'tr';
-    const fmtNum = (v, d = 4) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : '-';
-    const fmtP = (v) => {
-        if (typeof v !== 'number' || !isFinite(v)) return '-';
-        if (v < 0.001) return '<.001';
-        return v.toFixed(3);
-    };
-
-    const tables = [];
-
-    // Table 1: Model Summary / Omnibus Tests
-    tables.push({
-        titleTR: 'Omnibus Model Testleri',
-        titleEN: 'Omnibus Tests of Model Coefficients',
-        columns: [
-            isTR ? '-2 Log Olabilirlik' : '-2 Log Likelihood',
-            isTR ? 'Ki-Kare' : 'Chi-square',
-            'df',
-            isTR ? 'Anlamlılık' : 'Sig.'
-        ],
-        rows: [
-            [fmtNum(result.minus2LogLik, 3), fmtNum(result.omnibusChiSquare, 3), result.dfModel, fmtP(result.modelPValue)]
-        ]
-    });
-
-    // Table 2: Variables in the Equation
-    const varCols = [
-        isTR ? 'Değişken' : 'Variable',
-        'B',
-        'S.E.',
-        'Wald',
-        'df',
-        isTR ? 'Anlamlılık' : 'Sig.',
-        'Exp(B)',
-        isTR ? '95% GA Alt' : '95% CI Lower',
-        isTR ? '95% GA Üst' : '95% CI Upper'
-    ];
-    const varRows = result.coefficients.map(c => [
-        c.name,
-        fmtNum(c.B, 4),
-        fmtNum(c.SE, 4),
-        fmtNum(c.Wald, 3),
-        c.df,
-        fmtP(c.pValue),
-        fmtNum(c.expB, 3),
-        fmtNum(c.ci95?.lower, 3),
-        fmtNum(c.ci95?.upper, 3)
-    ]);
-
-    tables.push({
-        titleTR: 'Denklemdeki Değişkenler',
-        titleEN: 'Variables in the Equation',
-        columns: varCols,
-        rows: varRows
-    });
-
-    // Table 3: Case Processing Summary
-    tables.push({
-        titleTR: 'Vaka Özeti',
-        titleEN: 'Case Processing Summary',
-        columns: [isTR ? 'Durum' : 'Status', 'N', '%'],
-        rows: [
-            [isTR ? 'Olay' : 'Event', result.events, fmtNum(100 * result.events / result.n, 1)],
-            [isTR ? 'Sansürlü' : 'Censored', result.n - result.events, fmtNum(100 * (result.n - result.events) / result.n, 1)],
-            [isTR ? 'Toplam' : 'Total', result.n, '100.0']
-        ]
-    });
-
-    return tables;
-}
+// NOTE: runCoxRegression moved to PROMPT-UPDATE-2 section (line ~8020) with Efron tie handling and Schoenfeld residuals
 
 // Window binding for wizard
 window.runAssumptionWizard = runAssumptionWizard;
@@ -9530,6 +10795,8 @@ window.runFrequencyAnalysis = runFrequencyAnalysis;
 
 // SPSS Wrappers
 window.runIndependentTTest_SPSS = runIndependentTTest_SPSS;
+window.runPairedTTest_SPSS = runPairedTTest_SPSS;
+window.runOneSampleTTest_SPSS = runOneSampleTTest_SPSS;
 window.runOneWayANOVA_SPSS = runOneWayANOVA_SPSS;
 window.runChiSquareCrosstabs_SPSS = runChiSquareCrosstabs_SPSS;
 
@@ -9542,11 +10809,13 @@ window.calculateMean = calculateMean;
 window.calculateVariance = calculateVariance;
 window.calculateStdDev = calculateStdDev;
 window.runStatWidgetAnalysis = runStatWidgetAnalysis;
+// PROMPT-UPDATE-5: Exact p-value function exposed for testing
+window.approximateTTestPValue = approximateTTestPValue;
 
 // FAZ-ADV-5: Cox Regression (Optional Advanced Feature)
 window.runCoxRegression = runCoxRegression;
 
-console.log('✅ stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic + FAZ-ADV-5 Cox) loaded');
+console.log('âœ… stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic + FAZ-ADV-5 Cox) loaded');
 
 
 

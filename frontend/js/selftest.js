@@ -822,7 +822,314 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             return 'PASS';
         });
 
-        // Test: ANOVA + Tukey Post-Hoc (Homogeneous Variances)
+        // PROMPT-UPDATE-1 GÖREV D: Test 1 - Cutoff changes confusion matrix
+        results.statEngineTests.logistic_cutoff_changes_confusion = runSmokeTest('runLogisticRegression (cutoff changes CM)', () => {
+            if (typeof window.runLogisticRegression !== 'function') return 'SKIP: not exposed to window';
+            // Binary data with clear separation
+            const testData = [];
+            for (let i = 0; i < 50; i++) {
+                testData.push({ X: i, Y: i < 25 ? 0 : 1 });
+            }
+
+            // Run with cutoff 0.5 (default)
+            const result05 = window.runLogisticRegression(testData, 'Y', ['X'], { cutoff: 0.5 });
+            if (!result05.valid) return `FAIL: cutoff 0.5 failed: ${result05.error}`;
+
+            // Run with cutoff 0.7
+            const result07 = window.runLogisticRegression(testData, 'Y', ['X'], { cutoff: 0.7 });
+            if (!result07.valid) return `FAIL: cutoff 0.7 failed: ${result07.error}`;
+
+            // Check cutoffUsed field exists
+            if (result05.cutoffUsed === undefined || result07.cutoffUsed === undefined) {
+                return 'FAIL: cutoffUsed field missing';
+            }
+
+            // Confusion matrices should differ with different cutoffs
+            const cm05 = result05.confusionMatrix;
+            const cm07 = result07.confusionMatrix;
+            if (!cm05 || !cm07) return 'FAIL: confusionMatrix missing';
+
+            // With higher cutoff, fewer positives should be predicted (TP+FP decreases)
+            const predicted05 = (cm05.TP || 0) + (cm05.FP || 0);
+            const predicted07 = (cm07.TP || 0) + (cm07.FP || 0);
+
+            // Higher cutoff should predict fewer positives (or same if data is extreme)
+            if (predicted07 > predicted05) {
+                return `WARN: Higher cutoff predicts more positives (${predicted07} > ${predicted05})`;
+            }
+
+            // Check metrics object exists
+            if (!result05.metrics || !result07.metrics) {
+                return 'FAIL: metrics object missing';
+            }
+
+            return `PASS: cutoff 0.5: TP=${cm05.TP}, cutoff 0.7: TP=${cm07.TP}`;
+        });
+
+        // PROMPT-UPDATE-1 GÖREV D: Test 2 - AUC range verification
+        results.statEngineTests.logistic_auc_range = runSmokeTest('runLogisticRegression (AUC range)', () => {
+            if (typeof window.runLogisticRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Perfect separation data (AUC should be ~1.0)
+            const perfectData = [];
+            for (let i = 0; i < 50; i++) {
+                perfectData.push({ X: i, Y: i < 25 ? 0 : 1 });
+            }
+            const perfectResult = window.runLogisticRegression(perfectData, 'Y', ['X']);
+            if (!perfectResult.valid) return `FAIL: perfect data failed: ${perfectResult.error}`;
+
+            // Check roc object exists
+            if (!perfectResult.roc) return 'FAIL: roc object missing';
+
+            const auc = perfectResult.roc.auc;
+
+            // AUC must be within [0, 1]
+            if (typeof auc !== 'number' || isNaN(auc)) return 'FAIL: AUC is not a number';
+            if (auc < 0 || auc > 1) return `FAIL: AUC ${auc} out of range [0, 1]`;
+
+            // For perfect separation, AUC should be close to 1
+            if (auc < 0.9) return `WARN: AUC ${auc.toFixed(3)} unexpectedly low for perfect data`;
+
+            // Check optimalThreshold exists
+            if (typeof perfectResult.roc.optimalThreshold !== 'number') {
+                return 'FAIL: optimalThreshold missing';
+            }
+
+            // Check youdenJ exists
+            if (typeof perfectResult.roc.youdenJ !== 'number') {
+                return 'FAIL: youdenJ missing';
+            }
+
+            // Check ROC points array exists and is non-empty
+            if (!perfectResult.roc.points || perfectResult.roc.points.length === 0) {
+                return 'FAIL: roc.points empty';
+            }
+
+            return `PASS: AUC=${auc.toFixed(3)}, optimalThreshold=${perfectResult.roc.optimalThreshold.toFixed(3)}`;
+        });
+
+        // PROMPT-UPDATE-1 GÖREV D: Test 3 - Hosmer-Lemeshow smoke test
+        results.statEngineTests.logistic_hl_smoke = runSmokeTest('runLogisticRegression (HL smoke)', () => {
+            if (typeof window.runLogisticRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Test 1: Sufficient n (should have valid HL)
+            const largeData = [];
+            for (let i = 0; i < 100; i++) {
+                largeData.push({ X: i + Math.random() * 10, Y: i < 50 ? 0 : 1 });
+            }
+            const largeResult = window.runLogisticRegression(largeData, 'Y', ['X']);
+            if (!largeResult.valid) return `FAIL: large data failed: ${largeResult.error}`;
+
+            // Check hosmerLemeshow object exists
+            if (!largeResult.hosmerLemeshow) return 'FAIL: hosmerLemeshow missing';
+
+            // For n=100, HL should be valid
+            if (!largeResult.hosmerLemeshow.valid) {
+                return `WARN: HL invalid for n=100: ${largeResult.hosmerLemeshow.noteEN || largeResult.hosmerLemeshow.noteTR}`;
+            }
+
+            // Check HL fields
+            const hl = largeResult.hosmerLemeshow;
+            if (typeof hl.chiSquare !== 'number') return 'FAIL: HL chiSquare missing';
+            if (typeof hl.df !== 'number') return 'FAIL: HL df missing';
+            if (typeof hl.pValue !== 'number') return 'FAIL: HL pValue missing';
+
+            // Test 2: Small n (should gracefully degrade)
+            const smallData = [];
+            for (let i = 0; i < 10; i++) {
+                smallData.push({ X: i, Y: i < 5 ? 0 : 1 });
+            }
+            const smallResult = window.runLogisticRegression(smallData, 'Y', ['X']);
+            // Should not crash
+            if (!smallResult.valid) {
+                // Small n may fail, that's OK
+                return `PASS: small n handled (error: ${smallResult.error?.slice(0, 30) || 'model fail'})`;
+            }
+
+            // If valid, HL should be invalid (graceful degradation)
+            if (smallResult.hosmerLemeshow && !smallResult.hosmerLemeshow.valid) {
+                if (!smallResult.hosmerLemeshow.noteTR && !smallResult.hosmerLemeshow.noteEN) {
+                    return 'WARN: HL invalid but no note message';
+                }
+            }
+
+            return `PASS: HL χ²=${hl.chiSquare.toFixed(2)}, df=${hl.df}, p=${hl.pValue.toFixed(3)}`;
+        });
+
+        // PROMPT-UPDATE-2 GÖREV D: Test 1 - Cox ties method switch
+        results.statEngineTests.cox_ties_method_switch = runSmokeTest('runCoxRegression (ties switch)', () => {
+            if (typeof window.runCoxRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Create survival data with ties
+            const survivalData = [];
+            for (let i = 0; i < 100; i++) {
+                const time = Math.floor(i / 5) + 1; // Creates ties
+                const event = i % 3 === 0 ? 1 : 0;  // ~33% events
+                const age = 30 + i % 40;
+                const treatment = i % 2;
+                survivalData.push({ Time: time, Event: event, Age: age, Treatment: treatment });
+            }
+
+            // Test Breslow (default)
+            const breslowResult = window.runCoxRegression(survivalData, 'Time', 'Event', ['Age', 'Treatment'], { ties: 'breslow' });
+            if (!breslowResult.valid) return `FAIL: Breslow failed: ${breslowResult.error}`;
+            if (breslowResult.tiesMethodUsed !== 'breslow') return 'FAIL: tiesMethodUsed not breslow';
+
+            // Test Efron
+            const efronResult = window.runCoxRegression(survivalData, 'Time', 'Event', ['Age', 'Treatment'], { ties: 'efron' });
+            if (!efronResult.valid) return `FAIL: Efron failed: ${efronResult.error}`;
+            if (efronResult.tiesMethodUsed !== 'efron') return 'FAIL: tiesMethodUsed not efron';
+
+            // Log-likelihoods should differ (Efron is usually slightly different)
+            // Both should have hazard ratios
+            if (!breslowResult.hazardRatios || breslowResult.hazardRatios.length !== 2) {
+                return 'FAIL: Breslow missing hazardRatios';
+            }
+            if (!efronResult.hazardRatios || efronResult.hazardRatios.length !== 2) {
+                return 'FAIL: Efron missing hazardRatios';
+            }
+
+            return `PASS: Breslow LL=${breslowResult.logLikelihood.toFixed(2)}, Efron LL=${efronResult.logLikelihood.toFixed(2)}`;
+        });
+
+        // PROMPT-UPDATE-2 GÖREV D: Test 2 - Cox PH test smoke
+        results.statEngineTests.cox_ph_test_smoke = runSmokeTest('runCoxRegression (PH test smoke)', () => {
+            if (typeof window.runCoxRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Create survival data with enough events for PH test
+            const survivalData = [];
+            for (let i = 0; i < 100; i++) {
+                const time = i + 1 + Math.random() * 10;
+                const event = i % 2 === 0 ? 1 : 0; // 50% events
+                const x1 = Math.random() * 10;
+                const x2 = i < 50 ? 0 : 1;
+                survivalData.push({ Time: time, Event: event, X1: x1, X2: x2 });
+            }
+
+            const result = window.runCoxRegression(survivalData, 'Time', 'Event', ['X1', 'X2']);
+            if (!result.valid) return `FAIL: ${result.error}`;
+
+            // Check phTest object exists
+            if (!result.phTest) return 'FAIL: phTest object missing';
+
+            // phTest.method should be 'schoenfeld'
+            if (result.phTest.method !== 'schoenfeld') return 'FAIL: phTest.method not schoenfeld';
+
+            if (result.phTest.valid) {
+                // Valid PH test should have globalP and covariates
+                if (typeof result.phTest.globalP !== 'number') return 'FAIL: globalP not a number';
+                if (!result.phTest.covariates || result.phTest.covariates.length !== 2) {
+                    return 'FAIL: covariates array incorrect';
+                }
+
+                // Check covariate test results
+                const cov = result.phTest.covariates[0];
+                if (typeof cov.pValue !== 'number') return 'FAIL: covariate pValue missing';
+
+                return `PASS: globalP=${result.phTest.globalP.toFixed(3)}, valid=true`;
+            } else {
+                // Invalid is OK if notes exist (graceful degradation)
+                if (!result.phTest.noteTR && !result.phTest.noteEN) {
+                    return 'WARN: phTest invalid but no note';
+                }
+                return `PASS: phTest valid=false (graceful)`;
+            }
+        });
+
+        // PROMPT-UPDATE-3 GÖREV C: Test 1 - multi_vif_present
+        results.statEngineTests.multi_vif_present = runSmokeTest('runLinearRegression (multi VIF)', () => {
+            if (typeof window.runLinearRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Create data with 2+ predictors
+            const data = [];
+            for (let i = 0; i < 50; i++) {
+                data.push({ Y: i * 2 + Math.random() * 5, X1: i, X2: i * 0.5 + Math.random() * 3, X3: Math.random() * 10 });
+            }
+
+            const result = window.runLinearRegression(data, 'Y', ['X1', 'X2', 'X3']);
+            if (!result.valid) return `FAIL: ${result.error}`;
+
+            // Check collinearity array exists and has correct length
+            if (!result.collinearity || !Array.isArray(result.collinearity)) {
+                return 'FAIL: collinearity array missing';
+            }
+            if (result.collinearity.length !== 3) {
+                return `FAIL: collinearity.length=${result.collinearity.length}, expected 3`;
+            }
+
+            // Check VIF values exist
+            const vifs = result.collinearity.map(c => c.vif);
+            if (vifs.some(v => typeof v !== 'number')) {
+                return 'FAIL: VIF values not numbers';
+            }
+
+            return `PASS: VIF=[${vifs.map(v => v.toFixed(2)).join(', ')}]`;
+        });
+
+        // PROMPT-UPDATE-3 GÖREV C: Test 2 - influence_arrays_present
+        results.statEngineTests.influence_arrays_present = runSmokeTest('runLinearRegression (influence)', () => {
+            if (typeof window.runLinearRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Create simple data
+            const data = [];
+            for (let i = 0; i < 30; i++) {
+                data.push({ Y: i * 3 + Math.random() * 2, X: i });
+            }
+
+            const result = window.runLinearRegression(data, 'Y', 'X');
+            if (!result.valid) return `FAIL: ${result.error}`;
+
+            // Check influence object exists
+            if (!result.influence) return 'FAIL: influence object missing';
+
+            // Check leverage and cooksD arrays
+            if (!Array.isArray(result.influence.leverage)) return 'FAIL: leverage not array';
+            if (!Array.isArray(result.influence.cooksD)) return 'FAIL: cooksD not array';
+
+            // Check dimensions match n
+            if (result.influence.leverage.length !== result.n) {
+                return `FAIL: leverage.length=${result.influence.leverage.length}, n=${result.n}`;
+            }
+            if (result.influence.cooksD.length !== result.n) {
+                return `FAIL: cooksD.length=${result.influence.cooksD.length}, n=${result.n}`;
+            }
+
+            return `PASS: leverage.length=${result.influence.leverage.length}, cooksD.length=${result.influence.cooksD.length}`;
+        });
+
+        // PROMPT-UPDATE-3 GÖREV C: Test 3 - no_infinity_crash (singular matrix)
+        results.statEngineTests.no_infinity_crash = runSmokeTest('runLinearRegression (singular)', () => {
+            if (typeof window.runLinearRegression !== 'function') return 'SKIP: not exposed to window';
+
+            // Create data with perfectly collinear predictors (X2 = X1 * 2)
+            const data = [];
+            for (let i = 0; i < 20; i++) {
+                data.push({ Y: i + Math.random(), X1: i, X2: i * 2 }); // X2 = 2*X1, perfectly collinear
+            }
+
+            // This should not crash, but return valid=false or handle gracefully
+            try {
+                const result = window.runLinearRegression(data, 'Y', ['X1', 'X2']);
+
+                // Either valid=false (singular detected) or valid=true with VIF=Infinity
+                if (!result.valid && result.collinearityError) {
+                    return 'PASS: singular matrix detected, valid=false';
+                }
+
+                if (result.valid && result.collinearity) {
+                    // Check for Infinity or high VIF
+                    const hasInf = result.collinearity.some(c => !isFinite(c.vif) || c.vif > 1000);
+                    if (hasInf) {
+                        return 'PASS: high VIF detected for collinear predictors';
+                    }
+                }
+
+                return 'PASS: no crash on collinear data';
+            } catch (e) {
+                return `FAIL: crashed with ${e.message}`;
+            }
+        });
+
         // Uses groups with similar variances - should trigger Tukey HSD
         results.statEngineTests.anovaPostHocTukey = runSmokeTest('runOneWayANOVA (Tukey - homogeneous)', () => {
             if (typeof window.runOneWayANOVA !== 'function') return 'SKIP: not exposed to window';
@@ -2055,6 +2362,187 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
     const TOLERANCES = { deterministic: 1e-10, floating: 1e-6, pValue: 1e-4 };
 
     // ===========================================
+    // PROMPT-1: GOLDEN SUITE v1 RUNNER
+    // Deterministic proof set with field-level validation
+    // ===========================================
+
+    // Canonical alias resolver - gets value from object using multiple path options
+    function resolveAlias(obj, aliases) {
+        if (!obj || !aliases) return undefined;
+        for (const alias of aliases) {
+            const parts = alias.split('.');
+            let val = obj;
+            for (const part of parts) {
+                if (val === null || val === undefined) break;
+                val = val[part];
+            }
+            if (val !== undefined && val !== null) return val;
+        }
+        return undefined;
+    }
+
+    // Field-level assertion with detailed output
+    function assertGoldenField(actual, expected, fieldName, tolerances, testId) {
+        const tol = tolerances[expected.tolerance] ?? 0.001;
+
+        // Handle comparison modes (lt = less than threshold)
+        if (expected.comparison === 'lt') {
+            const threshold = expected.threshold ?? expected.value;
+            if (actual < threshold) {
+                return { passed: true, field: fieldName, actual, threshold, mode: 'lt' };
+            } else {
+                return { passed: false, field: fieldName, actual, threshold, mode: 'lt', reason: `${actual} >= ${threshold}` };
+            }
+        }
+
+        // Handle array comparison
+        if (expected.type === 'array') {
+            const expArr = expected.value;
+            if (!Array.isArray(actual)) {
+                return { passed: false, field: fieldName, actual, expected: expArr, reason: 'Not an array' };
+            }
+            // Sort both for comparison (cluster sizes can be in any order)
+            const sortedActual = [...actual].sort((a, b) => a - b);
+            const sortedExpected = [...expArr].sort((a, b) => a - b);
+            if (sortedActual.length !== sortedExpected.length) {
+                return { passed: false, field: fieldName, actual: sortedActual, expected: sortedExpected, reason: 'Length mismatch' };
+            }
+            for (let i = 0; i < sortedActual.length; i++) {
+                if (Math.abs(sortedActual[i] - sortedExpected[i]) > tol) {
+                    return { passed: false, field: fieldName, actual: sortedActual, expected: sortedExpected, reason: `Element ${i} mismatch` };
+                }
+            }
+            return { passed: true, field: fieldName, actual: sortedActual, expected: sortedExpected };
+        }
+
+        // Standard numeric comparison
+        const delta = Math.abs(actual - expected.value);
+        if (delta <= tol) {
+            return { passed: true, field: fieldName, actual, expected: expected.value, delta, tolerance: tol };
+        } else {
+            return { passed: false, field: fieldName, actual, expected: expected.value, delta, tolerance: tol, reason: `delta ${delta.toExponential(2)} > tol ${tol}` };
+        }
+    }
+
+    // Run a single golden test case
+    function runGoldenTestCase(testCase, tolerances) {
+        const fn = window[testCase.function];
+        if (typeof fn !== 'function') {
+            return { id: testCase.id, status: 'SKIP', reason: `${testCase.function} not bound` };
+        }
+
+        // Execute the function with appropriate input format
+        let result;
+        try {
+            const input = testCase.input;
+            switch (testCase.function) {
+                case 'runOneSampleTTest':
+                    result = fn(input.sample, input.testValue);
+                    break;
+                case 'runIndependentTTest':
+                    result = fn(input.group1, input.group2);
+                    break;
+                case 'runPairedTTest':
+                    result = fn(input.before, input.after);
+                    break;
+                case 'runOneWayANOVA':
+                    result = fn(input.groups);
+                    break;
+                case 'runChiSquareTest':
+                    result = fn(input.table);
+                    break;
+                case 'runCorrelationTest':
+                    result = fn(input.x, input.y);
+                    break;
+                case 'runLinearRegression':
+                    result = fn(input.data, input.yColumn, input.xColumn);
+                    break;
+                case 'runMannWhitneyU':
+                    result = fn(input.group1, input.group2);
+                    break;
+                case 'runKMeansAnalysis':
+                    result = fn(input.data, input.columns, input.options);
+                    break;
+                default:
+                    return { id: testCase.id, status: 'SKIP', reason: `Unknown function: ${testCase.function}` };
+            }
+        } catch (e) {
+            return { id: testCase.id, status: 'FAIL', reason: `Execution error: ${e.message}` };
+        }
+
+        if (!result || result.error || result.valid === false) {
+            return { id: testCase.id, status: 'FAIL', reason: `Invalid result: ${result?.error || 'unknown'}` };
+        }
+
+        // Validate each expected field
+        const fieldResults = [];
+        let allPassed = true;
+
+        for (const [fieldName, expected] of Object.entries(testCase.expected)) {
+            const actual = resolveAlias(result, expected.aliases);
+            if (actual === undefined) {
+                fieldResults.push({ passed: false, field: fieldName, reason: 'Field not found', aliases: expected.aliases });
+                allPassed = false;
+                continue;
+            }
+
+            const fieldResult = assertGoldenField(actual, expected, fieldName, tolerances, testCase.id);
+            fieldResults.push(fieldResult);
+            if (!fieldResult.passed) allPassed = false;
+        }
+
+        return {
+            id: testCase.id,
+            status: allPassed ? 'PASS' : 'FAIL',
+            description: testCase.description,
+            fields: fieldResults
+        };
+    }
+
+    // Run all golden suite tests
+    function runGoldenSuite(goldenData) {
+        if (!goldenData?.goldenSuite?.testCases) {
+            console.warn('[GOLDEN] No goldenSuite.testCases found');
+            return { pass: 0, fail: 0, skip: 0, results: [] };
+        }
+
+        const suite = goldenData.goldenSuite;
+        const tolerances = suite.tolerances || TOLERANCES;
+        const results = [];
+        let pass = 0, fail = 0, skip = 0;
+
+        console.log('[GOLDEN] Running Golden Suite v1...');
+
+        for (const [name, testCase] of Object.entries(suite.testCases)) {
+            const result = runGoldenTestCase(testCase, tolerances);
+            results.push(result);
+
+            if (result.status === 'PASS') {
+                pass++;
+                console.log(`[GOLDEN] ✅ PASS: ${result.id} - ${testCase.description}`);
+            } else if (result.status === 'SKIP') {
+                skip++;
+                console.warn(`[GOLDEN] ⏭ SKIP: ${result.id} - ${result.reason}`);
+            } else {
+                fail++;
+                console.error(`[GOLDEN] ❌ FAIL: ${result.id} - ${testCase.description}`);
+                // Detailed field-level failure output
+                result.fields?.forEach(f => {
+                    if (!f.passed) {
+                        console.error(`   └─ field=${f.field}, expected=${JSON.stringify(f.expected)}, actual=${JSON.stringify(f.actual)}, ${f.reason || ''}`);
+                    }
+                });
+            }
+        }
+
+        console.log(`[GOLDEN] Summary: ${pass} PASS, ${fail} FAIL, ${skip} SKIP`);
+        return { pass, fail, skip, results };
+    }
+
+    // Expose Golden Suite Runner
+    window.runGoldenSuite = runGoldenSuite;
+
+    // ===========================================
     // ASSERTION HELPERS
     // ===========================================
     const testResults = { pass: 0, fail: 0, skip: 0, tests: [] };
@@ -2156,6 +2644,48 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
     // ===========================================
     // FAZ-ST2: GOLDEN DATASET TESTS (SPSS Parity)
     // ===========================================
+
+    // PROMPT-1: Golden Suite v1 - Field-level validation from golden_expected.json
+    registerTest('golden_suite_v1', 'Golden-Suite', async () => {
+        try {
+            // Try to load golden_expected.json from js folder
+            const response = await fetch('./js/golden_expected.json');
+            if (!response.ok) {
+                return skipTest('golden_suite_v1', `Failed to load golden_expected.json: ${response.status}`);
+            }
+            const goldenData = await response.json();
+
+            if (!goldenData.goldenSuite) {
+                return skipTest('golden_suite_v1', 'No goldenSuite in golden_expected.json');
+            }
+
+            const suiteResult = runGoldenSuite(goldenData);
+
+            // Aggregate into testResults
+            testResults.tests.push({
+                id: 'golden_suite_v1',
+                status: suiteResult.fail === 0 && suiteResult.skip < suiteResult.pass ? 'PASS' : 'FAIL',
+                pass: suiteResult.pass,
+                fail: suiteResult.fail,
+                skip: suiteResult.skip,
+                results: suiteResult.results
+            });
+
+            if (suiteResult.fail > 0) {
+                testResults.fail++;
+                console.error(`[SELFTEST] FAIL: golden_suite_v1 - ${suiteResult.fail} field-level failures`);
+            } else if (suiteResult.pass > 0) {
+                testResults.pass++;
+                console.log(`[SELFTEST] PASS: golden_suite_v1 - ${suiteResult.pass} tests passed`);
+            } else {
+                testResults.skip++;
+            }
+        } catch (e) {
+            console.error('[SELFTEST] golden_suite_v1 error:', e);
+            testResults.tests.push({ id: 'golden_suite_v1', status: 'SKIP', reason: e.message });
+            testResults.skip++;
+        }
+    });
 
     // Golden 1: T-Test one-sample (mean = μ → t = 0)
     registerTest('golden_ttest_onesample_null', 'Golden-TTest', () => {
@@ -2296,6 +2826,46 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         assertClose(alpha, 1.0, 0.01, 'golden_cronbach_alpha');
     });
 
+    // PROMPT-UPDATE-5: Golden T-Test p-value exact validation
+    registerTest('golden_ttest_pvalue_exact', 'Golden-PValue', () => {
+        // Test exact lookup: df=10, t=2.228 should give p=0.05
+        const pExact = window.approximateTTestPValue ?
+            window.approximateTTestPValue(2.228, 10, { exactMode: true }) : null;
+        if (pExact === null) return skipTest('golden_ttest_pvalue_exact', 'approximateTTestPValue not exposed');
+
+        // Tolerance 1e-4 as per PROMPT-UPDATE-5
+        const tolerance = 0.0001;
+        if (Math.abs(pExact - 0.05) > tolerance) {
+            testResults.tests.push({
+                id: 'golden_ttest_pvalue_exact', status: 'FAIL',
+                reason: `pValue=${pExact.toFixed(6)}, expected=0.05, diff=${Math.abs(pExact - 0.05).toFixed(6)}`
+            });
+            testResults.fail++;
+            return;
+        }
+        testResults.tests.push({ id: 'golden_ttest_pvalue_exact', status: 'PASS', pValue: pExact });
+        testResults.pass++;
+        console.log(`[SELFTEST] PASS: golden_ttest_pvalue_exact - p=${pExact.toFixed(6)} (expected 0.05)`);
+    });
+
+    // PROMPT-UPDATE-5: exactMode fallback test - large df uses approximation
+    registerTest('exactMode_fallback', 'Golden-PValue', () => {
+        // df=100 should fallback to approximation (not in exact table)
+        const pApprox = window.approximateTTestPValue ?
+            window.approximateTTestPValue(2.0, 100, { exactMode: true }) : null;
+        if (pApprox === null) return skipTest('exactMode_fallback', 'approximateTTestPValue not exposed');
+
+        // Should return a valid p-value (0-1 range)
+        if (pApprox < 0 || pApprox > 1) {
+            testResults.tests.push({ id: 'exactMode_fallback', status: 'FAIL', reason: `pValue=${pApprox} out of range` });
+            testResults.fail++;
+            return;
+        }
+        testResults.tests.push({ id: 'exactMode_fallback', status: 'PASS', pValue: pApprox });
+        testResults.pass++;
+        console.log(`[SELFTEST] PASS: exactMode_fallback - df=100 p=${pApprox.toFixed(6)} (approximation used)`);
+    });
+
     // ===========================================
     // A) DESCRIPTIVE STATS TESTS
     // ===========================================
@@ -2343,6 +2913,66 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const result = window.runLeveneTest([g1, g2], 0.05);
         if (!result.valid) return skipTest('normality_levene_equal', result.error || 'invalid');
         assertInRange(result.pValue, 0, 1, 'normality_levene_p');
+    });
+
+    // PROMPT-UPDATE-4: Anderson-Darling test present
+    registerTest('normality_ad_present', 'B-Normality', () => {
+        if (!window.runAndersonDarlingTest) return skipTest('normality_ad_present', 'runAndersonDarlingTest not bound');
+        const data = genNormal(100, 50, 10, 54321);
+        const result = window.runAndersonDarlingTest(data, 0.05);
+        if (!result.valid) return skipTest('normality_ad_present', result.error || 'invalid');
+        if (typeof result.A2 !== 'number' || isNaN(result.A2)) {
+            testResults.tests.push({ id: 'normality_ad_present', status: 'FAIL', reason: 'A2 not a valid number' });
+            testResults.fail++;
+            return;
+        }
+        assertInRange(result.pValue, 0, 1, 'normality_ad_pValue');
+        console.log(`[SELFTEST] PASS: normality_ad_present - A2=${result.A2.toFixed(4)}, p=${result.pValue.toFixed(4)}`);
+    });
+
+    // PROMPT-UPDATE-4: K-S Lilliefors method in supplementary or large-n fallback
+    registerTest('normality_ks_lilliefors_present', 'B-Normality', () => {
+        if (!window.runShapiroWilkTest) return skipTest('normality_ks_lilliefors_present', 'runShapiroWilkTest not bound');
+        // Test with n > 5000 to trigger K-S Lilliefors fallback
+        const data = [];
+        for (let i = 0; i < 5500; i++) data.push(Math.random() * 100);
+        const result = window.runShapiroWilkTest(data, 0.05);
+        if (!result.valid) return skipTest('normality_ks_lilliefors_present', result.error || 'invalid');
+        // Check for ks.method === 'lilliefors'
+        if (!result.ks || result.ks.method !== 'lilliefors') {
+            testResults.tests.push({ id: 'normality_ks_lilliefors_present', status: 'FAIL', reason: 'ks.method not lilliefors' });
+            testResults.fail++;
+            return;
+        }
+        assertInRange(result.ks.D, 0, 1, 'ks_D_range');
+        console.log(`[SELFTEST] PASS: normality_ks_lilliefors_present - D=${result.ks.D.toFixed(4)}, method=${result.ks.method}`);
+    });
+
+    // PROMPT-UPDATE-4: Large-n fallback crash test
+    registerTest('normality_large_n_fallback', 'B-Normality', () => {
+        if (!window.runShapiroWilkTest) return skipTest('normality_large_n_fallback', 'runShapiroWilkTest not bound');
+        try {
+            const data = [];
+            for (let i = 0; i < 6000; i++) data.push(i + Math.random());
+            const result = window.runShapiroWilkTest(data, 0.05);
+            if (!result.valid) {
+                testResults.tests.push({ id: 'normality_large_n_fallback', status: 'FAIL', reason: 'Result not valid for n=6000' });
+                testResults.fail++;
+                return;
+            }
+            // Should have testType kolmogorov-smirnov
+            if (result.testType !== 'kolmogorov-smirnov') {
+                testResults.tests.push({ id: 'normality_large_n_fallback', status: 'FAIL', reason: 'testType should be kolmogorov-smirnov' });
+                testResults.fail++;
+                return;
+            }
+            testResults.tests.push({ id: 'normality_large_n_fallback', status: 'PASS', n: result.n, testType: result.testType });
+            testResults.pass++;
+            console.log(`[SELFTEST] PASS: normality_large_n_fallback - n=${result.n}, type=${result.testType}`);
+        } catch (e) {
+            testResults.tests.push({ id: 'normality_large_n_fallback', status: 'FAIL', reason: 'Crashed: ' + e.message });
+            testResults.fail++;
+        }
     });
 
     // ===========================================
@@ -2865,10 +3495,11 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             { x: 10, y: 10 }, { x: 11, y: 11 }
         ];
 
-        // Run 5 times - check that cluster COUNTS are consistent (2 clusters of 2 each)
+        // PROMPT-3 GÖREV D: Run 5 times with same seed - must be deterministic
         const results = [];
         for (let i = 0; i < 5; i++) {
-            const r = window.runKMeansAnalysis(data, ['x', 'y'], 2, 42); // seed = 42
+            // Use opts object with seed parameter
+            const r = window.runKMeansAnalysis(data, ['x', 'y'], { k: 2, seed: 42, writeBack: false });
             if (r.valid) {
                 // Check that we get 2 clusters with 2 items each (order may vary)
                 const sizes = (r.clusterSizes || r.clusters?.map(c => c.count || c.size) || []).sort();
@@ -2883,12 +3514,14 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         // All 5 should have same cluster size distribution
         const allSame = results.every(r => r === results[0]);
         if (allSame) {
-            testResults.tests.push({ id: 'determinism_kmeans_5x', status: 'PASS' });
+            console.log('[SELFTEST] PASS: determinism_kmeans_5x - All 5 runs identical with seed=42');
+            testResults.tests.push({ id: 'determinism_kmeans_5x', status: 'PASS', note: 'Deterministic with seed' });
             testResults.pass++;
         } else {
-            // If sizes differ, it's a real failure; but cluster order variations are OK
-            testResults.tests.push({ id: 'determinism_kmeans_5x', status: 'PASS', note: 'Cluster sizes consistent' });
-            testResults.pass++;
+            // PROMPT-3 GÖREV D: If sizes differ, it's a REAL FAIL (not PASS)
+            console.log('[SELFTEST] FAIL: determinism_kmeans_5x - Results differ:', results);
+            testResults.tests.push({ id: 'determinism_kmeans_5x', status: 'FAIL', reason: 'Cluster sizes not consistent with same seed' });
+            testResults.fail++;
         }
     });
 
@@ -3396,6 +4029,251 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         }
 
         testResults.tests.push({ id: 'guided_anova_produces_message', status: 'PASS', messageKey: msgKey });
+        testResults.pass++;
+    });
+
+    // ===========================================
+    // GÖREV D: PAIRED T-TEST SPSS WRAPPER TESTS
+    // ===========================================
+
+    registerTest('paired_wrapper_exists', 'O-SPSSWrappers', () => {
+        // Test: window.runPairedTTest_SPSS is bound
+        if (typeof window.runPairedTTest_SPSS !== 'function') {
+            console.log('[SELFTEST] FAIL: paired_wrapper_exists - runPairedTTest_SPSS not bound to window');
+            testResults.tests.push({ id: 'paired_wrapper_exists', status: 'FAIL', reason: 'runPairedTTest_SPSS not bound to window' });
+            testResults.fail++;
+            return;
+        }
+        console.log('[SELFTEST] PASS: paired_wrapper_exists - runPairedTTest_SPSS bound');
+        testResults.tests.push({ id: 'paired_wrapper_exists', status: 'PASS' });
+        testResults.pass++;
+    });
+
+    registerTest('paired_wrapper_tables_smoke', 'O-SPSSWrappers', () => {
+        if (typeof window.runPairedTTest_SPSS !== 'function') {
+            return skipTest('paired_wrapper_tables_smoke', 'runPairedTTest_SPSS not bound');
+        }
+
+        // Test data: before and after with clear difference
+        const before = [10, 12, 14, 16, 18];
+        const after = [15, 17, 19, 21, 23]; // +5 each
+
+        const result = window.runPairedTTest_SPSS(before, after, 0.05, ['Before', 'After']);
+
+        // Check valid
+        if (!result.valid) {
+            testResults.tests.push({ id: 'paired_wrapper_tables_smoke', status: 'FAIL', reason: 'Result invalid: ' + (result.error || 'unknown') });
+            testResults.fail++;
+            return;
+        }
+
+        // Check tables array exists with 3 tables
+        if (!result.tables || !Array.isArray(result.tables) || result.tables.length !== 3) {
+            testResults.tests.push({ id: 'paired_wrapper_tables_smoke', status: 'FAIL', reason: 'Expected 3 tables, got: ' + (result.tables?.length ?? 0) });
+            testResults.fail++;
+            return;
+        }
+
+        // Check CI is numeric
+        const ci = result.confidenceInterval;
+        if (!ci || typeof ci.lower !== 'number' || typeof ci.upper !== 'number' || !isFinite(ci.lower) || !isFinite(ci.upper)) {
+            testResults.tests.push({ id: 'paired_wrapper_tables_smoke', status: 'FAIL', reason: 'CI not numeric: lower=' + ci?.lower + ', upper=' + ci?.upper });
+            testResults.fail++;
+            return;
+        }
+
+        // Check correlation exists
+        if (!result.correlation || typeof result.correlation.r !== 'number') {
+            testResults.tests.push({ id: 'paired_wrapper_tables_smoke', status: 'FAIL', reason: 'Correlation missing or not numeric' });
+            testResults.fail++;
+            return;
+        }
+
+        console.log(`[SELFTEST] PASS: paired_wrapper_tables_smoke - tables=3, CI=[${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}]`);
+        testResults.tests.push({ id: 'paired_wrapper_tables_smoke', status: 'PASS', tables: 3, ci: `[${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}]` });
+        testResults.pass++;
+    });
+
+    // ===========================================
+    // PROMPT-0: ONE-SAMPLE T-TEST SPSS WRAPPER TESTS
+    // ===========================================
+
+    registerTest('onesample_wrapper_exists', 'O-SPSSWrappers', () => {
+        // Test: window.runOneSampleTTest_SPSS is bound
+        if (typeof window.runOneSampleTTest_SPSS !== 'function') {
+            console.log('[SELFTEST] FAIL: onesample_wrapper_exists - runOneSampleTTest_SPSS not bound to window');
+            testResults.tests.push({ id: 'onesample_wrapper_exists', status: 'FAIL', reason: 'runOneSampleTTest_SPSS not bound to window' });
+            testResults.fail++;
+            return;
+        }
+        console.log('[SELFTEST] PASS: onesample_wrapper_exists - runOneSampleTTest_SPSS bound');
+        testResults.tests.push({ id: 'onesample_wrapper_exists', status: 'PASS' });
+        testResults.pass++;
+    });
+
+    registerTest('onesample_wrapper_tables_smoke', 'O-SPSSWrappers', () => {
+        if (typeof window.runOneSampleTTest_SPSS !== 'function') {
+            return skipTest('onesample_wrapper_tables_smoke', 'runOneSampleTTest_SPSS not bound');
+        }
+
+        // Test data: sample with known mean
+        const sample = [10, 12, 14, 16, 18];
+        const testValue = 10;
+
+        const result = window.runOneSampleTTest_SPSS(sample, testValue, 0.05, 'TestVar');
+
+        // Check valid
+        if (!result.valid) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'Result invalid: ' + (result.error || 'unknown') });
+            testResults.fail++;
+            return;
+        }
+
+        // Check tables array exists with 2 tables (One-Sample Statistics + One-Sample Test)
+        if (!result.tables || !Array.isArray(result.tables) || result.tables.length !== 2) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'Expected 2 tables, got: ' + (result.tables?.length ?? 0) });
+            testResults.fail++;
+            return;
+        }
+
+        // Check table names are correct (SPSS parity requirement)
+        const tableNames = result.tables.map(t => t.name);
+        const hasStatsTable = tableNames.some(n => n && (n.includes('One-Sample Statistics') || n.includes('Tek Örneklem İstatistikleri')));
+        const hasTestTable = tableNames.some(n => n && (n.includes('One-Sample Test') || n.includes('Tek Örneklem Testi')));
+
+        if (!hasStatsTable) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'Missing One-Sample Statistics table. Got: ' + tableNames.join(', ') });
+            testResults.fail++;
+            return;
+        }
+
+        if (!hasTestTable) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'Missing One-Sample Test table. Got: ' + tableNames.join(', ') });
+            testResults.fail++;
+            return;
+        }
+
+        // Check CI is numeric
+        const ci = result.confidenceInterval;
+        if (!ci || typeof ci.lower !== 'number' || typeof ci.upper !== 'number' || !isFinite(ci.lower) || !isFinite(ci.upper)) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'CI not numeric: lower=' + ci?.lower + ', upper=' + ci?.upper });
+            testResults.fail++;
+            return;
+        }
+
+        // Check testValue is preserved
+        if (result.testValue !== testValue) {
+            testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'FAIL', reason: 'testValue not preserved: ' + result.testValue });
+            testResults.fail++;
+            return;
+        }
+
+        console.log(`[SELFTEST] PASS: onesample_wrapper_tables_smoke - tables=2, CI=[${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}]`);
+        testResults.tests.push({ id: 'onesample_wrapper_tables_smoke', status: 'PASS', tables: 2, ci: `[${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}]` });
+        testResults.pass++;
+    });
+
+    // ===========================================
+    // PROMPT-2: LINEAR REGRESSION CI + DW TESTS
+    // ===========================================
+
+    registerTest('linear_regression_ci_present', 'P-RegressionEnhance', () => {
+        if (typeof window.runLinearRegression !== 'function') {
+            return skipTest('linear_regression_ci_present', 'runLinearRegression not bound');
+        }
+
+        // Test data: simple linear relationship
+        const testData = [
+            { x: 1, y: 2 },
+            { x: 2, y: 4 },
+            { x: 3, y: 6 },
+            { x: 4, y: 8 },
+            { x: 5, y: 10 }
+        ];
+
+        const result = window.runLinearRegression(testData, 'y', 'x');
+
+        // Check valid
+        if (!result.valid) {
+            console.log('[SELFTEST] FAIL: linear_regression_ci_present - Result invalid:', result.error || 'unknown');
+            testResults.tests.push({ id: 'linear_regression_ci_present', status: 'FAIL', reason: 'Result invalid: ' + (result.error || 'unknown') });
+            testResults.fail++;
+            return;
+        }
+
+        // Check slope CI exists and is numeric
+        const slopeCI = result.coefficients?.slope?.CI;
+        if (!slopeCI || typeof slopeCI.lower !== 'number' || typeof slopeCI.upper !== 'number') {
+            console.log('[SELFTEST] FAIL: linear_regression_ci_present - Slope CI missing or not numeric', slopeCI);
+            testResults.tests.push({ id: 'linear_regression_ci_present', status: 'FAIL', reason: 'Slope CI missing or not numeric' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check intercept CI exists
+        const interceptCI = result.coefficients?.intercept?.CI;
+        if (!interceptCI || typeof interceptCI.lower !== 'number') {
+            console.log('[SELFTEST] FAIL: linear_regression_ci_present - Intercept CI missing or not numeric', interceptCI);
+            testResults.tests.push({ id: 'linear_regression_ci_present', status: 'FAIL', reason: 'Intercept CI missing or not numeric' });
+            testResults.fail++;
+            return;
+        }
+
+        console.log(`[SELFTEST] PASS: linear_regression_ci_present - slope CI=[${slopeCI.lower.toFixed(2)}, ${slopeCI.upper.toFixed(2)}]`);
+        testResults.tests.push({ id: 'linear_regression_ci_present', status: 'PASS', slopeCI: `[${slopeCI.lower.toFixed(2)}, ${slopeCI.upper.toFixed(2)}]` });
+        testResults.pass++;
+    });
+
+    registerTest('linear_regression_dw_present', 'P-RegressionEnhance', () => {
+        if (typeof window.runLinearRegression !== 'function') {
+            return skipTest('linear_regression_dw_present', 'runLinearRegression not bound');
+        }
+
+        // Test data
+        const testData = [
+            { x: 1, y: 2.1 },
+            { x: 2, y: 3.9 },
+            { x: 3, y: 6.2 },
+            { x: 4, y: 7.8 },
+            { x: 5, y: 10.1 }
+        ];
+
+        const result = window.runLinearRegression(testData, 'y', 'x');
+
+        // Check valid
+        if (!result.valid) {
+            console.log('[SELFTEST] FAIL: linear_regression_dw_present - Result invalid', result.error);
+            testResults.tests.push({ id: 'linear_regression_dw_present', status: 'FAIL', reason: 'Result invalid' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check Durbin-Watson exists and is in valid range [0, 4]
+        const dw = result.durbinWatson;
+        if (typeof dw !== 'number' || !isFinite(dw)) {
+            console.log('[SELFTEST] FAIL: linear_regression_dw_present - Durbin-Watson not numeric:', dw);
+            testResults.tests.push({ id: 'linear_regression_dw_present', status: 'FAIL', reason: 'Durbin-Watson not numeric: ' + dw });
+            testResults.fail++;
+            return;
+        }
+
+        if (dw < 0 || dw > 4) {
+            testResults.tests.push({ id: 'linear_regression_dw_present', status: 'FAIL', reason: `Durbin-Watson out of range [0,4]: ${dw}` });
+            testResults.fail++;
+            return;
+        }
+
+        // Check VIF exists for slope
+        const vif = result.coefficients?.slope?.VIF;
+        if (typeof vif !== 'number' || vif !== 1) {
+            console.log('[SELFTEST] FAIL: linear_regression_dw_present - VIF not 1:', vif);
+            testResults.tests.push({ id: 'linear_regression_dw_present', status: 'FAIL', reason: 'VIF not 1 for single predictor: ' + vif });
+            testResults.fail++;
+            return;
+        }
+
+        console.log(`[SELFTEST] PASS: linear_regression_dw_present - DW=${dw.toFixed(3)}, VIF=${vif}`);
+        testResults.tests.push({ id: 'linear_regression_dw_present', status: 'PASS', durbinWatson: dw.toFixed(3), vif: vif });
         testResults.pass++;
     });
 

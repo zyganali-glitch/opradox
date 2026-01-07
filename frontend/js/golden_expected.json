@@ -1,0 +1,773 @@
+{
+    "version": "1.0",
+    "description": "High-precision expected p-values for SPSS parity validation",
+    "tolerance": 0.0001,
+    "t_test": {
+        "df_5": [
+            {
+                "t": 0.000,
+                "pValue": 1.0000,
+                "twoTailed": true
+            },
+            {
+                "t": 1.000,
+                "pValue": 0.3632,
+                "twoTailed": true
+            },
+            {
+                "t": 2.015,
+                "pValue": 0.1000,
+                "twoTailed": true
+            },
+            {
+                "t": 2.571,
+                "pValue": 0.0500,
+                "twoTailed": true
+            },
+            {
+                "t": 3.365,
+                "pValue": 0.0200,
+                "twoTailed": true
+            },
+            {
+                "t": 4.032,
+                "pValue": 0.0100,
+                "twoTailed": true
+            }
+        ],
+        "df_10": [
+            {
+                "t": 0.000,
+                "pValue": 1.0000,
+                "twoTailed": true
+            },
+            {
+                "t": 1.000,
+                "pValue": 0.3409,
+                "twoTailed": true
+            },
+            {
+                "t": 1.812,
+                "pValue": 0.1000,
+                "twoTailed": true
+            },
+            {
+                "t": 2.228,
+                "pValue": 0.0500,
+                "twoTailed": true
+            },
+            {
+                "t": 2.764,
+                "pValue": 0.0200,
+                "twoTailed": true
+            },
+            {
+                "t": 3.169,
+                "pValue": 0.0100,
+                "twoTailed": true
+            }
+        ],
+        "df_20": [
+            {
+                "t": 0.000,
+                "pValue": 1.0000,
+                "twoTailed": true
+            },
+            {
+                "t": 1.000,
+                "pValue": 0.3297,
+                "twoTailed": true
+            },
+            {
+                "t": 1.725,
+                "pValue": 0.1000,
+                "twoTailed": true
+            },
+            {
+                "t": 2.086,
+                "pValue": 0.0500,
+                "twoTailed": true
+            },
+            {
+                "t": 2.528,
+                "pValue": 0.0200,
+                "twoTailed": true
+            },
+            {
+                "t": 2.845,
+                "pValue": 0.0100,
+                "twoTailed": true
+            }
+        ],
+        "df_30": [
+            {
+                "t": 0.000,
+                "pValue": 1.0000,
+                "twoTailed": true
+            },
+            {
+                "t": 1.000,
+                "pValue": 0.3253,
+                "twoTailed": true
+            },
+            {
+                "t": 1.697,
+                "pValue": 0.1000,
+                "twoTailed": true
+            },
+            {
+                "t": 2.042,
+                "pValue": 0.0500,
+                "twoTailed": true
+            },
+            {
+                "t": 2.457,
+                "pValue": 0.0200,
+                "twoTailed": true
+            },
+            {
+                "t": 2.750,
+                "pValue": 0.0100,
+                "twoTailed": true
+            }
+        ]
+    },
+    "chi_square": {
+        "df_1": [
+            {
+                "chi2": 0.000,
+                "pValue": 1.0000
+            },
+            {
+                "chi2": 2.706,
+                "pValue": 0.1000
+            },
+            {
+                "chi2": 3.841,
+                "pValue": 0.0500
+            },
+            {
+                "chi2": 5.024,
+                "pValue": 0.0250
+            },
+            {
+                "chi2": 6.635,
+                "pValue": 0.0100
+            }
+        ],
+        "df_5": [
+            {
+                "chi2": 0.000,
+                "pValue": 1.0000
+            },
+            {
+                "chi2": 9.236,
+                "pValue": 0.1000
+            },
+            {
+                "chi2": 11.070,
+                "pValue": 0.0500
+            },
+            {
+                "chi2": 12.833,
+                "pValue": 0.0250
+            },
+            {
+                "chi2": 15.086,
+                "pValue": 0.0100
+            }
+        ],
+        "df_10": [
+            {
+                "chi2": 0.000,
+                "pValue": 1.0000
+            },
+            {
+                "chi2": 15.987,
+                "pValue": 0.1000
+            },
+            {
+                "chi2": 18.307,
+                "pValue": 0.0500
+            },
+            {
+                "chi2": 20.483,
+                "pValue": 0.0250
+            },
+            {
+                "chi2": 23.209,
+                "pValue": 0.0100
+            }
+        ]
+    },
+    "f_test": {
+        "df1_1": {
+            "df2_10": [
+                {
+                    "F": 0.000,
+                    "pValue": 1.0000
+                },
+                {
+                    "F": 3.285,
+                    "pValue": 0.1000
+                },
+                {
+                    "F": 4.965,
+                    "pValue": 0.0500
+                },
+                {
+                    "F": 10.044,
+                    "pValue": 0.0100
+                }
+            ],
+            "df2_20": [
+                {
+                    "F": 0.000,
+                    "pValue": 1.0000
+                },
+                {
+                    "F": 2.975,
+                    "pValue": 0.1000
+                },
+                {
+                    "F": 4.351,
+                    "pValue": 0.0500
+                },
+                {
+                    "F": 8.096,
+                    "pValue": 0.0100
+                }
+            ]
+        },
+        "df1_2": {
+            "df2_10": [
+                {
+                    "F": 0.000,
+                    "pValue": 1.0000
+                },
+                {
+                    "F": 2.924,
+                    "pValue": 0.1000
+                },
+                {
+                    "F": 4.103,
+                    "pValue": 0.0500
+                },
+                {
+                    "F": 7.559,
+                    "pValue": 0.0100
+                }
+            ]
+        }
+    },
+    "goldenSuite": {
+        "version": "1.0",
+        "description": "PROMPT-1: Deterministic golden test cases with field-level validation",
+        "tolerances": {
+            "pValue": 0.001,
+            "statistic": 0.01,
+            "ci": 0.01,
+            "effectSize": 0.01,
+            "df": 0,
+            "count": 0,
+            "correlation": 0.001,
+            "mean": 0.01
+        },
+        "testCases": {
+            "oneSampleTTest": {
+                "id": "GS-T1",
+                "description": "One-sample t-test: sample mean 7, test value 5",
+                "function": "runOneSampleTTest",
+                "input": {
+                    "sample": [
+                        5,
+                        6,
+                        7,
+                        8,
+                        9
+                    ],
+                    "testValue": 5
+                },
+                "expected": {
+                    "tStatistic": {
+                        "value": 2.8284,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "tStatistic",
+                            "stats.t",
+                            "t"
+                        ]
+                    },
+                    "df": {
+                        "value": 4,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom",
+                            "df",
+                            "stats.df"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0474,
+                        "tolerance": "pValue",
+                        "aliases": [
+                            "pValue",
+                            "pValues.test",
+                            "p"
+                        ]
+                    },
+                    "cohensD": {
+                        "value": 1.2649,
+                        "tolerance": "effectSize",
+                        "aliases": [
+                            "cohensD",
+                            "effectSizes.cohensD"
+                        ]
+                    }
+                }
+            },
+            "independentTTest": {
+                "id": "GS-T2",
+                "description": "Independent t-test: large effect (20-point difference)",
+                "function": "runIndependentTTest",
+                "input": {
+                    "group1": [
+                        10,
+                        11,
+                        12,
+                        13,
+                        14
+                    ],
+                    "group2": [
+                        30,
+                        31,
+                        32,
+                        33,
+                        34
+                    ]
+                },
+                "expected": {
+                    "tStatistic": {
+                        "value": -20.0,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "tStatistic",
+                            "stats.t",
+                            "t"
+                        ]
+                    },
+                    "df": {
+                        "value": 8,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom",
+                            "df"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.0001,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    },
+                    "cohensD": {
+                        "value": -12.6491,
+                        "tolerance": "effectSize",
+                        "aliases": [
+                            "cohensD",
+                            "effectSizes.cohensD"
+                        ]
+                    }
+                }
+            },
+            "pairedTTest": {
+                "id": "GS-T3",
+                "description": "Paired t-test: constant +5 difference",
+                "function": "runPairedTTest",
+                "input": {
+                    "before": [
+                        10,
+                        20,
+                        30,
+                        40,
+                        50
+                    ],
+                    "after": [
+                        15,
+                        25,
+                        35,
+                        45,
+                        55
+                    ]
+                },
+                "expected": {
+                    "meanDifference": {
+                        "value": 5.0,
+                        "tolerance": "mean",
+                        "aliases": [
+                            "meanDifference",
+                            "stats.meanDiff"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.001,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    },
+                    "df": {
+                        "value": 4,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom",
+                            "df"
+                        ]
+                    }
+                }
+            },
+            "oneWayANOVA": {
+                "id": "GS-A1",
+                "description": "One-way ANOVA: 3 groups with significant difference",
+                "function": "runOneWayANOVA",
+                "input": {
+                    "groups": [
+                        [
+                            10,
+                            11,
+                            12
+                        ],
+                        [
+                            20,
+                            21,
+                            22
+                        ],
+                        [
+                            30,
+                            31,
+                            32
+                        ]
+                    ]
+                },
+                "expected": {
+                    "fStatistic": {
+                        "value": 300.0,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "fStatistic",
+                            "F",
+                            "stats.F"
+                        ]
+                    },
+                    "dfBetween": {
+                        "value": 2,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom.between",
+                            "dfBetween"
+                        ]
+                    },
+                    "dfWithin": {
+                        "value": 6,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom.within",
+                            "dfWithin"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.0001,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    },
+                    "etaSquared": {
+                        "value": 0.9890,
+                        "tolerance": "effectSize",
+                        "aliases": [
+                            "etaSquared",
+                            "effectSizes.etaSquared"
+                        ]
+                    }
+                }
+            },
+            "chiSquare2x2": {
+                "id": "GS-C1",
+                "description": "Chi-square: perfect association (Cramer's V = 1)",
+                "function": "runChiSquareTest",
+                "input": {
+                    "table": [
+                        [
+                            20,
+                            0
+                        ],
+                        [
+                            0,
+                            20
+                        ]
+                    ]
+                },
+                "expected": {
+                    "chi2Statistic": {
+                        "value": 40.0,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "chiSquare",
+                            "chi2Statistic",
+                            "chi2"
+                        ]
+                    },
+                    "df": {
+                        "value": 1,
+                        "tolerance": "df",
+                        "aliases": [
+                            "degreesOfFreedom",
+                            "df"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.0001,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    },
+                    "cramersV": {
+                        "value": 1.0,
+                        "tolerance": "effectSize",
+                        "aliases": [
+                            "effectSizes.cramersV",
+                            "cramersV"
+                        ]
+                    }
+                }
+            },
+            "pearsonCorrelation": {
+                "id": "GS-R1",
+                "description": "Pearson correlation: perfect positive (r = 1)",
+                "function": "runCorrelationTest",
+                "input": {
+                    "x": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "y": [
+                        2,
+                        4,
+                        6,
+                        8,
+                        10
+                    ]
+                },
+                "expected": {
+                    "correlation": {
+                        "value": 1.0,
+                        "tolerance": "correlation",
+                        "aliases": [
+                            "correlation",
+                            "stats.r",
+                            "r"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.001,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    }
+                }
+            },
+            "linearRegression": {
+                "id": "GS-LR1",
+                "description": "Linear regression: exact y = 2x + 1",
+                "function": "runLinearRegression",
+                "input": {
+                    "data": [
+                        {
+                            "x": 0,
+                            "y": 1
+                        },
+                        {
+                            "x": 1,
+                            "y": 3
+                        },
+                        {
+                            "x": 2,
+                            "y": 5
+                        },
+                        {
+                            "x": 3,
+                            "y": 7
+                        },
+                        {
+                            "x": 4,
+                            "y": 9
+                        }
+                    ],
+                    "yColumn": "y",
+                    "xColumn": "x"
+                },
+                "expected": {
+                    "slope": {
+                        "value": 2.0,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "slope",
+                            "coefficients.slope.B"
+                        ]
+                    },
+                    "intercept": {
+                        "value": 1.0,
+                        "tolerance": "statistic",
+                        "aliases": [
+                            "intercept",
+                            "coefficients.intercept.B"
+                        ]
+                    },
+                    "rSquared": {
+                        "value": 1.0,
+                        "tolerance": "correlation",
+                        "aliases": [
+                            "rSquared",
+                            "R2"
+                        ]
+                    }
+                }
+            },
+            "mannWhitneyU": {
+                "id": "GS-NP1",
+                "description": "Mann-Whitney U: well-separated groups",
+                "function": "runMannWhitneyU",
+                "input": {
+                    "group1": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "group2": [
+                        10,
+                        11,
+                        12,
+                        13,
+                        14
+                    ]
+                },
+                "expected": {
+                    "uStatistic": {
+                        "value": 0,
+                        "tolerance": "count",
+                        "aliases": [
+                            "U",
+                            "uStatistic",
+                            "result.statistic"
+                        ]
+                    },
+                    "pValue": {
+                        "value": 0.0,
+                        "tolerance": "pValue",
+                        "comparison": "lt",
+                        "threshold": 0.01,
+                        "aliases": [
+                            "pValue",
+                            "p"
+                        ]
+                    }
+                }
+            },
+            "kmeansSeeded": {
+                "id": "GS-K1",
+                "description": "KMeans: 2 well-separated clusters (seeded)",
+                "function": "runKMeansAnalysis",
+                "input": {
+                    "data": [
+                        {
+                            "x": 0,
+                            "y": 0
+                        },
+                        {
+                            "x": 1,
+                            "y": 1
+                        },
+                        {
+                            "x": 0,
+                            "y": 1
+                        },
+                        {
+                            "x": 1,
+                            "y": 0
+                        },
+                        {
+                            "x": 10,
+                            "y": 10
+                        },
+                        {
+                            "x": 11,
+                            "y": 11
+                        },
+                        {
+                            "x": 10,
+                            "y": 11
+                        },
+                        {
+                            "x": 11,
+                            "y": 10
+                        }
+                    ],
+                    "columns": [
+                        "x",
+                        "y"
+                    ],
+                    "options": {
+                        "k": 2,
+                        "seed": 42
+                    }
+                },
+                "expected": {
+                    "k": {
+                        "value": 2,
+                        "tolerance": "count",
+                        "aliases": [
+                            "k",
+                            "clusters.length"
+                        ]
+                    },
+                    "clusterSizes": {
+                        "value": [
+                            4,
+                            4
+                        ],
+                        "tolerance": "count",
+                        "type": "array",
+                        "aliases": [
+                            "clusterCounts",
+                            "clusterSizes"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
