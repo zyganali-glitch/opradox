@@ -778,3 +778,22 @@ body:not(.dark-mode) .viz-try-demo-btn {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.25);
 }
+
+/* =====================================================
+   FAZ-GUIDE-2: GUIDED ANALYSIS TOGGLE BUTTON
+   ===================================================== */
+
+.viz-guided-toggle {
+    min-width: 38px !important;
+    padding: 6px 10px !important;
+}
+
+.viz-guided-toggle.viz-guided-active {
+    background: rgba(34, 197, 94, 0.2) !important;
+    border-color: var(--gm-success) !important;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.viz-guided-icon {
+    font-size: 1.1rem;
+}

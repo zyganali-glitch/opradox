@@ -4683,6 +4683,87 @@ export function runStatWidgetAnalysis(widgetId) {
         // Render results
         resultsContainer.innerHTML = renderStatResults(result, type);
 
+        // =====================================================
+        // FAZ-GUIDE-3: T-Test Guided Analysis Integration
+        // Show single-line recommendation if guidedAnalysis is ON
+        // Does NOT change computed results
+        // =====================================================
+        if (window.VIZ_SETTINGS?.guidedAnalysis === true) {
+            let wizardResult = null;
+            let wizardContext = { alpha };
+
+            // Build context based on test type
+            if (type === 'ttest' || type === 'ttest-independent') {
+                // Get group data for dual t-test
+                let g1Data, g2Data;
+                if (group1 && group2 && group && var2) {
+                    g1Data = data.filter(r => r[group] === group1).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                    g2Data = data.filter(r => r[group] === group2).map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                } else if (var1 && var2) {
+                    g1Data = data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v));
+                    g2Data = data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                }
+                wizardContext.group1Values = g1Data || [];
+                wizardContext.group2Values = g2Data || [];
+                wizardResult = runAssumptionWizard('dualTTest', wizardContext);
+            } else if (type === 'ttest-paired') {
+                // For paired t-test, compute difference scores
+                const v1Data = data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v));
+                const v2Data = data.map(r => parseFloat(r[var2])).filter(v => !isNaN(v));
+                const minLen = Math.min(v1Data.length, v2Data.length);
+                const diffs = [];
+                for (let i = 0; i < minLen; i++) {
+                    diffs.push(v2Data[i] - v1Data[i]);
+                }
+                wizardContext.differenceScores = diffs;
+                wizardResult = runAssumptionWizard('pairedTTest', wizardContext);
+            } else if (type === 'ttest-one') {
+                // For one-sample t-test, use sample values
+                const sampleData = data.map(r => parseFloat(r[var1])).filter(v => !isNaN(v));
+                wizardContext.sampleValues = sampleData;
+                wizardResult = runAssumptionWizard('oneSampleTTest', wizardContext);
+            } else if (type === 'anova' || type === 'anova-oneway') {
+                // FAZ-GUIDE-4: ANOVA Guided Analysis
+                // Build groups from groupCol and valueCol
+                const anovaGroup = group || var1;
+                const anovaValue = var2 || document.getElementById(`${widgetId}_yCol`)?.value;
+                if (anovaGroup && anovaValue) {
+                    const groups = groupDataByColumn(data, anovaGroup, anovaValue);
+                    wizardContext.groups = groups;
+                    wizardResult = runAssumptionWizard('anova', wizardContext);
+                }
+            }
+
+            // Display recommendation if wizard returned valid result
+            if (wizardResult && wizardResult.valid && wizardResult.recommendation) {
+                const msgKey = wizardResult.recommendation.messageKeyTR;
+                const prefix = getText('guided_prefix');
+                const message = getText(msgKey);
+                const severityClass = wizardResult.severity === 'warn' ? 'viz-stat-warn' :
+                    wizardResult.severity === 'error' ? 'viz-stat-error' : 'viz-stat-info';
+
+                const recommendationHtml = `
+                    <div class="viz-guided-recommendation ${severityClass}" style="
+                        padding: 8px 12px;
+                        margin-bottom: 10px;
+                        border-radius: 6px;
+                        font-size: 0.85rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: ${wizardResult.severity === 'warn' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(74, 144, 217, 0.1)'};
+                        border-left: 3px solid ${wizardResult.severity === 'warn' ? '#f59e0b' : '#4a90d9'};
+                    ">
+                        <span style="font-size: 1.1rem;">🧠</span>
+                        <span><strong>${prefix}</strong> ${message}</span>
+                    </div>
+                `;
+
+                // Prepend to results container
+                resultsContainer.insertAdjacentHTML('afterbegin', recommendationHtml);
+            }
+        }
+
     } catch (error) {
         resultsContainer.innerHTML = `
             <div class="viz-stat-error">
@@ -8123,6 +8204,174 @@ export function runItemTotalAnalysis(data, columns, itemNames = null) {
         interpretationEN: apaEN
     };
 }
+
+// =====================================================
+// FAZ-GUIDE-1: ASSUMPTION WIZARD ENGINE
+// Default OFF - never modifies existing analysis results
+// Only produces recommendations
+// =====================================================
+
+// Global settings - ensure VIZ_SETTINGS exists with default OFF
+window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+if (window.VIZ_SETTINGS.guidedAnalysis === undefined) {
+    window.VIZ_SETTINGS.guidedAnalysis = false;
+}
+
+// =====================================================
+// FAZ-GUIDE-6: CONFIG-BASED ASSUMPTION WIZARD RULES
+// Add new test types by adding entries to this config
+// =====================================================
+const ASSUMPTION_WIZARD_RULES = {
+    dualTTest: {
+        displayName: 'Independent T-Test',
+        minSampleSize: 3,
+        getDataArrays: (ctx) => {
+            const g1 = ctx.group1Values || [];
+            const g2 = ctx.group2Values || [];
+            return { isValid: g1.length >= 3 && g2.length >= 3, groups: [g1, g2], combined: [...g1, ...g2] };
+        },
+        checkNormality: true,
+        normalityStrategy: 'combined', // 'combined' | 'per_group' | 'differences'
+        checkHomogeneity: true,
+        decisionTree: (normalOk, homoOk) => {
+            if (normalOk === false && homoOk === false) return { code: 'mannwhitney', key: 'guided_ttest_non_normal_and_hetero_mannwhitney' };
+            if (normalOk === false) return { code: 'mannwhitney', key: 'guided_ttest_non_normal_mannwhitney' };
+            if (homoOk === false) return { code: 'welch', key: 'guided_ttest_hetero_welch' };
+            return { code: 'ttest_ok', key: 'guided_ttest_ok' };
+        }
+    },
+    pairedTTest: {
+        displayName: 'Paired T-Test',
+        minSampleSize: 3,
+        getDataArrays: (ctx) => {
+            const diffs = ctx.differenceScores || [];
+            return { isValid: diffs.length >= 3, combined: diffs };
+        },
+        checkNormality: true,
+        normalityStrategy: 'combined', // differences are already combined
+        checkHomogeneity: false,
+        decisionTree: (normalOk, homoOk) => {
+            if (normalOk === false) return { code: 'wilcoxon', key: 'guided_paired_non_normal_wilcoxon' };
+            return { code: 'paired_ok', key: 'guided_paired_ok' };
+        }
+    },
+    oneSampleTTest: {
+        displayName: 'One-Sample T-Test',
+        minSampleSize: 3,
+        getDataArrays: (ctx) => {
+            const sample = ctx.sampleValues || [];
+            return { isValid: sample.length >= 3, combined: sample };
+        },
+        checkNormality: true,
+        normalityStrategy: 'combined',
+        checkHomogeneity: false,
+        decisionTree: (normalOk, homoOk) => {
+            if (normalOk === false) return { code: 'sign_wilcoxon', key: 'guided_one_sample_non_normal_sign_wilcoxon' };
+            return { code: 'one_sample_ok', key: 'guided_one_sample_ok' };
+        }
+    },
+    anova: {
+        displayName: 'One-Way ANOVA',
+        minSampleSize: 2, // per group
+        getDataArrays: (ctx) => {
+            const groups = ctx.groups || [];
+            const isValid = groups.length >= 2 && groups.every(g => g && g.length >= 2);
+            return { isValid, groups, combined: groups.flat() };
+        },
+        checkNormality: true,
+        normalityStrategy: 'combined',
+        checkHomogeneity: true,
+        decisionTree: (normalOk, homoOk) => {
+            if (normalOk === false) return { code: 'kruskal', key: 'guided_anova_non_normal_kruskal' };
+            if (homoOk === false) return { code: 'posthoc_gameshowell', key: 'guided_anova_hetero_gameshowell' };
+            if (homoOk === true) return { code: 'posthoc_tukey', key: 'guided_anova_homo_tukey' };
+            return { code: 'anova_ok', key: 'guided_anova_ok' };
+        }
+    }
+};
+
+// Expose for extension
+window.ASSUMPTION_WIZARD_RULES = ASSUMPTION_WIZARD_RULES;
+
+/**
+ * FAZ-GUIDE-1/6: Config-Based Assumption Wizard API
+ * Produces recommendations; NEVER modifies existing analysis results.
+ * @param {string} statType - Key from ASSUMPTION_WIZARD_RULES
+ * @param {object} ctx - Context with data arrays
+ * @returns {object|null} Canonical recommendation object or null if disabled
+ */
+function runAssumptionWizard(statType, ctx) {
+    // GUARD: If guidedAnalysis is OFF, return null (no computation)
+    if (window.VIZ_SETTINGS?.guidedAnalysis !== true) {
+        return null;
+    }
+
+    // GUARD: Missing context - return invalid without crash
+    if (!ctx) {
+        return { valid: false, severity: 'info', assumptions: {}, recommendation: null };
+    }
+
+    // Get rule config
+    const rule = ASSUMPTION_WIZARD_RULES[statType];
+    if (!rule) {
+        return { valid: false, severity: 'info', assumptions: {}, recommendation: null };
+    }
+
+    const alpha = ctx.alpha || 0.05;
+    let normalityResult = { ok: null, pValue: null, method: 'not_tested' };
+    let homogeneityResult = { ok: null, pValue: null, method: 'not_tested' };
+
+    try {
+        // Get data arrays using rule's extractor
+        const dataResult = rule.getDataArrays(ctx);
+        if (!dataResult.isValid || (dataResult.combined && dataResult.combined.length < 3)) {
+            return { valid: false, severity: 'info', assumptions: {}, recommendation: null };
+        }
+
+        // Check normality if required
+        if (rule.checkNormality && dataResult.combined) {
+            const swResult = runShapiroWilkTest(dataResult.combined, alpha);
+            normalityResult = {
+                ok: swResult.valid ? swResult.isNormal : null,
+                pValue: swResult.valid ? swResult.pValue : null,
+                method: swResult.testType || 'shapiro-wilk',
+                details: swResult
+            };
+        }
+
+        // Check homogeneity if required
+        if (rule.checkHomogeneity && dataResult.groups && dataResult.groups.length >= 2) {
+            const levResult = runLeveneTest(dataResult.groups, alpha);
+            homogeneityResult = {
+                ok: levResult.valid ? !levResult.significant : null,
+                pValue: levResult.valid ? levResult.pValue : null,
+                method: 'levene',
+                details: levResult
+            };
+        }
+
+        // Apply decision tree
+        const decision = rule.decisionTree(normalityResult.ok, homogeneityResult.ok);
+        const severity = (normalityResult.ok === false || homogeneityResult.ok === false) ? 'warn' : 'info';
+
+        return {
+            valid: true,
+            severity,
+            assumptions: { normality: normalityResult, homogeneity: homogeneityResult },
+            recommendation: {
+                recommendedTestCode: decision.code,
+                messageKeyTR: decision.key,
+                messageKeyEN: decision.key
+            }
+        };
+    } catch (e) {
+        console.warn('[WIZARD] Assumption check failed:', e.message);
+        return { valid: false, severity: 'info', assumptions: {}, recommendation: null };
+    }
+}
+
+// Window binding for wizard
+window.runAssumptionWizard = runAssumptionWizard;
 
 // =====================================================
 // Window bindings - public API

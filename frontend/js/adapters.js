@@ -352,6 +352,297 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
     };
 
     // =====================================================
+    // VIRAL-2: STANDALONE HTML EXPORT (Full Offline Support)
+    // Creates a single HTML file that works without internet
+    // =====================================================
+    window.exportStandaloneHTML = async function () {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+        if (window.showToast) window.showToast(lang === 'tr' ? '🔄 Standalone HTML oluşturuluyor...' : '🔄 Creating Standalone HTML...', 'info');
+
+        try {
+            // Step 1: Collect chart data with options
+            const chartsData = (window.VIZ_STATE?.charts || []).map(config => {
+                const chart = window.VIZ_STATE?.echartsInstances?.[config.id];
+                return {
+                    id: config.id,
+                    type: config.type,
+                    title: config.title,
+                    options: chart ? chart.getOption() : null
+                };
+            });
+
+            // Step 2: Collect raw data for stat widgets
+            const rawData = window.VIZ_STATE?.data || [];
+            const columns = window.VIZ_STATE?.columns || [];
+
+            // Step 3: Fetch ECharts library and embed inline
+            let echartsCode = '';
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js');
+                if (response.ok) {
+                    echartsCode = await response.text();
+                }
+            } catch (e) {
+                console.warn('[VIRAL-2] Could not fetch ECharts, trying local fallback');
+                // Fallback: use CDN reference (less portable but still works online)
+            }
+
+            // If fetch failed, embed a minimal CDN loader with fallback
+            const echartsEmbed = echartsCode
+                ? `<script>${echartsCode}<\/script>`
+                : `<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"><\/script>
+                   <script>if(typeof echarts==='undefined'){document.body.innerHTML='<div style="padding:50px;text-align:center;color:#f66;"><h2>ECharts yüklenemedi</h2><p>İnternet bağlantısı gerekli veya dosyayı yeniden oluşturun.</p></div>';}<\/script>`;
+
+            // Step 4: Build standalone HTML
+            const isDark = document.body.classList.contains('dark-mode');
+            const html = `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opradox Dashboard - ${new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US')}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: ${isDark ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' : 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)'};
+            color: ${isDark ? '#fff' : '#333'};
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        .header h1 { 
+            font-size: 2rem; 
+            color: #4a90d9; 
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header p { color: ${isDark ? '#888' : '#666'}; font-size: 0.9rem; }
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            background: ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};
+        }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #4a90d9; }
+        .stat-label { font-size: 0.8rem; color: ${isDark ? '#888' : '#666'}; margin-top: 5px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .chart-card {
+            background: ${isDark ? 'rgba(255,255,255,0.05)' : '#fff'};
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};
+            box-shadow: ${isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.05)'};
+        }
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-title::before { content: '📊'; }
+        .chart-container { height: 320px; }
+        .data-summary {
+            background: ${isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fa'};
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .data-summary h3 { 
+            font-size: 0.9rem; 
+            margin-bottom: 10px; 
+            color: ${isDark ? '#4a90d9' : '#333'};
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            max-height: 200px;
+            overflow: auto;
+            display: block;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#eee'};
+        }
+        .data-table th { 
+            background: ${isDark ? 'rgba(74,144,217,0.2)' : '#e3f2fd'}; 
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        .footer {
+            text-align: center;
+            color: ${isDark ? '#666' : '#999'};
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.8rem;
+        }
+        .footer a { color: #4a90d9; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .offline-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 1.5rem; }
+            .stats-bar { gap: 15px; }
+        }
+    </style>
+    ${echartsEmbed}
+</head>
+<body>
+    <div class="header">
+        <h1>
+            📊 Opradox Dashboard
+            <span class="offline-badge">✈️ ${lang === 'tr' ? 'Çevrimdışı Hazır' : 'Offline Ready'}</span>
+        </h1>
+        <p>${lang === 'tr' ? 'Oluşturulma' : 'Created'}: ${new Date().toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')}</p>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value">${chartsData.length}</div>
+            <div class="stat-label">${lang === 'tr' ? 'Grafik' : 'Charts'}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">${rawData.length.toLocaleString()}</div>
+            <div class="stat-label">${lang === 'tr' ? 'Satır Veri' : 'Data Rows'}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">${columns.length}</div>
+            <div class="stat-label">${lang === 'tr' ? 'Sütun' : 'Columns'}</div>
+        </div>
+    </div>
+
+    <div class="grid" id="dashboardGrid"></div>
+
+    ${rawData.length > 0 && rawData.length <= 100 ? `
+    <div class="data-summary">
+        <h3>📋 ${lang === 'tr' ? 'Veri Özeti' : 'Data Summary'} (${Math.min(rawData.length, 20)} / ${rawData.length} ${lang === 'tr' ? 'satır' : 'rows'})</h3>
+        <table class="data-table">
+            <thead><tr>${columns.slice(0, 8).map(c => `<th>${c}</th>`).join('')}${columns.length > 8 ? '<th>...</th>' : ''}</tr></thead>
+            <tbody>${rawData.slice(0, 20).map(row => `<tr>${columns.slice(0, 8).map(c => `<td>${row[c] ?? ''}</td>`).join('')}${columns.length > 8 ? '<td>...</td>' : ''}</tr>`).join('')}</tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    <div class="footer">
+        <p>Opradox Visual Studio ${lang === 'tr' ? 'ile oluşturuldu' : 'powered by'} | 
+           <a href="https://opradox.com" target="_blank">opradox.com</a></p>
+        <p style="margin-top:5px;font-size:0.7rem;">${lang === 'tr' ? 'Bu dosya internetsiz çalışır' : 'This file works offline'} ✈️</p>
+    </div>
+
+    <script>
+        (function() {
+            const chartsData = ${JSON.stringify(chartsData)};
+            const grid = document.getElementById('dashboardGrid');
+            
+            if (typeof echarts === 'undefined') {
+                grid.innerHTML = '<div style="padding:50px;text-align:center;"><h2 style="color:#f66;">ECharts yüklenemedi</h2><p>Lütfen internet bağlantısı ile tekrar deneyin.</p></div>';
+                return;
+            }
+            
+            chartsData.forEach((chartData, index) => {
+                const card = document.createElement('div');
+                card.className = 'chart-card';
+                card.innerHTML = '<div class="chart-title">' + (chartData.title || '${lang === 'tr' ? 'Grafik' : 'Chart'} ' + (index + 1)) + '</div><div class="chart-container" id="chart' + index + '"></div>';
+                grid.appendChild(card);
+                
+                if (chartData.options) {
+                    try {
+                        const chart = echarts.init(document.getElementById('chart' + index), '${isDark ? 'dark' : ''}');
+                        chart.setOption(chartData.options);
+                    } catch(e) {
+                        document.getElementById('chart' + index).innerHTML = '<div style="padding:20px;text-align:center;color:#888;">Grafik render edilemedi</div>';
+                    }
+                }
+            });
+            
+            // Resize handler
+            window.addEventListener('resize', () => {
+                document.querySelectorAll('.chart-container').forEach(el => {
+                    const instance = echarts.getInstanceByDom(el);
+                    if (instance) instance.resize();
+                });
+            });
+        })();
+    <\/script>
+</body>
+</html>`;
+
+            // Step 5: Download
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const filename = `opradox-standalone-${new Date().toISOString().slice(0, 10)}.html`;
+            window.downloadFile(url, filename);
+            URL.revokeObjectURL(url);
+
+            // Size info
+            const sizeKB = Math.round(blob.size / 1024);
+            const sizeInfo = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`;
+
+            if (window.showToast) {
+                window.showToast(
+                    lang === 'tr'
+                        ? `✅ Standalone HTML indirildi (${sizeInfo}) - Çevrimdışı çalışır!`
+                        : `✅ Standalone HTML downloaded (${sizeInfo}) - Works offline!`,
+                    'success'
+                );
+            }
+
+            console.log(`[VIRAL-2] Standalone HTML exported: ${filename} (${sizeInfo})`);
+
+        } catch (error) {
+            console.error('[VIRAL-2] Standalone HTML export error:', error);
+            if (window.showToast) {
+                window.showToast(
+                    lang === 'tr' ? 'Standalone HTML oluşturulamadı: ' + error.message : 'Failed to create Standalone HTML: ' + error.message,
+                    'error'
+                );
+            }
+        }
+    };
+
+    // =====================================================
     // FAZ 1C: exportChartAsSVG - Full Implementation
     // =====================================================
     window.exportChartAsSVG = function (chartId) {
@@ -811,6 +1102,7 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
             { divider: true },
             { icon: 'fa-file-pdf', label: 'PDF', action: 'exportPDF' },
             { icon: 'fa-file-code', label: 'Portable HTML', action: 'exportPortableHTML' },
+            { icon: 'fa-plane', label: 'Standalone HTML ✈️', action: 'exportStandaloneHTML', highlight: true },
             { divider: true },
             { icon: 'fa-code', label: 'Embed Kodu', action: 'generateEmbed' },
             { icon: 'fa-qrcode', label: 'QR Kod', action: 'generateQR' },
@@ -843,10 +1135,16 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                     cursor: pointer;
                     transition: background 0.2s;
                 `;
-                btn.innerHTML = `<i class="fas ${item.icon}" style="width:16px;color:#4a90d9;"></i> ${item.label}`;
+                btn.innerHTML = `<i class="fas ${item.icon}" style="width:16px;color:${item.highlight ? '#27ae60' : '#4a90d9'};"></i> ${item.label}`;
 
-                btn.onmouseover = () => btn.style.background = 'rgba(74,144,217,0.2)';
-                btn.onmouseout = () => btn.style.background = 'transparent';
+                // Highlight styling for VIRAL-2 Standalone HTML
+                if (item.highlight) {
+                    btn.style.background = 'linear-gradient(90deg, rgba(39,174,96,0.15) 0%, transparent 100%)';
+                    btn.style.borderLeft = '3px solid #27ae60';
+                }
+
+                btn.onmouseover = () => btn.style.background = item.highlight ? 'rgba(39,174,96,0.3)' : 'rgba(74,144,217,0.2)';
+                btn.onmouseout = () => btn.style.background = item.highlight ? 'linear-gradient(90deg, rgba(39,174,96,0.15) 0%, transparent 100%)' : 'transparent';
 
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -894,6 +1192,9 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 break;
             case 'exportPortableHTML':
                 if (typeof window.exportPortableDashboard === 'function') window.exportPortableDashboard();
+                break;
+            case 'exportStandaloneHTML':
+                if (typeof window.exportStandaloneHTML === 'function') window.exportStandaloneHTML();
                 break;
             case 'generateEmbed':
                 if (typeof window.generateEmbedCode === 'function') window.generateEmbedCode();
@@ -3172,6 +3473,421 @@ console.log('[BUILD_ID]', '20241228-2051', 'adapters.js');
                 window.rerenderAllCharts();
             }
         }
+    };
+
+    // =====================================================
+    // VIRAL-3: TEMPLATE GALLERY (Local Preset Library)
+    // =====================================================
+    const TEMPLATE_STORAGE_KEY = 'opradox_user_templates';
+
+    // Built-in presets
+    const BUILTIN_TEMPLATES = {
+        'sales_kpi': {
+            name: 'Sales KPI Dashboard',
+            icon: '💰',
+            description_tr: 'Satış performansı takibi için hazır dashboard',
+            description_en: 'Ready-made dashboard for sales performance tracking',
+            charts: [
+                { type: 'bar', title: 'Aylık Satışlar', xAxis: null, yAxis: null, aggregation: 'sum', color: '#4a90d9' },
+                { type: 'line', title: 'Satış Trendi', xAxis: null, yAxis: null, aggregation: 'sum', color: '#27ae60' },
+                { type: 'pie', title: 'Ürün Dağılımı', xAxis: null, yAxis: null, aggregation: 'count', color: '#f39c12' },
+                { type: 'gauge', title: 'Hedef Gerçekleşme', xAxis: null, yAxis: null, aggregation: 'avg', color: '#e74c3c' }
+            ]
+        },
+        'survey_stats': {
+            name: 'Survey Statistics',
+            icon: '📊',
+            description_tr: 'Anket sonuçları ve istatistikler',
+            description_en: 'Survey results and statistics analysis',
+            charts: [
+                { type: 'bar', title: 'Grup Karşılaştırma', xAxis: null, yAxis: null, aggregation: 'avg', color: '#9b59b6' },
+                { type: 'pie', title: 'Kategori Dağılımı', xAxis: null, yAxis: null, aggregation: 'count', color: '#3498db' },
+                { type: 'boxplot', title: 'Değer Dağılımı', xAxis: null, yAxis: null, aggregation: 'none', color: '#1abc9c' },
+                { type: 'heatmap', title: 'Korelasyon Matrisi', xAxis: null, yAxis: null, aggregation: 'avg', color: '#e67e22' }
+            ]
+        },
+        'finance_snapshot': {
+            name: 'Finance Snapshot',
+            icon: '💵',
+            description_tr: 'Finansal özet ve trendler',
+            description_en: 'Financial summary and trends overview',
+            charts: [
+                { type: 'line', title: 'Gelir Trendi', xAxis: null, yAxis: null, aggregation: 'sum', color: '#27ae60' },
+                { type: 'bar', title: 'Gider Kategorileri', xAxis: null, yAxis: null, aggregation: 'sum', color: '#e74c3c' },
+                { type: 'area', title: 'Kümülatif Kar', xAxis: null, yAxis: null, aggregation: 'sum', color: '#3498db' },
+                { type: 'pie', title: 'Maliyet Dağılımı', xAxis: null, yAxis: null, aggregation: 'sum', color: '#f1c40f' }
+            ]
+        },
+        'hr_analytics': {
+            name: 'HR Analytics',
+            icon: '👥',
+            description_tr: 'İnsan kaynakları metrikleri',
+            description_en: 'Human resources metrics and insights',
+            charts: [
+                { type: 'bar', title: 'Departman Dağılımı', xAxis: null, yAxis: null, aggregation: 'count', color: '#8e44ad' },
+                { type: 'scatter', title: 'Yaş vs Deneyim', xAxis: null, yAxis: null, aggregation: 'none', color: '#2980b9' },
+                { type: 'pie', title: 'Cinsiyet Oranı', xAxis: null, yAxis: null, aggregation: 'count', color: '#16a085' },
+                { type: 'line', title: 'Çalışan Sayısı Trendi', xAxis: null, yAxis: null, aggregation: 'count', color: '#d35400' }
+            ]
+        },
+        'marketing_dashboard': {
+            name: 'Marketing Dashboard',
+            icon: '📈',
+            description_tr: 'Pazarlama performansı ve kampanya takibi',
+            description_en: 'Marketing performance and campaign tracking',
+            charts: [
+                { type: 'funnel', title: 'Dönüşüm Hunisi', xAxis: null, yAxis: null, aggregation: 'sum', color: '#1abc9c' },
+                { type: 'bar', title: 'Kanal Performansı', xAxis: null, yAxis: null, aggregation: 'sum', color: '#3498db' },
+                { type: 'line', title: 'Trafik Trendi', xAxis: null, yAxis: null, aggregation: 'sum', color: '#9b59b6' },
+                { type: 'pie', title: 'Kaynak Dağılımı', xAxis: null, yAxis: null, aggregation: 'count', color: '#e74c3c' }
+            ]
+        }
+    };
+
+    // Get all templates (built-in + user)
+    window.getTemplates = function () {
+        const userTemplates = loadUserTemplates();
+        return {
+            builtin: BUILTIN_TEMPLATES,
+            user: userTemplates
+        };
+    };
+
+    // Load user templates from localStorage
+    function loadUserTemplates() {
+        try {
+            const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+            return stored ? JSON.parse(stored) : {};
+        } catch (e) {
+            console.warn('[VIRAL-3] Could not load user templates:', e);
+            return {};
+        }
+    }
+
+    // Save user templates to localStorage
+    function saveUserTemplates(templates) {
+        try {
+            localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+            return true;
+        } catch (e) {
+            console.error('[VIRAL-3] Could not save user templates:', e);
+            return false;
+        }
+    }
+
+    // Apply a template
+    window.applyTemplate = function (templateId) {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+        const templates = window.getTemplates();
+
+        let template = templates.builtin[templateId] || templates.user[templateId];
+        if (!template) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Şablon bulunamadı' : 'Template not found', 'error');
+            return false;
+        }
+
+        // Build config for importJSONConfig
+        const config = {
+            version: '2.0',
+            charts: template.charts.map((c, i) => ({
+                id: `template_${templateId}_${i}`,
+                ...c
+            })),
+            filters: [],
+            theme: document.body.classList.contains('day-mode') ? 'light' : 'dark'
+        };
+
+        // Clear existing and apply
+        if (typeof window.clearDashboard === 'function') {
+            window.clearDashboard();
+        } else if (window.VIZ_STATE) {
+            window.VIZ_STATE.charts = [];
+        }
+
+        if (typeof window.importJSONConfig === 'function') {
+            window.importJSONConfig(config);
+        }
+
+        if (window.showToast) {
+            const msg = lang === 'tr'
+                ? `✨ "${template.name}" şablonu uygulandı`
+                : `✨ "${template.name}" template applied`;
+            window.showToast(msg, 'success');
+        }
+
+        console.log(`[VIRAL-3] Template applied: ${templateId}`);
+        return true;
+    };
+
+    // Save current dashboard as template
+    window.saveAsTemplate = function (name, description = '') {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        if (!name || name.trim() === '') {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Şablon adı gerekli' : 'Template name required', 'warning');
+            return false;
+        }
+
+        const charts = (window.VIZ_STATE?.charts || []).map(c => ({
+            type: c.type,
+            title: c.title,
+            xAxis: c.xAxis,
+            yAxis: c.yAxis,
+            yAxes: c.yAxes,
+            aggregation: c.aggregation,
+            color: c.color
+        }));
+
+        if (charts.length === 0) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Dashboard boş, şablon oluşturulamaz' : 'Dashboard empty, cannot create template', 'warning');
+            return false;
+        }
+
+        const templateId = 'user_' + Date.now();
+        const template = {
+            name: name.trim(),
+            icon: '📁',
+            description: description || (lang === 'tr' ? 'Kullanıcı şablonu' : 'User template'),
+            charts: charts,
+            createdAt: new Date().toISOString()
+        };
+
+        const userTemplates = loadUserTemplates();
+        userTemplates[templateId] = template;
+
+        if (saveUserTemplates(userTemplates)) {
+            if (window.showToast) {
+                const msg = lang === 'tr'
+                    ? `💾 "${name}" şablonu kaydedildi`
+                    : `💾 "${name}" template saved`;
+                window.showToast(msg, 'success');
+            }
+            console.log(`[VIRAL-3] Template saved: ${templateId}`);
+            return templateId;
+        }
+        return false;
+    };
+
+    // Delete a user template
+    window.deleteTemplate = function (templateId) {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+
+        if (!templateId.startsWith('user_')) {
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Yerleşik şablonlar silinemez' : 'Built-in templates cannot be deleted', 'warning');
+            return false;
+        }
+
+        const userTemplates = loadUserTemplates();
+        if (userTemplates[templateId]) {
+            delete userTemplates[templateId];
+            saveUserTemplates(userTemplates);
+            if (window.showToast) window.showToast(lang === 'tr' ? 'Şablon silindi' : 'Template deleted', 'success');
+            return true;
+        }
+        return false;
+    };
+
+    // Show Template Gallery Modal
+    window.showTemplateGallery = function () {
+        const lang = window.VIZ_STATE?.lang || 'tr';
+        const templates = window.getTemplates();
+
+        // Remove existing modal
+        const existing = document.querySelector('.viz-template-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'viz-template-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 10003;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        `;
+
+        const builtinHtml = Object.entries(templates.builtin).map(([id, t]) => {
+            const desc = lang === 'tr' ? (t.description_tr || t.description || '') : (t.description_en || t.description || '');
+            return `
+            <div class="template-card" data-id="${id}" style="
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 12px;
+                padding: 16px;
+                cursor: pointer;
+                transition: all 0.2s;
+            ">
+                <div style="font-size: 2rem; margin-bottom: 8px;">${t.icon}</div>
+                <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${t.name}</div>
+                <div style="font-size: 0.75rem; color: #888;">${desc}</div>
+                <div style="font-size: 0.7rem; color: #4a90d9; margin-top: 8px;">${t.charts.length} ${lang === 'tr' ? 'grafik' : 'charts'}</div>
+            </div>
+        `}).join('');
+
+        const userHtml = Object.keys(templates.user).length > 0
+            ? Object.entries(templates.user).map(([id, t]) => `
+                <div class="template-card user-template" data-id="${id}" style="
+                    background: rgba(39,174,96,0.1);
+                    border: 1px solid rgba(39,174,96,0.3);
+                    border-radius: 12px;
+                    padding: 16px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    position: relative;
+                ">
+                    <button class="delete-template-btn" data-id="${id}" style="
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                        background: #e74c3c;
+                        border: none;
+                        border-radius: 50%;
+                        width: 20px;
+                        height: 20px;
+                        color: #fff;
+                        font-size: 10px;
+                        cursor: pointer;
+                    ">×</button>
+                    <div style="font-size: 2rem; margin-bottom: 8px;">${t.icon}</div>
+                    <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${t.name}</div>
+                    <div style="font-size: 0.75rem; color: #888;">${t.description}</div>
+                    <div style="font-size: 0.7rem; color: #27ae60; margin-top: 8px;">${t.charts.length} ${lang === 'tr' ? 'grafik' : 'charts'}</div>
+                </div>
+            `).join('')
+            : `<div style="color:#888;text-align:center;grid-column:1/-1;padding:20px;">
+                ${lang === 'tr' ? 'Henüz kullanıcı şablonu yok' : 'No user templates yet'}
+            </div>`;
+
+        modal.innerHTML = `
+            <div style="
+                background: #1a1a2e;
+                border-radius: 16px;
+                max-width: 800px;
+                max-height: 80vh;
+                width: 90%;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            ">
+                <div style="
+                    padding: 20px 24px;
+                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                ">
+                    <h2 style="color: #fff; margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;">
+                        📚 ${lang === 'tr' ? 'Şablon Galerisi' : 'Template Gallery'}
+                    </h2>
+                    <button id="closeTemplateModal" style="
+                        background: transparent;
+                        border: none;
+                        color: #888;
+                        font-size: 1.5rem;
+                        cursor: pointer;
+                    ">×</button>
+                </div>
+
+                <div style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+                    <h3 style="color: #4a90d9; font-size: 0.9rem; margin-bottom: 12px;">
+                        ${lang === 'tr' ? 'Hazır Şablonlar' : 'Built-in Templates'}
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+                        ${builtinHtml}
+                    </div>
+
+                    <h3 style="color: #27ae60; font-size: 0.9rem; margin-bottom: 12px;">
+                        ${lang === 'tr' ? 'Kendi Şablonlarım' : 'My Templates'}
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                        ${userHtml}
+                    </div>
+                </div>
+
+                <div style="
+                    padding: 16px 24px;
+                    border-top: 1px solid rgba(255,255,255,0.1);
+                    display: flex;
+                    gap: 12px;
+                ">
+                    <input type="text" id="newTemplateName" placeholder="${lang === 'tr' ? 'Şablon adı...' : 'Template name...'}" style="
+                        flex: 1;
+                        padding: 10px 14px;
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid rgba(255,255,255,0.2);
+                        border-radius: 8px;
+                        color: #fff;
+                        font-size: 14px;
+                    ">
+                    <button id="saveTemplateBtn" style="
+                        padding: 10px 20px;
+                        background: linear-gradient(135deg, #27ae60, #2ecc71);
+                        border: none;
+                        border-radius: 8px;
+                        color: #fff;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">
+                        <i class="fas fa-save"></i> ${lang === 'tr' ? 'Kaydet' : 'Save'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event handlers
+        modal.querySelector('#closeTemplateModal').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        // Template card click
+        modal.querySelectorAll('.template-card').forEach(card => {
+            card.onclick = (e) => {
+                if (e.target.classList.contains('delete-template-btn')) return;
+                const id = card.dataset.id;
+                window.applyTemplate(id);
+                modal.remove();
+            };
+            card.onmouseover = () => card.style.transform = 'translateY(-2px)';
+            card.onmouseout = () => card.style.transform = 'translateY(0)';
+        });
+
+        // Delete button click
+        modal.querySelectorAll('.delete-template-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                if (confirm(lang === 'tr' ? 'Bu şablonu silmek istediğinize emin misiniz?' : 'Are you sure you want to delete this template?')) {
+                    window.deleteTemplate(id);
+                    modal.remove();
+                    window.showTemplateGallery(); // Refresh
+                }
+            };
+        });
+
+        // Save template click
+        modal.querySelector('#saveTemplateBtn').onclick = () => {
+            const name = modal.querySelector('#newTemplateName').value;
+            if (window.saveAsTemplate(name)) {
+                modal.remove();
+                window.showTemplateGallery(); // Refresh
+            }
+        };
+
+        // Enter key to save
+        modal.querySelector('#newTemplateName').onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                modal.querySelector('#saveTemplateBtn').click();
+            }
+        };
+
+        console.log('[VIRAL-3] Template gallery opened');
     };
 
     // =====================================================

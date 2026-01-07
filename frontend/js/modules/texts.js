@@ -300,6 +300,21 @@ export const VIZ_TEXTS = {
         // ===== VIRAL-1: Try Demo =====
         try_demo: 'Demo Dene | Try Demo',
 
+        // ===== VIRAL-2: Standalone HTML =====
+        standalone_html: 'Standalone HTML ✈️',
+        standalone_html_creating: 'Standalone HTML oluşturuluyor...',
+        standalone_html_success: 'Standalone HTML indirildi - Çevrimdışı çalışır!',
+
+        // ===== VIRAL-3: Template Gallery =====
+        templates: 'Şablonlar',
+        template_gallery: 'Şablon Galerisi',
+        builtin_templates: 'Hazır Şablonlar',
+        my_templates: 'Kendi Şablonlarım',
+        save_as_template: 'Şablon Olarak Kaydet',
+        template_name: 'Şablon adı...',
+        template_applied: 'Şablon uygulandı',
+        template_saved: 'Şablon kaydedildi',
+
         // ===== NEW TRANSLATIONS - Map Charts =====
         chart_choropleth: 'Choropleth',
         chart_bubble_map: 'Bubble Map',
@@ -321,7 +336,24 @@ export const VIZ_TEXTS = {
         toast_annotation_on: 'Annotation modu açıldı - Çizmeye başlayın!',
         toast_fabric_not_loaded: 'Fabric.js yüklenmedi, annotation kullanılamıyor',
         toast_annotations_cleared: 'Annotations temizlendi',
-        toast_annotations_saved: 'Annotations kaydedildi'
+        toast_annotations_saved: 'Annotations kaydedildi',
+
+        // ===== FAZ-GUIDE-1: Guided Analysis Messages =====
+        guided_prefix: 'Rehberli Analiz:',
+        guided_ttest_ok: 'Varsayımlar uygun görünüyor. Student\'s t-testi kullanılabilir.',
+        guided_ttest_non_normal_mannwhitney: 'Normallik varsayımı sağlanmıyor. t-testi yerine Mann–Whitney U testi önerilir.',
+        guided_ttest_hetero_welch: 'Varyanslar homojen değil. Welch t-testi önerilir.',
+        guided_ttest_non_normal_and_hetero_mannwhitney: 'Normallik ve homojenlik varsayımları zayıf. Mann–Whitney U testi önerilir.',
+        guided_paired_ok: 'Varsayımlar uygun görünüyor. Eşleştirilmiş t-testi kullanılabilir.',
+        guided_paired_non_normal_wilcoxon: 'Fark puanları normal dağılmıyor. Wilcoxon işaretli sıralar testi önerilir.',
+        guided_one_sample_ok: 'Varsayımlar uygun görünüyor. Tek örneklem t-testi kullanılabilir.',
+        guided_one_sample_non_normal_sign_wilcoxon: 'Normallik varsayımı sağlanmıyor. Wilcoxon işaretli sıralar / İşaret testi düşünülebilir.',
+        guided_anova_ok: 'Varsayımlar uygun görünüyor. Tek yönlü ANOVA kullanılabilir.',
+        guided_anova_homo_tukey: 'Varyanslar homojen. Post-hoc için Tukey HSD önerilir.',
+        guided_anova_hetero_gameshowell: 'Varyanslar homojen değil. Post-hoc için Games–Howell önerilir.',
+        guided_anova_non_normal_kruskal: 'Normallik varsayımı zayıf. ANOVA yerine Kruskal–Wallis testi düşünülebilir.',
+        guided_toggle_on: 'Rehberli Analiz: Açık',
+        guided_toggle_off: 'Rehberli Analiz: Kapalı'
     },
     en: {
         viz_subtitle: 'Visual Studio',
@@ -619,6 +651,21 @@ export const VIZ_TEXTS = {
         // ===== VIRAL-1: Try Demo =====
         try_demo: 'Try Demo | Demo Dene',
 
+        // ===== VIRAL-2: Standalone HTML =====
+        standalone_html: 'Standalone HTML ✈️',
+        standalone_html_creating: 'Creating Standalone HTML...',
+        standalone_html_success: 'Standalone HTML downloaded - Works offline!',
+
+        // ===== VIRAL-3: Template Gallery =====
+        templates: 'Templates',
+        template_gallery: 'Template Gallery',
+        builtin_templates: 'Built-in Templates',
+        my_templates: 'My Templates',
+        save_as_template: 'Save as Template',
+        template_name: 'Template name...',
+        template_applied: 'Template applied',
+        template_saved: 'Template saved',
+
         // ===== NEW TRANSLATIONS - Map Charts =====
         chart_choropleth: 'Choropleth',
         chart_bubble_map: 'Bubble Map',
@@ -640,7 +687,24 @@ export const VIZ_TEXTS = {
         toast_annotation_on: 'Annotation mode enabled - Start drawing!',
         toast_fabric_not_loaded: 'Fabric.js not loaded, annotation unavailable',
         toast_annotations_cleared: 'Annotations cleared',
-        toast_annotations_saved: 'Annotations saved'
+        toast_annotations_saved: 'Annotations saved',
+
+        // ===== FAZ-GUIDE-1: Guided Analysis Messages =====
+        guided_prefix: 'Guided Analysis:',
+        guided_ttest_ok: 'Assumptions look acceptable. Student\'s t-test is appropriate.',
+        guided_ttest_non_normal_mannwhitney: 'Normality is not met. Consider Mann–Whitney U instead of the t-test.',
+        guided_ttest_hetero_welch: 'Variances are not homogeneous. Consider Welch\'s t-test.',
+        guided_ttest_non_normal_and_hetero_mannwhitney: 'Normality and homogeneity are questionable. Consider Mann–Whitney U.',
+        guided_paired_ok: 'Assumptions look acceptable. Paired t-test is appropriate.',
+        guided_paired_non_normal_wilcoxon: 'Difference scores are not normal. Consider the Wilcoxon signed-rank test.',
+        guided_one_sample_ok: 'Assumptions look acceptable. One-sample t-test is appropriate.',
+        guided_one_sample_non_normal_sign_wilcoxon: 'Normality is not met. Consider a Wilcoxon signed-rank / sign test.',
+        guided_anova_ok: 'Assumptions look acceptable. One-way ANOVA is appropriate.',
+        guided_anova_homo_tukey: 'Variances appear homogeneous. Consider Tukey HSD for post-hoc comparisons.',
+        guided_anova_hetero_gameshowell: 'Variances are not homogeneous. Consider Games–Howell for post-hoc comparisons.',
+        guided_anova_non_normal_kruskal: 'Normality is questionable. Consider Kruskal–Wallis as a nonparametric alternative.',
+        guided_toggle_on: 'Guided Analysis: On',
+        guided_toggle_off: 'Guided Analysis: Off'
     }
 };
 

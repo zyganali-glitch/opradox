@@ -942,5 +942,77 @@ window.toggleCommandPalette = toggleCommandPalette;
 window.openCommandPalette = openCommandPalette;
 window.closeCommandPalette = closeCommandPalette;
 
-console.log('✅ ui.js module loaded (with annotations and command palette)');
+// -----------------------------------------------------
+// FAZ-GUIDE-2: GUIDED ANALYSIS TOGGLE BUTTON
+// Minimal 🧠 toggle for assumption wizard
+// -----------------------------------------------------
 
+/**
+ * Toggle the Guided Analysis feature ON/OFF
+ */
+export function toggleGuidedAnalysis() {
+    // Ensure VIZ_SETTINGS exists
+    window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+
+    // Toggle the flag
+    const newState = !window.VIZ_SETTINGS.guidedAnalysis;
+    window.VIZ_SETTINGS.guidedAnalysis = newState;
+
+    // Update button visual
+    const btn = document.getElementById('guidedAnalysisToggle');
+    if (btn) {
+        btn.classList.toggle('viz-guided-active', newState);
+        btn.setAttribute('aria-pressed', newState.toString());
+        btn.title = newState ? getText('guided_toggle_on') : getText('guided_toggle_off');
+    }
+
+    // Show toast with status
+    const msgKey = newState ? 'guided_toggle_on' : 'guided_toggle_off';
+    showToast(getText(msgKey), newState ? 'success' : 'info');
+}
+
+/**
+ * Initialize the Guided Analysis toggle button
+ * Appends to stat panel or fallback location
+ */
+export function initGuidedAnalysisButton() {
+    // Avoid duplicate
+    if (document.getElementById('guidedAnalysisToggle')) return;
+
+    // Find target container - stat buttons area
+    const statButtonsArea = document.querySelector('.viz-stat-buttons')
+        || document.querySelector('.viz-analysis-panel')
+        || document.querySelector('#vizLeftPanel .viz-section:last-child');
+
+    if (!statButtonsArea) {
+        console.log('[GUIDE] Stat panel not found, deferring button init');
+        return;
+    }
+
+    // Create button
+    const btn = document.createElement('button');
+    btn.id = 'guidedAnalysisToggle';
+    btn.className = 'viz-stat-btn viz-guided-toggle';
+    btn.setAttribute('aria-label', 'Guided Analysis');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.title = getText('guided_toggle_off');
+    btn.innerHTML = '<span class="viz-guided-icon">🧠</span>';
+    btn.onclick = toggleGuidedAnalysis;
+
+    // Append to stat buttons area
+    statButtonsArea.appendChild(btn);
+}
+
+// Window bindings for guided analysis
+window.toggleGuidedAnalysis = toggleGuidedAnalysis;
+window.initGuidedAnalysisButton = initGuidedAnalysisButton;
+
+// Auto-init on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGuidedAnalysisButton);
+} else {
+    // DOM already loaded, init with a small delay to ensure other elements exist
+    setTimeout(initGuidedAnalysisButton, 500);
+}
+
+console.log('✅ ui.js module loaded (with annotations and command palette)');

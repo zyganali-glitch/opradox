@@ -1586,6 +1586,56 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         // END STAT ENGINE TESTS
         // =====================================================
 
+        // =====================================================
+        // FAZ-GUIDE-5: GUIDED ANALYSIS TESTS
+        // =====================================================
+        results.guidedTests = {};
+
+        // TEST A: Wizard returns null when OFF
+        results.guidedTests.guidedOffNull = runSmokeTest('Guided OFF returns null', () => {
+            if (typeof window.runAssumptionWizard !== 'function') return 'SKIP: not exposed';
+            const origFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+            window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+            window.VIZ_SETTINGS.guidedAnalysis = false;
+            const result = window.runAssumptionWizard('dualTTest', { group1Values: [1, 2, 3], group2Values: [4, 5, 6] });
+            window.VIZ_SETTINGS.guidedAnalysis = origFlag;
+            if (result !== null) return 'FAIL: expected null, got ' + typeof result;
+            return 'PASS';
+        });
+
+        // TEST B: Wizard produces message when ON
+        results.guidedTests.guidedOnMessage = runSmokeTest('Guided ON produces message', () => {
+            if (typeof window.runAssumptionWizard !== 'function') return 'SKIP: not exposed';
+            const origFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+            window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+            window.VIZ_SETTINGS.guidedAnalysis = true;
+            const result = window.runAssumptionWizard('dualTTest', { group1Values: [10, 12, 14, 16, 18], group2Values: [20, 22, 24, 26, 28], alpha: 0.05 });
+            window.VIZ_SETTINGS.guidedAnalysis = origFlag;
+            if (!result || !result.valid) return 'FAIL: result invalid';
+            const msgKey = result.recommendation?.messageKeyTR;
+            if (!msgKey || !msgKey.startsWith('guided_')) return 'FAIL: bad messageKey ' + msgKey;
+            return `PASS: ${msgKey}`;
+        });
+
+        // TEST C: ANOVA wizard works
+        results.guidedTests.guidedAnova = runSmokeTest('Guided ANOVA', () => {
+            if (typeof window.runAssumptionWizard !== 'function') return 'SKIP: not exposed';
+            const origFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+            window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+            window.VIZ_SETTINGS.guidedAnalysis = true;
+            const result = window.runAssumptionWizard('anova', { groups: [[10, 12, 14], [20, 22, 24], [30, 32, 34]], alpha: 0.05 });
+            window.VIZ_SETTINGS.guidedAnalysis = origFlag;
+            if (!result || !result.valid) return 'FAIL: result invalid';
+            const msgKey = result.recommendation?.messageKeyTR;
+            if (!msgKey || !msgKey.startsWith('guided_anova')) return 'FAIL: bad messageKey ' + msgKey;
+            return `PASS: ${msgKey}`;
+        });
+
+        // Count guided test passes
+        const guidedResults = Object.values(results.guidedTests);
+        results.checks.guidedTestsPassed = guidedResults.filter(r => r.startsWith('PASS')).length;
+        results.checks.guidedTestsTotal = guidedResults.length;
+
 
         // Final status
         if (results.errors.length > 0) {
@@ -1636,7 +1686,10 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const faz12Info = results.checks.faz12TestsPassed !== undefined
             ? ` | FAZ12: ${results.checks.faz12TestsPassed}/${results.checks.faz12TestsTotal}`
             : '';
-        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}`);
+        const guidedInfo = results.checks.guidedTestsPassed !== undefined
+            ? ` | GUIDE: ${results.checks.guidedTestsPassed}/${results.checks.guidedTestsTotal}`
+            : '';
+        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}`);
 
         // FAZ-ST4: Log deferred items
         if (results.deferredItems && results.deferredItems.length > 0) {
@@ -2745,6 +2798,142 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
                 testResults.pass++;
             }
         }
+    });
+
+    // ===========================================
+    // FAZ-GUIDE-5: GUIDED ANALYSIS SMOKE TESTS
+    // Tests wizard API and flag behavior
+    // ===========================================
+
+    registerTest('guided_off_no_result', 'N-GuidedAnalysis', () => {
+        if (!window.runAssumptionWizard) return skipTest('guided_off_no_result', 'runAssumptionWizard not exposed');
+
+        // Save original flag
+        const originalFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+
+        // Ensure OFF
+        window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+        window.VIZ_SETTINGS.guidedAnalysis = false;
+
+        // Call wizard - should return null when OFF
+        const result = window.runAssumptionWizard('dualTTest', { group1Values: [1, 2, 3], group2Values: [4, 5, 6] });
+
+        // Restore flag
+        window.VIZ_SETTINGS.guidedAnalysis = originalFlag;
+
+        if (result !== null) {
+            testResults.tests.push({ id: 'guided_off_no_result', status: 'FAIL', reason: 'Expected null when OFF, got: ' + typeof result });
+            testResults.fail++;
+        } else {
+            testResults.tests.push({ id: 'guided_off_no_result', status: 'PASS' });
+            testResults.pass++;
+        }
+    });
+
+    registerTest('guided_on_produces_message', 'N-GuidedAnalysis', () => {
+        if (!window.runAssumptionWizard) return skipTest('guided_on_produces_message', 'runAssumptionWizard not exposed');
+
+        // Save original flag
+        const originalFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+
+        // Enable guided analysis
+        window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+        window.VIZ_SETTINGS.guidedAnalysis = true;
+
+        // Call wizard with valid context
+        const ctx = {
+            group1Values: [10, 12, 14, 16, 18],
+            group2Values: [20, 22, 24, 26, 28],
+            alpha: 0.05
+        };
+        const result = window.runAssumptionWizard('dualTTest', ctx);
+
+        // Restore flag
+        window.VIZ_SETTINGS.guidedAnalysis = originalFlag;
+
+        if (!result || !result.valid) {
+            testResults.tests.push({ id: 'guided_on_produces_message', status: 'FAIL', reason: 'Result invalid or null' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check recommendation has messageKey
+        const msgKeyTR = result.recommendation?.messageKeyTR;
+        const msgKeyEN = result.recommendation?.messageKeyEN;
+
+        if (typeof msgKeyTR !== 'string' || !msgKeyTR.startsWith('guided_')) {
+            testResults.tests.push({ id: 'guided_on_produces_message', status: 'FAIL', reason: 'messageKeyTR invalid: ' + msgKeyTR });
+            testResults.fail++;
+            return;
+        }
+
+        if (typeof msgKeyEN !== 'string' || !msgKeyEN.startsWith('guided_')) {
+            testResults.tests.push({ id: 'guided_on_produces_message', status: 'FAIL', reason: 'messageKeyEN invalid: ' + msgKeyEN });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({ id: 'guided_on_produces_message', status: 'PASS', messageKey: msgKeyTR });
+        testResults.pass++;
+    });
+
+    registerTest('guided_getText_nonempty', 'N-GuidedAnalysis', () => {
+        if (!window.getText) return skipTest('guided_getText_nonempty', 'getText not exposed');
+
+        // Test that guided keys return non-empty strings
+        const keysToTest = [
+            'guided_prefix',
+            'guided_ttest_ok',
+            'guided_ttest_non_normal_mannwhitney',
+            'guided_anova_ok'
+        ];
+
+        for (const key of keysToTest) {
+            const text = window.getText(key);
+            if (!text || text === key) {
+                testResults.tests.push({ id: 'guided_getText_nonempty', status: 'FAIL', reason: `Key '${key}' returned empty/fallback` });
+                testResults.fail++;
+                return;
+            }
+        }
+
+        testResults.tests.push({ id: 'guided_getText_nonempty', status: 'PASS' });
+        testResults.pass++;
+    });
+
+    registerTest('guided_anova_produces_message', 'N-GuidedAnalysis', () => {
+        if (!window.runAssumptionWizard) return skipTest('guided_anova_produces_message', 'runAssumptionWizard not exposed');
+
+        // Save and enable
+        const originalFlag = window.VIZ_SETTINGS?.guidedAnalysis;
+        window.VIZ_SETTINGS = window.VIZ_SETTINGS || {};
+        window.VIZ_SETTINGS.guidedAnalysis = true;
+
+        // ANOVA context with 3 groups
+        const ctx = {
+            groups: [[10, 12, 14], [20, 22, 24], [30, 32, 34]],
+            alpha: 0.05
+        };
+        const result = window.runAssumptionWizard('anova', ctx);
+
+        // Restore
+        window.VIZ_SETTINGS.guidedAnalysis = originalFlag;
+
+        if (!result || !result.valid) {
+            testResults.tests.push({ id: 'guided_anova_produces_message', status: 'FAIL', reason: 'Result invalid' });
+            testResults.fail++;
+            return;
+        }
+
+        const msgKey = result.recommendation?.messageKeyTR;
+        if (typeof msgKey !== 'string' || !msgKey.startsWith('guided_anova')) {
+            testResults.tests.push({ id: 'guided_anova_produces_message', status: 'FAIL', reason: 'ANOVA messageKey invalid: ' + msgKey });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({ id: 'guided_anova_produces_message', status: 'PASS', messageKey: msgKey });
+        testResults.pass++;
     });
 
     // ===========================================
