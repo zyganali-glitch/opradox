@@ -2509,6 +2509,104 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         }
     }
 
+    // FAZ-ADV-1: SPSS "Variables in the Equation" table
+    // Calculate Wald statistics: Wald = (B / SE)^2
+    const waldChi2 = [];
+    const waldDf = [];
+    const waldPValues = [];
+    const expB = []; // Exp(B) = odds ratio with intercept included
+    const expBCI = { lower: [], upper: [], level: 0.95 };
+    const zCritical = 1.96; // 95% CI
+
+    // Include intercept in Wald calculations
+    for (let j = 0; j < numParams; j++) {
+        const se = standardErrors[j] || 0;
+        const b = beta[j];
+
+        // Wald chi-square = (B / SE)^2
+        const wald = se > 0 ? Math.pow(b / se, 2) : NaN;
+        waldChi2.push(isFinite(wald) ? wald : NaN);
+        waldDf.push(1); // df = 1 for each parameter
+
+        // Wald p-value from chi-square distribution (df=1)
+        const waldP = isFinite(wald) ? approximateChiSquarePValue(wald, 1) : NaN;
+        waldPValues.push(isFinite(waldP) ? waldP : NaN);
+
+        // Exp(B)
+        const expBVal = Math.exp(b);
+        expB.push(isFinite(expBVal) ? expBVal : NaN);
+
+        // 95% CI for Exp(B): exp(B ± z*SE)
+        const lowerCI = Math.exp(b - zCritical * se);
+        const upperCI = Math.exp(b + zCritical * se);
+        expBCI.lower.push(isFinite(lowerCI) ? lowerCI : NaN);
+        expBCI.upper.push(isFinite(upperCI) ? upperCI : NaN);
+    }
+
+    // Build SPSS "Variables in the Equation" table
+    const variableNames = ['(Constant)', ...((typeof arg3 === 'object' && Array.isArray(arg3)) ? arg3 : Array.from({ length: p }, (_, i) => `X${i + 1}`))];
+    const spssTableRows = [];
+
+    for (let j = 0; j < numParams; j++) {
+        spssTableRows.push({
+            variable: variableNames[j] || `X${j}`,
+            B: beta[j],
+            SE: standardErrors[j] || NaN,
+            Wald: waldChi2[j],
+            df: waldDf[j],
+            Sig: waldPValues[j],
+            ExpB: expB[j],
+            CI_lower: expBCI.lower[j],
+            CI_upper: expBCI.upper[j]
+        });
+    }
+
+    const spssTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'Denklemdeki Değişkenler' : 'Variables in the Equation',
+        columns: ['Variable', 'B', 'S.E.', 'Wald', 'df', 'Sig.', 'Exp(B)', '95% CI Lower', '95% CI Upper'],
+        rows: spssTableRows.map(row => [
+            row.variable,
+            isFinite(row.B) ? row.B.toFixed(4) : '-',
+            isFinite(row.SE) ? row.SE.toFixed(4) : '-',
+            isFinite(row.Wald) ? row.Wald.toFixed(4) : '-',
+            row.df,
+            isFinite(row.Sig) ? (row.Sig < 0.001 ? '<.001' : row.Sig.toFixed(3)) : '-',
+            isFinite(row.ExpB) ? row.ExpB.toFixed(4) : '-',
+            isFinite(row.CI_lower) ? row.CI_lower.toFixed(4) : '-',
+            isFinite(row.CI_upper) ? row.CI_upper.toFixed(4) : '-'
+        ])
+    };
+
+    // Model summary table
+    const modelSummaryTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'Model Özeti' : 'Model Summary',
+        columns: ['-2LL', 'Cox & Snell R²', 'Nagelkerke R²'],
+        rows: [[
+            isFinite(minus2LL) ? minus2LL.toFixed(3) : '-',
+            isFinite(coxSnellR2) ? coxSnellR2.toFixed(3) : '-',
+            isFinite(nagelkerkeR2) ? nagelkerkeR2.toFixed(3) : '-'
+        ]]
+    };
+
+    // Classification table
+    const classificationTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'Sınıflandırma Tablosu' : 'Classification Table',
+        columns: ['', 'Predicted 0', 'Predicted 1', '% Correct'],
+        rows: [
+            ['Observed 0', TN, FP, isFinite(TN / (TN + FP) * 100) ? (TN / (TN + FP) * 100).toFixed(1) + '%' : '-'],
+            ['Observed 1', FN, TP, isFinite(TP / (TP + FN) * 100) ? (TP / (TP + FN) * 100).toFixed(1) + '%' : '-'],
+            ['Overall', '', '', (accuracy * 100).toFixed(1) + '%']
+        ]
+    };
+
+    // Notes about SE calculation method
+    const seNotes = [];
+    if (method === 'GD') {
+        seNotes.push(VIZ_STATE.lang === 'tr'
+            ? 'SE hesabı yaklaşık (gradient descent kullanıldı)'
+            : 'SE calculated approximately (gradient descent used)');
+    }
+
     return {
         valid: true,
         testName: 'Logistic Regression',
@@ -2526,7 +2624,22 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         standardErrors: standardErrors.slice(1),
         pValues: pValues.slice(1),
 
-        // Odds ratios
+        // FAZ-ADV-1: Wald statistics (excluding intercept for backward compatibility)
+        wald: {
+            chi2: waldChi2.slice(1),
+            df: waldDf.slice(1),
+            pValues: waldPValues.slice(1)
+        },
+
+        // FAZ-ADV-1: Exp(B) and CI (excluding intercept)
+        expB: expB.slice(1),
+        expBCI: {
+            lower: expBCI.lower.slice(1),
+            upper: expBCI.upper.slice(1),
+            level: 0.95
+        },
+
+        // Odds ratios (alias for backward compatibility)
         oddsRatios: oddsRatios,
         oddsRatio: oddsRatios, // Alias
 
@@ -2552,6 +2665,11 @@ export function runLogisticRegression(arg1, arg2, arg3, arg4) {
         predictedProbabilities: predictions,
         predictedClasses: predictedClasses,
 
+        // FAZ-ADV-1: SPSS tables
+        tables: [spssTable, modelSummaryTable, classificationTable],
+
+        // Notes
+        notes: seNotes.length > 0 ? seNotes : undefined,
         warnings: warnings.length > 0 ? warnings : undefined,
 
         interpretation: VIZ_STATE.lang === 'tr'
@@ -5798,8 +5916,14 @@ export function runFrequencyAnalysis(data, column) {
 /**
  * Run PCA Analysis (Real Implementation)
  * Uses: standardization, covariance matrix, power iteration for eigenvalues
+ * FAZ-ADV-2: Added optional Varimax rotation
+ * @param {Array} data - Data array
+ * @param {Array} columns - Column names
+ * @param {Object} opts - Options { rotation: 'none'|'varimax' }
  */
-export function runPCAAnalysis(data, columns) {
+export function runPCAAnalysis(data, columns, opts = {}) {
+    const rotation = opts.rotation || 'none';
+
     if (columns.length < 2) {
         return { error: VIZ_STATE.lang === 'tr' ? 'PCA için en az 2 değişken gerekli' : 'At least 2 variables required for PCA', valid: false };
     }
@@ -5853,11 +5977,12 @@ export function runPCAAnalysis(data, columns) {
         }
     }
 
-    // 3. Power iteration to find first 2 eigenvalues/eigenvectors
+    // 3. Power iteration to find eigenvalues/eigenvectors (extract min(p, 3) components)
+    const numComponents = Math.min(p, 3);
     const eigenResults = [];
     let workMatrix = covMatrix.map(row => [...row]);
 
-    for (let comp = 0; comp < Math.min(2, p); comp++) {
+    for (let comp = 0; comp < numComponents; comp++) {
         // Power iteration
         let vec = new Array(p).fill(1 / Math.sqrt(p));
         for (let iter = 0; iter < 100; iter++) {
@@ -5870,6 +5995,7 @@ export function runPCAAnalysis(data, columns) {
             }
             // Normalize
             const norm = Math.sqrt(newVec.reduce((s, v) => s + v * v, 0));
+            if (norm < 1e-10) break;
             vec = newVec.map(v => v / norm);
         }
 
@@ -5883,7 +6009,7 @@ export function runPCAAnalysis(data, columns) {
             eigenvalue += vec[i] * sum;
         }
 
-        eigenResults.push({ eigenvalue, eigenvector: vec });
+        eigenResults.push({ eigenvalue: Math.max(0, eigenvalue), eigenvector: vec });
 
         // Deflate matrix for next component
         for (let i = 0; i < p; i++) {
@@ -5893,9 +6019,23 @@ export function runPCAAnalysis(data, columns) {
         }
     }
 
-    // 4. Calculate explained variance
-    const totalVar = eigenResults.reduce((s, e) => s + e.eigenvalue, 0) +
-        (p > 2 ? covMatrix.reduce((s, r, i) => s + r[i], 0) - eigenResults.reduce((s, e) => s + e.eigenvalue, 0) : 0);
+    // 4. Build loadings matrix: loading[i][j] = eigenvector[j][i] * sqrt(eigenvalue[j])
+    // Rows = variables, Columns = components
+    const loadings = [];
+    for (let i = 0; i < p; i++) {
+        loadings[i] = [];
+        for (let j = 0; j < numComponents; j++) {
+            loadings[i][j] = eigenResults[j].eigenvector[i] * Math.sqrt(eigenResults[j].eigenvalue);
+        }
+    }
+
+    // 5. FAZ-ADV-2: Varimax Rotation (if requested)
+    let rotatedLoadings = null;
+    if (rotation === 'varimax' && numComponents >= 2) {
+        rotatedLoadings = varimaxRotation(loadings, p, numComponents);
+    }
+
+    // 6. Calculate explained variance
     const actualTotal = covMatrix.reduce((s, r, i) => s + r[i], 0);
 
     const components = eigenResults.map((e, i) => ({
@@ -5904,25 +6044,168 @@ export function runPCAAnalysis(data, columns) {
         variance_explained: ((e.eigenvalue / actualTotal) * 100).toFixed(1),
         loadings: columns.map((col, j) => ({
             variable: col,
-            loading: e.eigenvector[j].toFixed(3)
+            loading: loadings[j][i].toFixed(3)
         }))
     }));
 
     const cumulativeVar = components.reduce((s, c) => s + parseFloat(c.variance_explained), 0).toFixed(1);
 
+    // 7. FAZ-ADV-2: Build SPSS-style tables
+    const tables = [];
+
+    // Component Matrix (Unrotated)
+    const componentMatrixTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'Bileşen Matrisi' : 'Component Matrix',
+        columns: ['Variable', ...eigenResults.map((_, i) => `PC${i + 1}`)],
+        rows: columns.map((col, i) => [
+            col,
+            ...loadings[i].map(l => isFinite(l) ? l.toFixed(3) : '-')
+        ])
+    };
+    tables.push(componentMatrixTable);
+
+    // Rotated Component Matrix (if rotation applied)
+    if (rotatedLoadings) {
+        const rotatedMatrixTable = {
+            title: VIZ_STATE.lang === 'tr' ? 'Döndürülmüş Bileşen Matrisi (Varimax)' : 'Rotated Component Matrix (Varimax)',
+            columns: ['Variable', ...eigenResults.map((_, i) => `PC${i + 1}`)],
+            rows: columns.map((col, i) => [
+                col,
+                ...rotatedLoadings[i].map(l => isFinite(l) ? l.toFixed(3) : '-')
+            ])
+        };
+        tables.push(rotatedMatrixTable);
+    }
+
+    // Total Variance Explained table
+    const varianceTable = {
+        title: VIZ_STATE.lang === 'tr' ? 'Açıklanan Toplam Varyans' : 'Total Variance Explained',
+        columns: ['Component', 'Eigenvalue', '% Variance', 'Cumulative %'],
+        rows: []
+    };
+    let cumulative = 0;
+    eigenResults.forEach((e, i) => {
+        const varExplained = (e.eigenvalue / actualTotal) * 100;
+        cumulative += varExplained;
+        varianceTable.rows.push([
+            `PC${i + 1}`,
+            e.eigenvalue.toFixed(3),
+            varExplained.toFixed(1) + '%',
+            cumulative.toFixed(1) + '%'
+        ]);
+    });
+    tables.push(varianceTable);
+
     return {
         testType: 'pca',
-        testName: 'Temel Bileşenler Analizi (PCA)',
+        testName: VIZ_STATE.lang === 'tr' ? 'Temel Bileşenler Analizi (PCA)' : 'Principal Component Analysis (PCA)',
         valid: true,
         nVariables: p,
         nObservations: validN,
         components: components,
         cumulative_variance: cumulativeVar,
+
+        // FAZ-ADV-2: Loadings matrices
+        loadings: loadings,
+        rotatedLoadings: rotatedLoadings,
+        rotation: rotation,
+
+        // FAZ-ADV-2: SPSS tables
+        tables: tables,
+
         interpretation: {
-            tr: `${p} değişkenle PCA yapıldı. İlk ${components.length} bileşen toplam varyansın %${cumulativeVar}'ini açıklıyor.`,
-            en: `PCA performed on ${p} variables. First ${components.length} components explain ${cumulativeVar}% of total variance.`
+            tr: `${p} değişkenle PCA yapıldı. İlk ${components.length} bileşen toplam varyansın %${cumulativeVar}'ini açıklıyor.${rotation === 'varimax' ? ' Varimax rotasyon uygulandı.' : ''}`,
+            en: `PCA performed on ${p} variables. First ${components.length} components explain ${cumulativeVar}% of total variance.${rotation === 'varimax' ? ' Varimax rotation applied.' : ''}`
         }
     };
+}
+
+/**
+ * FAZ-ADV-2: Varimax Rotation Algorithm
+ * Orthogonal rotation to maximize variance of squared loadings
+ * @param {Array} loadings - Original loadings matrix [variables x components]
+ * @param {number} nVars - Number of variables
+ * @param {number} nComps - Number of components
+ * @returns {Array} Rotated loadings matrix
+ */
+function varimaxRotation(loadings, nVars, nComps, maxIter = 100, tol = 1e-6) {
+    // Deep copy loadings
+    let A = loadings.map(row => [...row]);
+
+    // Kaiser normalization: normalize rows
+    const h = []; // communalities
+    for (let i = 0; i < nVars; i++) {
+        h[i] = Math.sqrt(A[i].reduce((s, v) => s + v * v, 0)) || 1;
+        for (let j = 0; j < nComps; j++) {
+            A[i][j] /= h[i];
+        }
+    }
+
+    // Iterative pairwise rotation
+    for (let iter = 0; iter < maxIter; iter++) {
+        let converged = true;
+
+        // Rotate each pair of components
+        for (let c1 = 0; c1 < nComps - 1; c1++) {
+            for (let c2 = c1 + 1; c2 < nComps; c2++) {
+                // Calculate rotation angle using varimax criterion
+                let u = 0, v = 0;
+                for (let i = 0; i < nVars; i++) {
+                    const x = A[i][c1];
+                    const y = A[i][c2];
+                    const x2 = x * x;
+                    const y2 = y * y;
+                    u += (x2 - y2);
+                    v += 2 * x * y;
+                }
+
+                // Sum of (x² - y²)² and (2xy)² for varimax
+                let a = 0, b = 0, c = 0, d = 0;
+                for (let i = 0; i < nVars; i++) {
+                    const x = A[i][c1];
+                    const y = A[i][c2];
+                    const x2 = x * x;
+                    const y2 = y * y;
+                    const xy = x * y;
+
+                    a += x2 - y2;
+                    b += 2 * xy;
+                    c += (x2 - y2) * (x2 - y2) - 4 * xy * xy;
+                    d += 4 * xy * (x2 - y2);
+                }
+
+                // Optimal rotation angle
+                const num = d - 2 * a * b / nVars;
+                const den = c - (a * a - b * b) / nVars;
+                const phi = 0.25 * Math.atan2(num, den);
+
+                if (Math.abs(phi) > tol) {
+                    converged = false;
+                    const cos_phi = Math.cos(phi);
+                    const sin_phi = Math.sin(phi);
+
+                    // Apply rotation
+                    for (let i = 0; i < nVars; i++) {
+                        const x = A[i][c1];
+                        const y = A[i][c2];
+                        A[i][c1] = cos_phi * x + sin_phi * y;
+                        A[i][c2] = -sin_phi * x + cos_phi * y;
+                    }
+                }
+            }
+        }
+
+        if (converged) break;
+    }
+
+    // De-normalize (restore communalities)
+    for (let i = 0; i < nVars; i++) {
+        for (let j = 0; j < nComps; j++) {
+            A[i][j] *= h[i];
+        }
+    }
+
+    return A;
 }
 
 

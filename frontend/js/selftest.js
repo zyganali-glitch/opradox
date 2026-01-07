@@ -2302,6 +2302,76 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         assertClose(result.rSquared, 1.0, TOLERANCES.floating, 'regression_rsq');
     });
 
+    // FAZ-ADV-1: Logistic Regression SPSS Table Test
+    registerTest('logistic_spss_table', 'G-Regression', () => {
+        if (!window.runLogisticRegression) return skipTest('logistic_spss_table', 'Not implemented');
+        // Binary classification data: y = 1 if x > 5
+        const data = [
+            { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 },
+            { x: 6, y: 1 }, { x: 7, y: 1 }, { x: 8, y: 1 }, { x: 9, y: 1 }, { x: 10, y: 1 }
+        ];
+        const result = window.runLogisticRegression(data, 'y', ['x']);
+        if (!result.valid) return skipTest('logistic_spss_table', result.error || 'invalid');
+
+        // Check tables exist
+        if (!result.tables || !Array.isArray(result.tables) || result.tables.length === 0) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'No tables array' });
+            testResults.fail++;
+            return;
+        }
+
+        // Find "Variables in the Equation" table (first table)
+        const spssTable = result.tables[0];
+        if (!spssTable || !spssTable.columns) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'First table missing columns' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check required columns exist: Wald, Exp(B), 95% CI
+        const cols = spssTable.columns.map(c => c.toLowerCase());
+        const hasWald = cols.some(c => c.includes('wald'));
+        const hasExpB = cols.some(c => c.includes('exp(b)') || c.includes('exp'));
+        const hasCI = cols.some(c => c.includes('ci') || c.includes('95%'));
+
+        if (!hasWald) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'Missing Wald column' });
+            testResults.fail++;
+            return;
+        }
+        if (!hasExpB) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'Missing Exp(B) column' });
+            testResults.fail++;
+            return;
+        }
+        if (!hasCI) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'Missing 95% CI column' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check wald, expB, expBCI fields exist and are not undefined
+        if (!result.wald || result.wald.chi2 === undefined) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'wald.chi2 undefined' });
+            testResults.fail++;
+            return;
+        }
+        if (!result.expB || !Array.isArray(result.expB)) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'expB undefined' });
+            testResults.fail++;
+            return;
+        }
+        if (!result.expBCI || result.expBCI.lower === undefined) {
+            testResults.tests.push({ id: 'logistic_spss_table', status: 'FAIL', reason: 'expBCI undefined' });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({ id: 'logistic_spss_table', status: 'PASS', tables: result.tables.length, wald: result.wald.chi2[0], expB: result.expB[0] });
+        testResults.pass++;
+        console.log(`[SELFTEST] PASS: logistic_spss_table - tables=${result.tables.length}, Wald=${result.wald.chi2[0]?.toFixed(2)}, Exp(B)=${result.expB[0]?.toFixed(2)}`);
+    });
+
     registerTest('spearman_basic', 'G-Correlation', () => {
         if (!window.runCorrelationTest) return skipTest('spearman_basic', 'Not implemented');
         const x = [1, 2, 3, 4, 5], y = [2, 4, 6, 8, 10];
@@ -2322,6 +2392,90 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const cumVar = parseFloat(result.cumulative_variance) || 0;
         const sum = cumVar / 100; // convert to ratio
         assertInRange(sum, 0.99, 1.01, 'pca_variance_sum');
+    });
+
+    // FAZ-ADV-2: PCA Varimax Rotation Test
+    registerTest('pca_varimax_rotation', 'H-Multivariate', () => {
+        if (!window.runPCAAnalysis) return skipTest('pca_varimax_rotation', 'Not implemented');
+        // Create data with 4 variables to test rotation
+        const data = [
+            { A: 1, B: 2, C: 3, D: 4 },
+            { A: 2, B: 4, C: 5, D: 7 },
+            { A: 3, B: 5, C: 7, D: 9 },
+            { A: 4, B: 6, C: 8, D: 11 },
+            { A: 5, B: 8, C: 10, D: 13 },
+            { A: 6, B: 9, C: 11, D: 14 }
+        ];
+
+        // Test with rotation='varimax'
+        const result = window.runPCAAnalysis(data, ['A', 'B', 'C', 'D'], { rotation: 'varimax' });
+        if (!result.valid) return skipTest('pca_varimax_rotation', result.error || 'invalid');
+
+        // Check rotatedLoadings exists
+        if (!result.rotatedLoadings) {
+            testResults.tests.push({ id: 'pca_varimax_rotation', status: 'FAIL', reason: 'rotatedLoadings missing' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check loadings exist
+        if (!result.loadings) {
+            testResults.tests.push({ id: 'pca_varimax_rotation', status: 'FAIL', reason: 'loadings missing' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check dimensions match
+        if (result.loadings.length !== result.rotatedLoadings.length) {
+            testResults.tests.push({ id: 'pca_varimax_rotation', status: 'FAIL', reason: 'loadings dimensions mismatch' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check rotation field
+        if (result.rotation !== 'varimax') {
+            testResults.tests.push({ id: 'pca_varimax_rotation', status: 'FAIL', reason: 'rotation field incorrect' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check tables exist (should have Component Matrix + Rotated Component Matrix + Variance table)
+        if (!result.tables || result.tables.length < 2) {
+            testResults.tests.push({ id: 'pca_varimax_rotation', status: 'FAIL', reason: 'tables missing or incomplete' });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({ id: 'pca_varimax_rotation', status: 'PASS', nVars: result.nVariables, tables: result.tables.length });
+        testResults.pass++;
+        console.log(`[SELFTEST] PASS: pca_varimax_rotation - rotation=${result.rotation}, tables=${result.tables.length}`);
+    });
+
+    // FAZ-ADV-2: PCA without rotation (backward compatibility)
+    registerTest('pca_no_rotation_compat', 'H-Multivariate', () => {
+        if (!window.runPCAAnalysis) return skipTest('pca_no_rotation_compat', 'Not implemented');
+        const data = [{ X: 1, Y: 2 }, { X: 2, Y: 4 }, { X: 3, Y: 6 }];
+
+        // Call without opts (backward compatible)
+        const result = window.runPCAAnalysis(data, ['X', 'Y']);
+        if (!result.valid) return skipTest('pca_no_rotation_compat', result.error || 'invalid');
+
+        // rotatedLoadings should be null when rotation='none'
+        if (result.rotatedLoadings !== null) {
+            testResults.tests.push({ id: 'pca_no_rotation_compat', status: 'FAIL', reason: 'rotatedLoadings should be null for rotation=none' });
+            testResults.fail++;
+            return;
+        }
+
+        // rotation field should be 'none'
+        if (result.rotation !== 'none') {
+            testResults.tests.push({ id: 'pca_no_rotation_compat', status: 'FAIL', reason: `rotation should be 'none', got ${result.rotation}` });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({ id: 'pca_no_rotation_compat', status: 'PASS' });
+        testResults.pass++;
     });
 
     registerTest('kmeans_centers', 'H-Multivariate', () => {
