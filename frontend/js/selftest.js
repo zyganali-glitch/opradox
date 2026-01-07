@@ -1636,8 +1636,247 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         results.checks.guidedTestsPassed = guidedResults.filter(r => r.startsWith('PASS')).length;
         results.checks.guidedTestsTotal = guidedResults.length;
 
+        // =====================================================
+        // FAZ-ADV: ADVANCED STAT ENGINE TESTS
+        // =====================================================
+        results.fazAdvTests = {};
 
-        // Final status
+        // FAZ-ADV-1: Logistic Regression SPSS Table
+        results.fazAdvTests.logisticSPSSTable = runSmokeTest('Logistic SPSS Table', () => {
+            if (typeof window.runLogisticRegression !== 'function') return 'SKIP: not exposed';
+            const data = [
+                { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 },
+                { x: 6, y: 1 }, { x: 7, y: 1 }, { x: 8, y: 1 }, { x: 9, y: 1 }, { x: 10, y: 1 }
+            ];
+            const result = window.runLogisticRegression(data, 'y', ['x']);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.tables || result.tables.length === 0) return 'FAIL: no tables';
+            if (!result.wald || !result.wald.chi2) return 'FAIL: wald missing';
+            if (!result.expB || !Array.isArray(result.expB)) return 'FAIL: expB missing';
+            if (!result.expBCI || result.expBCI.lower === undefined) return 'FAIL: expBCI missing';
+            const cols = result.tables[0].columns.map(c => c.toLowerCase());
+            const hasWald = cols.some(c => c.includes('wald'));
+            const hasExpB = cols.some(c => c.includes('exp'));
+            if (!hasWald || !hasExpB) return 'FAIL: table missing Wald/ExpB columns';
+            return `PASS: tables=${result.tables.length}, Wald=${result.wald.chi2[0]?.toFixed(2)}`;
+        });
+
+        // FAZ-ADV-2: PCA Varimax Rotation
+        results.fazAdvTests.pcaVarimax = runSmokeTest('PCA Varimax', () => {
+            if (typeof window.runPCAAnalysis !== 'function') return 'SKIP: not exposed';
+            const data = [
+                { A: 1, B: 2, C: 3 }, { A: 2, B: 4, C: 5 }, { A: 3, B: 5, C: 7 },
+                { A: 4, B: 6, C: 8 }, { A: 5, B: 8, C: 10 }, { A: 6, B: 9, C: 11 }
+            ];
+            const result = window.runPCAAnalysis(data, ['A', 'B', 'C'], { rotation: 'varimax' });
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.rotatedLoadings) return 'FAIL: rotatedLoadings missing';
+            if (!result.loadings) return 'FAIL: loadings missing';
+            if (result.rotation !== 'varimax') return 'FAIL: rotation field wrong';
+            if (!result.tables || result.tables.length < 2) return 'FAIL: tables missing';
+            return `PASS: rotation=${result.rotation}, tables=${result.tables.length}`;
+        });
+
+        // FAZ-ADV-2b: PCA backward compatibility (no rotation)
+        results.fazAdvTests.pcaNoRotation = runSmokeTest('PCA No Rotation', () => {
+            if (typeof window.runPCAAnalysis !== 'function') return 'SKIP: not exposed';
+            const data = [{ X: 1, Y: 2 }, { X: 2, Y: 4 }, { X: 3, Y: 6 }];
+            const result = window.runPCAAnalysis(data, ['X', 'Y']);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (result.rotatedLoadings !== null) return 'FAIL: rotatedLoadings should be null';
+            if (result.rotation !== 'none') return 'FAIL: rotation should be none';
+            return 'PASS: backward compatible';
+        });
+
+        // FAZ-ADV-3: Two-Way ANOVA Post-Hoc
+        results.fazAdvTests.twoWayPostHoc = runSmokeTest('Two-Way ANOVA PostHoc', () => {
+            if (typeof window.runTwoWayANOVA !== 'function') return 'SKIP: not exposed';
+            const data = [
+                { g: 'M', t: 'A', v: 10 }, { g: 'M', t: 'A', v: 12 },
+                { g: 'M', t: 'B', v: 20 }, { g: 'M', t: 'B', v: 22 },
+                { g: 'F', t: 'A', v: 8 }, { g: 'F', t: 'A', v: 10 },
+                { g: 'F', t: 'B', v: 18 }, { g: 'F', t: 'B', v: 20 }
+            ];
+            const result = window.runTwoWayANOVA(data, 'g', 't', 'v', 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.postHoc) return 'FAIL: postHoc missing';
+            if (result.postHoc.method !== 'bonferroni') return 'FAIL: method not bonferroni';
+            if (!['simpleEffects', 'mainEffects'].includes(result.postHoc.scope)) return 'FAIL: scope invalid';
+            if (!Array.isArray(result.postHoc.comparisons) || result.postHoc.comparisons.length === 0) return 'FAIL: comparisons empty';
+            const first = result.postHoc.comparisons[0];
+            if (typeof first.pValueAdj !== 'number') return 'FAIL: pValueAdj not number';
+            return `PASS: method=${result.postHoc.method}, scope=${result.postHoc.scope}, n=${result.postHoc.comparisons.length}`;
+        });
+
+        // FAZ-ADV-4: Repeated Measures ANOVA Post-Hoc
+        results.fazAdvTests.rmPostHoc = runSmokeTest('RM-ANOVA PostHoc', () => {
+            if (typeof window.runRepeatedMeasuresANOVA !== 'function') return 'SKIP: not exposed';
+            const data = [
+                { subject: 'S1', t1: 5, t2: 7, t3: 9 },
+                { subject: 'S2', t1: 6, t2: 8, t3: 10 },
+                { subject: 'S3', t1: 4, t2: 6, t3: 8 },
+                { subject: 'S4', t1: 7, t2: 9, t3: 11 },
+                { subject: 'S5', t1: 5, t2: 7, t3: 9 }
+            ];
+            const result = window.runRepeatedMeasuresANOVA(data, ['t1', 't2', 't3'], 0.05);
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.postHoc) return 'FAIL: postHoc missing';
+            if (result.postHoc.method !== 'bonferroni') return 'FAIL: method not bonferroni';
+            if (!Array.isArray(result.postHoc.comparisons)) return 'FAIL: comparisons not array';
+            if (result.postHoc.comparisons.length === 0) return 'FAIL: comparisons empty';
+            const first = result.postHoc.comparisons[0];
+            if (typeof first.pAdj !== 'number') return 'FAIL: pAdj not number';
+            if (first.cond1 === undefined || first.cond2 === undefined) return 'FAIL: cond1/cond2 missing';
+            return `PASS: method=${result.postHoc.method}, n=${result.postHoc.comparisons.length}, pAdj=${first.pAdj.toFixed(4)}`;
+        });
+
+        // Count FAZ-ADV test passes
+        const fazAdvResults = Object.values(results.fazAdvTests);
+        results.checks.fazAdvTestsPassed = fazAdvResults.filter(r => r.startsWith('PASS')).length;
+        results.checks.fazAdvTestsTotal = fazAdvResults.length;
+
+        // =====================================================
+        // SURVIVAL ADVANCED TESTS - Log-Rank + Median CI
+        // =====================================================
+
+        results.survivalAdvancedTests = {};
+
+        // Test 1: logRankAvailable
+        results.survivalAdvancedTests.logRankAvailable = runSmokeTest('logRankAvailable', () => {
+            if (typeof window.runSurvivalAnalysis !== 'function') return 'SKIP: not exposed';
+
+            const data = [
+                { time: 5, status: 1, group: 'A' },
+                { time: 8, status: 1, group: 'A' },
+                { time: 10, status: 0, group: 'A' },
+                { time: 12, status: 1, group: 'A' },
+                { time: 3, status: 1, group: 'B' },
+                { time: 6, status: 1, group: 'B' },
+                { time: 9, status: 0, group: 'B' },
+                { time: 15, status: 1, group: 'B' }
+            ];
+
+            const result = window.runSurvivalAnalysis(data, 'time', 'status', 'group');
+
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.logRank) return 'FAIL: logRank missing';
+            if (!result.logRank.valid) return 'FAIL: logRank.valid=false';
+            if (!isFinite(result.logRank.chiSquare)) return 'FAIL: chiSquare not finite';
+            if (!isFinite(result.logRank.pValue)) return 'FAIL: pValue not finite';
+            if (result.logRank.df !== 1) return `FAIL: df=${result.logRank.df}, expected 1`;
+
+            return `PASS: χ²=${result.logRank.chiSquare.toFixed(4)}, p=${result.logRank.pValue.toFixed(4)}`;
+        });
+
+        // Test 2: medianSurvivalComputed
+        results.survivalAdvancedTests.medianSurvivalComputed = runSmokeTest('medianSurvivalComputed', () => {
+            if (typeof window.runSurvivalAnalysis !== 'function') return 'SKIP: not exposed';
+
+            // Data designed so median can be computed (S(t) crosses 0.5)
+            const data = [
+                { time: 1, status: 1, group: 'A' },
+                { time: 2, status: 1, group: 'A' },
+                { time: 3, status: 1, group: 'A' },
+                { time: 4, status: 1, group: 'A' },
+                { time: 1, status: 1, group: 'B' },
+                { time: 5, status: 1, group: 'B' },
+                { time: 10, status: 1, group: 'B' },
+                { time: 15, status: 1, group: 'B' }
+            ];
+
+            const result = window.runSurvivalAnalysis(data, 'time', 'status', 'group');
+
+            if (!result.valid) return `FAIL: ${result.error || 'invalid'}`;
+            if (!result.medianSurvival) return 'FAIL: medianSurvival missing';
+            if (!result.medianSurvival.byGroup) return 'FAIL: byGroup missing';
+
+            const groupA = result.medianSurvival.byGroup['A'];
+            const groupB = result.medianSurvival.byGroup['B'];
+
+            if (groupA === undefined) return 'FAIL: group A undefined';
+            if (groupB === undefined) return 'FAIL: group B undefined';
+            if (groupA.median === undefined) return 'FAIL: A.median undefined';
+            if (groupB.median === undefined) return 'FAIL: B.median undefined';
+
+            // Both groups should have non-null medians with this data
+            if (groupA.median === null) return 'WARN: A.median is null (expected value)';
+            if (groupB.median === null) return 'WARN: B.median is null (expected value)';
+
+            return `PASS: A.median=${groupA.median}, B.median=${groupB.median}`;
+        });
+
+        // Count survival test passes
+        const survivalResults = Object.values(results.survivalAdvancedTests);
+        results.checks.survivalAdvancedTestsPassed = survivalResults.filter(r => r.startsWith('PASS')).length;
+        results.checks.survivalAdvancedTestsTotal = survivalResults.length;
+
+        // =====================================================
+        // FAZ-ADV-5: COX REGRESSION TESTS
+        // =====================================================
+
+        results.coxTests = {};
+
+        // Test 1: Cox Regression Basic
+        results.coxTests.coxBasic = runSmokeTest('Cox Regression Basic', () => {
+            // Check feature flag
+            if (!window.VIZ_STATE?.enableCox) return 'SKIP: Feature flag disabled';
+            if (typeof window.runCoxRegression !== 'function') return 'SKIP: not exposed';
+
+            // Create inline test dataset (20 rows)
+            const data = [
+                { time: 5, event: 1, age: 45, stage: 1 },
+                { time: 8, event: 1, age: 55, stage: 2 },
+                { time: 12, event: 0, age: 35, stage: 1 },
+                { time: 15, event: 1, age: 65, stage: 2 },
+                { time: 3, event: 1, age: 50, stage: 1 },
+                { time: 20, event: 0, age: 40, stage: 1 },
+                { time: 7, event: 1, age: 60, stage: 2 },
+                { time: 10, event: 1, age: 52, stage: 2 },
+                { time: 25, event: 0, age: 38, stage: 1 },
+                { time: 6, event: 1, age: 58, stage: 2 },
+                { time: 18, event: 1, age: 48, stage: 1 },
+                { time: 4, event: 1, age: 62, stage: 2 },
+                { time: 22, event: 0, age: 42, stage: 1 },
+                { time: 9, event: 1, age: 56, stage: 2 },
+                { time: 14, event: 1, age: 44, stage: 1 },
+                { time: 2, event: 1, age: 68, stage: 2 },
+                { time: 30, event: 0, age: 36, stage: 1 },
+                { time: 11, event: 1, age: 54, stage: 2 },
+                { time: 16, event: 0, age: 46, stage: 1 },
+                { time: 8, event: 1, age: 59, stage: 2 }
+            ];
+
+            const result = window.runCoxRegression(data, {
+                timeCol: 'time',
+                eventCol: 'event',
+                xCols: ['age', 'stage']
+            });
+
+            if (!result.ok) return `FAIL: ${result.error || 'not ok'}`;
+            if (result.coefficients.length !== 2) return `FAIL: coefficients count=${result.coefficients.length}, expected 2`;
+            if (result.tables.length < 2) return `FAIL: tables.length=${result.tables.length}, expected >=2`;
+
+            const c = result.coefficients[0];
+            if (typeof c.expB !== 'number' || isNaN(c.expB)) return 'FAIL: expB not a valid number';
+            if (!c.ci95 || typeof c.ci95.lower !== 'number') return 'FAIL: ci95.lower missing';
+            if (!c.ci95 || typeof c.ci95.upper !== 'number') return 'FAIL: ci95.upper missing';
+
+            return `PASS: n=${result.n}, events=${result.events}, converged=${result.convergence?.converged}`;
+        });
+
+        // Test 2: Cox Regression - Binding exists (always runs)
+        results.coxTests.coxBinding = runSmokeTest('Cox Regression Binding', () => {
+            if (typeof window.runCoxRegression !== 'function') return 'FAIL: runCoxRegression not exposed';
+            return 'PASS: binding exists';
+        });
+
+        // Count Cox test passes
+        const coxResults = Object.values(results.coxTests);
+        results.checks.coxTestsPassed = coxResults.filter(r => r.startsWith('PASS')).length;
+        results.checks.coxTestsTotal = coxResults.length;
+        results.checks.coxTestsSkipped = coxResults.filter(r => r.startsWith('SKIP')).length;
+
+
         if (results.errors.length > 0) {
             results.selftest = 'fail';
         } else if (results.warnings.length > 3 || results.checks.smokeTestsPassed < results.checks.smokeTestsTotal * 0.7) {
@@ -1689,7 +1928,16 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const guidedInfo = results.checks.guidedTestsPassed !== undefined
             ? ` | GUIDE: ${results.checks.guidedTestsPassed}/${results.checks.guidedTestsTotal}`
             : '';
-        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}`);
+        const fazAdvInfo = results.checks.fazAdvTestsPassed !== undefined
+            ? ` | FAZ-ADV: ${results.checks.fazAdvTestsPassed}/${results.checks.fazAdvTestsTotal}`
+            : '';
+        const survivalInfo = results.checks.survivalAdvancedTestsPassed !== undefined
+            ? ` | SURV: ${results.checks.survivalAdvancedTestsPassed}/${results.checks.survivalAdvancedTestsTotal}`
+            : '';
+        const coxInfo = results.checks.coxTestsPassed !== undefined
+            ? ` | COX: ${results.checks.coxTestsPassed}/${results.checks.coxTestsTotal}`
+            : '';
+        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}${fazAdvInfo}${survivalInfo}${coxInfo}`);
 
         // FAZ-ST4: Log deferred items
         if (results.deferredItems && results.deferredItems.length > 0) {
@@ -2171,6 +2419,67 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         if (!result.valid) return skipTest('anova_twoway', result.error || 'invalid');
         // Treatment effect should be significant (large mean difference)
         assertInRange(result.effects.factorB.pValue, 0, 0.05, 'anova_twoway');
+    });
+
+    // FAZ-ADV-3: Two-Way ANOVA Post-Hoc Test
+    registerTest('twoway_posthoc', 'D-ANOVA', () => {
+        if (!window.runTwoWayANOVA) return skipTest('twoway_posthoc', 'Not implemented');
+        const data = [
+            { gender: 'M', treatment: 'A', score: 10 },
+            { gender: 'M', treatment: 'A', score: 12 },
+            { gender: 'M', treatment: 'B', score: 20 },
+            { gender: 'M', treatment: 'B', score: 22 },
+            { gender: 'F', treatment: 'A', score: 8 },
+            { gender: 'F', treatment: 'A', score: 10 },
+            { gender: 'F', treatment: 'B', score: 18 },
+            { gender: 'F', treatment: 'B', score: 20 }
+        ];
+        const result = window.runTwoWayANOVA(data, 'gender', 'treatment', 'score', 0.05);
+        if (!result.valid) return skipTest('twoway_posthoc', result.error || 'invalid');
+
+        // Check postHoc exists
+        if (!result.postHoc) {
+            testResults.tests.push({ id: 'twoway_posthoc', status: 'FAIL', reason: 'postHoc missing' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check postHoc structure
+        if (!result.postHoc.method || result.postHoc.method !== 'bonferroni') {
+            testResults.tests.push({ id: 'twoway_posthoc', status: 'FAIL', reason: 'method should be bonferroni' });
+            testResults.fail++;
+            return;
+        }
+
+        if (!result.postHoc.scope || !['simpleEffects', 'mainEffects'].includes(result.postHoc.scope)) {
+            testResults.tests.push({ id: 'twoway_posthoc', status: 'FAIL', reason: 'scope invalid' });
+            testResults.fail++;
+            return;
+        }
+
+        if (!Array.isArray(result.postHoc.comparisons) || result.postHoc.comparisons.length === 0) {
+            testResults.tests.push({ id: 'twoway_posthoc', status: 'FAIL', reason: 'comparisons empty' });
+            testResults.fail++;
+            return;
+        }
+
+        // Check pValueAdj is a number in first comparison
+        const firstComp = result.postHoc.comparisons[0];
+        if (typeof firstComp.pValueAdj !== 'number' || isNaN(firstComp.pValueAdj)) {
+            testResults.tests.push({ id: 'twoway_posthoc', status: 'FAIL', reason: 'pValueAdj is not a number' });
+            testResults.fail++;
+            return;
+        }
+
+        testResults.tests.push({
+            id: 'twoway_posthoc',
+            status: 'PASS',
+            method: result.postHoc.method,
+            scope: result.postHoc.scope,
+            numComparisons: result.postHoc.comparisons.length
+        });
+        testResults.pass++;
+        console.log(`[SELFTEST] PASS: twoway_posthoc - method=${result.postHoc.method}, scope=${result.postHoc.scope}, n=${result.postHoc.comparisons.length}`);
     });
 
     registerTest('anova_repeated', 'D-ANOVA', () => {

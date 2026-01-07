@@ -2390,5 +2390,159 @@ window.getDeltaInsights = getDeltaInsights;
 window.showDeltaInsightsPanel = showDeltaInsightsPanel;
 window.hideDeltaInsightsPanel = hideDeltaInsightsPanel;
 
-console.log('✅ advanced.js (Complete: Part 1 + Part 2 + VIRAL-4) loaded');
+// =====================================================
+// FAZ-ADV-5: COX REGRESSION MODAL
+// =====================================================
+
+/**
+ * Show Cox Regression Modal
+ * Feature flag controlled - only shows when VIZ_STATE.enableCox = true
+ */
+export function showCoxModal() {
+    // Feature flag check
+    if (!VIZ_STATE.enableCox) {
+        showToast(VIZ_STATE.lang === 'tr' ? 'Cox Regression henüz aktif değil' : 'Cox Regression not enabled', 'info');
+        return;
+    }
+
+    // Data check
+    if (!VIZ_STATE.data || VIZ_STATE.data.length === 0) {
+        showToast(VIZ_STATE.lang === 'tr' ? 'Önce veri yükleyin' : 'Load data first', 'error');
+        return;
+    }
+
+    const columns = VIZ_STATE.columns || [];
+    const isTR = VIZ_STATE.lang === 'tr';
+
+    const colOptions = columns.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    const modalContent = `
+        <div class="cox-modal">
+            <h3><i class="fas fa-heartbeat"></i> ${isTR ? 'Cox Regresyon Analizi' : 'Cox Regression Analysis'}</h3>
+            
+            <div class="cox-form">
+                <div class="cox-form-group">
+                    <label>${isTR ? 'Süre Sütunu (Time)' : 'Time Column'}</label>
+                    <select id="coxTimeCol">${colOptions}</select>
+                </div>
+                
+                <div class="cox-form-group">
+                    <label>${isTR ? 'Olay Sütunu (1=olay, 0=sansürlü)' : 'Event Column (1=event, 0=censored)'}</label>
+                    <select id="coxEventCol">${colOptions}</select>
+                </div>
+                
+                <div class="cox-form-group">
+                    <label>${isTR ? 'Kovaryatlar (Ctrl+Click ile çoklu seçim)' : 'Covariates (Ctrl+Click for multiple)'}</label>
+                    <select id="coxXCols" multiple size="5">${colOptions}</select>
+                </div>
+            </div>
+            
+            <div class="cox-actions">
+                <button class="btn-secondary" onclick="closeModal()">${isTR ? 'İptal' : 'Cancel'}</button>
+                <button class="btn-primary" onclick="runCoxFromModal()">
+                    <i class="fas fa-play"></i> ${isTR ? 'Analiz Et' : 'Analyze'}
+                </button>
+            </div>
+            
+            <div class="cox-result" id="coxResultArea" style="display:none;"></div>
+        </div>
+    `;
+
+    createModal('coxModal', modalContent, { width: '600px' });
+    injectCoxModalStyles();
+}
+
+/**
+ * Run Cox Regression from modal inputs
+ */
+function runCoxFromModal() {
+    const timeCol = document.getElementById('coxTimeCol')?.value;
+    const eventCol = document.getElementById('coxEventCol')?.value;
+    const xColsSelect = document.getElementById('coxXCols');
+    const xCols = Array.from(xColsSelect?.selectedOptions || []).map(o => o.value);
+
+    if (!timeCol || !eventCol || xCols.length === 0) {
+        showToast(VIZ_STATE.lang === 'tr' ? 'Tüm alanları doldurun' : 'Fill all fields', 'error');
+        return;
+    }
+
+    const result = window.runCoxRegression(VIZ_STATE.data, { timeCol, eventCol, xCols });
+
+    const resultArea = document.getElementById('coxResultArea');
+    if (!resultArea) return;
+
+    if (!result.ok) {
+        resultArea.innerHTML = `<div class="cox-error">${result.error}</div>`;
+        resultArea.style.display = 'block';
+        return;
+    }
+
+    // Render SPSS-like tables
+    const isTR = VIZ_STATE.lang === 'tr';
+    let html = `<h4>${isTR ? 'Sonuçlar' : 'Results'}</h4>`;
+
+    result.tables.forEach(table => {
+        const title = isTR ? table.titleTR : table.titleEN;
+        html += `<div class="cox-table-wrapper"><h5>${title}</h5><table class="cox-table"><thead><tr>`;
+        table.columns.forEach(col => { html += `<th>${col}</th>`; });
+        html += `</tr></thead><tbody>`;
+        table.rows.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => { html += `<td>${cell}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+    });
+
+    // Notes
+    const notes = isTR ? result.notesTR : result.notesEN;
+    if (notes?.length) {
+        html += `<div class="cox-notes">${notes.join('<br>')}</div>`;
+    }
+
+    resultArea.innerHTML = html;
+    resultArea.style.display = 'block';
+
+    showToast(isTR ? 'Cox analizi tamamlandı' : 'Cox analysis complete', 'success');
+}
+
+/**
+ * Inject Cox Modal Styles
+ */
+function injectCoxModalStyles() {
+    if (document.getElementById('cox-modal-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'cox-modal-styles';
+    style.textContent = `
+        .cox-modal h3 { margin: 0 0 20px 0; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .cox-form { display: flex; flex-direction: column; gap: 15px; }
+        .cox-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .cox-form-group label { color: rgba(255,255,255,0.7); font-size: 0.85rem; font-weight: 600; }
+        .cox-form-group select { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 10px; color: #fff; font-size: 0.9rem; }
+        .cox-form-group select:focus { border-color: #4a90d9; outline: none; }
+        .cox-form-group select[multiple] { min-height: 100px; }
+        .cox-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .cox-actions button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .cox-actions .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+        .cox-actions .btn-primary { background: linear-gradient(135deg, #4a90d9, #357abd); color: #fff; }
+        .cox-result { margin-top: 20px; max-height: 400px; overflow-y: auto; }
+        .cox-result h4 { color: #4a90d9; margin: 0 0 15px 0; }
+        .cox-table-wrapper { margin-bottom: 20px; }
+        .cox-table-wrapper h5 { color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0 0 8px 0; }
+        .cox-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .cox-table th, .cox-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .cox-table th { background: rgba(74,144,217,0.2); color: #4a90d9; font-weight: 600; }
+        .cox-table td { color: rgba(255,255,255,0.9); }
+        .cox-notes { margin-top: 15px; padding: 10px; background: rgba(46,204,113,0.1); border-left: 3px solid #2ecc71; border-radius: 0 6px 6px 0; color: rgba(255,255,255,0.8); font-size: 0.85rem; }
+        .cox-error { padding: 10px; background: rgba(231,76,60,0.2); border-left: 3px solid #e74c3c; border-radius: 0 6px 6px 0; color: #e74c3c; }
+    `;
+    document.head.appendChild(style);
+}
+
+// Window binding for Cox Modal
+window.showCoxModal = showCoxModal;
+window.runCoxFromModal = runCoxFromModal;
+
+console.log('✅ advanced.js (Complete: Part 1 + Part 2 + VIRAL-4 + FAZ-ADV-5 Cox) loaded');
 

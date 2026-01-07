@@ -26,6 +26,9 @@ export const VIZ_STATE = {
     // FAZ-4B: Academic Change Log
     changeLog: [],
 
+    // FAZ-ADV-5: Feature Flags (Optional Advanced Features)
+    enableCox: false,  // Cox Proportional Hazards Regression
+
     get file() { return this.getActiveFile(); },
     get data() { return this.getActiveData(); },
     get columns() { return this.getActiveColumns(); },

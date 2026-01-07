@@ -1260,6 +1260,17 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
         ? (VIZ_STATE.lang === 'tr' ? `Anlamlı etkiler: ${significantEffects.join(', ')} (p < ${alpha})` : `Significant effects: ${significantEffects.join(', ')} (p < ${alpha})`)
         : (VIZ_STATE.lang === 'tr' ? `Hiçbir etki istatistiksel olarak anlamlı değil (p >= ${alpha})` : `No effect is statistically significant (p >= ${alpha})`);
 
+    // FAZ-ADV-3: Post-hoc comparisons (Bonferroni)
+    const postHoc = calculateTwoWayPostHoc(
+        p_AB < alpha, // interaction significant?
+        levelsA, levelsB,
+        marginalA, marginalB,
+        cells, cellN, cellMeans,
+        MS_Error, df_Error,
+        factorAColumn, factorBColumn,
+        alpha
+    );
+
     return {
         valid: true,
         testType: 'twoWayANOVA',
@@ -1306,10 +1317,170 @@ export function runTwoWayANOVA(data, factorAColumn, factorBColumn, valueColumn, 
             interaction: { F: F_AB, pValue: p_AB, partialEtaSq: partialEtaSq_AB, significant: p_AB < alpha }
         },
         anovaTable: anovaTable,
+
+        // FAZ-ADV-3: Post-hoc comparisons
+        postHoc: postHoc,
+
         interpretation: interpretation,
         interpretationEN: significantEffects.length > 0
             ? `Significant effects: ${significantEffects.join(', ').replace('ana etkisi', 'main effect').replace('etkileşimi', 'interaction')} (p < ${alpha})`
             : `No statistically significant effects (p >= ${alpha})`
+    };
+}
+
+/**
+ * FAZ-ADV-3: Calculate post-hoc comparisons for Two-Way ANOVA
+ * If interaction is significant: simple effects (pairwise within each level)
+ * If interaction is not significant: main effects pairwise
+ * Uses Bonferroni correction
+ */
+function calculateTwoWayPostHoc(interactionSig, levelsA, levelsB, marginalA, marginalB, cells, cellN, cellMeans, MS_Error, df_Error, factorAName, factorBName, alpha) {
+    const comparisons = [];
+    let scope = interactionSig ? 'simpleEffects' : 'mainEffects';
+
+    // Helper: pairwise t-test
+    function pairwiseTTest(mean1, mean2, n1, n2, msError) {
+        const meanDiff = mean1 - mean2;
+        const se = Math.sqrt(msError * (1 / n1 + 1 / n2));
+        const t = meanDiff / se;
+        const pValue = approximateTTestPValue(Math.abs(t), df_Error);
+        return { meanDiff, se, t, pValue };
+    }
+
+    // Helper: 95% CI
+    function calcCI(meanDiff, se, df) {
+        const tCrit = getTCritical(df, 0.05);
+        return {
+            lower: meanDiff - tCrit * se,
+            upper: meanDiff + tCrit * se
+        };
+    }
+
+    if (interactionSig) {
+        // Simple effects: pairwise for Factor A at each level of B
+        levelsB.forEach(lb => {
+            const pairs = [];
+            for (let i = 0; i < levelsA.length; i++) {
+                for (let j = i + 1; j < levelsA.length; j++) {
+                    const la1 = levelsA[i];
+                    const la2 = levelsA[j];
+                    const mean1 = cellMeans[la1][lb];
+                    const mean2 = cellMeans[la2][lb];
+                    const n1 = cellN[la1][lb];
+                    const n2 = cellN[la2][lb];
+
+                    const test = pairwiseTTest(mean1, mean2, n1, n2, MS_Error);
+                    const ci = calcCI(test.meanDiff, test.se, df_Error);
+
+                    pairs.push({
+                        effect: `${factorAName} at ${factorBName}=${lb}`,
+                        levelA: la1,
+                        levelB: la2,
+                        meanDiff: test.meanDiff,
+                        pValue: test.pValue,
+                        se: test.se,
+                        ciLow: ci.lower,
+                        ciHigh: ci.upper
+                    });
+                }
+            }
+            // Add pairs with Bonferroni adjustment calculated later
+            comparisons.push(...pairs);
+        });
+
+        // Also simple effects: pairwise for Factor B at each level of A
+        levelsA.forEach(la => {
+            for (let i = 0; i < levelsB.length; i++) {
+                for (let j = i + 1; j < levelsB.length; j++) {
+                    const lb1 = levelsB[i];
+                    const lb2 = levelsB[j];
+                    const mean1 = cellMeans[la][lb1];
+                    const mean2 = cellMeans[la][lb2];
+                    const n1 = cellN[la][lb1];
+                    const n2 = cellN[la][lb2];
+
+                    const test = pairwiseTTest(mean1, mean2, n1, n2, MS_Error);
+                    const ci = calcCI(test.meanDiff, test.se, df_Error);
+
+                    comparisons.push({
+                        effect: `${factorBName} at ${factorAName}=${la}`,
+                        levelA: lb1,
+                        levelB: lb2,
+                        meanDiff: test.meanDiff,
+                        pValue: test.pValue,
+                        se: test.se,
+                        ciLow: ci.lower,
+                        ciHigh: ci.upper
+                    });
+                }
+            }
+        });
+    } else {
+        // Main effects pairwise: Factor A marginal means
+        for (let i = 0; i < levelsA.length; i++) {
+            for (let j = i + 1; j < levelsA.length; j++) {
+                const la1 = levelsA[i];
+                const la2 = levelsA[j];
+                const mean1 = marginalA[la1].mean;
+                const mean2 = marginalA[la2].mean;
+                const n1 = marginalA[la1].n;
+                const n2 = marginalA[la2].n;
+
+                const test = pairwiseTTest(mean1, mean2, n1, n2, MS_Error);
+                const ci = calcCI(test.meanDiff, test.se, df_Error);
+
+                comparisons.push({
+                    effect: factorAName,
+                    levelA: la1,
+                    levelB: la2,
+                    meanDiff: test.meanDiff,
+                    pValue: test.pValue,
+                    se: test.se,
+                    ciLow: ci.lower,
+                    ciHigh: ci.upper
+                });
+            }
+        }
+
+        // Main effects pairwise: Factor B marginal means
+        for (let i = 0; i < levelsB.length; i++) {
+            for (let j = i + 1; j < levelsB.length; j++) {
+                const lb1 = levelsB[i];
+                const lb2 = levelsB[j];
+                const mean1 = marginalB[lb1].mean;
+                const mean2 = marginalB[lb2].mean;
+                const n1 = marginalB[lb1].n;
+                const n2 = marginalB[lb2].n;
+
+                const test = pairwiseTTest(mean1, mean2, n1, n2, MS_Error);
+                const ci = calcCI(test.meanDiff, test.se, df_Error);
+
+                comparisons.push({
+                    effect: factorBName,
+                    levelA: lb1,
+                    levelB: lb2,
+                    meanDiff: test.meanDiff,
+                    pValue: test.pValue,
+                    se: test.se,
+                    ciLow: ci.lower,
+                    ciHigh: ci.upper
+                });
+            }
+        }
+    }
+
+    // Apply Bonferroni correction
+    const numComparisons = comparisons.length || 1;
+    comparisons.forEach(c => {
+        c.pValueAdj = Math.min(1, c.pValue * numComparisons);
+        c.significant = c.pValueAdj < alpha;
+    });
+
+    return {
+        method: 'bonferroni',
+        scope: scope,
+        numComparisons: numComparisons,
+        comparisons: comparisons
     };
 }
 
@@ -1554,6 +1725,54 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
             : `Mauchly testi ihlal edildi (p = ${mauchlyP.toFixed(3)}). Greenhouse-Geisser düzeltmesi kullanıldı. Koşullar arasında anlamlı fark yok, F(${df_Treatment_GG.toFixed(2)}, ${df_Error_GG.toFixed(2)}) = ${F.toFixed(2)}, p = ${pValue_GG.toFixed(4)}`;
     }
 
+    // FAZ-ADV-4: Post-hoc pairwise paired t-tests with Bonferroni correction
+    const postHocComparisons = [];
+    const numComparisons = k * (k - 1) / 2;
+
+    for (let i = 0; i < k - 1; i++) {
+        for (let j = i + 1; j < k; j++) {
+            // Extract paired values for conditions i and j
+            const diffs = [];
+            for (let s = 0; s < n; s++) {
+                diffs.push(matrix[s][i] - matrix[s][j]);
+            }
+
+            // Paired t-test
+            const meanDiff = diffs.reduce((a, b) => a + b, 0) / n;
+            const diffVariance = diffs.reduce((s, d) => s + Math.pow(d - meanDiff, 2), 0) / (n - 1);
+            const se = Math.sqrt(diffVariance / n);
+            const t = se > 0 ? meanDiff / se : 0;
+            const df = n - 1;
+            const p = approximateTTestPValue(Math.abs(t), df);
+            const pAdj = Math.min(1, p * numComparisons);
+
+            // 95% CI for mean difference
+            const tCrit = getTCritical(df, 0.05);
+            const ciLow = meanDiff - tCrit * se;
+            const ciHigh = meanDiff + tCrit * se;
+
+            postHocComparisons.push({
+                cond1: measureColumns[i],
+                cond2: measureColumns[j],
+                meanDiff: meanDiff,
+                se: se,
+                t: t,
+                df: df,
+                p: p,
+                pAdj: pAdj,
+                ciLow: ciLow,
+                ciHigh: ciHigh,
+                significant: pAdj < alpha
+            });
+        }
+    }
+
+    const postHoc = {
+        method: 'bonferroni',
+        numComparisons: numComparisons,
+        comparisons: postHocComparisons
+    };
+
     return {
         valid: true,
         testType: 'repeatedMeasuresANOVA',
@@ -1596,6 +1815,10 @@ export function runRepeatedMeasuresANOVA(data, measureColumns, alpha = 0.05) {
         withinSubjectsEffects: withinSubjectsEffects,
         sphericityAssumed: sphericityAssumed,
         effectivePValue: effectivePValue,
+
+        // FAZ-ADV-4: Post-hoc comparisons
+        postHoc: postHoc,
+
         interpretation: interpretation,
         interpretationEN: interpretation.replace('anlamlı fark var', 'significant difference').replace('anlamlı fark yok', 'no significant difference').replace('Mauchly testi sağlandı', 'Sphericity assumed').replace('Mauchly testi ihlal edildi', 'Sphericity violated').replace('düzeltmesi kullanıldı', 'correction applied').replace('Koşullar arasında', 'Between conditions')
     };
@@ -6992,8 +7215,12 @@ export function runDiscriminantAnalysis(data, groupColumn, columns) {
 }
 
 /**
- * Survival analysis (Basic Kaplan-Meier)
+ * Survival analysis (Kaplan-Meier with Log-Rank Test and Median CI)
  * Requires: time (numeric), event (binary: 1=event, 0=censored)
+ * 
+ * Enhanced features:
+ * - Log-rank test for comparing 2+ groups (χ², df, pValue)
+ * - Median survival with 95% CI (Greenwood SE + log-log transform)
  */
 export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) {
     if (!timeColumn || !eventColumn) {
@@ -7016,46 +7243,303 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         return { error: VIZ_STATE.lang === 'tr' ? 'Yeterli veri yok (min 5 gözlem)' : 'Insufficient data (min 5 observations)', valid: false };
     }
 
-    // 2. Kaplan-Meier by group
+    // 2. Kaplan-Meier by group (with Greenwood variance for CI)
     const groups = [...new Set(observations.map(o => o.group))];
 
-    const kmResults = groups.map(g => {
-        const gObs = observations.filter(o => o.group === g).sort((a, b) => a.time - b.time);
+    // Helper: Calculate detailed KM with variance for median CI
+    function computeKM(gObs) {
         const n = gObs.length;
-
-        // Calculate survival at each event time
+        const sortedObs = [...gObs].sort((a, b) => a.time - b.time);
         const survivalTable = [];
         let atRisk = n;
         let survival = 1;
-        let prevTime = 0;
+        let greenwoodSum = 0; // Σ d_j / (n_j * (n_j - d_j))
 
-        // Group by time
-        const timePoints = [...new Set(gObs.map(o => o.time))].sort((a, b) => a - b);
+        const timePoints = [...new Set(sortedObs.map(o => o.time))].sort((a, b) => a - b);
 
         timePoints.forEach(t => {
-            const events = gObs.filter(o => o.time === t && o.event === 1).length;
-            const censored = gObs.filter(o => o.time === t && o.event === 0).length;
+            const events = sortedObs.filter(o => o.time === t && o.event === 1).length;
+            const censored = sortedObs.filter(o => o.time === t && o.event === 0).length;
 
             if (events > 0) {
                 survival *= (atRisk - events) / atRisk;
-                survivalTable.push({ time: t, survival: survival.toFixed(3), atRisk, events, censored });
+                // Greenwood variance component
+                if (atRisk > events) {
+                    greenwoodSum += events / (atRisk * (atRisk - events));
+                }
+                const variance = survival * survival * greenwoodSum;
+                const se = Math.sqrt(variance);
+                survivalTable.push({
+                    time: t,
+                    survival: survival,
+                    survivalStr: survival.toFixed(3),
+                    atRisk,
+                    events,
+                    censored,
+                    variance,
+                    se
+                });
             }
 
             atRisk -= (events + censored);
         });
 
-        // Median survival (time when survival < 0.5)
-        const medianRow = survivalTable.find(r => parseFloat(r.survival) < 0.5);
+        return { survivalTable, n, events: gObs.filter(o => o.event === 1).length, censored: gObs.filter(o => o.event === 0).length };
+    }
+
+    // Helper: Calculate median survival with log-log CI
+    function computeMedianWithCI(survivalTable, level = 0.95) {
+        const alpha = 1 - level;
+        const z = 1.96; // z_{0.025} for 95% CI
+
+        // Find median: first time where S(t) <= 0.5
+        const medianRow = survivalTable.find(r => r.survival <= 0.5);
+        const median = medianRow ? medianRow.time : null;
+
+        if (!medianRow || medianRow.survival <= 0 || medianRow.survival >= 1) {
+            return { median, ciLower: null, ciUpper: null, level, method: 'KM', ciMethod: 'log-log' };
+        }
+
+        // Log-log transform CI for S(t=median)
+        const S = medianRow.survival;
+        const SE = medianRow.se;
+
+        if (S <= 0 || S >= 1 || SE <= 0 || Math.log(S) === 0) {
+            return { median, ciLower: null, ciUpper: null, level, method: 'KM', ciMethod: 'log-log' };
+        }
+
+        // θ = -log(-log(S))
+        const theta = -Math.log(-Math.log(S));
+        // SE(θ) = SE / (S * |log(S)|)
+        const seTheta = SE / (S * Math.abs(Math.log(S)));
+
+        const thetaLower = theta - z * seTheta;
+        const thetaUpper = theta + z * seTheta;
+
+        // Invert: S = exp(-exp(-θ))
+        const sLower = Math.exp(-Math.exp(-thetaUpper)); // Note: swap for CI
+        const sUpper = Math.exp(-Math.exp(-thetaLower));
+
+        // Find times corresponding to these survival probabilities
+        // ciLower = first t where S(t) <= sUpper
+        // ciUpper = first t where S(t) <= sLower
+        const ciLowerRow = survivalTable.find(r => r.survival <= sUpper);
+        const ciUpperRow = survivalTable.find(r => r.survival <= sLower);
+
+        return {
+            median,
+            ciLower: ciLowerRow ? ciLowerRow.time : null,
+            ciUpper: ciUpperRow ? ciUpperRow.time : null,
+            level,
+            method: 'KM',
+            ciMethod: 'log-log'
+        };
+    }
+
+    const kmResults = groups.map(g => {
+        const gObs = observations.filter(o => o.group === g);
+        const km = computeKM(gObs);
+
+        // Median survival (time when survival <= 0.5) - backwards compatible
+        const medianRow = km.survivalTable.find(r => r.survival <= 0.5);
         const medianSurvival = medianRow ? medianRow.time : 'NR';
 
         return {
             group: g,
-            n: n,
-            events: gObs.filter(o => o.event === 1).length,
-            censored: gObs.filter(o => o.event === 0).length,
+            n: km.n,
+            events: km.events,
+            censored: km.censored,
             medianSurvival: medianSurvival,
-            survivalTable: survivalTable.slice(0, 10) // First 10 time points
+            survivalTable: km.survivalTable.slice(0, 10).map(r => ({
+                time: r.time,
+                survival: r.survivalStr,
+                atRisk: r.atRisk,
+                events: r.events,
+                censored: r.censored
+            })),
+            _fullSurvivalTable: km.survivalTable // Internal use for median CI
         };
+    });
+
+    // 3. Compute Median Survival with CI (for each group + overall)
+    const medianSurvivalResult = {
+        overall: null,
+        byGroup: {}
+    };
+
+    // Overall median (all observations combined)
+    const allKM = computeKM(observations);
+    medianSurvivalResult.overall = computeMedianWithCI(allKM.survivalTable);
+
+    // Per-group median
+    kmResults.forEach(kmr => {
+        const fullTable = kmr._fullSurvivalTable;
+        medianSurvivalResult.byGroup[kmr.group] = computeMedianWithCI(fullTable);
+    });
+
+    // 4. Log-Rank Test (only when 2+ groups)
+    let logRankResult = null;
+
+    if (groups.length >= 2 && groupColumn) {
+        // Collect all unique event times across all groups
+        const allEventTimes = [...new Set(
+            observations.filter(o => o.event === 1).map(o => o.time)
+        )].sort((a, b) => a - b);
+
+        // For each group, track at-risk counts at each time
+        const groupData = {};
+        groups.forEach(g => {
+            const gObs = observations.filter(o => o.group === g).sort((a, b) => a.time - b.time);
+            groupData[g] = { obs: gObs, n: gObs.length };
+        });
+
+        // Calculate O - E and variance for each group
+        let sumStats = {}; // { group: { O: observed, E: expected, V: variance } }
+        groups.forEach(g => {
+            sumStats[g] = { O: 0, E: 0, V: 0 };
+        });
+
+        allEventTimes.forEach(t => {
+            // At each event time t, calculate risk sets and events per group
+            let totalAtRisk = 0;
+            let totalEvents = 0;
+            const groupAtRisk = {};
+            const groupEvents = {};
+
+            groups.forEach(g => {
+                const gObs = groupData[g].obs;
+                // At-risk: those with time >= t
+                const atRisk = gObs.filter(o => o.time >= t).length;
+                // Events at time t
+                const events = gObs.filter(o => o.time === t && o.event === 1).length;
+
+                groupAtRisk[g] = atRisk;
+                groupEvents[g] = events;
+                totalAtRisk += atRisk;
+                totalEvents += events;
+            });
+
+            // Skip if no one at risk or no events
+            if (totalAtRisk === 0 || totalEvents === 0) return;
+
+            // Calculate expected and variance for each group (Breslow approximation for ties)
+            groups.forEach(g => {
+                const n_i = groupAtRisk[g];
+                const d_i = groupEvents[g];
+                const n = totalAtRisk;
+                const d = totalEvents;
+
+                // Expected: E_i = n_i * (d / n)
+                const E_i = n_i * (d / n);
+                sumStats[g].O += d_i;
+                sumStats[g].E += E_i;
+
+                // Variance: V_i = n_i * (n - n_i) * d * (n - d) / (n^2 * (n - 1))
+                if (n > 1) {
+                    const V_i = (n_i * (n - n_i) * d * (n - d)) / (n * n * (n - 1));
+                    sumStats[g].V += V_i;
+                }
+            });
+        });
+
+        // Calculate chi-square statistic
+        // χ² = Σ (O_i - E_i)² / V_i (for each group except last, to maintain df = k-1)
+        // Alternative: use pooled formula for better numerical stability
+        let chiSquare = 0;
+        let totalV = 0;
+
+        groups.forEach(g => {
+            const O = sumStats[g].O;
+            const E = sumStats[g].E;
+            const V = sumStats[g].V;
+
+            if (V > 0) {
+                chiSquare += ((O - E) * (O - E)) / V;
+            }
+            totalV += V;
+        });
+
+        // Degrees of freedom = k - 1
+        const df = groups.length - 1;
+
+        // p-value from chi-square distribution
+        let pValue = 1;
+        if (chiSquare > 0 && df > 0) {
+            pValue = 1 - chiSquareCDF(chiSquare, df);
+        }
+
+        logRankResult = {
+            method: 'logrank',
+            chiSquare: isFinite(chiSquare) ? chiSquare : NaN,
+            df: df,
+            pValue: isFinite(pValue) ? pValue : NaN,
+            valid: isFinite(chiSquare) && isFinite(pValue),
+            notes: VIZ_STATE.lang === 'tr' ? 'Breslow yaklaşımı (bağlı gözlemler için)' : 'Breslow approximation for ties'
+        };
+    }
+
+    // 5. Build result tables
+    const tables = [];
+
+    // Log-Rank Test table (only if valid)
+    if (logRankResult && logRankResult.valid) {
+        tables.push({
+            title: VIZ_STATE.lang === 'tr' ? 'Log-Rank Testi' : 'Log-Rank Test',
+            columns: [
+                VIZ_STATE.lang === 'tr' ? 'İstatistik' : 'Statistic',
+                'χ²',
+                'df',
+                'p'
+            ],
+            rows: [
+                ['Log-Rank', logRankResult.chiSquare.toFixed(4), logRankResult.df, logRankResult.pValue.toFixed(4)]
+            ]
+        });
+    }
+
+    // Median Survival table
+    const medianRows = [];
+
+    // Add overall row if multiple groups exist
+    if (groups.length > 1 && medianSurvivalResult.overall) {
+        const ov = medianSurvivalResult.overall;
+        medianRows.push([
+            VIZ_STATE.lang === 'tr' ? 'Toplam' : 'Overall',
+            observations.length,
+            ov.median !== null ? ov.median : 'NR',
+            ov.ciLower !== null ? ov.ciLower : '-',
+            ov.ciUpper !== null ? ov.ciUpper : '-'
+        ]);
+    }
+
+    // Add per-group rows
+    kmResults.forEach(kmr => {
+        const gm = medianSurvivalResult.byGroup[kmr.group];
+        medianRows.push([
+            kmr.group,
+            kmr.n,
+            gm && gm.median !== null ? gm.median : 'NR',
+            gm && gm.ciLower !== null ? gm.ciLower : '-',
+            gm && gm.ciUpper !== null ? gm.ciUpper : '-'
+        ]);
+    });
+
+    tables.push({
+        title: VIZ_STATE.lang === 'tr' ? 'Medyan Sağkalım' : 'Median Survival',
+        columns: [
+            VIZ_STATE.lang === 'tr' ? 'Grup' : 'Group',
+            'n',
+            VIZ_STATE.lang === 'tr' ? 'Medyan' : 'Median',
+            VIZ_STATE.lang === 'tr' ? '%95 GA Alt' : '95% CI Lower',
+            VIZ_STATE.lang === 'tr' ? '%95 GA Üst' : '95% CI Upper'
+        ],
+        rows: medianRows
+    });
+
+    // Clean up internal fields before returning
+    const cleanedKmResults = kmResults.map(kmr => {
+        const { _fullSurvivalTable, ...rest } = kmr;
+        return rest;
     });
 
     return {
@@ -7064,10 +7548,16 @@ export function runSurvivalAnalysis(data, timeColumn, eventColumn, groupColumn) 
         valid: true,
         nObservations: observations.length,
         nGroups: groups.length,
-        groups: kmResults,
+        groups: cleanedKmResults,
+        // New: Log-rank test result (only if 2+ groups)
+        logRank: logRankResult,
+        // New: Median survival with CI
+        medianSurvival: medianSurvivalResult,
+        // New: SPSS-style tables
+        tables: tables,
         interpretation: {
-            tr: `${observations.length} gözlem analiz edildi. ${groups.length > 1 ? `${groups.length} grup karşılaştırıldı.` : ''} Medyan sağkalım tablodan görülebilir.`,
-            en: `${observations.length} observations analyzed. ${groups.length > 1 ? `${groups.length} groups compared.` : ''} Median survival shown in table.`
+            tr: `${observations.length} gözlem analiz edildi. ${groups.length > 1 ? `${groups.length} grup karşılaştırıldı.${logRankResult && logRankResult.valid ? ` Log-rank p = ${logRankResult.pValue.toFixed(4)}` : ''}` : ''} Medyan sağkalım tablodan görülebilir.`,
+            en: `${observations.length} observations analyzed. ${groups.length > 1 ? `${groups.length} groups compared.${logRankResult && logRankResult.valid ? ` Log-rank p = ${logRankResult.pValue.toFixed(4)}` : ''}` : ''} Median survival shown in table.`
         }
     };
 }
@@ -8653,6 +9143,359 @@ function runAssumptionWizard(statType, ctx) {
     }
 }
 
+// =====================================================
+// FAZ-ADV-5: COX PROPORTIONAL HAZARDS REGRESSION
+// Newton-Raphson optimization with Breslow tie-handling
+// =====================================================
+
+/**
+ * Cox Proportional Hazards Regression
+ * @param {Array} data - Array of objects with time, event, and covariate columns
+ * @param {Object} opts - { timeCol, eventCol, xCols, ties: 'breslow', maxIter: 25, tol: 1e-6 }
+ * @returns {Object} - Canonical output with coefficients, model fit, and SPSS-like tables
+ */
+export function runCoxRegression(data, opts = {}) {
+    // Input validation
+    if (!data || !Array.isArray(data) || data.length < 5) {
+        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'En az 5 gözlem gerekli' : 'At least 5 observations required' };
+    }
+
+    const { timeCol, eventCol, xCols, ties = 'breslow', maxIter = 25, tol = 1e-6 } = opts;
+
+    if (!timeCol || !eventCol || !xCols || !Array.isArray(xCols) || xCols.length === 0) {
+        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'timeCol, eventCol ve xCols gerekli' : 'timeCol, eventCol and xCols required' };
+    }
+
+    // Extract and validate data
+    const cleanData = [];
+    for (const row of data) {
+        const t = parseFloat(row[timeCol]);
+        const e = parseInt(row[eventCol], 10);
+        if (isNaN(t) || t <= 0 || isNaN(e) || (e !== 0 && e !== 1)) continue;
+
+        const x = [];
+        let valid = true;
+        for (const col of xCols) {
+            const v = parseFloat(row[col]);
+            if (isNaN(v)) { valid = false; break; }
+            x.push(v);
+        }
+        if (valid) cleanData.push({ time: t, event: e, x });
+    }
+
+    if (cleanData.length < 5) {
+        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'Geçerli veri yetersiz' : 'Insufficient valid data' };
+    }
+
+    // Sort by time (ascending)
+    cleanData.sort((a, b) => a.time - b.time);
+
+    const n = cleanData.length;
+    const p = xCols.length;
+    const events = cleanData.filter(d => d.event === 1).length;
+
+    if (events < 2) {
+        return { testType: 'cox', ok: false, error: VIZ_STATE.lang === 'tr' ? 'En az 2 olay gerekli' : 'At least 2 events required' };
+    }
+
+    // Initialize coefficients to zero
+    let beta = new Array(p).fill(0);
+
+    // Newton-Raphson iteration
+    let converged = false;
+    let iter = 0;
+    let logLik = -Infinity;
+    let logLik0 = null; // Null model log-likelihood
+
+    // Calculate null model log-likelihood (beta = 0)
+    logLik0 = calcLogLikelihood(cleanData, new Array(p).fill(0));
+
+    for (iter = 0; iter < maxIter; iter++) {
+        const { ll, gradient, hessian } = calcDerivatives(cleanData, beta);
+
+        // Check for convergence
+        if (Math.abs(ll - logLik) < tol) {
+            converged = true;
+            logLik = ll;
+            break;
+        }
+        logLik = ll;
+
+        // Solve Hessian * delta = gradient
+        const delta = solveLinearSystem(hessian, gradient);
+        if (!delta) {
+            // Singular matrix - use gradient descent fallback
+            const step = 0.01;
+            for (let j = 0; j < p; j++) {
+                beta[j] += step * gradient[j];
+            }
+        } else {
+            for (let j = 0; j < p; j++) {
+                beta[j] += delta[j];
+            }
+        }
+    }
+
+    if (!converged) iter = maxIter;
+
+    // Calculate final Hessian for standard errors
+    const { hessian: finalHessian } = calcDerivatives(cleanData, beta);
+    const invHessian = invertMatrix(finalHessian);
+
+    // Build coefficients output
+    const coefficients = [];
+    for (let j = 0; j < p; j++) {
+        const B = beta[j];
+        const SE = invHessian ? Math.sqrt(-invHessian[j][j]) : NaN;
+        const Wald = SE > 0 ? Math.pow(B / SE, 2) : NaN;
+        const pValue = isNaN(Wald) ? NaN : approximateChiSquarePValue(Wald, 1);
+        const expB = Math.exp(B);
+        const ciLower = Math.exp(B - 1.96 * SE);
+        const ciUpper = Math.exp(B + 1.96 * SE);
+
+        coefficients.push({
+            name: xCols[j],
+            B: B,
+            SE: SE,
+            Wald: Wald,
+            df: 1,
+            pValue: pValue,
+            expB: expB,
+            ci95: { lower: ciLower, upper: ciUpper }
+        });
+    }
+
+    // Model fit statistics
+    const minus2LogLik = -2 * logLik;
+    const minus2LogLik0 = -2 * logLik0;
+    const omnibusChiSquare = minus2LogLik0 - minus2LogLik;
+    const dfModel = p;
+    const modelPValue = approximateChiSquarePValue(omnibusChiSquare, dfModel);
+
+    // Build SPSS-like tables
+    const tables = renderCoxRegressionSPSS({
+        n, events, converged, iter, tol,
+        minus2LogLik, minus2LogLik0, omnibusChiSquare, dfModel, modelPValue,
+        coefficients
+    }, VIZ_STATE.lang);
+
+    return {
+        testType: 'cox',
+        ok: true,
+        n: n,
+        events: events,
+        method: 'Cox PH (Partial Likelihood)',
+        ties: ties,
+        convergence: { converged, iter, tol },
+        modelFit: {
+            minus2LogLik: minus2LogLik,
+            minus2LogLikNull: minus2LogLik0,
+            omnibusChiSquare: omnibusChiSquare,
+            df: dfModel,
+            pValue: modelPValue
+        },
+        coefficients: coefficients,
+        tables: tables,
+        notesTR: converged ? ['Model başarıyla yakınsadı.'] : ['Model maksimum iterasyonda durdu, yakınsama sağlanamadı.'],
+        notesEN: converged ? ['Model converged successfully.'] : ['Model stopped at maximum iterations, convergence not achieved.']
+    };
+
+    // Helper: Calculate log-likelihood
+    function calcLogLikelihood(d, b) {
+        let ll = 0;
+        for (let i = 0; i < d.length; i++) {
+            if (d[i].event !== 1) continue;
+            const eta_i = dotProduct(b, d[i].x);
+            let sumExp = 0;
+            for (let j = i; j < d.length; j++) {
+                sumExp += Math.exp(dotProduct(b, d[j].x));
+            }
+            ll += eta_i - Math.log(sumExp);
+        }
+        return ll;
+    }
+
+    // Helper: Calculate gradient and hessian
+    function calcDerivatives(d, b) {
+        const grad = new Array(p).fill(0);
+        const hess = Array.from({ length: p }, () => new Array(p).fill(0));
+        let ll = 0;
+
+        for (let i = 0; i < d.length; i++) {
+            if (d[i].event !== 1) continue;
+
+            const eta_i = dotProduct(b, d[i].x);
+            let S0 = 0, S1 = new Array(p).fill(0), S2 = Array.from({ length: p }, () => new Array(p).fill(0));
+
+            for (let j = i; j < d.length; j++) {
+                const expEta_j = Math.exp(dotProduct(b, d[j].x));
+                S0 += expEta_j;
+                for (let k = 0; k < p; k++) {
+                    S1[k] += d[j].x[k] * expEta_j;
+                    for (let l = 0; l < p; l++) {
+                        S2[k][l] += d[j].x[k] * d[j].x[l] * expEta_j;
+                    }
+                }
+            }
+
+            ll += eta_i - Math.log(S0);
+
+            for (let k = 0; k < p; k++) {
+                grad[k] += d[i].x[k] - S1[k] / S0;
+                for (let l = 0; l < p; l++) {
+                    hess[k][l] -= S2[k][l] / S0 - (S1[k] * S1[l]) / (S0 * S0);
+                }
+            }
+        }
+
+        return { ll, gradient: grad, hessian: hess };
+    }
+
+    // Helper: Dot product
+    function dotProduct(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+        return sum;
+    }
+
+    // Helper: Solve linear system Ax = b using Gaussian elimination
+    function solveLinearSystem(A, b) {
+        const n = b.length;
+        const aug = A.map((row, i) => [...row, b[i]]);
+
+        for (let i = 0; i < n; i++) {
+            let maxRow = i;
+            for (let k = i + 1; k < n; k++) {
+                if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+            }
+            [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
+
+            if (Math.abs(aug[i][i]) < 1e-12) return null;
+
+            for (let k = i + 1; k < n; k++) {
+                const c = aug[k][i] / aug[i][i];
+                for (let j = i; j <= n; j++) {
+                    aug[k][j] -= c * aug[i][j];
+                }
+            }
+        }
+
+        const x = new Array(n);
+        for (let i = n - 1; i >= 0; i--) {
+            x[i] = aug[i][n];
+            for (let j = i + 1; j < n; j++) {
+                x[i] -= aug[i][j] * x[j];
+            }
+            x[i] /= aug[i][i];
+        }
+        return x;
+    }
+
+    // Helper: Invert matrix
+    function invertMatrix(A) {
+        const n = A.length;
+        const aug = A.map((row, i) => [...row, ...new Array(n).fill(0).map((_, j) => i === j ? 1 : 0)]);
+
+        for (let i = 0; i < n; i++) {
+            let maxRow = i;
+            for (let k = i + 1; k < n; k++) {
+                if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+            }
+            [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
+
+            if (Math.abs(aug[i][i]) < 1e-12) return null;
+
+            const pivot = aug[i][i];
+            for (let j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
+
+            for (let k = 0; k < n; k++) {
+                if (k === i) continue;
+                const c = aug[k][i];
+                for (let j = 0; j < 2 * n; j++) {
+                    aug[k][j] -= c * aug[i][j];
+                }
+            }
+        }
+
+        return aug.map(row => row.slice(n));
+    }
+}
+
+/**
+ * Render SPSS-like tables for Cox Regression
+ */
+function renderCoxRegressionSPSS(result, lang = 'tr') {
+    const isTR = lang === 'tr';
+    const fmtNum = (v, d = 4) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : '-';
+    const fmtP = (v) => {
+        if (typeof v !== 'number' || !isFinite(v)) return '-';
+        if (v < 0.001) return '<.001';
+        return v.toFixed(3);
+    };
+
+    const tables = [];
+
+    // Table 1: Model Summary / Omnibus Tests
+    tables.push({
+        titleTR: 'Omnibus Model Testleri',
+        titleEN: 'Omnibus Tests of Model Coefficients',
+        columns: [
+            isTR ? '-2 Log Olabilirlik' : '-2 Log Likelihood',
+            isTR ? 'Ki-Kare' : 'Chi-square',
+            'df',
+            isTR ? 'Anlamlılık' : 'Sig.'
+        ],
+        rows: [
+            [fmtNum(result.minus2LogLik, 3), fmtNum(result.omnibusChiSquare, 3), result.dfModel, fmtP(result.modelPValue)]
+        ]
+    });
+
+    // Table 2: Variables in the Equation
+    const varCols = [
+        isTR ? 'Değişken' : 'Variable',
+        'B',
+        'S.E.',
+        'Wald',
+        'df',
+        isTR ? 'Anlamlılık' : 'Sig.',
+        'Exp(B)',
+        isTR ? '95% GA Alt' : '95% CI Lower',
+        isTR ? '95% GA Üst' : '95% CI Upper'
+    ];
+    const varRows = result.coefficients.map(c => [
+        c.name,
+        fmtNum(c.B, 4),
+        fmtNum(c.SE, 4),
+        fmtNum(c.Wald, 3),
+        c.df,
+        fmtP(c.pValue),
+        fmtNum(c.expB, 3),
+        fmtNum(c.ci95?.lower, 3),
+        fmtNum(c.ci95?.upper, 3)
+    ]);
+
+    tables.push({
+        titleTR: 'Denklemdeki Değişkenler',
+        titleEN: 'Variables in the Equation',
+        columns: varCols,
+        rows: varRows
+    });
+
+    // Table 3: Case Processing Summary
+    tables.push({
+        titleTR: 'Vaka Özeti',
+        titleEN: 'Case Processing Summary',
+        columns: [isTR ? 'Durum' : 'Status', 'N', '%'],
+        rows: [
+            [isTR ? 'Olay' : 'Event', result.events, fmtNum(100 * result.events / result.n, 1)],
+            [isTR ? 'Sansürlü' : 'Censored', result.n - result.events, fmtNum(100 * (result.n - result.events) / result.n, 1)],
+            [isTR ? 'Toplam' : 'Total', result.n, '100.0']
+        ]
+    });
+
+    return tables;
+}
+
 // Window binding for wizard
 window.runAssumptionWizard = runAssumptionWizard;
 
@@ -8700,7 +9543,10 @@ window.calculateVariance = calculateVariance;
 window.calculateStdDev = calculateStdDev;
 window.runStatWidgetAnalysis = runStatWidgetAnalysis;
 
-console.log('✅ stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic Modules) loaded');
+// FAZ-ADV-5: Cox Regression (Optional Advanced Feature)
+window.runCoxRegression = runCoxRegression;
+
+console.log('✅ stats.js (Complete: Part 1-6 + SPSS Wrappers + FAZ-4 Academic + FAZ-ADV-5 Cox) loaded');
 
 
 

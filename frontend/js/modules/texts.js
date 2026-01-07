@@ -353,7 +353,19 @@ export const VIZ_TEXTS = {
         guided_anova_hetero_gameshowell: 'Varyanslar homojen değil. Post-hoc için Games–Howell önerilir.',
         guided_anova_non_normal_kruskal: 'Normallik varsayımı zayıf. ANOVA yerine Kruskal–Wallis testi düşünülebilir.',
         guided_toggle_on: 'Rehberli Analiz: Açık',
-        guided_toggle_off: 'Rehberli Analiz: Kapalı'
+        guided_toggle_off: 'Rehberli Analiz: Kapalı',
+
+        // ===== FAZ-ADV-5: Cox Regression =====
+        stat_cox: 'Cox Regresyon',
+        cox_model_summary: 'Model Özeti',
+        cox_omnibus_tests: 'Omnibus Testleri',
+        cox_variables: 'Denklemdeki Değişkenler',
+        cox_hazard_ratio: 'Tehlike Oranı',
+        cox_convergence_ok: 'Model yakınsadı',
+        cox_convergence_fail: 'Model yakınsamadı',
+        cox_time_col: 'Süre Sütunu',
+        cox_event_col: 'Olay Sütunu (1=olay, 0=sansürlü)',
+        cox_covariates: 'Kovaryatlar'
     },
     en: {
         viz_subtitle: 'Visual Studio',
@@ -704,7 +716,19 @@ export const VIZ_TEXTS = {
         guided_anova_hetero_gameshowell: 'Variances are not homogeneous. Consider Games–Howell for post-hoc comparisons.',
         guided_anova_non_normal_kruskal: 'Normality is questionable. Consider Kruskal–Wallis as a nonparametric alternative.',
         guided_toggle_on: 'Guided Analysis: On',
-        guided_toggle_off: 'Guided Analysis: Off'
+        guided_toggle_off: 'Guided Analysis: Off',
+
+        // ===== FAZ-ADV-5: Cox Regression =====
+        stat_cox: 'Cox Regression',
+        cox_model_summary: 'Model Summary',
+        cox_omnibus_tests: 'Omnibus Tests',
+        cox_variables: 'Variables in the Equation',
+        cox_hazard_ratio: 'Hazard Ratio',
+        cox_convergence_ok: 'Model converged',
+        cox_convergence_fail: 'Model did not converge',
+        cox_time_col: 'Time Column',
+        cox_event_col: 'Event Column (1=event, 0=censored)',
+        cox_covariates: 'Covariates'
     }
 };
 
