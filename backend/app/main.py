@@ -24,6 +24,12 @@ from .google_sheets_api import router as google_sheets_router
 from .sql_api import router as sql_router
 from .websocket_api import router as websocket_router
 from .scheduled_reports_api import router as scheduled_router
+from .health_api import router as health_router
+from .selftest_api import router as selftest_router
+
+# FAZ-ES-6: Queue API
+from .queue_api import router as queue_router
+from .queue_ws import router as queue_ws_router
 
 # -------------------------------------------------------
 # Opradox 2.0 – Main Application
@@ -65,9 +71,84 @@ app.include_router(google_sheets_router)  # /viz/google/* (Google Sheets)
 app.include_router(sql_router)            # /viz/sql/* (SQL Query)
 app.include_router(websocket_router)      # /viz/ws/* (WebSocket Collaboration)
 app.include_router(scheduled_router)      # /viz/schedule/* (Zamanlanmış Raporlar)
+app.include_router(health_router)         # /health (Health Check)
+app.include_router(selftest_router)       # /selftest/* (Selftest API)
 
+# FAZ-ES-6: Queue API
+app.include_router(queue_router)          # /queue/* (Central Queue)
+app.include_router(queue_ws_router)       # /ws/queue (Queue WebSocket)
 
-
+# -------------------------------------------------------
+# STARTUP INIT (FAZ-ES-5: Storage + Cleanup)
+# -------------------------------------------------------
+@app.on_event("startup")
+async def startup_init():
+    """
+    Startup'ta:
+    - Storage DB init
+    - Expired shares cleanup
+    - Eski shared_files temizliği (48 saat)
+    Hata olursa server açılışını engellemez.
+    """
+    import os
+    import time
+    from pathlib import Path
+    
+    # FAZ-ES-5: Storage init
+    try:
+        from .storage import init_db
+        from .cleanup_jobs import run_all_cleanup
+        
+        init_db()
+        cleanup_result = run_all_cleanup()
+        if cleanup_result.get("shares", {}).get("deleted", 0) > 0:
+            print(f"[STARTUP] Cleanup: {cleanup_result}")
+    except Exception as e:
+        print(f"[STARTUP] Storage init warning: {e}")
+    
+    # FAZ-ES-5: Scheduled jobs restore from DB
+    try:
+        from .scheduled_reports_api import _load_jobs_from_db
+        _load_jobs_from_db()
+    except Exception as e:
+        print(f"[STARTUP] Scheduled jobs restore warning: {e}")
+    
+    # FAZ-ES-6: Queue init and engine start
+    try:
+        from .queue_storage import init_queue_table
+        from .queue_engine import start_engine
+        
+        init_queue_table()
+        start_engine()
+    except Exception as e:
+        print(f"[STARTUP] Queue init warning: {e}")
+    
+    # FAZ-ES-1: shared_files eski dosya temizliği
+    try:
+        base_dir = Path(__file__).resolve().parents[2]
+        shared_dir = base_dir / "shared_files"
+        
+        if not shared_dir.exists():
+            return
+        
+        max_age_seconds = 48 * 60 * 60  # 48 saat
+        current_time = time.time()
+        cleaned_count = 0
+        
+        for file_path in shared_dir.iterdir():
+            if file_path.is_file():
+                try:
+                    file_age = current_time - file_path.stat().st_mtime
+                    if file_age > max_age_seconds:
+                        file_path.unlink()
+                        cleaned_count += 1
+                except Exception:
+                    pass
+        
+        if cleaned_count > 0:
+            print(f"[STARTUP] shared_files cleanup: {cleaned_count} old files removed")
+    except Exception as e:
+        print(f"[STARTUP] shared_files cleanup skipped: {e}")
 
 # -------------------------------------------------------
 # GET SHEET COLUMNS (Visual Builder için dinamik sütun çekme)
@@ -524,7 +605,7 @@ async def create_share_link(scenario_id: str, format: str = "xlsx"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Dosya oluşturma hatası: {e}")
     
-    # Store'a kaydet
+    # In-memory store'a kaydet (mevcut davranış)
     SHARE_STORE[share_id] = {
         "path": str(path),
         "filename": filename,
@@ -532,7 +613,24 @@ async def create_share_link(scenario_id: str, format: str = "xlsx"):
         "format": format
     }
     
-    # Temizlik (eski share'leri sil)
+    # FAZ-ES-5: DB'ye de persist et (restart sonrası kalıcılık)
+    try:
+        from .storage import insert_share_link
+        from .storage_models import ShareLink
+        
+        share_link = ShareLink(
+            share_id=share_id,
+            scenario_id=scenario_id,
+            file_path=str(path),
+            created_at=time.time(),
+            expires_at=time.time() + SHARE_EXPIRY_SECONDS,
+            watermark_applied=True
+        )
+        insert_share_link(share_link)
+    except Exception as e:
+        print(f"[SHARE] DB persist warning: {e}")
+    
+    # Temizlik (eski share'leri sil - in-memory)
     current_time = time.time()
     expired_ids = [sid for sid, sdata in SHARE_STORE.items() 
                    if current_time - sdata["created_at"] > SHARE_EXPIRY_SECONDS]
@@ -546,7 +644,7 @@ async def create_share_link(scenario_id: str, format: str = "xlsx"):
     return {
         "share_id": share_id,
         "share_url": f"/s/{share_id}",
-        "full_url": f"http://localhost:8000/s/{share_id}",  # Production'da domain ile değişecek
+        "full_url": f"http://localhost:8000/s/{share_id}",
         "expires_in": "24 saat",
         "filename": filename
     }
@@ -556,22 +654,76 @@ async def create_share_link(scenario_id: str, format: str = "xlsx"):
 async def get_shared_file(share_id: str):
     """
     Paylaşılan dosyayı indir.
+    FAZ-ES-5: Önce in-memory, sonra DB'ye fallback (restart sonrası kalıcılık).
     """
     from fastapi.responses import FileResponse
+    from pathlib import Path
+    import os
     
-    if share_id not in SHARE_STORE:
+    share_data = None
+    from_db = False
+    
+    # 1. Önce in-memory SHARE_STORE'a bak
+    if share_id in SHARE_STORE:
+        share_data = SHARE_STORE[share_id]
+        created_at = share_data["created_at"]
+        file_path = share_data["path"]
+        filename = share_data["filename"]
+    else:
+        # 2. In-memory'de yoksa DB'ye bak (FAZ-ES-5: restart persistence)
+        try:
+            from .storage import get_share_link, delete_share_link, safe_delete_file, increment_share_downloads
+            
+            db_link = get_share_link(share_id)
+            if db_link:
+                from_db = True
+                created_at = db_link.created_at
+                file_path = db_link.file_path
+                filename = Path(db_link.file_path).name
+                
+                # Expiry check (DB)
+                if db_link.is_expired():
+                    # Cleanup: dosya sil, DB kaydı sil
+                    safe_delete_file(Path(file_path))
+                    delete_share_link(share_id)
+                    raise HTTPException(status_code=410, detail="Bu paylaşım linkinin süresi dolmuş.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[SHARE] DB lookup error: {e}")
+    
+    # 3. Hiçbirinde bulunamadıysa 404
+    if share_data is None and not from_db:
         raise HTTPException(status_code=404, detail="Paylaşım linki bulunamadı veya süresi dolmuş.")
     
-    share_data = SHARE_STORE[share_id]
-    
-    # Expiry check
-    if time.time() - share_data["created_at"] > SHARE_EXPIRY_SECONDS:
+    # 4. In-memory expiry check
+    if share_data and time.time() - created_at > SHARE_EXPIRY_SECONDS:
         del SHARE_STORE[share_id]
         raise HTTPException(status_code=410, detail="Bu paylaşım linkinin süresi dolmuş.")
     
+    # 5. Dosya var mı kontrol et
+    if not os.path.exists(file_path):
+        # DB veya in-memory'den temizle
+        if share_id in SHARE_STORE:
+            del SHARE_STORE[share_id]
+        try:
+            from .storage import delete_share_link
+            delete_share_link(share_id)
+        except:
+            pass
+        raise HTTPException(status_code=404, detail="Paylaşım dosyası bulunamadı.")
+    
+    # 6. Download count güncelle (DB varsa)
+    if from_db:
+        try:
+            from .storage import increment_share_downloads
+            increment_share_downloads(share_id)
+        except:
+            pass
+    
     return FileResponse(
-        share_data["path"], 
-        filename=share_data["filename"],
+        file_path, 
+        filename=filename,
         media_type="application/octet-stream"
     )
 

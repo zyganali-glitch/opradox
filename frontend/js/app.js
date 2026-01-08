@@ -19,151 +19,148 @@ let ACTIVE_SCENARIO_ID = null;
 let LAST_RESULT_DATA = null;
 
 
-
-// ===== UNIFIED TOAST NOTIFICATION SYSTEM =====
+// ===== UNIFIED TOAST NOTIFICATION SYSTEM (FAZ-ES-1: Non-overriding guard) =====
 
 // Global toast function - single source for all pages (Excel Studio, Visual Studio, etc.)
+// Guard: Only define if not already present (toast.js or other script may have defined it)
 
-const TOAST_MAX_VISIBLE = 3;
+if (!window.showToast) {
+    const TOAST_MAX_VISIBLE = 3;
+    const TOAST_QUEUE = [];
+    let TOAST_ACTIVE_COUNT = 0;
 
-const TOAST_QUEUE = [];
-
-let TOAST_ACTIVE_COUNT = 0;
-
-
-
-/**
-
- * Show a toast notification (bottom-right, stacking, no icons)
-
- * @param {string} message - Toast message text
-
- * @param {string} type - Toast type: 'success' | 'info' | 'warn' | 'error'
-
- * @param {number} duration - Duration in ms (default: 4000)
-
- */
-
-window.showToast = function (message, type = 'info', duration = 4000) {
-
-    // Ensure host container exists
-
-    let host = document.querySelector('.op-toast-host');
-
-    if (!host) {
-
-        host = document.createElement('div');
-
-        host.className = 'op-toast-host';
-
-        document.body.appendChild(host);
-
-    }
-
-
-
-    // Create toast element
-
-    const toast = document.createElement('div');
-
-    toast.className = `op-toast op-toast-${type}`;
-
-    toast.innerHTML = `<span class="op-toast-message">${message}</span>`;
-
-
-
-    // Queue management - max 3 visible at once
-
-    if (TOAST_ACTIVE_COUNT >= TOAST_MAX_VISIBLE) {
-
-        // Remove oldest toast to make room
-
-        const oldestToast = host.querySelector('.op-toast.show');
-
-        if (oldestToast) {
-
-            dismissToast(oldestToast);
-
+    /**
+     * Show a toast notification (bottom-right, stacking, no icons)
+     * @param {string} message - Toast message text
+     * @param {string} type - Toast type: 'success' | 'info' | 'warn' | 'error'
+     * @param {number} duration - Duration in ms (default: 4000)
+     */
+    window.showToast = function (message, type = 'info', duration = 4000) {
+        // Ensure host container exists
+        let host = document.querySelector('.op-toast-host');
+        if (!host) {
+            host = document.createElement('div');
+            host.className = 'op-toast-host';
+            document.body.appendChild(host);
         }
 
-    }
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `op-toast op-toast-${type}`;
+        toast.innerHTML = `<span class="op-toast-message">${message}</span>`;
 
+        // Queue management - max 3 visible at once
+        if (TOAST_ACTIVE_COUNT >= TOAST_MAX_VISIBLE) {
+            const oldestToast = host.querySelector('.op-toast.show');
+            if (oldestToast) {
+                dismissToast(oldestToast);
+            }
+        }
 
+        // Add to DOM
+        host.appendChild(toast);
+        TOAST_ACTIVE_COUNT++;
 
-    // Add to DOM
-
-    host.appendChild(toast);
-
-    TOAST_ACTIVE_COUNT++;
-
-
-
-    // Trigger show animation
-
-    requestAnimationFrame(() => {
-
+        // Trigger show animation
         requestAnimationFrame(() => {
-
-            toast.classList.add('show');
-
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
         });
 
-    });
+        // Auto dismiss after duration
+        const dismissTimeout = setTimeout(() => {
+            dismissToast(toast);
+        }, duration);
 
+        // Store timeout for potential early dismissal
+        toast._dismissTimeout = dismissTimeout;
 
+        function dismissToast(t) {
+            if (t._dismissed) return;
+            t._dismissed = true;
+            clearTimeout(t._dismissTimeout);
+            t.classList.remove('show');
+            t.classList.add('hide');
+            setTimeout(() => {
+                if (t.parentNode) {
+                    t.parentNode.removeChild(t);
+                    TOAST_ACTIVE_COUNT = Math.max(0, TOAST_ACTIVE_COUNT - 1);
+                }
+            }, 300);
+        }
 
-    // Auto dismiss after duration
+        return toast;
+    };
+    console.log('[APP.JS] showToast defined by app.js');
+} else {
+    console.log('[APP.JS] showToast already defined, using existing implementation');
+}
 
-    const dismissTimeout = setTimeout(() => {
+// ===== BOOT HEALTH CHECK (FAZ-ES-1) =====
+// Non-blocking health ping on page load with TR/EN toast feedback
 
-        dismissToast(toast);
-
-    }, duration);
-
-
-
-    // Store timeout for potential early dismissal
-
-    toast._dismissTimeout = dismissTimeout;
-
-
-
-    function dismissToast(t) {
-
-        if (t._dismissed) return;
-
-        t._dismissed = true;
-
-
-
-        clearTimeout(t._dismissTimeout);
-
-        t.classList.remove('show');
-
-        t.classList.add('hide');
-
-
-
-        setTimeout(() => {
-
-            if (t.parentNode) {
-
-                t.parentNode.removeChild(t);
-
-                TOAST_ACTIVE_COUNT = Math.max(0, TOAST_ACTIVE_COUNT - 1);
-
-            }
-
-        }, 300);
-
+const HEALTH_CHECK_MESSAGES = {
+    tr: {
+        checking: "Sunucu kontrol ediliyor…",
+        ok: "Sunucu sağlığı: OK",
+        degraded: "Uyarı: Sunucu sağlığı kısmi sorunlu. Bazı işlemler başarısız olabilir.",
+        unreachable: "Excel motoru erişilemiyor. Lütfen daha sonra tekrar deneyin."
+    },
+    en: {
+        checking: "Checking server health…",
+        ok: "Server health: OK",
+        degraded: "Warning: Server health is degraded. Some operations may fail.",
+        unreachable: "Excel engine is unreachable. Please try again later."
     }
-
-
-
-    return toast;
-
 };
 
+async function performBootHealthCheck() {
+    const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+    const msgs = HEALTH_CHECK_MESSAGES[lang] || HEALTH_CHECK_MESSAGES.tr;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(`${BACKEND_BASE_URL}/health`, {
+            method: 'GET',
+            cache: 'no-store',
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status === 'degraded') {
+            // Always show degraded warning
+            if (typeof showToast === 'function') {
+                showToast(msgs.degraded, 'warn', 6000);
+            }
+            console.warn('[HEALTH] Server degraded:', data.notes);
+        } else {
+            // OK status - only log, don't show toast (less noisy)
+            console.log('[HEALTH] Server OK:', data);
+        }
+    } catch (err) {
+        // Fetch failed - server unreachable
+        console.error('[HEALTH] Server unreachable:', err.message);
+        if (typeof showToast === 'function') {
+            showToast(msgs.unreachable, 'error', 8000);
+        }
+    }
+}
+
+// Run health check on DOMContentLoaded (non-blocking)
+document.addEventListener('DOMContentLoaded', function () {
+    // Delay slightly to ensure toast system is ready
+    setTimeout(performBootHealthCheck, 500);
+});
 
 
 // ===== RESULT DISPLAY SYSTEM =====

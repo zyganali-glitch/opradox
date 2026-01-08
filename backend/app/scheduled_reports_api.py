@@ -1,6 +1,7 @@
 """
 Scheduled Reports API - Opradox Visual Studio
 Zamanlanmış rapor gönderimi (APScheduler)
+FAZ-ES-5: DB persistence eklendi
 """
 from __future__ import annotations
 from typing import List, Optional
@@ -8,12 +9,67 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 import json
+import time
 
 router = APIRouter(prefix="/viz/schedule", tags=["scheduled-reports"])
 
-# Zamanlanmış görevleri saklamak için basit in-memory store
-# Production'da Redis veya veritabanı kullanılmalı
+# Zamanlanmış görevleri saklamak için in-memory cache (runtime aktif kullanım)
+# FAZ-ES-5: DB ile senkronize tutulacak
 SCHEDULED_JOBS: dict = {}
+
+
+def _persist_job_to_db(job_id: str, job_data: dict):
+    """FAZ-ES-5: Job'u DB'ye persist et (best-effort)."""
+    try:
+        from .storage import upsert_scheduled_job
+        from .storage_models import ScheduledJob
+        
+        now = time.time()
+        scheduled_job = ScheduledJob(
+            job_id=job_id,
+            payload_json=json.dumps(job_data, ensure_ascii=False),
+            created_at=job_data.get("_db_created_at", now),
+            updated_at=now,
+            enabled=job_data.get("enabled", True),
+            last_run_at=None,
+            next_run_at=None,
+            error_last=None
+        )
+        upsert_scheduled_job(scheduled_job)
+    except Exception as e:
+        print(f"[SCHEDULE] DB persist warning: {e}")
+
+
+def _delete_job_from_db(job_id: str):
+    """FAZ-ES-5: Job'u DB'den sil (best-effort)."""
+    try:
+        from .storage import delete_scheduled_job
+        delete_scheduled_job(job_id)
+    except Exception as e:
+        print(f"[SCHEDULE] DB delete warning: {e}")
+
+
+def _load_jobs_from_db():
+    """FAZ-ES-5: Startup'ta DB'den job'ları yükle."""
+    try:
+        from .storage import list_scheduled_jobs
+        
+        db_jobs = list_scheduled_jobs(enabled_only=False)
+        loaded_count = 0
+        
+        for job in db_jobs:
+            try:
+                job_data = json.loads(job.payload_json)
+                job_data["_db_created_at"] = job.created_at
+                SCHEDULED_JOBS[job.job_id] = job_data
+                loaded_count += 1
+            except Exception:
+                pass
+        
+        if loaded_count > 0:
+            print(f"[SCHEDULE] Loaded {loaded_count} jobs from DB")
+    except Exception as e:
+        print(f"[SCHEDULE] DB load warning: {e}")
 
 
 class ScheduleRequest(BaseModel):
@@ -79,6 +135,9 @@ async def create_scheduled_report(request: ScheduleRequest):
             "next_run": trigger.get_next_fire_time(None, datetime.now()).isoformat() if trigger else None
         }
         
+        # FAZ-ES-5: DB'ye persist et
+        _persist_job_to_db(job_id, SCHEDULED_JOBS[job_id])
+        
         return {
             "success": True,
             "job_id": job_id,
@@ -101,6 +160,9 @@ async def create_scheduled_report(request: ScheduleRequest):
             "created_at": datetime.now().isoformat(),
             "note": "APScheduler yüklü değil - pip install apscheduler"
         }
+        
+        # FAZ-ES-5: DB'ye persist et (APScheduler olmasa bile)
+        _persist_job_to_db(job_id, SCHEDULED_JOBS[job_id])
         
         return {
             "success": True,
@@ -145,6 +207,9 @@ async def toggle_scheduled_report(job_id: str):
     SCHEDULED_JOBS[job_id]["enabled"] = not SCHEDULED_JOBS[job_id]["enabled"]
     status = "etkinleştirildi" if SCHEDULED_JOBS[job_id]["enabled"] else "devre dışı bırakıldı"
     
+    # FAZ-ES-5: DB güncellemesi
+    _persist_job_to_db(job_id, SCHEDULED_JOBS[job_id])
+    
     return {
         "success": True,
         "job_id": job_id,
@@ -162,6 +227,9 @@ async def delete_scheduled_report(job_id: str):
         raise HTTPException(status_code=404, detail="Zamanlanmış rapor bulunamadı")
     
     del SCHEDULED_JOBS[job_id]
+    
+    # FAZ-ES-5: DB'den sil
+    _delete_job_from_db(job_id)
     
     return {
         "success": True,

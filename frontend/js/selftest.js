@@ -2183,7 +2183,134 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         results.checks.coxTestsTotal = coxResults.length;
         results.checks.coxTestsSkipped = coxResults.filter(r => r.startsWith('SKIP')).length;
 
+        // =====================================================
+        // FAZ-QA-2: CRITICAL FLOW INTEGRATION TESTS
+        // Crash-focused, deterministic smoke tests
+        // =====================================================
 
+        results.criticalFlowTests = {};
+
+        // Test 1: Dataset injection + state integrity
+        results.criticalFlowTests.datasetInjection = runSmokeTest('criticalFlow.datasetInjection', () => {
+            if (!window.VIZ_STATE) return 'SKIP: VIZ_STATE missing';
+            const sampleData = [];
+            for (let i = 1; i <= 20; i++) {
+                sampleData.push({ id: i, category: i % 3 === 0 ? 'C' : (i % 2 === 0 ? 'B' : 'A'), value: i * 10 });
+            }
+            const originalData = window.VIZ_STATE.data;
+            window.VIZ_STATE.data = sampleData;
+            const injected = window.VIZ_STATE.data && window.VIZ_STATE.data.length === 20;
+            window.VIZ_STATE.data = originalData; // Restore
+            return injected ? 'PASS: 20 rows injected' : 'FAIL: injection failed';
+        });
+
+        // Test 2: CrossFilter flow (apply + verify + clear)
+        results.criticalFlowTests.crossFilterFlow = runSmokeTest('criticalFlow.crossFilter', () => {
+            if (typeof window.applyCrossFilter !== 'function') return 'SKIP: applyCrossFilter missing';
+            if (!window.VIZ_STATE) return 'SKIP: VIZ_STATE missing';
+            const beforeCount = window.VIZ_STATE.filters?.length || 0;
+            try {
+                window.applyCrossFilter({ column: '__cf_test__', operator: 'eq', value: 'test' });
+                // Clear the test filter
+                if (window.VIZ_STATE.filters) {
+                    window.VIZ_STATE.filters = window.VIZ_STATE.filters.filter(f => f.column !== '__cf_test__');
+                }
+            } catch (e) {
+                return 'FAIL: ' + e.message;
+            }
+            const finalCount = window.VIZ_STATE.filters?.length || 0;
+            return finalCount <= beforeCount ? 'PASS: apply + clear OK' : 'FAIL: filter leak';
+        });
+
+        // Test 3: Chart render with dummy container
+        results.criticalFlowTests.chartRender = runSmokeTest('criticalFlow.chartRender', () => {
+            if (typeof window.renderChart !== 'function') return 'SKIP: renderChart missing';
+            const container = document.createElement('div');
+            container.id = 'cf_test_chart_chart';
+            container.style.cssText = 'width:100px;height:100px;position:absolute;left:-9999px;';
+            document.body.appendChild(container);
+            try {
+                window.renderChart({ id: 'cf_test_chart', type: 'bar', title: 'CFTest', xAxis: '', yAxis: '' });
+                return 'PASS: no crash';
+            } catch (e) {
+                return 'FAIL: ' + e.message;
+            } finally {
+                container.remove();
+            }
+        });
+
+        // Test 4: Stat engines (3 types: parametric, non-parametric, regression)
+        results.criticalFlowTests.statEngines = runSmokeTest('criticalFlow.statEngines', () => {
+            const subResults = [];
+            // Parametric: t-test
+            if (typeof window.runIndependentTTest === 'function') {
+                try { window.runIndependentTTest([1, 2, 3, 4, 5], [6, 7, 8, 9, 10]); subResults.push('ttest:OK'); }
+                catch { subResults.push('ttest:CRASH'); }
+            } else { subResults.push('ttest:SKIP'); }
+            // Non-parametric: Mann-Whitney
+            if (typeof window.runMannWhitneyU === 'function') {
+                try { window.runMannWhitneyU([1, 2, 3, 4, 5], [6, 7, 8, 9, 10]); subResults.push('mw:OK'); }
+                catch { subResults.push('mw:CRASH'); }
+            } else { subResults.push('mw:SKIP'); }
+            // Regression: Linear
+            if (typeof window.runLinearRegression === 'function') {
+                try {
+                    window.runLinearRegression([{ x: 1, y: 2 }, { x: 2, y: 4 }, { x: 3, y: 6 }], 'y', 'x');
+                    subResults.push('lr:OK');
+                } catch { subResults.push('lr:CRASH'); }
+            } else { subResults.push('lr:SKIP'); }
+            const hasCrash = subResults.some(r => r.includes('CRASH'));
+            return hasCrash ? 'FAIL: ' + subResults.join(',') : 'PASS: ' + subResults.join(',');
+        });
+
+        // Test 5: Right panel toggle (if exists)
+        results.criticalFlowTests.rightPanelToggle = runSmokeTest('criticalFlow.rightPanel', () => {
+            const toggleFns = ['toggleRightPanel', 'toggleSettingsPanel', 'openSettingsPanel', 'closeSettingsPanel'];
+            const found = toggleFns.find(fn => typeof window[fn] === 'function');
+            if (!found) return 'SKIP: no panel toggle function';
+            try {
+                window[found]();
+                window[found]();
+                return 'PASS: ' + found;
+            } catch (e) {
+                return 'FAIL: ' + e.message;
+            }
+        });
+
+        // Count critical flow test passes
+        const cfResults = Object.values(results.criticalFlowTests);
+        results.checks.criticalFlowTestsPassed = cfResults.filter(r => r.startsWith('PASS')).length;
+        results.checks.criticalFlowTestsTotal = cfResults.length;
+        results.checks.criticalFlowTestsSkipped = cfResults.filter(r => r.startsWith('SKIP')).length;
+
+        // =====================================================
+        // FAZ-QA-2: GLOBAL PASS/FAIL/SKIP SUMMARY COUNTERS
+        // =====================================================
+
+        function countAllStatuses(obj, prefix = '') {
+            let pass = 0, fail = 0, skip = 0;
+            const processValue = (val) => {
+                if (typeof val === 'string') {
+                    if (val.startsWith('PASS')) pass++;
+                    else if (val.startsWith('FAIL')) fail++;
+                    else if (val.startsWith('SKIP') || val.startsWith('DEFERRED') || val.startsWith('WARN')) skip++;
+                } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                    Object.values(val).forEach(processValue);
+                }
+            };
+            // Process test result objects
+            ['smokeTests', 'chartTypeTests', 'statEngineTests', 'faz3Tests', 'faz4Tests', 'faz5Tests',
+                'faz6Tests', 'faz7Tests', 'faz8Tests', 'faz9Tests', 'faz10Tests', 'faz11Tests', 'faz12Tests',
+                'guidedTests', 'fazAdvTests', 'survivalAdvancedTests', 'coxTests', 'criticalFlowTests'
+            ].forEach(key => {
+                if (obj[key] && typeof obj[key] === 'object') {
+                    Object.values(obj[key]).forEach(processValue);
+                }
+            });
+            return { pass, fail, skip, total: pass + fail + skip };
+        }
+
+        results.summary = countAllStatuses(results);
         if (results.errors.length > 0) {
             results.selftest = 'fail';
         } else if (results.warnings.length > 3 || results.checks.smokeTestsPassed < results.checks.smokeTestsTotal * 0.7) {
@@ -2244,7 +2371,13 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const coxInfo = results.checks.coxTestsPassed !== undefined
             ? ` | COX: ${results.checks.coxTestsPassed}/${results.checks.coxTestsTotal}`
             : '';
-        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}${fazAdvInfo}${survivalInfo}${coxInfo}`);
+        const cfInfo = results.checks.criticalFlowTestsPassed !== undefined
+            ? ` | CF: ${results.checks.criticalFlowTestsPassed}/${results.checks.criticalFlowTestsTotal}`
+            : '';
+        const summaryInfo = results.summary
+            ? ` | TOTAL: ${results.summary.pass}P/${results.summary.fail}F/${results.summary.skip}S`
+            : '';
+        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}${fazAdvInfo}${survivalInfo}${coxInfo}${cfInfo}${summaryInfo}`);
 
         // FAZ-ST4: Log deferred items
         if (results.deferredItems && results.deferredItems.length > 0) {
@@ -2431,40 +2564,46 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             return { id: testCase.id, status: 'SKIP', reason: `${testCase.function} not bound` };
         }
 
-        // Execute the function with appropriate input format
+        // FAZ-QA-1.5: Execute with args or legacy fallback
         let result;
         try {
-            const input = testCase.input;
-            switch (testCase.function) {
-                case 'runOneSampleTTest':
-                    result = fn(input.sample, input.testValue);
-                    break;
-                case 'runIndependentTTest':
-                    result = fn(input.group1, input.group2);
-                    break;
-                case 'runPairedTTest':
-                    result = fn(input.before, input.after);
-                    break;
-                case 'runOneWayANOVA':
-                    result = fn(input.groups);
-                    break;
-                case 'runChiSquareTest':
-                    result = fn(input.table);
-                    break;
-                case 'runCorrelationTest':
-                    result = fn(input.x, input.y);
-                    break;
-                case 'runLinearRegression':
-                    result = fn(input.data, input.yColumn, input.xColumn);
-                    break;
-                case 'runMannWhitneyU':
-                    result = fn(input.group1, input.group2);
-                    break;
-                case 'runKMeansAnalysis':
-                    result = fn(input.data, input.columns, input.options);
-                    break;
-                default:
-                    return { id: testCase.id, status: 'SKIP', reason: `Unknown function: ${testCase.function}` };
+            if (testCase.args && Array.isArray(testCase.args)) {
+                // Generic args-based execution (priority)
+                result = fn(...testCase.args);
+            } else {
+                // Legacy fallback for backward compatibility (9 original test cases)
+                const input = testCase.input;
+                switch (testCase.function) {
+                    case 'runOneSampleTTest':
+                        result = fn(input.sample, input.testValue);
+                        break;
+                    case 'runIndependentTTest':
+                        result = fn(input.group1, input.group2);
+                        break;
+                    case 'runPairedTTest':
+                        result = fn(input.before, input.after);
+                        break;
+                    case 'runOneWayANOVA':
+                        result = fn(input.groups);
+                        break;
+                    case 'runChiSquareTest':
+                        result = fn(input.table);
+                        break;
+                    case 'runCorrelationTest':
+                        result = fn(input.x, input.y);
+                        break;
+                    case 'runLinearRegression':
+                        result = fn(input.data, input.yColumn, input.xColumn);
+                        break;
+                    case 'runMannWhitneyU':
+                        result = fn(input.group1, input.group2);
+                        break;
+                    case 'runKMeansAnalysis':
+                        result = fn(input.data, input.columns, input.options);
+                        break;
+                    default:
+                        return { id: testCase.id, status: 'SKIP', reason: `No args or legacy mapping for: ${testCase.function}` };
+                }
             }
         } catch (e) {
             return { id: testCase.id, status: 'FAIL', reason: `Execution error: ${e.message}` };
@@ -3451,7 +3590,7 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
     // ===========================================
     registerTest('locale_mojibake_scan', 'I-Locale', () => {
         // Mojibake patterns that indicate UTF-8 decoded as Latin-1
-        const badPatterns = ['Ã', 'Å', 'Ä', '�', 'Ä°', 'Ã¼', 'Ã¶', 'Ã§', 'ÅŸ', 'Ä±', 'DeÄ'];
+        const badPatterns = ['Ã', 'Å', 'Ä', '�', 'İ', 'ü', 'ö', 'ç', 'ÅŸ', 'ı', 'DeÄ'];
 
         // Scan document for visible text with mojibake
         let foundMojibake = [];

@@ -1,0 +1,63 @@
+# ============================================================
+# Opradox Excel Studio - Docker Compose
+# ============================================================
+
+services:
+  excelstudio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opradox/excel-studio:latest
+    container_name: excel-studio
+    
+    # --- Ports ---
+    ports:
+      - "8100:8100"
+    
+    # --- Environment Variables ---
+    environment:
+      - TZ=UTC
+      # Selftest token (optional - if not set, /selftest returns 503)
+      - SELFTEST_TOKEN=${SELFTEST_TOKEN:-}
+      # Build identification (set by scripts/build.sh)
+      - BUILD_ID=${BUILD_ID:-dev}
+      # Optional maintenance flags (default OFF for prod safety)
+      - RUN_SELFTEST_ON_START=${RUN_SELFTEST_ON_START:-0}
+      - RUN_GOLDEN_ON_START=${RUN_GOLDEN_ON_START:-0}
+      - SELFTEST_MODE=${SELFTEST_MODE:-quick}
+    
+    # --- Volumes (persistent data) ---
+    volumes:
+      - ./backend/logs:/app/backend/logs
+      - ./backend/shared_files:/app/backend/shared_files
+      - ./backend/uploads:/app/backend/uploads
+      # Golden suite data (for maintenance mode)
+      - ./backend/golden:/app/backend/golden
+      # FAZ-ES-5: SQLite database persistence
+      - ./backend/data:/app/backend/data
+    
+    # --- Health Check ---
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # --- Restart Policy ---
+    restart: unless-stopped
+    
+    # --- Resource Limits (optional, uncomment if needed) ---
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+# --- Networks (optional) ---
+# networks:
+#   default:
+#     name: opradox-network
