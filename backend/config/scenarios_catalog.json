@@ -1,5 +1,88 @@
 [
   {
+    "id": "macro-studio-pro",
+    "category": "advanced_macro",
+    "title_tr": "Makro Stüdyosu PRO",
+    "title_en": "Macro Studio PRO",
+    "short_tr": "Excel makrolarını analiz edin, pipeline oluşturun ve güvenle çalıştırın. VBA doktor ile kod kalitesini ölçün.",
+    "short_en": "Analyze Excel macros, create pipelines and execute safely. Measure code quality with VBA doctor.",
+    "status": "implemented",
+    "implementation": {
+      "module": "app.scenarios.macro_studio_pro",
+      "func": "run"
+    },
+    "params": [
+      {
+        "name": "config",
+        "type": "macro_builder_pro",
+        "label_tr": "Makro Pipeline Yapılandırması",
+        "label_en": "Macro Pipeline Configuration",
+        "description_tr": "Makro analizi ve pipeline işlemlerini adım adım oluşturun.",
+        "description_en": "Build macro analysis and pipeline operations step by step."
+      }
+    ],
+    "tags_tr": [
+      "makro",
+      "vba",
+      "analiz",
+      "pipeline",
+      "doctor",
+      "xlsm",
+      "güvenlik"
+    ],
+    "tags_en": [
+      "macro",
+      "vba",
+      "analysis",
+      "pipeline",
+      "doctor",
+      "xlsm",
+      "security"
+    ],
+    "help_tr": {
+      "what_is_tr": "Makro Stüdyosu PRO, Excel makrolarınızı (.xlsm dosyaları) analiz etmenizi, güvenlik risklerini tespit etmenizi ve görsel pipeline arayüzü ile makro işlemlerini yönetmenizi sağlar.\n\n🎯 **Özellikler:**\n- VBA kod analizi ve güvenlik taraması\n- Performans ve kod kalitesi puanlama\n- Makro amacı tespiti (intent detection)\n- Pipeline blokları ile görsel iş akışı\n- Modül bazlı kod görüntüleme",
+      "how_to_tr": [
+        "**Dosya Yükle:** .xlsm veya .xlsx dosyanızı yükleyin.",
+        "**Analiz Et:** Macro Doctor butonu ile VBA kodunu analiz edin.",
+        "**Pipeline Oluştur:** Sol panelden blokları sürükleyerek pipeline oluşturun.",
+        "**Çalıştır:** Pipeline'ı çalıştırarak sonucu alın."
+      ],
+      "examples_tr": [
+        "**Örnek 1: VBA Güvenlik Taraması**",
+        "- .xlsm dosyası yükleyin",
+        "- 'Analiz Et' butonuna tıklayın",
+        "- Güvenlik risklerini ve önerileri inceleyin",
+        "",
+        "**Örnek 2: Makro Pipeline**",
+        "- Dosya yükleyin",
+        "- 'Veri Temizle' bloğu ekleyin",
+        "- 'Hesapla' bloğu ekleyin",
+        "- Pipeline'ı çalıştırın"
+      ]
+    },
+    "help_en": {
+      "what_is_en": "Macro Studio PRO allows you to analyze Excel macros (.xlsm files), detect security risks, and manage macro operations through a visual pipeline interface.\n\n🎯 **Features:**\n- VBA code analysis and security scanning\n- Performance and code quality scoring\n- Macro intent detection\n- Visual workflow with pipeline blocks\n- Module-based code viewing",
+      "how_to_en": [
+        "**Upload File:** Upload your .xlsm or .xlsx file.",
+        "**Analyze:** Use the Macro Doctor button to analyze VBA code.",
+        "**Create Pipeline:** Drag blocks from the left panel to create a pipeline.",
+        "**Run:** Execute the pipeline to get results."
+      ],
+      "examples_en": [
+        "**Example 1: VBA Security Scan**",
+        "- Upload .xlsm file",
+        "- Click 'Analyze' button",
+        "- Review security risks and recommendations",
+        "",
+        "**Example 2: Macro Pipeline**",
+        "- Upload file",
+        "- Add 'Clean Data' block",
+        "- Add 'Calculate' block",
+        "- Run the pipeline"
+      ]
+    }
+  },
+  {
     "id": "custom-report-builder-pro",
     "category": "reporting_pivot",
     "title_tr": "Rapor Stüdyosu PRO",

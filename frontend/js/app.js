@@ -2569,6 +2569,22 @@ async function inspectFile(file, sheetName = null, skipDropdownRebuild = false, 
 
             showFileInfo(data, 1, skipDropdownRebuild);
 
+            // Store global file info for Macro Studio and other modules
+            window.LAST_FILE = file;
+            window.LAST_FILE_INFO = {
+                filename: file.name,
+                columns: data.columns,
+                row_count: data.row_count,
+                col_count: data.columns?.length || 0,
+                sheets: data.sheet_names || FILE_SHEET_NAMES,
+                current_sheet: data.active_sheet || FILE_SELECTED_SHEET
+            };
+
+            // Dispatch event for Macro Studio and other listeners
+            window.dispatchEvent(new CustomEvent('opradox-file-loaded', {
+                detail: window.LAST_FILE_INFO
+            }));
+            console.log('📢 opradox-file-loaded event dispatched');
 
 
             // DYNAMIC REFRESH: Ana dosya yüklendiğinde aktif senaryo formunu güncelle
@@ -4945,6 +4961,14 @@ function renderAccordionMenu() {
 
     const categoryConfig = {
 
+        "advanced_macro": {
+
+            name: CURRENT_LANG === 'tr' ? "Makro Stüdyosu" : "Macro Studio",
+
+            icon: "fa-code", color: "#8b5cf6"
+
+        },
+
         "lookup_join": {
 
             name: CURRENT_LANG === 'tr' ? "Veri Birleştirme" : "Lookup & Join",
@@ -5580,6 +5604,64 @@ function renderDynamicForm(scenarioId, params) {
             }
 
         }
+
+        return; // Normal form render'ı atla
+
+    }
+
+    // Macro Studio PRO için özel senaryo - Makro Stüdyosu PRO
+
+    else if (scenarioId === 'macro-studio-pro') {
+
+        console.log('🔧 Macro Studio PRO detected - opening Macro Studio');
+
+
+
+        // Normal form container'ı gizle, Macro Studio'yu göster
+
+        container.innerHTML = `
+
+            <div class="gm-info-box" style="padding:12px; margin-bottom:10px;">
+
+                <i class="fas fa-code" style="color:#8b5cf6;"></i>
+
+                <strong>Macro Studio Aktif</strong> - .xlsm dosyanızı yükleyin ve analiz/pipeline oluşturun.
+
+            </div>
+
+            <div id="macroStudioContainer"></div>
+
+        `;
+
+
+
+        // Visual Builder'ı gizle, Macro Studio'yu başlat
+
+        if (vbContainer) vbContainer.style.display = 'none';
+
+
+
+        // MacroStudio modülünü başlat (eğer yüklüyse)
+
+        if (typeof MacroStudio !== 'undefined' && MacroStudio.initWithinExcel) {
+
+            MacroStudio.initWithinExcel('macroStudioContainer', scenarioId);
+
+        } else if (typeof MacroStudio !== 'undefined' && MacroStudio.init) {
+
+            // Fallback: eski init fonksiyonu
+
+            console.log('MacroStudio.initWithinExcel bulunamadı, init kullanılıyor');
+
+        } else {
+
+            console.warn('MacroStudio modülü yüklenmedi');
+
+            container.innerHTML += '<div class="gm-info-box" style="color:var(--gm-danger);"><i class="fas fa-exclamation-triangle"></i> Macro Studio modülü yüklenemedi.</div>';
+
+        }
+
+
 
         return; // Normal form render'ı atla
 

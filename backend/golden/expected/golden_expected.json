@@ -1,0 +1,97 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-01-08T13:00:32.729024+00:00",
+  "generator": "EXCEL_STUDIO_GOLDEN_SUITE",
+  "cases": [
+    {
+      "case_id": "filter_active_status",
+      "scenario_id": "filter-rows-by-condition",
+      "input_file": "golden/inputs/test_filter.xlsx",
+      "params": {
+        "filter_column": "Status",
+        "operator": "eq",
+        "filter_value": "Active"
+      },
+      "description": "Status=Active olan satırları filtrele",
+      "expect": {
+        "type": "dataframe",
+        "shape": [
+          2,
+          3
+        ],
+        "columns": [
+          "Name",
+          "Score",
+          "Status"
+        ],
+        "hash": "f6fad53fb8aec384beede39eca1f9fa4",
+        "metrics": {
+          "row_count": 2,
+          "col_count": 3,
+          "columns": [
+            "Name",
+            "Score",
+            "Status"
+          ],
+          "null_count": 0,
+          "numeric_stats": {
+            "Score": {
+              "mean": 88.0,
+              "sum": 176.0
+            }
+          }
+        }
+      },
+      "tolerance": {
+        "metrics": {
+          "mean": 1e-06,
+          "sum": 1e-06
+        }
+      }
+    },
+    {
+      "case_id": "pivot_sum_by_category",
+      "scenario_id": "pivot-sum-by-category",
+      "input_file": "golden/inputs/test_pivot.xlsx",
+      "params": {
+        "row_field": "Category",
+        "value_field": "Value",
+        "agg": "sum"
+      },
+      "description": "Category'ye göre Value toplamı pivot",
+      "expect": {
+        "type": "dataframe",
+        "shape": [
+          3,
+          2
+        ],
+        "columns": [
+          "Category",
+          "Value"
+        ],
+        "hash": "f76778f48ce3815ce8707348dc0d573a",
+        "metrics": {
+          "row_count": 3,
+          "col_count": 2,
+          "columns": [
+            "Category",
+            "Value"
+          ],
+          "null_count": 0,
+          "numeric_stats": {
+            "Value": {
+              "mean": 666.666667,
+              "sum": 2000.0
+            }
+          }
+        }
+      },
+      "tolerance": {
+        "metrics": {
+          "mean": 1e-06,
+          "sum": 1e-06
+        }
+      }
+    }
+  ]
+}

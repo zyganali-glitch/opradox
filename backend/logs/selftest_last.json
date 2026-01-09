@@ -1,0 +1,49 @@
+{
+  "status": "PASS",
+  "mode": "quick",
+  "ts_utc": "2026-01-08T13:08:34.825222+00:00",
+  "duration_ms": 1429,
+  "checks": [
+    {
+      "id": "import_pandas",
+      "status": "PASS",
+      "detail": "pandas 2.3.3"
+    },
+    {
+      "id": "import_numpy",
+      "status": "PASS",
+      "detail": "numpy 2.3.5"
+    },
+    {
+      "id": "import_openpyxl",
+      "status": "PASS",
+      "detail": "openpyxl 3.1.5"
+    },
+    {
+      "id": "import_xlsxwriter",
+      "status": "PASS",
+      "detail": "xlsxwriter 3.2.9"
+    },
+    {
+      "id": "df_sum_mean",
+      "status": "PASS",
+      "detail": "sum=15, mean=30.0"
+    },
+    {
+      "id": "df_groupby",
+      "status": "PASS",
+      "detail": "groupby sum: A=30, B=70"
+    },
+    {
+      "id": "scenario_filter-rows-by-condition",
+      "status": "PASS",
+      "detail": "Completed in 19ms"
+    }
+  ],
+  "summary": {
+    "pass": 7,
+    "fail": 0,
+    "skip": 0,
+    "total": 7
+  }
+}

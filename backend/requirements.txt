@@ -40,3 +40,5 @@ gspread
 sqlalchemy
 google-auth
 google-auth-oauthlib
+# VBA Analysis (FAZ-3)
+oletools

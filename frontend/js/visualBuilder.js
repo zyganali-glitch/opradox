@@ -1912,6 +1912,9 @@ const VisualBuilder = {
             return;
         }
 
+        // FAZ-A/B: Also call unified API (parallel - for testing)
+        this._callUnifiedAPI('preview');
+
         // previewScenario fonksiyonunu çağır
         if (typeof window.previewScenario === 'function') {
             window.previewScenario('custom-report-builder-pro');
@@ -1921,8 +1924,67 @@ const VisualBuilder = {
                 showToast('Önizleme fonksiyonu bulunamadı', 'error', 3000);
             }
         }
+    },
+
+    // ===== FAZ-A/B: UNIFIED API CALL =====
+    async _callUnifiedAPI(mode = 'build') {
+        try {
+            const fileInput = document.getElementById("fileInput");
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                console.log('[UnifiedAPI] No file loaded, skipping unified API call');
+                return null;
+            }
+
+            const actions = this.exportToJSON();
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Second file if exists
+            const fileInput2 = document.getElementById("fileInput2");
+            if (fileInput2 && fileInput2.files && fileInput2.files.length > 0) {
+                formData.append('file2', fileInput2.files[0]);
+            }
+
+            // Request JSON
+            const requestJson = {
+                scenario_id: 'report-studio-pro',
+                mode: 'build',
+                input: {
+                    data_source: {
+                        sheet_name: document.getElementById('sheetSelect')?.value || null,
+                        header_row: parseInt(document.getElementById('headerRow')?.value) || 0
+                    },
+                    actions: actions
+                },
+                options: {
+                    preview: mode === 'preview',
+                    lang: typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr',
+                    row_limit: 100
+                }
+            };
+            formData.append('request_json', JSON.stringify(requestJson));
+
+            console.log('[UnifiedAPI] Calling /api/scenario/run with:', requestJson.scenario_id, mode);
+
+            const response = await fetch('/api/scenario/run', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('[UnifiedAPI] Response:', result.success ? 'SUCCESS' : 'FAILED', result);
+                return result;
+            } else {
+                console.warn('[UnifiedAPI] Request failed:', response.status);
+                return null;
+            }
+        } catch (err) {
+            console.warn('[UnifiedAPI] Error (non-blocking):', err.message);
+            return null;
+        }
     }
-};
+}
 
 // Global erişim
 window.VisualBuilder = VisualBuilder;

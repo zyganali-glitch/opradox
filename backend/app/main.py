@@ -31,6 +31,12 @@ from .selftest_api import router as selftest_router
 from .queue_api import router as queue_router
 from .queue_ws import router as queue_ws_router
 
+# FAZ-3: VBA Analysis API (Macro Doctor)
+from .vba_api import router as vba_router
+
+# FAZ-A: Unified Scenario Runner API
+from .scenario_api import router as scenario_router
+
 # -------------------------------------------------------
 # Opradox 2.0 – Main Application
 # -------------------------------------------------------
@@ -77,6 +83,12 @@ app.include_router(selftest_router)       # /selftest/* (Selftest API)
 # FAZ-ES-6: Queue API
 app.include_router(queue_router)          # /queue/* (Central Queue)
 app.include_router(queue_ws_router)       # /ws/queue (Queue WebSocket)
+
+# FAZ-3: VBA Analysis API (Macro Doctor)
+app.include_router(vba_router)            # /vba/* (VBA Analysis)
+
+# FAZ-A: Unified Scenario Runner API
+app.include_router(scenario_router)       # /api/scenario/* (Unified Runner)
 
 # -------------------------------------------------------
 # STARTUP INIT (FAZ-ES-5: Storage + Cleanup)

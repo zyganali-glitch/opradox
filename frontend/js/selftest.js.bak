@@ -2284,91 +2284,6 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         results.checks.criticalFlowTestsSkipped = cfResults.filter(r => r.startsWith('SKIP')).length;
 
         // =====================================================
-        // FAZ-6: MACRO STUDIO SMOKE TESTS
-        // =====================================================
-
-        results.macroStudioTests = {};
-
-        // Test 1: MacroStudio module exists
-        results.macroStudioTests.moduleExists = runSmokeTest('MacroStudio.moduleExists', () => {
-            if (typeof window.MacroStudio === 'undefined') return 'SKIP: MacroStudio not loaded';
-            if (typeof window.MacroStudio.getState !== 'function') return 'FAIL: getState missing';
-            return 'PASS: MacroStudio module loaded';
-        });
-
-        // Test 2: MacroPipeline module exists
-        results.macroStudioTests.pipelineExists = runSmokeTest('MacroPipeline.moduleExists', () => {
-            if (typeof window.MacroPipeline === 'undefined') return 'SKIP: MacroPipeline not loaded';
-            if (typeof window.MacroPipeline.getState !== 'function') return 'FAIL: getState missing';
-            if (typeof window.MacroPipeline.getBlockTypes !== 'function') return 'FAIL: getBlockTypes missing';
-            return 'PASS: MacroPipeline module loaded';
-        });
-
-        // Test 3: MacroDoctor module exists
-        results.macroStudioTests.doctorExists = runSmokeTest('MacroDoctor.moduleExists', () => {
-            if (typeof window.MacroDoctor === 'undefined') return 'SKIP: MacroDoctor not loaded';
-            return 'PASS: MacroDoctor module loaded';
-        });
-
-        // Test 4: MacroDiffTrace module exists (FAZ-4)
-        results.macroStudioTests.diffTraceExists = runSmokeTest('MacroDiffTrace.moduleExists', () => {
-            if (typeof window.MacroDiffTrace === 'undefined') return 'SKIP: MacroDiffTrace not loaded';
-            if (typeof window.MacroDiffTrace.generateDiff !== 'function') return 'FAIL: generateDiff missing';
-            if (typeof window.MacroDiffTrace.buildDecisionTrace !== 'function') return 'FAIL: buildDecisionTrace missing';
-            return 'PASS: MacroDiffTrace module loaded';
-        });
-
-        // Test 5: MacroSuggestions module exists (FAZ-5)
-        results.macroStudioTests.suggestionsExists = runSmokeTest('MacroSuggestions.moduleExists', () => {
-            if (typeof window.MacroSuggestions === 'undefined') return 'SKIP: MacroSuggestions not loaded';
-            if (typeof window.MacroSuggestions.evaluate !== 'function') return 'FAIL: evaluate missing';
-            return 'PASS: MacroSuggestions module loaded';
-        });
-
-        // Test 6: Pipeline block types defined
-        results.macroStudioTests.blockTypes = runSmokeTest('MacroPipeline.blockTypes', () => {
-            if (typeof window.MacroPipeline === 'undefined') return 'SKIP: MacroPipeline not loaded';
-            const blockTypes = window.MacroPipeline.getBlockTypes();
-            if (!blockTypes || typeof blockTypes !== 'object') return 'FAIL: getBlockTypes returned invalid';
-            const typeCount = Object.keys(blockTypes).length;
-            if (typeCount < 5) return 'FAIL: too few block types: ' + typeCount;
-            return 'PASS: ' + typeCount + ' block types defined';
-        });
-
-        // Test 7: Diff generate smoke
-        results.macroStudioTests.diffGenerate = runSmokeTest('MacroDiffTrace.generateDiff', () => {
-            if (typeof window.MacroDiffTrace === 'undefined') return 'SKIP: MacroDiffTrace not loaded';
-            const before = [{ A: 1 }, { A: 2 }, { A: 3 }];
-            const after = [{ A: 1 }, { A: 2 }];
-            try {
-                const diff = window.MacroDiffTrace.generateDiff(before, after);
-                if (!diff || typeof diff.rowsRemoved !== 'number') return 'FAIL: invalid diff result';
-                if (diff.rowsRemoved !== 1) return 'FAIL: expected 1 row removed';
-                return 'PASS: diff calculated correctly';
-            } catch (e) {
-                return 'FAIL: ' + e.message;
-            }
-        });
-
-        // Test 8: Suggestions evaluate smoke
-        results.macroStudioTests.suggestionsEvaluate = runSmokeTest('MacroSuggestions.evaluate', () => {
-            if (typeof window.MacroSuggestions === 'undefined') return 'SKIP: MacroSuggestions not loaded';
-            try {
-                const suggestions = window.MacroSuggestions.evaluate();
-                if (!Array.isArray(suggestions)) return 'FAIL: evaluate should return array';
-                return 'PASS: evaluate returned ' + suggestions.length + ' suggestions';
-            } catch (e) {
-                return 'FAIL: ' + e.message;
-            }
-        });
-
-        // Count Macro Studio test passes
-        const msResults = Object.values(results.macroStudioTests);
-        results.checks.macroStudioTestsPassed = msResults.filter(r => r.startsWith('PASS')).length;
-        results.checks.macroStudioTestsTotal = msResults.length;
-        results.checks.macroStudioTestsSkipped = msResults.filter(r => r.startsWith('SKIP')).length;
-
-        // =====================================================
         // FAZ-QA-2: GLOBAL PASS/FAIL/SKIP SUMMARY COUNTERS
         // =====================================================
 
@@ -2386,8 +2301,7 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             // Process test result objects
             ['smokeTests', 'chartTypeTests', 'statEngineTests', 'faz3Tests', 'faz4Tests', 'faz5Tests',
                 'faz6Tests', 'faz7Tests', 'faz8Tests', 'faz9Tests', 'faz10Tests', 'faz11Tests', 'faz12Tests',
-                'guidedTests', 'fazAdvTests', 'survivalAdvancedTests', 'coxTests', 'criticalFlowTests',
-                'macroStudioTests'
+                'guidedTests', 'fazAdvTests', 'survivalAdvancedTests', 'coxTests', 'criticalFlowTests'
             ].forEach(key => {
                 if (obj[key] && typeof obj[key] === 'object') {
                     Object.values(obj[key]).forEach(processValue);
@@ -2460,13 +2374,10 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
         const cfInfo = results.checks.criticalFlowTestsPassed !== undefined
             ? ` | CF: ${results.checks.criticalFlowTestsPassed}/${results.checks.criticalFlowTestsTotal}`
             : '';
-        const msInfo = results.checks.macroStudioTestsPassed !== undefined
-            ? ` | MACRO: ${results.checks.macroStudioTestsPassed}/${results.checks.macroStudioTestsTotal}`
-            : '';
         const summaryInfo = results.summary
             ? ` | TOTAL: ${results.summary.pass}P/${results.summary.fail}F/${results.summary.skip}S`
             : '';
-        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}${fazAdvInfo}${survivalInfo}${coxInfo}${cfInfo}${msInfo}${summaryInfo}`);
+        console.log(`[SELFTEST] Status: ${results.selftest.toUpperCase()} | Functions: ${criticalFunctions.length - missingCount}/${criticalFunctions.length} | Smoke: ${results.checks.smokeTestsPassed}/${results.checks.smokeTestsTotal}${chartInfo}${statInfo}${faz3Info}${faz4Info}${faz5Info}${faz6Info}${faz7Info}${faz8Info}${faz9Info}${faz10Info}${faz11Info}${faz12Info}${guidedInfo}${fazAdvInfo}${survivalInfo}${coxInfo}${cfInfo}${summaryInfo}`);
 
         // FAZ-ST4: Log deferred items
         if (results.deferredItems && results.deferredItems.length > 0) {
@@ -3679,7 +3590,7 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
     // ===========================================
     registerTest('locale_mojibake_scan', 'I-Locale', () => {
         // Mojibake patterns that indicate UTF-8 decoded as Latin-1
-        const badPatterns = ['Ã', 'Å', 'Ä', '�', 'İ', 'ü', 'ö', 'ç', 'ÅŸ', 'ı', 'DeÄ'];
+        const badPatterns = ['Ã', 'Å', 'Ä', '�', 'Ä°', 'Ã¼', 'Ã¶', 'Ã§', 'ÅŸ', 'Ä±', 'DeÄ'];
 
         // Scan document for visible text with mojibake
         let foundMojibake = [];
