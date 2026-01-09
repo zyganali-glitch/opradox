@@ -1,0 +1,125 @@
+{
+    "interval_seconds": 60,
+    "timeout_seconds": 5,
+    "fail_threshold": 2,
+    "ok_threshold": 2,
+    "cooldown_fail_seconds": 600,
+    "cooldown_degraded_seconds": 1800,
+    "language": "tr",
+    "services": [
+        {
+            "name": "Excel Studio",
+            "id": "excel",
+            "base_url": "http://127.0.0.1:8100",
+            "health_url": "/health",
+            "mode": "json_health",
+            "expect": {
+                "http": 200,
+                "json_keys": [
+                    "status",
+                    "build_id",
+                    "storage",
+                    "queue"
+                ]
+            },
+            "degraded_rules": [
+                {
+                    "path": "scheduler_available",
+                    "equals": false,
+                    "reason_tr": "Zamanlayıcı (scheduler) devre dışı.",
+                    "reason_en": "Scheduler is disabled."
+                },
+                {
+                    "path": "selftest_quick_last.status",
+                    "equals": "FAIL",
+                    "reason_tr": "Selftest FAIL.",
+                    "reason_en": "Selftest FAIL."
+                },
+                {
+                    "path": "storage.ok",
+                    "equals": false,
+                    "reason_tr": "Depolama hatası.",
+                    "reason_en": "Storage error."
+                },
+                {
+                    "path": "queue.ok",
+                    "equals": false,
+                    "reason_tr": "Kuyruk sistemi hatası.",
+                    "reason_en": "Queue system error."
+                }
+            ],
+            "selftest": {
+                "enabled": false,
+                "url": "/selftest/run?mode=quick",
+                "headers": {
+                    "X-SELFTEST-TOKEN": "${ENV:SELFTEST_TOKEN}"
+                },
+                "run_on": "degraded_or_fail"
+            }
+        },
+        {
+            "name": "VS Static",
+            "id": "vs",
+            "base_url": "http://127.0.0.1:8100",
+            "mode": "http_checks",
+            "checks": [
+                {
+                    "type": "http",
+                    "url": "/viz.html",
+                    "expect_http": 200
+                },
+                {
+                    "type": "http",
+                    "url": "/js/selftest.js",
+                    "expect_http": 200,
+                    "optional": true
+                }
+            ]
+        },
+        {
+            "name": "Hub",
+            "id": "hub",
+            "base_url": "http://127.0.0.1:8000",
+            "mode": "http_checks",
+            "checks": [
+                {
+                    "type": "http",
+                    "url": "/health",
+                    "expect_http": 200,
+                    "optional": true
+                }
+            ],
+            "skip_if_unreachable": true
+        },
+        {
+            "name": "PDF Tools",
+            "id": "pdf",
+            "base_url": "http://127.0.0.1:8200",
+            "mode": "http_checks",
+            "checks": [
+                {
+                    "type": "http",
+                    "url": "/health",
+                    "expect_http": 200,
+                    "optional": true
+                }
+            ],
+            "skip_if_unreachable": true
+        },
+        {
+            "name": "OCR",
+            "id": "ocr",
+            "base_url": "http://127.0.0.1:8300",
+            "mode": "http_checks",
+            "checks": [
+                {
+                    "type": "http",
+                    "url": "/health",
+                    "expect_http": 200,
+                    "optional": true
+                }
+            ],
+            "skip_if_unreachable": true
+        }
+    ]
+}

@@ -4,3 +4,6 @@ __pycache__/
 .DS_Store
 node_modules/
 .env
+
+# FAZ-ES-7: Monitoring runtime state
+monitoring/monitor_state.json

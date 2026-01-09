@@ -179,7 +179,17 @@ async def health_check() -> Dict[str, Any]:
     except Exception as e:
         queue_status = {"ok": False, "error": str(e)[:50]}
     
+    # FAZ-ES-7: Resource limits for monitoring visibility
+    limits = {
+        "max_upload_mb": 50,
+        "max_rows": 1000000,
+        "max_pages": 100,
+        "policy_tr": "Kaynakları verimli kullanmak için bu işlemde belirli limitler uygulanır. Bu limitler ileride artırılabilir.",
+        "policy_en": "To use resources efficiently, certain limits apply to this operation. These limits may be increased as the infrastructure scales."
+    }
+    
     return {
+        "ok": status == "ok",
         "status": status,
         "service": "excel_studio",
         "build_id": _BUILD_ID,
@@ -190,6 +200,7 @@ async def health_check() -> Dict[str, Any]:
         "storage": storage_status,
         "queue": queue_status,
         "selftest_quick_last": selftest_quick_last,
+        "limits": limits,
         "notes": notes if notes else None,
         "request_id": request_id
     }
