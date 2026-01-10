@@ -13,7 +13,7 @@
     // CONSTANTS
     // ============================================================
 
-    const BACKEND_BASE_URL = '';
+    const BACKEND_BASE_URL = window.BACKEND_BASE_URL || 'http://127.0.0.1:8100';
     const SEVERITY_COLORS = {
         HIGH: '#ef4444',
         MEDIUM: '#f97316',
@@ -104,9 +104,34 @@
             hybrid_view: 'Code Preview (Read-Only)',
             read_only_warning: 'Note: Code view is read-only. Editing is not allowed.',
             analysis_complete: 'Analysis complete',
-            upload_first: 'Upload an XLSM file first'
+            upload_first: 'Upload an XLSM file first',
+            // FAZ-MS-P3: Decision Trace texts
+            decision_trace_title: 'Decision Trace',
+            why_flagged: 'Why Flagged',
+            evidence: 'Evidence',
+            suggested_fix: 'Suggested Fix',
+            before: 'Before',
+            after: 'After',
+            view_fix: 'View Fix',
+            hide_fix: 'Hide Fix',
+            rule: 'Rule',
+            category: 'Category',
+            no_trace: 'No findings to trace'
         }
     };
+
+    // FAZ-MS-P3: Additional TR texts (injected)
+    DOCTOR_TEXTS.tr.decision_trace_title = 'Karar İzleme';
+    DOCTOR_TEXTS.tr.why_flagged = 'Neden İşaretlendi';
+    DOCTOR_TEXTS.tr.evidence = 'Kanıt';
+    DOCTOR_TEXTS.tr.suggested_fix = 'Önerilen Düzeltme';
+    DOCTOR_TEXTS.tr.before = 'Önce';
+    DOCTOR_TEXTS.tr.after = 'Sonra';
+    DOCTOR_TEXTS.tr.view_fix = 'Düzeltmeyi Gör';
+    DOCTOR_TEXTS.tr.hide_fix = 'Düzeltmeyi Gizle';
+    DOCTOR_TEXTS.tr.rule = 'Kural';
+    DOCTOR_TEXTS.tr.category = 'Kategori';
+    DOCTOR_TEXTS.tr.no_trace = 'İzlenecek bulgu yok';
 
     function getText(key, subKey = null) {
         const lang = window.MacroStudio?.getState()?.currentLang || 'tr';
@@ -233,6 +258,9 @@
 
         // Intent Section
         html += renderIntentSection(result.intent, lang);
+
+        // FAZ-MS-P3: Decision Trace Section
+        html += renderDecisionTraceSection(result.decision_trace, lang);
 
         // Modules / Hybrid View
         html += renderModulesSection(result.modules, lang);
@@ -492,6 +520,126 @@
         return html;
     }
 
+    // ============================================================
+    // FAZ-MS-P3: Decision Trace Section
+    // ============================================================
+
+    function renderDecisionTraceSection(decisionTrace, lang) {
+        if (!decisionTrace || decisionTrace.length === 0) {
+            return `
+                <div class="doctor-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-route"></i> ${getText('decision_trace_title')}</h3>
+                    </div>
+                    <div class="section-content">
+                        <p class="no-trace-message"><i class="fas fa-check-circle"></i> ${getText('no_trace')}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        const becauseKey = lang === 'tr' ? 'because_tr' : 'because_en';
+        const fixKey = lang === 'tr' ? 'fix_tr' : 'fix_en';
+
+        let html = `
+            <div class="doctor-section collapsible">
+                <div class="section-header">
+                    <h3><i class="fas fa-route"></i> ${getText('decision_trace_title')}</h3>
+                    <span class="trace-count">${decisionTrace.length}</span>
+                    <i class="fas fa-chevron-down section-toggle"></i>
+                </div>
+                <div class="section-content">
+                    <div class="decision-trace-list">
+        `;
+
+        decisionTrace.forEach((entry, idx) => {
+            const severityColor = SEVERITY_COLORS[entry.severity] || '#888';
+            const categoryIcon = getCategoryIcon(entry.category);
+
+            html += `
+                <div class="trace-entry severity-${entry.severity?.toLowerCase() || 'low'}">
+                    <div class="trace-header">
+                        <span class="trace-icon" style="color:${severityColor};">
+                            <i class="fas ${categoryIcon}"></i>
+                        </span>
+                        <span class="trace-rule">${entry.rule_id}</span>
+                        <span class="trace-category">${entry.category}</span>
+                        <span class="trace-severity" style="background:${severityColor};">${entry.severity}</span>
+                    </div>
+                    <div class="trace-body">
+                        <div class="trace-because">
+                            <strong>${getText('why_flagged')}:</strong> ${entry[becauseKey]}
+                        </div>
+                        <div class="trace-evidence">
+                            <strong>${getText('evidence')}:</strong>
+                            <code>${escapeHtml(entry.evidence)}</code>
+                            ${entry.module ? `<span class="trace-module">(${entry.module}${entry.line ? ':' + entry.line : ''})</span>` : ''}
+                        </div>
+            `;
+
+            // Render fix suggestion if available
+            if (entry.suggested_fix) {
+                html += `
+                    <div class="trace-fix">
+                        <button class="fix-toggle-btn" onclick="MacroDoctor.toggleFixDiff(${idx})">
+                            <i class="fas fa-wrench"></i> ${getText('view_fix')}
+                        </button>
+                        <div class="fix-diff" id="fixDiff_${idx}" style="display:none;">
+                            <div class="fix-description">
+                                <i class="fas fa-lightbulb"></i> ${entry.suggested_fix[fixKey]}
+                            </div>
+                            <div class="fix-code-diff">
+                                <div class="diff-before">
+                                    <span class="diff-label">${getText('before')}:</span>
+                                    <pre><code>${escapeHtml(entry.suggested_fix.before)}</code></pre>
+                                </div>
+                                <div class="diff-arrow"><i class="fas fa-arrow-right"></i></div>
+                                <div class="diff-after">
+                                    <span class="diff-label">${getText('after')}:</span>
+                                    <pre><code>${escapeHtml(entry.suggested_fix.after)}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function getCategoryIcon(category) {
+        switch (category) {
+            case 'security': return 'fa-shield-halved';
+            case 'performance': return 'fa-gauge-high';
+            case 'quality': return 'fa-code';
+            default: return 'fa-circle-info';
+        }
+    }
+
+    function toggleFixDiff(idx) {
+        const diffEl = document.getElementById(`fixDiff_${idx}`);
+        const btn = diffEl?.previousElementSibling;
+        if (diffEl) {
+            const isHidden = diffEl.style.display === 'none';
+            diffEl.style.display = isHidden ? 'block' : 'none';
+            if (btn) {
+                btn.innerHTML = `<i class="fas fa-wrench"></i> ${isHidden ? getText('hide_fix') : getText('view_fix')}`;
+            }
+        }
+    }
+
     function renderModulesSection(modules, lang) {
         if (!modules?.length) return '';
 
@@ -701,11 +849,190 @@
     }
 
     // ============================================================
+    // FAZ-MS-P3: CSS Styles for Decision Trace
+    // ============================================================
+
+    function injectDecisionTraceStyles() {
+        if (document.getElementById('macro-doctor-trace-styles')) return;
+
+        const styles = document.createElement('style');
+        styles.id = 'macro-doctor-trace-styles';
+        styles.textContent = `
+            /* Decision Trace Section */
+            .decision-trace-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .trace-entry {
+                background: rgba(0,0,0,0.2);
+                border-radius: 8px;
+                padding: 12px;
+                border-left: 4px solid var(--trace-color, #888);
+            }
+            
+            .trace-entry.severity-high { --trace-color: #ef4444; }
+            .trace-entry.severity-medium { --trace-color: #f97316; }
+            .trace-entry.severity-low { --trace-color: #eab308; }
+            
+            .trace-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
+            }
+            
+            .trace-icon {
+                font-size: 1.1rem;
+            }
+            
+            .trace-rule {
+                font-weight: 600;
+                font-family: monospace;
+                background: rgba(255,255,255,0.1);
+                padding: 2px 8px;
+                border-radius: 4px;
+            }
+            
+            .trace-category {
+                font-size: 0.8rem;
+                opacity: 0.7;
+                text-transform: uppercase;
+            }
+            
+            .trace-severity {
+                font-size: 0.75rem;
+                padding: 2px 8px;
+                border-radius: 4px;
+                color: white;
+                font-weight: 600;
+            }
+            
+            .trace-body {
+                font-size: 0.9rem;
+            }
+            
+            .trace-because {
+                margin-bottom: 6px;
+            }
+            
+            .trace-evidence code {
+                background: rgba(0,0,0,0.3);
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: monospace;
+                font-size: 0.85rem;
+            }
+            
+            .trace-module {
+                font-size: 0.8rem;
+                opacity: 0.7;
+                margin-left: 8px;
+            }
+            
+            .trace-fix {
+                margin-top: 10px;
+            }
+            
+            .fix-toggle-btn {
+                background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                border: none;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            
+            .fix-toggle-btn:hover {
+                filter: brightness(1.1);
+            }
+            
+            .fix-diff {
+                margin-top: 10px;
+                background: rgba(0,0,0,0.25);
+                border-radius: 6px;
+                padding: 12px;
+            }
+            
+            .fix-description {
+                margin-bottom: 10px;
+                color: #eab308;
+                font-size: 0.9rem;
+            }
+            
+            .fix-code-diff {
+                display: flex;
+                gap: 15px;
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+            
+            .diff-before, .diff-after {
+                flex: 1;
+                min-width: 200px;
+            }
+            
+            .diff-label {
+                display: block;
+                font-size: 0.8rem;
+                margin-bottom: 5px;
+                opacity: 0.7;
+            }
+            
+            .diff-before pre {
+                background: rgba(239, 68, 68, 0.2);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                border-radius: 4px;
+                padding: 8px;
+                overflow-x: auto;
+            }
+            
+            .diff-after pre {
+                background: rgba(34, 197, 94, 0.2);
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                border-radius: 4px;
+                padding: 8px;
+                overflow-x: auto;
+            }
+            
+            .diff-arrow {
+                color: var(--gm-text-muted, #888);
+                padding-top: 25px;
+            }
+            
+            .trace-count {
+                background: var(--gm-primary, #6366f1);
+                color: white;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.8rem;
+                margin-left: 10px;
+            }
+            
+            .no-trace-message {
+                color: #22c55e;
+                padding: 20px;
+                text-align: center;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+
+    // ============================================================
     // UI INIT
     // ============================================================
 
     function init() {
         console.log('[MacroDoctor] Initializing...');
+
+        // FAZ-MS-P3: Inject decision trace styles
+        injectDecisionTraceStyles();
 
         // Create results container if not exists
         const resultsContainer = document.getElementById('macroDoctorResults');
@@ -737,7 +1064,9 @@
     window.MacroDoctor = {
         init,
         analyzeFile,
+        analyze: analyzeFile,  // FAZ-MS-P0: Alias for backward compatibility (macroStudio.js calls analyze)
         toggleModuleCode,
+        toggleFixDiff,  // FAZ-MS-P3: Toggle fix suggestion diff
         getState: () => DOCTOR_STATE,
         getLastResult: () => DOCTOR_STATE.lastResult,
         // FAZ-E: Pipeline suggestion functions

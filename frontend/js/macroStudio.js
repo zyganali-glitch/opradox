@@ -5,6 +5,7 @@
  * ALLOWLIST: Mevcut data source block kodları (reuse), queueClient.js, queueModal.js
  * YASAKLAR: Özel popup, yeni preview mantığı, Toast override, VBA execute
  */
+console.log("=== macroStudio.js LOADING ===");
 
 (function () {
     'use strict';
@@ -21,6 +22,7 @@
     // Embedded mode state (when running within excel.html)
     let EMBEDDED_MODE = false;
     let EMBEDDED_CONTAINER_ID = null;
+    let EMBEDDED_MOUNT_ID = null; // FAZ-MS-2: Idempotent mount guard
 
     // Macro Studio State
     const MACRO_STATE = {
@@ -132,8 +134,16 @@
     function initWithinExcel(containerId, scenarioId) {
         console.log('[MacroStudio] Initializing in embedded mode:', containerId, scenarioId);
 
+        // FAZ-MS-2: Idempotent mount guard - prevent double render
+        const mountId = `${containerId}_${scenarioId}`;
+        if (EMBEDDED_MOUNT_ID === mountId && EMBEDDED_MODE) {
+            console.log('[MacroStudio] Already mounted, skipping re-render');
+            return;
+        }
+
         EMBEDDED_MODE = true;
         EMBEDDED_CONTAINER_ID = containerId;
+        EMBEDDED_MOUNT_ID = mountId;
         MACRO_STATE.activeScenarioId = scenarioId;
 
         const container = document.getElementById(containerId);
@@ -296,7 +306,7 @@
             <!-- STUDIO MODE: Pipeline Builder -->
             <div id="macroStudioPanel" style="display: ${MACRO_STATE.currentMode === 'studio' ? 'block' : 'none'};">
                 <!-- PIPELINE LAYOUT: Palette + Canvas -->
-                <div style="display: grid; grid-template-columns: 280px 1fr; gap: 15px; min-height: 350px;">
+                <div style="display: grid; grid-template-columns: 280px 1fr 300px; gap: 15px; min-height: 350px;">
                     <!-- BLOCK PALETTE -->
                     <div class="gm-card" style="max-height: 500px; overflow-y: auto;">
                         <div id="macroPipelinePalette" class="vb-palette" style="padding: 10px;">
@@ -325,9 +335,18 @@
                                 <i class="fas fa-arrow-left"></i> ${lang === 'tr' ? 'Soldaki paletden blok ekleyin' : 'Add blocks from the palette on the left'}
                             </div>
                         </div>
-                        <!-- Block Settings Panel -->
-                        <div id="macroPipelineSettings" class="vb-settings" style="border-top: 1px solid var(--gm-border); padding: 10px; max-height: 200px; overflow-y: auto;">
-                            <!-- Settings rendered by MacroPipeline -->
+                    </div>
+
+                    <!-- RIGHT COLUMN: Block Settings Panel -->
+                    <div class="gm-card" style="display: flex; flex-direction: column;">
+                        <div class="gm-card-header">
+                            <h3 style="margin: 0;"><i class="fas fa-sliders"></i> ${lang === 'tr' ? 'Blok Ayarları' : 'Block Settings'}</h3>
+                        </div>
+                        <div id="macroPipelineSettings" class="vb-settings" style="flex: 1; padding: 15px; overflow-y: auto; min-height: 250px;">
+                            <div class="vb-settings-empty" style="text-align: center; color: var(--gm-text-muted); padding: 40px 20px;">
+                                <i class="fas fa-sliders" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                                <p>${lang === 'tr' ? 'Ayarları görmek için blok seçin' : 'Select a block to see settings'}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1108,12 +1127,47 @@
     }
 
     // ============================================================
+    // CLEANUP - FAZ-MS-2
+    // ============================================================
+
+    /**
+     * Destroy embedded MacroStudio UI and cleanup state.
+     * Called when switching away from macro-studio-pro scenario.
+     */
+    function destroyEmbedded() {
+        console.log('[MacroStudio] Destroying embedded mode');
+
+        // Clear container
+        if (EMBEDDED_CONTAINER_ID) {
+            const container = document.getElementById(EMBEDDED_CONTAINER_ID);
+            if (container) {
+                container.innerHTML = '';
+            }
+        }
+
+        // Reset embedded state
+        EMBEDDED_MODE = false;
+        EMBEDDED_CONTAINER_ID = null;
+        EMBEDDED_MOUNT_ID = null;
+        MACRO_STATE.activeScenarioId = null;
+        MACRO_STATE.currentMode = 'studio';
+
+        // Clear pipeline if present
+        if (typeof window.MacroPipeline !== 'undefined' && window.MacroPipeline.clearPipeline) {
+            window.MacroPipeline.clearPipeline();
+        }
+
+        console.log('[MacroStudio] Embedded mode destroyed');
+    }
+
+    // ============================================================
     // EXPORT
     // ============================================================
 
     window.MacroStudio = {
         init: init,
         initWithinExcel: initWithinExcel,
+        destroyEmbedded: destroyEmbedded, // FAZ-MS-2: Cleanup function
         loadFile: loadFile,
         onSheetChange: onSheetChange,
         onEmbeddedSheetChange: onEmbeddedSheetChange,

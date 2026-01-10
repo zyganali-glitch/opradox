@@ -2362,6 +2362,57 @@ console.log('[SELFTEST_MODULE_URL]', SELFTEST_MODULE_URL);
             }
         });
 
+        // Test 9: DOM elements exist (FAZ-MS-P3: UI Parity)
+        results.macroStudioTests.domElements = runSmokeTest('MacroStudio.domElements', () => {
+            const palette = document.getElementById('macroPipelinePalette');
+            const canvas = document.getElementById('macroPipelineCanvas');
+            const settings = document.getElementById('macroPipelineSettings');
+
+            if (!palette && !canvas && !settings) return 'SKIP: Macro Studio not rendered';
+
+            const found = [];
+            if (palette) found.push('palette');
+            if (canvas) found.push('canvas');
+            if (settings) found.push('settings');
+
+            // All 3 should exist for UI parity
+            if (found.length === 3) return 'PASS: All DOM elements present (3-column layout)';
+            return `WARN: Found ${found.join(', ')} (${found.length}/3)`;
+        });
+
+        // Test 10: Settings panel renders on block select (FAZ-MS-P3)
+        results.macroStudioTests.settingsRender = runSmokeTest('MacroPipeline.settingsRender', () => {
+            if (typeof window.MacroPipeline === 'undefined') return 'SKIP: MacroPipeline not loaded';
+
+            // Check if MacroPipeline has addBlock and selectBlock
+            if (typeof window.MacroPipeline.addBlock !== 'function') return 'SKIP: addBlock missing';
+            if (typeof window.MacroPipeline.selectBlock !== 'function') return 'SKIP: selectBlock missing';
+
+            try {
+                // Add a filter block programmatically
+                const blockId = window.MacroPipeline.addBlock('filter');
+                if (!blockId) return 'WARN: Could not add block';
+
+                // Select the block
+                window.MacroPipeline.selectBlock(blockId);
+
+                // Check if settings panel has content
+                const settings = document.getElementById('macroPipelineSettings');
+                if (!settings) return 'SKIP: Settings container not found';
+
+                const hasContent = settings.innerHTML.length > 100;
+
+                // Cleanup - remove the block
+                if (typeof window.MacroPipeline.removeBlock === 'function') {
+                    window.MacroPipeline.removeBlock(blockId);
+                }
+
+                return hasContent ? 'PASS: Settings panel rendered with content' : 'WARN: Settings panel may be empty';
+            } catch (e) {
+                return 'WARN: ' + (e.message || '').slice(0, 50);
+            }
+        });
+
         // Count Macro Studio test passes
         const msResults = Object.values(results.macroStudioTests);
         results.checks.macroStudioTestsPassed = msResults.filter(r => r.startsWith('PASS')).length;

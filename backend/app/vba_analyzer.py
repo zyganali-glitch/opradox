@@ -617,6 +617,147 @@ def detect_intent(modules: List[Dict]) -> Dict[str, Any]:
 
 
 # =============================================================================
+# VBA FIX SUGGESTIONS (FAZ-MS-P3: Rule-based fix recommendations)
+# =============================================================================
+
+VBA_FIX_SUGGESTIONS = {
+    "select_usage": {
+        "fix_tr": ".Select yerine doğrudan Range referansı kullanın",
+        "fix_en": "Use direct Range reference instead of .Select",
+        "before": "Range(\"A1\").Select\nSelection.Value = 1",
+        "after": "Range(\"A1\").Value = 1"
+    },
+    "activate_usage": {
+        "fix_tr": ".Activate yerine Worksheet değişkeni kullanın",
+        "fix_en": "Use Worksheet variable instead of .Activate",
+        "before": "Sheets(\"Data\").Activate\nActiveSheet.Range(\"A1\").Value",
+        "after": "Dim ws As Worksheet\nSet ws = Sheets(\"Data\")\nws.Range(\"A1\").Value"
+    },
+    "selection_usage": {
+        "fix_tr": "Selection yerine açık Range referansı kullanın",
+        "fix_en": "Use explicit Range reference instead of Selection",
+        "before": "Selection.Copy",
+        "after": "rng.Copy  ' rng = Range(...)"
+    },
+    "activesheet_usage": {
+        "fix_tr": "ActiveSheet yerine Worksheet değişkeni kullanın",
+        "fix_en": "Use Worksheet variable instead of ActiveSheet",
+        "before": "ActiveSheet.Range(\"A1\")",
+        "after": "ws.Range(\"A1\")  ' ws = Worksheets(...)"
+    },
+    "goto_usage": {
+        "fix_tr": "GoTo yerine yapısal kontrol akışı kullanın (If/Else, Select Case)",
+        "fix_en": "Use structured control flow instead of GoTo (If/Else, Select Case)",
+        "before": "If x > 0 Then GoTo Label1",
+        "after": "If x > 0 Then\n    ' code\nEnd If"
+    },
+    "magic_numbers": {
+        "fix_tr": "Sihirli sayılar yerine Const tanımlayın",
+        "fix_en": "Define Const instead of magic numbers",
+        "before": "If Count > 1000 Then",
+        "after": "Const MAX_COUNT As Long = 1000\nIf Count > MAX_COUNT Then"
+    },
+    "empty_error_handling": {
+        "fix_tr": "On Error Resume Next sonrası hata kontrolü ekleyin",
+        "fix_en": "Add error check after On Error Resume Next",
+        "before": "On Error Resume Next\nX = Y / Z",
+        "after": "On Error Resume Next\nX = Y / Z\nIf Err.Number <> 0 Then\n    ' Handle error\n    Err.Clear\nEnd If"
+    }
+}
+
+
+def truncate_snippet(text: str, max_chars: int = 100) -> str:
+    """Truncate text to max_chars, appending '...' if needed."""
+    if not text:
+        return ""
+    text = text.strip()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars - 3] + "..."
+
+
+def build_decision_trace(security: Dict, performance: Dict, quality: Dict) -> List[Dict]:
+    """
+    FAZ-MS-P3: Build decision trace from analysis results.
+    
+    Each entry explains WHY a finding was flagged, with evidence.
+    
+    Returns:
+        [
+            {
+                "rule_id": str,
+                "category": "security" | "performance" | "quality",
+                "severity": str,
+                "because_tr": str,
+                "because_en": str,
+                "evidence": str (max 100 chars),
+                "suggested_fix": {...} or None
+            }
+        ]
+    """
+    trace = []
+    
+    # Security findings
+    for finding in security.get("findings", []):
+        rule_id = finding.get("type", "unknown")
+        trace.append({
+            "rule_id": rule_id,
+            "category": "security",
+            "severity": finding.get("severity", "MEDIUM"),
+            "because_tr": f"'{rule_id}' pattern'i tespit edildi: {finding.get('description_tr', '')}",
+            "because_en": f"'{rule_id}' pattern detected: {finding.get('description_en', '')}",
+            "evidence": truncate_snippet(finding.get("snippet", "")),
+            "module": finding.get("module", ""),
+            "line": finding.get("line", 0),
+            "suggested_fix": None  # Security fixes are context-dependent
+        })
+    
+    # Performance issues
+    for issue in performance.get("issues", []):
+        rule_id = issue.get("type", "unknown")
+        fix = VBA_FIX_SUGGESTIONS.get(rule_id)
+        trace.append({
+            "rule_id": rule_id,
+            "category": "performance",
+            "severity": issue.get("impact", "MEDIUM"),
+            "because_tr": f"{issue.get('count', 0)}x kullanım: {issue.get('description_tr', '')}",
+            "because_en": f"{issue.get('count', 0)}x usage: {issue.get('description_en', '')}",
+            "evidence": f"{issue.get('count', 0)} occurrence(s)",
+            "module": "",
+            "line": 0,
+            "suggested_fix": {
+                "fix_tr": fix["fix_tr"],
+                "fix_en": fix["fix_en"],
+                "before": fix["before"],
+                "after": fix["after"]
+            } if fix else None
+        })
+    
+    # Quality bad patterns
+    for pattern in quality.get("bad_patterns", []):
+        rule_id = pattern.get("type", "unknown")
+        fix = VBA_FIX_SUGGESTIONS.get(rule_id)
+        trace.append({
+            "rule_id": rule_id,
+            "category": "quality",
+            "severity": "LOW",
+            "because_tr": f"{pattern.get('count', 0)}x bulundu: {pattern.get('description_tr', '')}",
+            "because_en": f"{pattern.get('count', 0)}x found: {pattern.get('description_en', '')}",
+            "evidence": f"{pattern.get('count', 0)} occurrence(s)",
+            "module": "",
+            "line": 0,
+            "suggested_fix": {
+                "fix_tr": fix["fix_tr"],
+                "fix_en": fix["fix_en"],
+                "before": fix["before"],
+                "after": fix["after"]
+            } if fix else None
+        })
+    
+    return trace
+
+
+# =============================================================================
 # MAIN ANALYSIS FUNCTION
 # =============================================================================
 
@@ -654,6 +795,9 @@ def analyze_vba_file(file_path: str) -> Dict[str, Any]:
     quality = analyze_quality(modules)
     intent = detect_intent(modules)
     
+    # FAZ-MS-P3: Build decision trace
+    decision_trace = build_decision_trace(security, performance, quality)
+    
     # Build hybrid view data (code without exposing raw VBA)
     hybrid_view = []
     for module in modules:
@@ -661,9 +805,16 @@ def analyze_vba_file(file_path: str) -> Dict[str, Any]:
             "name": module["name"],
             "type": module["type"],
             "line_count": module["line_count"],
-            "preview": module["code"][:500] + "..." if len(module["code"]) > 500 else module["code"],
+            "preview": truncate_snippet(module["code"], 500),
             "parseable": True  # All oletools-extracted code is parseable
         })
+    
+    # FAZ-MS-P3: Standardized findings structure
+    findings = {
+        "security": security.get("findings", []),
+        "performance": performance.get("issues", []),
+        "quality": quality.get("bad_patterns", [])
+    }
     
     return {
         "success": True,
@@ -673,12 +824,16 @@ def analyze_vba_file(file_path: str) -> Dict[str, Any]:
         "quality": quality,
         "intent": intent,
         "modules": hybrid_view,
+        # FAZ-MS-P3: New standardized output
+        "findings": findings,
+        "decision_trace": decision_trace,
         "summary": {
             "module_count": len(modules),
             "total_lines": sum(m["line_count"] for m in modules),
             "risk_level": security["risk_level"],
             "performance_score": performance["score"],
             "quality_score": quality["score"],
-            "primary_intent": intent["primary"]
+            "primary_intent": intent["primary"],
+            "trace_count": len(decision_trace)
         }
     }

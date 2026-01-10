@@ -97,6 +97,33 @@ if (!window.showToast) {
     console.log('[APP.JS] showToast already defined, using existing implementation');
 }
 
+// ===== FAZ-MS-P0: DEBUG SYSTEM (only active with ?debug=1) =====
+
+/**
+ * Debug log helper - only logs when ?debug=1 is in URL
+ * @param {string} msg - Log message
+ * @param {...any} args - Additional log arguments
+ */
+function debugLog(msg, ...args) {
+    const isDebug = new URLSearchParams(window.location.search).get('debug') === '1';
+    if (isDebug) {
+        console.log('[DEBUG]', msg, ...args);
+    }
+}
+
+/**
+ * Debug toast helper - only shows toast when ?debug=1 is in URL
+ * @param {string} msgTr - Turkish message
+ * @param {string} msgEn - English message
+ */
+function debugToast(msgTr, msgEn) {
+    const isDebug = new URLSearchParams(window.location.search).get('debug') === '1';
+    if (isDebug && typeof showToast === 'function') {
+        const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+        showToast(lang === 'tr' ? msgTr : msgEn, 'info', 3000);
+    }
+}
+
 // ===== BOOT HEALTH CHECK (FAZ-ES-1) =====
 // Non-blocking health ping on page load with TR/EN toast feedback
 
@@ -5345,17 +5372,17 @@ function setupMiddlePaneDropZone() {
 
 
 
-            console.log('­şôĞ Scenario dropped:', data);
+            console.log('📦 Scenario dropped:', data);
+            debugLog('Drop event received', { id: data.id, isPremium: data.isPremium });
 
-
+            // FAZ-MS-P1: ID normalization for robustness (underscore vs dash)
+            const normalizeId = (id) => id ? id.replace(/_/g, '-').toLowerCase() : '';
+            const normalizedId = normalizeId(data.id);
 
             // Find the scenario in SCENARIO_LIST
+            const scenario = SCENARIO_LIST.find(s => normalizeId(s.id) === normalizedId);
 
-            const scenario = SCENARIO_LIST.find(s => s.id === data.id);
-
-
-
-            if (data.isPremium || data.id === 'custom-report-builder-pro') {
+            if (data.isPremium || normalizedId === 'custom-report-builder-pro') {
 
                 // Premium Card dropped - activate Visual Builder
 
@@ -5393,16 +5420,44 @@ function setupMiddlePaneDropZone() {
 
                 }
 
-                showToast(CURRENT_LANG === 'tr' ? '­şÄ¿ Visual Builder açıldı!' : '­şÄ¿ Visual Builder opened!', 'success');
+                showToast(CURRENT_LANG === 'tr' ? '🎿 Visual Builder açıldı!' : '🎿 Visual Builder opened!', 'success');
+
+            } else if (normalizedId === 'macro-studio-pro') {
+
+                // FAZ-MS-P1: Macro Studio dropped - activate Macro Studio
+                debugLog('Macro Studio PRO dropped - explicit handling', { scenario: scenario?.id });
+
+                ACTIVE_SCENARIO_ID = 'macro-studio-pro';
+
+                if (scenario) {
+                    document.getElementById('scenarioTitle').textContent = scenario.title;
+                    const subtitle = document.getElementById('scenarioSubtitle');
+                    if (subtitle) {
+                        subtitle.textContent = scenario.short || scenario.description ||
+                            (CURRENT_LANG === 'tr'
+                                ? 'VBA makrolarını analiz edin, pipeline oluşturun.'
+                                : 'Analyze VBA macros, build pipelines.');
+                    }
+                }
+
+                // Call renderDynamicForm which handles macro-studio-pro specially
+                renderDynamicForm('macro-studio-pro', scenario?.params || []);
+                loadScenarioHelp('macro-studio-pro');
+
+                showToast(CURRENT_LANG === 'tr' ? '🔧 Macro Studio açıldı!' : '🔧 Macro Studio opened!', 'success');
+                debugToast('Macro Studio drop handled', 'Macro Studio drop handled');
 
             } else if (scenario) {
 
                 // Normal scenario dropped
+                debugLog('Normal scenario dropped', { id: scenario.id });
 
                 selectScenario(scenario, null);
 
                 showToast(CURRENT_LANG === 'tr' ? `✓ ${scenario.title} seçildi` : `✓ ${scenario.title} selected`, 'success');
 
+            } else {
+                debugLog('Scenario not found in SCENARIO_LIST', { id: data.id, normalizedId });
             }
 
         } catch (err) {
@@ -5554,6 +5609,11 @@ function renderDynamicForm(scenarioId, params) {
     const vbContainer = document.getElementById("visualBuilderContainer");
 
 
+    // FAZ-MS-2: MacroStudio cleanup when switching away from macro-studio-pro
+    if (scenarioId !== 'macro-studio-pro' && typeof MacroStudio !== 'undefined' && MacroStudio.destroyEmbedded) {
+        MacroStudio.destroyEmbedded();
+    }
+
 
     // PRO Builder senaryosunu atla (dokunma!)
 
@@ -5614,6 +5674,7 @@ function renderDynamicForm(scenarioId, params) {
     else if (scenarioId === 'macro-studio-pro') {
 
         console.log('🔧 Macro Studio PRO detected - opening Macro Studio');
+        debugLog('Macro Studio PRO branch entered', { scenarioId, container: container.id });
 
 
 
@@ -5641,29 +5702,35 @@ function renderDynamicForm(scenarioId, params) {
 
 
 
-        // MacroStudio modülünü başlat (eğer yüklüyse)
-
-        if (typeof MacroStudio !== 'undefined' && MacroStudio.initWithinExcel) {
-
-            MacroStudio.initWithinExcel('macroStudioContainer', scenarioId);
-
-        } else if (typeof MacroStudio !== 'undefined' && MacroStudio.init) {
-
-            // Fallback: eski init fonksiyonu
-
-            console.log('MacroStudio.initWithinExcel bulunamadı, init kullanılıyor');
-
-        } else {
-
-            console.warn('MacroStudio modülü yüklenmedi');
-
-            container.innerHTML += '<div class="gm-info-box" style="color:var(--gm-danger);"><i class="fas fa-exclamation-triangle"></i> Macro Studio modülü yüklenemedi.</div>';
-
+        // FAZ-MS-P0: MacroStudio modülünü başlat (try/catch hardening)
+        try {
+            if (typeof MacroStudio !== 'undefined' && MacroStudio.initWithinExcel) {
+                MacroStudio.initWithinExcel('macroStudioContainer', scenarioId);
+                debugLog('MacroStudio.initWithinExcel called successfully');
+                debugToast('Macro Studio mounted', 'Macro Studio mounted');
+            } else if (typeof MacroStudio !== 'undefined' && MacroStudio.init) {
+                // Fallback: eski init fonksiyonu
+                console.log('MacroStudio.initWithinExcel bulunamadı, init kullanılıyor');
+                debugLog('MacroStudio using fallback init()');
+            } else {
+                console.warn('MacroStudio modülü yüklenmedi');
+                debugLog('MacroStudio module not loaded', { MacroStudio: typeof MacroStudio });
+                container.innerHTML += '<div class="gm-info-box" style="color:var(--gm-danger);"><i class="fas fa-exclamation-triangle"></i> Macro Studio modülü yüklenemedi.</div>';
+            }
+        } catch (err) {
+            console.error('[MacroStudio] Init error:', err);
+            debugLog('MacroStudio init exception', err);
+            // FAZ-MS-P0: Hardening - show minimal toast on critical error
+            if (typeof showToast === 'function') {
+                const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+                showToast(lang === 'tr' ? 'Macro Studio yüklenemedi' : 'Macro Studio failed to load', 'error');
+            }
         }
 
 
 
         return; // Normal form render'ı atla
+
 
     } else {
 

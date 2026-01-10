@@ -292,6 +292,62 @@
             ]
         },
 
+        // ===== LOOKUP & JOIN BLOKLARI (FAZ-MS-P2: PRO Parity) =====
+        lookup_join: {
+            name: { tr: "VLOOKUP / Birleştir", en: "VLOOKUP / Join" },
+            icon: "fa-link",
+            color: "#4a90d9",
+            description: { tr: "İki tabloyu birleştir (VLOOKUP/Merge)", en: "Join two tables" },
+            category: "combine",
+            requiresSecondFile: true,
+            joinTypes: [
+                { value: "vlookup", label: { tr: "VLOOKUP (Eşleşen değerleri getir)", en: "VLOOKUP (Fetch matching values)" } },
+                { value: "left", label: { tr: "Sol Birleşim (Tüm ana tablo + eşleşenler)", en: "Left Join" } },
+                { value: "inner", label: { tr: "İç Birleşim (Sadece eşleşenler)", en: "Inner Join" } },
+                { value: "outer", label: { tr: "Dış Birleşim (Tümü)", en: "Outer Join" } },
+                { value: "cross_sheet", label: { tr: "Aynı Dosyadan Farklı Sayfa", en: "Cross-Sheet (Same File)" } }
+            ]
+        },
+
+        // ===== UNION (Alt Alta Birleştir) =====
+        union: {
+            name: { tr: "Alt Alta Birleştir", en: "Union (Append)" },
+            icon: "fa-layer-group",
+            color: "#0ea5e9",
+            description: { tr: "İki tabloyu alt alta ekle", en: "Append two tables" },
+            category: "combine",
+            requiresSecondFile: true
+        },
+
+        // ===== DIFF (Fark Bul) =====
+        diff: {
+            name: { tr: "Fark Bul", en: "Find Difference" },
+            icon: "fa-not-equal",
+            color: "#ef4444",
+            description: { tr: "Ana dosyada olup ikincide olmayan", en: "Records only in main file" },
+            category: "combine",
+            requiresSecondFile: true
+        },
+
+        // ===== VALIDATE (Doğrula) =====
+        validate: {
+            name: { tr: "Doğrula", en: "Validate" },
+            icon: "fa-check-double",
+            color: "#22c55e",
+            description: { tr: "Referans listeden doğrula", en: "Validate against reference" },
+            category: "combine",
+            requiresSecondFile: true
+        },
+
+        // ===== WHAT-IF VARIABLE (Senaryo Değişkeni) =====
+        what_if_variable: {
+            name: { tr: "Senaryo Değişkeni", en: "What-If Variable" },
+            icon: "fa-sliders",
+            color: "#7c3aed",
+            description: { tr: "What-If analizi için değişken tanımla", en: "Define variable for What-If" },
+            category: "analysis"
+        },
+
         // ===== ÇIKTI AYARLARI =====
         output_settings: {
             name: { tr: "Çıktı Ayarları", en: "Output Settings" },
@@ -323,13 +379,19 @@
             id: 'transform',
             name: { tr: 'Dönüştürme', en: 'Transform' },
             icon: 'fa-wand-magic-sparkles',
-            blocks: ['computed', 'formula', 'if_else', 'advanced_computed', 'sort']
+            blocks: ['what_if_variable', 'computed', 'formula', 'if_else', 'advanced_computed', 'sort']
         },
         {
             id: 'aggregate',
             name: { tr: 'Toplama & Analiz', en: 'Aggregate & Analysis' },
             icon: 'fa-calculator',
             blocks: ['grouping', 'pivot', 'window_function', 'time_series']
+        },
+        {
+            id: 'combine',
+            name: { tr: 'Birleştirme', en: 'Combine' },
+            icon: 'fa-link',
+            blocks: ['lookup_join', 'union', 'diff', 'validate']
         },
         {
             id: 'output',
@@ -570,24 +632,43 @@
 
     function getDefaultBlockConfig(blockType) {
         const defaults = {
+            // Source
+            data_source: { source_type: 'main', sheet_name: '' },
+            // Transform
             if_condition: { column: '', operator: '==', value: '' },
             loop: { variable: 'row' },
             switch_case: { column: '', cases: [] },
             computed: { name: '', columns: [], operation: 'add' },
             formula: { name: '', expression: '' },
-            text_transform: { column: '', transform_type: 'trim' },
+            if_else: { name: '', column: '', condition: '==', compare_value: '', true_value: '', false_value: '' },
+            text_transform: { column: '', transform_type: 'trim', output_name: '' },
             date_transform: { column: '', transform_type: 'extract_year' },
             filter: { column: '', operator: 'equals', value: '' },
+            sort: { column: '', order: 'asc' },
             remove_duplicates: { columns: [] },
             remove_nulls: { columns: [] },
-            grouping: { group_by: [], aggregations: [] },
-            pivot: { rows: [], columns: [], values: [], agg: 'sum' },
+            // Aggregate
+            grouping: { group_by: [], agg_column: '', agg_func: 'sum', agg_alias: '' },
+            pivot: { rows: [], columns: [], values: [], aggregation: 'sum', percent_type: '', show_totals: true },
+            window_function: { window_type: 'rank', value_column: '', direction: 'desc', partition_by: [], output_name: '' },
+            time_series: { analysis_type: 'ytd_sum', date_column: '', value_column: '', output_name: '' },
+            advanced_computed: { advanced_type: 'z_score', column: '', output_name: '', separator: ',' },
             sum_column: { column: '' },
             count_rows: {},
             avg_column: { column: '' },
+            // Combine
+            lookup_join: { join_type: 'vlookup', main_key: '', source_key: '', fetch_columns: [], source_type: 'second_file', source_sheet: '' },
+            union: { source_type: 'second_file', source_sheet: '', ignore_index: true },
+            diff: { left_on: '', source_type: 'second_file', right_on: '' },
+            validate: { left_on: '', source_type: 'second_file', right_on: '', valid_label: 'Geçerli', invalid_label: 'Geçersiz' },
+            // Output
+            chart: { chart_type: 'column', x_column: '', y_columns: [], title: '', show_legend: true },
+            conditional_format: { column: '', cf_type: 'color_scale', threshold_value: 10 },
             output_settings: { filename: 'output', format: 'xlsx' },
             export_excel: { filename: 'output.xlsx' },
-            export_csv: { filename: 'output.csv', delimiter: ',' }
+            export_csv: { filename: 'output.csv', delimiter: ',' },
+            // Analysis
+            what_if_variable: { name: '', value: 1 }
         };
         return defaults[blockType] || {};
     }
@@ -606,6 +687,17 @@
             case 'text_transform':
             case 'date_transform':
                 return config.column ? `${config.column}` : '';
+            // FAZ-MS-P2: New block summaries
+            case 'lookup_join':
+                return config.join_type ? `${config.join_type}: ${config.main_key || '?'} ↔ ${config.source_key || '?'}` : '';
+            case 'union':
+                return config.append_type ? `(${config.append_type})` : '';
+            case 'diff':
+                return config.key_columns?.length ? `keys: ${config.key_columns.join(', ')}` : '';
+            case 'validate':
+                return config.key_column ? `${config.key_column} → ${config.action || 'flag'}` : '';
+            case 'what_if_variable':
+                return config.variable_name ? `$${config.variable_name} = ${config.default_value}` : '';
             default:
                 return '';
         }
@@ -878,10 +970,16 @@
     // ============================================================
 
     function renderPalette() {
+        console.log('[MacroPipeline] renderPalette called');
         const container = document.getElementById('macroPipelinePalette');
-        if (!container) return;
+        console.log('[MacroPipeline] macroPipelinePalette container:', container);
+        if (!container) {
+            console.warn('[MacroPipeline] macroPipelinePalette container NOT FOUND!');
+            return;
+        }
 
         let html = `<h3 class="vb-palette-title"><i class="fas fa-cubes"></i> ${getText({ tr: 'Blok Paleti', en: 'Block Palette' })}</h3>`;
+
         html += `<div class="vb-palette-categories">`;
 
         MACRO_PALETTE_CATEGORIES.forEach((category, idx) => {
@@ -1077,60 +1175,243 @@
 
     function renderBlockSettings(block, columns) {
         const config = block.config;
+        const blockDef = MACRO_BLOCK_TYPES[block.type];
+        const sheets = window.MacroStudio?.getState()?.sheetNames || [];
         let html = '';
 
         switch (block.type) {
+            // ===== VERİ KAYNAĞI =====
+            case 'data_source':
+                html += renderSelect('source_type', config.source_type, [
+                    { value: 'main', label: { tr: 'Ana Dosya', en: 'Main File' } },
+                    { value: 'second', label: { tr: 'İkinci Dosya', en: 'Second File' } },
+                    { value: 'cross_sheet', label: { tr: 'Aynı Dosyadan Farklı Sayfa', en: 'Cross-Sheet' } }
+                ], { tr: 'Kaynak Tipi', en: 'Source Type' });
+                if (config.source_type === 'cross_sheet' && sheets.length > 0) {
+                    html += renderSelect('sheet_name', config.sheet_name,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: 'Sayfa Seçimi', en: 'Sheet Selection' });
+                }
+                break;
+
+            // ===== FİLTRE =====
             case 'filter':
             case 'if_condition':
-                html += renderSelect('column', config.column, columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Sütun', en: 'Column' });
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Sütun', en: 'Column' });
                 html += renderSelect('operator', config.operator,
-                    MACRO_BLOCK_TYPES[block.type].operators, { tr: 'Operatör', en: 'Operator' });
+                    MACRO_BLOCK_TYPES[block.type]?.operators || MACRO_BLOCK_TYPES.filter.operators,
+                    { tr: 'Operatör', en: 'Operator' });
                 html += renderInput('value', config.value, { tr: 'Değer', en: 'Value' });
                 break;
 
+            // ===== HESAPLAMA =====
             case 'computed':
                 html += renderInput('name', config.name, { tr: 'Yeni Sütun Adı', en: 'New Column Name' });
-                html += renderMultiSelect('columns', config.columns || [], columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Kaynak Sütunlar', en: 'Source Columns' });
+                html += renderColumnSelect('columns', config.columns, columns, { tr: 'Kaynak Sütunlar', en: 'Source Columns' }, true);
                 html += renderSelect('operation', config.operation,
                     MACRO_BLOCK_TYPES.computed.operations, { tr: 'İşlem', en: 'Operation' });
                 break;
 
+            // ===== FORMÜL =====
             case 'formula':
                 html += renderInput('name', config.name, { tr: 'Çıktı Sütun Adı', en: 'Output Column Name' });
                 html += renderInput('expression', config.expression, { tr: 'Formül (örn: A+B*100)', en: 'Formula (e.g. A+B*100)' });
                 break;
 
-            case 'text_transform':
-            case 'date_transform':
-                html += renderSelect('column', config.column, columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Sütun', en: 'Column' });
-                html += renderSelect('transform_type', config.transform_type,
-                    MACRO_BLOCK_TYPES[block.type].transformTypes, { tr: 'İşlem Tipi', en: 'Transform Type' });
+            // ===== IF-ELSE =====
+            case 'if_else':
+                html += renderInput('name', config.name, { tr: 'Yeni Sütun Adı', en: 'New Column Name' });
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Koşul Sütunu', en: 'Condition Column' });
+                html += renderSelect('condition', config.condition,
+                    MACRO_BLOCK_TYPES.if_else.conditionTypes, { tr: 'Koşul', en: 'Condition' });
+                html += renderInput('compare_value', config.compare_value, { tr: 'Karşılaştırma Değeri', en: 'Compare Value' });
+                html += renderInput('true_value', config.true_value, { tr: 'Doğruysa Değer', en: 'If True Value' });
+                html += renderInput('false_value', config.false_value, { tr: 'Yanlışsa Değer', en: 'If False Value' });
                 break;
 
+            // ===== METİN DÖNÜŞTÜR =====
+            case 'text_transform':
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Kaynak Sütun', en: 'Source Column' });
+                html += renderSelect('transform_type', config.transform_type,
+                    MACRO_BLOCK_TYPES.text_transform.transformTypes, { tr: 'Dönüşüm Tipi', en: 'Transform Type' });
+                html += renderInput('output_name', config.output_name, { tr: 'Çıktı Sütun Adı (boşsa üzerine yazar)', en: 'Output Name (empty overwrites)' });
+                break;
+
+            // ===== SIRALAMA =====
+            case 'sort':
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Sıralama Sütunu', en: 'Sort Column' });
+                html += renderSelect('order', config.order || 'asc', [
+                    { value: 'asc', label: { tr: 'Artan (A→Z)', en: 'Ascending' } },
+                    { value: 'desc', label: { tr: 'Azalan (Z→A)', en: 'Descending' } }
+                ], { tr: 'Sıra', en: 'Order' });
+                break;
+
+            // ===== TEKRARLARİ SİL =====
             case 'remove_duplicates':
             case 'remove_nulls':
-                html += renderMultiSelect('columns', config.columns || [], columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Sütunlar (boş = tümü)', en: 'Columns (empty = all)' });
+                html += renderColumnSelect('columns', config.columns, columns,
+                    { tr: 'Sütunlar (boş = tümü)', en: 'Columns (empty = all)' }, true);
                 break;
 
+            // ===== GRUPLAMA =====
             case 'grouping':
-                html += renderMultiSelect('group_by', config.group_by || [], columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Gruplama Sütunları', en: 'Group By Columns' });
+                html += renderColumnSelect('group_by', config.group_by, columns, { tr: 'Gruplama Sütunları', en: 'Group By Columns' }, true);
+                html += renderColumnSelect('agg_column', config.agg_column, columns, { tr: 'Toplanacak Sütun', en: 'Aggregate Column' });
+                html += renderSelect('agg_func', config.agg_func,
+                    MACRO_BLOCK_TYPES.grouping.aggregations, { tr: 'Toplama Fonksiyonu', en: 'Aggregate Function' });
+                html += renderInput('agg_alias', config.agg_alias, { tr: 'Sonuç Sütun Adı', en: 'Result Column Name' });
                 break;
 
+            // ===== PİVOT =====
+            case 'pivot':
+                html += renderColumnSelect('rows', config.rows, columns, { tr: 'Satır Alanları', en: 'Row Fields' }, true);
+                html += renderColumnSelect('columns', config.columns, columns, { tr: 'Sütun Alanları (Opsiyonel)', en: 'Column Fields' }, true);
+                html += renderColumnSelect('values', config.values, columns, { tr: 'Değer Alanları', en: 'Value Fields' }, true);
+                html += renderSelect('aggregation', config.aggregation,
+                    MACRO_BLOCK_TYPES.pivot.aggregations, { tr: 'Toplama', en: 'Aggregation' });
+                html += renderSelect('percent_type', config.percent_type,
+                    MACRO_BLOCK_TYPES.pivot.percentTypes, { tr: 'Yüzde Tipi', en: 'Percent Type' });
+                html += renderCheckbox('show_totals', config.show_totals, { tr: 'Genel Toplam Göster', en: 'Show Grand Total' });
+                break;
+
+            // ===== WINDOW FONKSİYONLARI =====
+            case 'window_function':
+                html += renderSelect('window_type', config.window_type,
+                    MACRO_BLOCK_TYPES.window_function.windowTypes, { tr: 'Fonksiyon', en: 'Function' });
+                html += renderColumnSelect('value_column', config.value_column, columns, { tr: 'Değer Sütunu', en: 'Value Column' });
+                html += renderSelect('direction', config.direction || 'desc', [
+                    { value: 'asc', label: { tr: 'Artan (1=En Düşük)', en: 'Ascending (Lowest = 1)' } },
+                    { value: 'desc', label: { tr: 'Azalan (1=En Yüksek)', en: 'Descending (Highest = 1)' } }
+                ], { tr: 'Sıralama Yönü', en: 'Sort Direction' });
+                html += renderColumnSelect('partition_by', config.partition_by, columns,
+                    { tr: 'Gruplama Sütunları (Opsiyonel)', en: 'Partition By (Optional)' }, true);
+                html += renderInput('output_name', config.output_name, { tr: 'Çıktı Sütun Adı', en: 'Output Column Name' });
+                break;
+
+            // ===== ZAMAN SERİSİ =====
+            case 'time_series':
+                html += renderSelect('analysis_type', config.analysis_type,
+                    MACRO_BLOCK_TYPES.time_series.analysisTypes, { tr: 'Analiz Tipi', en: 'Analysis Type' });
+                html += renderColumnSelect('date_column', config.date_column, columns, { tr: 'Tarih Sütunu', en: 'Date Column' });
+                html += renderColumnSelect('value_column', config.value_column, columns, { tr: 'Değer Sütunu', en: 'Value Column' });
+                html += renderInput('output_name', config.output_name, { tr: 'Çıktı Sütun Adı', en: 'Output Column Name' });
+                break;
+
+            // ===== İLERİ HESAPLAMALAR =====
+            case 'advanced_computed':
+                html += renderSelect('advanced_type', config.advanced_type,
+                    MACRO_BLOCK_TYPES.advanced_computed.advancedTypes, { tr: 'Hesaplama Tipi', en: 'Calculation Type' });
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Kaynak Sütun', en: 'Source Column' });
+                if (['split', 'business_days'].includes(config.advanced_type)) {
+                    html += renderInput('separator', config.separator || ',', { tr: 'Ayraç', en: 'Separator' });
+                }
+                html += renderInput('output_name', config.output_name, { tr: 'Çıktı Sütun Adı', en: 'Output Column Name' });
+                break;
+
+            // ===== WHAT-IF DEĞİŞKEN =====
+            case 'what_if_variable':
+                html += renderInput('name', config.name, { tr: 'Değişken Adı', en: 'Variable Name' });
+                html += renderInput('value', config.value, { tr: 'Değer (Sayı)', en: 'Value (Number)' });
+                break;
+
+            // ===== LOOKUP & JOIN =====
+            case 'lookup_join':
+                html += renderSelect('join_type', config.join_type,
+                    MACRO_BLOCK_TYPES.lookup_join.joinTypes, { tr: 'Birleştirme Tipi', en: 'Join Type' });
+                html += renderColumnSelect('main_key', config.main_key, columns, { tr: 'Ana Anahtar Sütun', en: 'Main Key Column' });
+                html += renderSelect('source_type', config.source_type, [
+                    { value: 'second_file', label: { tr: 'İkinci Dosya', en: 'Second File' } },
+                    { value: 'same_file_sheet', label: { tr: 'Aynı Dosya - Farklı Sayfa', en: 'Same File - Different Sheet' } }
+                ], { tr: 'Kaynak', en: 'Source' });
+                if (config.source_type === 'same_file_sheet' && sheets.length > 0) {
+                    html += renderSelect('source_sheet', config.source_sheet,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: 'Sayfa', en: 'Sheet' });
+                }
+                html += renderInput('source_key', config.source_key, { tr: 'Kaynak Anahtar Sütun', en: 'Source Key Column' });
+                html += renderInput('fetch_columns', (config.fetch_columns || []).join(', '),
+                    { tr: 'Getirilecek Sütunlar (virgülle)', en: 'Columns to Fetch (comma-separated)' });
+                break;
+
+            // ===== UNION =====
+            case 'union':
+                html += renderSelect('source_type', config.source_type || 'second_file', [
+                    { value: 'second_file', label: { tr: 'İkinci Dosya', en: 'Second File' } },
+                    { value: 'same_file_sheet', label: { tr: 'Aynı Dosya - Farklı Sayfa', en: 'Same File - Different Sheet' } }
+                ], { tr: 'Kaynak', en: 'Source' });
+                if (config.source_type === 'same_file_sheet' && sheets.length > 0) {
+                    html += renderSelect('source_sheet', config.source_sheet,
+                        sheets.map(s => ({ value: s, label: s })),
+                        { tr: 'Sayfa', en: 'Sheet' });
+                }
+                html += renderCheckbox('ignore_index', config.ignore_index, { tr: 'İndeksi Sıfırla', en: 'Reset Index' });
+                break;
+
+            // ===== DIFF =====
+            case 'diff':
+                html += renderColumnSelect('left_on', config.left_on, columns, { tr: 'Karşılaştırma Sütunu', en: 'Compare Column' });
+                html += renderSelect('source_type', config.source_type || 'second_file', [
+                    { value: 'second_file', label: { tr: 'İkinci Dosya', en: 'Second File' } },
+                    { value: 'same_file_sheet', label: { tr: 'Aynı Dosya - Farklı Sayfa', en: 'Same File - Different Sheet' } }
+                ], { tr: 'Kaynak', en: 'Source' });
+                html += renderInput('right_on', config.right_on, { tr: 'Kaynak Eşleşme Sütunu', en: 'Source Match Column' });
+                break;
+
+            // ===== VALIDATE =====
+            case 'validate':
+                html += renderColumnSelect('left_on', config.left_on, columns, { tr: 'Doğrulanacak Sütun', en: 'Column to Validate' });
+                html += renderSelect('source_type', config.source_type || 'second_file', [
+                    { value: 'second_file', label: { tr: 'İkinci Dosya', en: 'Second File' } },
+                    { value: 'same_file_sheet', label: { tr: 'Aynı Dosya - Farklı Sayfa', en: 'Same File - Different Sheet' } }
+                ], { tr: 'Referans Kaynak', en: 'Reference Source' });
+                html += renderInput('right_on', config.right_on, { tr: 'Referans Sütunu', en: 'Reference Column' });
+                html += renderInput('valid_label', config.valid_label || 'Geçerli', { tr: 'Geçerli Etiketi', en: 'Valid Label' });
+                html += renderInput('invalid_label', config.invalid_label || 'Geçersiz', { tr: 'Geçersiz Etiketi', en: 'Invalid Label' });
+                break;
+
+            // ===== GRAFİK =====
+            case 'chart':
+                html += renderSelect('chart_type', config.chart_type,
+                    MACRO_BLOCK_TYPES.chart.chartTypes, { tr: 'Grafik Tipi', en: 'Chart Type' });
+                html += renderColumnSelect('x_column', config.x_column, columns, { tr: 'X Ekseni', en: 'X Axis' });
+                html += renderColumnSelect('y_columns', config.y_columns, columns, { tr: 'Y Ekseni', en: 'Y Axis' }, true);
+                html += renderInput('title', config.title, { tr: 'Başlık', en: 'Title' });
+                html += renderCheckbox('show_legend', config.show_legend, { tr: 'Gösterge Göster', en: 'Show Legend' });
+                break;
+
+            // ===== KOŞULLU FORMAT =====
+            case 'conditional_format':
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Sütun', en: 'Column' });
+                html += renderSelect('cf_type', config.cf_type,
+                    MACRO_BLOCK_TYPES.conditional_format.formatTypes, { tr: 'Format Tipi', en: 'Format Type' });
+                if (['threshold', 'top_n', 'bottom_n'].includes(config.cf_type)) {
+                    html += renderInput('threshold_value', config.threshold_value || 10, { tr: 'Eşik/N Değeri', en: 'Threshold/N Value' });
+                }
+                break;
+
+            // ===== ÇIKTI AYARLARI =====
+            case 'output_settings':
+                html += renderInput('filename', config.filename || 'output', { tr: 'Dosya Adı', en: 'Filename' });
+                html += renderSelect('format', config.format || 'xlsx', [
+                    { value: 'xlsx', label: 'Excel (.xlsx)' },
+                    { value: 'csv', label: 'CSV (.csv)' },
+                    { value: 'json', label: 'JSON (.json)' }
+                ], { tr: 'Format', en: 'Format' });
+                break;
+
+            // ===== ESKI BLOKLAR (legacy uyumluluk) =====
             case 'sum_column':
             case 'avg_column':
-                html += renderSelect('column', config.column, columns.map(c => ({ value: c, label: c })),
-                    { tr: 'Sütun', en: 'Column' });
+                html += renderColumnSelect('column', config.column, columns, { tr: 'Sütun', en: 'Column' });
                 break;
 
             case 'export_excel':
             case 'export_csv':
                 html += renderInput('filename', config.filename, { tr: 'Dosya Adı', en: 'Filename' });
                 break;
+
+            default:
+                html += `<p style="color:var(--gm-text-muted);font-size:0.85rem;">${getText({ tr: 'Bu blok için özel ayar yok.', en: 'No specific settings for this block.' })}</p>`;
         }
 
         return html;
@@ -1175,9 +1456,205 @@
         `;
     }
 
+    // Column selector with manual input support (Report Studio PRO pattern)
+    function renderColumnSelect(name, value, columns, label, isMultiple = false) {
+        const cols = columns || [];
+        if (isMultiple) {
+            return renderMultiSelect(name, value || [], cols.map(c => ({ value: c, label: c })), label);
+        }
+        let html = `
+            <div class="vb-form-group">
+                <label class="vb-form-label">${getText(label)}</label>
+                <select name="${name}" class="vb-select">
+                    <option value="">-- ${getText({ tr: 'Seçin', en: 'Select' })} --</option>
+        `;
+        cols.forEach(col => {
+            html += `<option value="${col}" ${value === col ? 'selected' : ''}>${col}</option>`;
+        });
+        html += `</select>
+                <input type="text" name="${name}_manual" value="" class="vb-input vb-manual-input" 
+                       placeholder="${getText({ tr: 'veya manuel yazın', en: 'or type manually' })}" 
+                       style="margin-top:4px;font-size:0.8rem;" />
+            </div>
+        `;
+        return html;
+    }
+
+    function renderCheckbox(name, value, label) {
+        return `
+            <div class="vb-form-group vb-form-checkbox">
+                <label class="vb-checkbox-label">
+                    <input type="checkbox" name="${name}" ${value ? 'checked' : ''} />
+                    <span>${getText(label)}</span>
+                </label>
+            </div>
+        `;
+    }
+
     function toggleCategory(categoryId) {
         const el = document.querySelector(`.vb-palette-category[data-category="${categoryId}"]`);
         if (el) el.classList.toggle('expanded');
+    }
+
+    // ============================================================
+    // STEP-WISE CACHE (IndexedDB) - FAZ-MS-5
+    // ============================================================
+
+    let cacheDB = null;
+
+    /**
+     * Open/create IndexedDB for step caching
+     */
+    function openCacheDB() {
+        if (cacheDB) return Promise.resolve(cacheDB);
+
+        return new Promise((resolve, reject) => {
+            try {
+                const request = indexedDB.open(CACHE_DB_NAME, CACHE_DB_VERSION);
+
+                request.onerror = () => {
+                    console.warn('[MacroPipeline] Cache DB open error');
+                    resolve(null);
+                };
+
+                request.onsuccess = (e) => {
+                    cacheDB = e.target.result;
+                    console.log('[MacroPipeline] Cache DB opened');
+                    resolve(cacheDB);
+                };
+
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(CACHE_STORE_NAME)) {
+                        db.createObjectStore(CACHE_STORE_NAME, { keyPath: 'key' });
+                        console.log('[MacroPipeline] Cache store created');
+                    }
+                };
+            } catch (err) {
+                console.warn('[MacroPipeline] IndexedDB not available:', err.message);
+                resolve(null);
+            }
+        });
+    }
+
+    /**
+     * Generate cache key from file fingerprint + actions hash
+     */
+    function generateCacheKey(fileInfo, actions, sheetName) {
+        const fingerprint = fileInfo
+            ? `${fileInfo.name || 'unknown'}_${fileInfo.size || 0}_${fileInfo.lastModified || 0}`
+            : 'no_file';
+
+        const actionsHash = actions && actions.length > 0
+            ? simpleHash(JSON.stringify(actions))
+            : 'no_actions';
+
+        const sheet = sheetName || 'default';
+
+        return `${fingerprint}_${actionsHash}_${sheet}`;
+    }
+
+    /**
+     * Simple hash function for cache key
+     */
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    /**
+     * Get cached step result by key
+     */
+    async function getCachedStep(key) {
+        if (!cacheDB) await openCacheDB();
+        if (!cacheDB) return null;
+
+        return new Promise((resolve) => {
+            try {
+                const tx = cacheDB.transaction(CACHE_STORE_NAME, 'readonly');
+                const store = tx.objectStore(CACHE_STORE_NAME);
+                const request = store.get(key);
+
+                request.onsuccess = () => {
+                    const result = request.result;
+                    if (result) {
+                        // Check if expired
+                        const age = Date.now() - (result.timestamp || 0);
+                        if (age < CACHE_MAX_AGE_MS) {
+                            console.log('[MacroPipeline] Cache HIT:', key);
+                            resolve(result.data);
+                        } else {
+                            console.log('[MacroPipeline] Cache EXPIRED:', key);
+                            resolve(null);
+                        }
+                    } else {
+                        console.log('[MacroPipeline] Cache MISS:', key);
+                        resolve(null);
+                    }
+                };
+
+                request.onerror = () => resolve(null);
+            } catch (err) {
+                console.warn('[MacroPipeline] Cache get error:', err.message);
+                resolve(null);
+            }
+        });
+    }
+
+    /**
+     * Store step result in cache
+     */
+    async function setCachedStep(key, data) {
+        if (!cacheDB) await openCacheDB();
+        if (!cacheDB) return false;
+
+        return new Promise((resolve) => {
+            try {
+                const tx = cacheDB.transaction(CACHE_STORE_NAME, 'readwrite');
+                const store = tx.objectStore(CACHE_STORE_NAME);
+
+                store.put({
+                    key: key,
+                    data: data,
+                    timestamp: Date.now()
+                });
+
+                tx.oncomplete = () => {
+                    console.log('[MacroPipeline] Cache SET:', key);
+                    resolve(true);
+                };
+
+                tx.onerror = () => resolve(false);
+            } catch (err) {
+                console.warn('[MacroPipeline] Cache set error:', err.message);
+                resolve(false);
+            }
+        });
+    }
+
+    /**
+     * Clear all cached steps
+     */
+    function clearAllCache() {
+        if (!cacheDB) {
+            console.log('[MacroPipeline] No cache DB to clear');
+            return;
+        }
+
+        try {
+            const tx = cacheDB.transaction(CACHE_STORE_NAME, 'readwrite');
+            const store = tx.objectStore(CACHE_STORE_NAME);
+            store.clear();
+            console.log('[MacroPipeline] Cache cleared');
+            showToast(getText({ tr: 'Önbellek temizlendi', en: 'Cache cleared' }), 'info');
+        } catch (err) {
+            console.warn('[MacroPipeline] Cache clear error:', err.message);
+        }
     }
 
     // ============================================================
@@ -1185,11 +1662,30 @@
     // ============================================================
 
     async function run() {
-        // FAZ-D: Also call unified API for backend execution
+        // FAZ-MS-5: Get file info for cache key
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput?.files?.[0];
+        const fileInfo = file ? { name: file.name, size: file.size, lastModified: file.lastModified } : null;
+        const actions = toReportActions();
+        const sheetName = document.getElementById('sheetSelect')?.value || null;
+        const cacheKey = generateCacheKey(fileInfo, actions, sheetName);
+
+        // FAZ-MS-5: Check cache first
+        const cached = await getCachedStep(cacheKey);
+        if (cached) {
+            console.log('[MacroPipeline] Using cached result');
+            displayResult(cached);
+            return;
+        }
+
+        // FAZ-D: Call unified API for backend execution
         const unifiedResult = await callUnifiedScenarioAPI();
         if (unifiedResult) {
             console.log('[MacroPipeline] Unified API result:', unifiedResult);
-            displayResult(unifiedResult.preview_data?.rows || []);
+            displayResult(unifiedResult); // FAZ-MS-4: Pass full response for download button
+
+            // FAZ-MS-5: Cache the result
+            await setCachedStep(cacheKey, unifiedResult);
             return;
         }
 
@@ -1197,8 +1693,10 @@
         const result = await executePipeline();
         if (result) {
             console.log('[MacroPipeline] Result:', result);
-            // Display result in preview or result area
             displayResult(result);
+
+            // FAZ-MS-5: Cache the result
+            await setCachedStep(cacheKey, result);
         }
     }
 
@@ -1383,18 +1881,134 @@
 
     function displayResult(data) {
         const resultContainer = document.getElementById('macroResultJson');
+        const statusContainer = document.getElementById('embeddedMacroStatusMessage');
         if (!resultContainer) return;
 
-        if (!data || data.length === 0) {
+        // Check if this is a full API response or just rows array
+        const isFullResponse = data && typeof data === 'object' && !Array.isArray(data) && ('success' in data || 'preview_data' in data);
+
+        if (isFullResponse) {
+            // Full API response - FAZ-MS-4 Enhanced
+            renderFullResult(data, resultContainer, statusContainer);
+        } else if (Array.isArray(data)) {
+            // Legacy: just rows array
+            renderPreviewRows(data, resultContainer);
+        } else {
             resultContainer.textContent = getText({ tr: 'Sonuç boş', en: 'Empty result' });
+        }
+    }
+
+    /**
+     * FAZ-MS-4: Render full API response with download button
+     */
+    function renderFullResult(response, container, statusContainer) {
+        const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+        const previewData = response.preview_data;
+        const rows = previewData?.rows || [];
+        const totalRows = previewData?.total_rows || rows.length;
+        const truncated = previewData?.truncated || false;
+        const downloadUrl = response.download_url;
+        const excelAvailable = response.excel_available;
+
+        // Build result HTML
+        let html = '';
+
+        // Status message
+        if (statusContainer) {
+            statusContainer.innerHTML = `
+                <span style="color: var(--gm-success);"><i class="fas fa-check-circle"></i></span>
+                ${response.summary || (lang === 'tr' ? 'İşlem tamamlandı' : 'Operation complete')}
+            `;
+        }
+
+        // Download/Share buttons
+        if (excelAvailable && downloadUrl) {
+            html += `
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <a href="${downloadUrl}" class="gm-pill-btn" style="background: linear-gradient(135deg, #10b981, #059669); text-decoration: none;">
+                        <i class="fas fa-download"></i> ${lang === 'tr' ? 'Excel İndir' : 'Download Excel'}
+                    </a>
+                    <button class="gm-pill-btn" onclick="MacroPipeline.shareResult()" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                        <i class="fas fa-share-alt"></i> ${lang === 'tr' ? 'Paylaş' : 'Share'}
+                    </button>
+                </div>
+            `;
+        }
+
+        // Preview info
+        const truncatedMsg = truncated
+            ? `<span style="color: var(--gm-warning);"><i class="fas fa-exclamation-triangle"></i> ${lang === 'tr' ? `İlk ${rows.length} satır gösteriliyor (toplam: ${totalRows})` : `Showing first ${rows.length} rows (total: ${totalRows})`}</span>`
+            : `<span style="color: var(--gm-text-muted);">${totalRows} ${lang === 'tr' ? 'satır' : 'rows'}</span>`;
+
+        html += `<div style="margin-bottom: 8px; font-size: 0.85rem;">${truncatedMsg}</div>`;
+
+        // Preview table (first 10 rows max for display)
+        if (rows.length > 0) {
+            const displayRows = rows.slice(0, 10);
+            const columns = previewData?.columns || Object.keys(displayRows[0] || {});
+
+            html += `<div style="overflow-x: auto; max-height: 200px; overflow-y: auto;">`;
+            html += `<table class="gm-preview-table" style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">`;
+            html += `<thead><tr>`;
+            columns.forEach(col => {
+                html += `<th style="padding: 4px 8px; background: var(--gm-bg-alt); border: 1px solid var(--gm-border); white-space: nowrap;">${col}</th>`;
+            });
+            html += `</tr></thead>`;
+            html += `<tbody>`;
+            displayRows.forEach(row => {
+                html += `<tr>`;
+                columns.forEach(col => {
+                    const val = row[col];
+                    html += `<td style="padding: 4px 8px; border: 1px solid var(--gm-border); white-space: nowrap;">${val !== null && val !== undefined ? val : ''}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+
+            if (displayRows.length < rows.length) {
+                html += `<div style="font-size: 0.75rem; color: var(--gm-text-muted); margin-top: 4px;">... ${lang === 'tr' ? 've' : 'and'} ${rows.length - displayRows.length} ${lang === 'tr' ? 'satır daha' : 'more rows'}</div>`;
+            }
+        }
+
+        container.innerHTML = html;
+        showToast(getText({ tr: 'Pipeline tamamlandı!', en: 'Pipeline complete!' }), 'success');
+    }
+
+    /**
+     * Legacy: Render just rows array
+     */
+    function renderPreviewRows(rows, container) {
+        if (!rows || rows.length === 0) {
+            container.textContent = getText({ tr: 'Sonuç boş', en: 'Empty result' });
             return;
         }
 
-        // Show preview of first 10 rows
-        const preview = data.slice(0, 10);
-        resultContainer.textContent = JSON.stringify(preview, null, 2);
+        // Show preview of first 10 rows as JSON
+        const preview = rows.slice(0, 10);
+        container.textContent = JSON.stringify(preview, null, 2);
+        showToast(getText({ tr: 'Sonuç:', en: 'Result:' }) + ` ${rows.length} ${getText({ tr: 'satır', en: 'rows' })}`, 'success');
+    }
 
-        showToast(getText({ tr: 'Sonuç:', en: 'Result:' }) + ` ${data.length} ${getText({ tr: 'satır', en: 'rows' })}`, 'success');
+    /**
+     * FAZ-MS-4: Share result via share endpoint
+     */
+    async function shareResult() {
+        const lang = typeof CURRENT_LANG !== 'undefined' ? CURRENT_LANG : 'tr';
+        try {
+            const response = await fetch('/share/macro-studio-pro?format=xlsx', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.share_url) {
+                    await navigator.clipboard.writeText(data.share_url);
+                    showToast(lang === 'tr' ? 'Paylaşım linki kopyalandı!' : 'Share link copied!', 'success');
+                }
+            } else {
+                showToast(lang === 'tr' ? 'Paylaşım hatası' : 'Share error', 'error');
+            }
+        } catch (err) {
+            console.error('[MacroPipeline] Share error:', err);
+            showToast(lang === 'tr' ? 'Paylaşım hatası' : 'Share error', 'error');
+        }
     }
 
     function clearPipeline() {
@@ -1413,6 +2027,35 @@
         renderSettings();
         setupDropHandlers();
         console.log('[MacroPipeline] Initialized');
+    }
+
+    /**
+     * Toggle category accordion expansion
+     * @param {string} categoryId - ID of category to toggle
+     */
+    function toggleCategory(categoryId) {
+        const category = document.querySelector(`.vb-palette-category[data-category="${categoryId}"]`);
+        if (category) {
+            category.classList.toggle('expanded');
+        }
+    }
+
+    /**
+     * Set cached step data (FAZ-MS-5)
+     * @param {string} hash - Cache key hash
+     * @param {any} data - Data to cache
+     */
+    async function setCachedStep(hash, data) {
+        return cacheStep(hash, data);
+    }
+
+    /**
+     * Generate cache key for pipeline state (FAZ-MS-5)
+     * @param {Array} blocks - Pipeline blocks
+     * @returns {string} Cache key hash
+     */
+    function generateCacheKey(blocks) {
+        return generateStepHash(blocks || PIPELINE_STATE.blocks);
     }
 
     /**
@@ -1473,7 +2116,10 @@
         getState: () => PIPELINE_STATE,
         getBlockTypes: () => MACRO_BLOCK_TYPES,
         getCachedStep,
-        clearAllCache
+        setCachedStep,     // FAZ-MS-5
+        generateCacheKey,  // FAZ-MS-5
+        clearAllCache,
+        shareResult        // FAZ-MS-4
     };
 
 })();

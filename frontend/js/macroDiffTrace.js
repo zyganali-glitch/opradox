@@ -104,7 +104,21 @@
             pivot: 'Pivot tablo oluşturuldu',
             sum_column: 'Sütun toplamı hesaplandı',
             count_rows: 'Satır sayısı hesaplandı',
-            avg_column: 'Ortalama hesaplandı'
+            avg_column: 'Ortalama hesaplandı',
+            // FAZ-MS-P2: New block types
+            lookup_join: 'VLOOKUP/Join uygulandı',
+            union: 'Tablolar birleştirildi',
+            diff: 'Fark analizi yapıldı',
+            validate: 'Doğrulama yapıldı',
+            what_if_variable: 'Senaryo değişkeni tanımlandı',
+            if_else: 'Koşullu değer atandı',
+            window_function: 'Pencere fonksiyonu uygulandı',
+            time_series: 'Zaman serisi analizi yapıldı',
+            advanced_computed: 'İleri hesaplama yapıldı',
+            sort: 'Sıralama yapıldı',
+            chart: 'Grafik oluşturuldu',
+            conditional_format: 'Koşullu format uygulandı',
+            output_settings: 'Çıktı ayarları belirlendi'
         },
         en: {
             filter: 'Filter applied',
@@ -119,7 +133,21 @@
             pivot: 'Pivot table created',
             sum_column: 'Column sum calculated',
             count_rows: 'Row count calculated',
-            avg_column: 'Average calculated'
+            avg_column: 'Average calculated',
+            // FAZ-MS-P2: New block types
+            lookup_join: 'VLOOKUP/Join applied',
+            union: 'Tables merged',
+            diff: 'Difference analysis performed',
+            validate: 'Validation performed',
+            what_if_variable: 'What-if variable defined',
+            if_else: 'Conditional value assigned',
+            window_function: 'Window function applied',
+            time_series: 'Time series analysis performed',
+            advanced_computed: 'Advanced calculation performed',
+            sort: 'Sorting applied',
+            chart: 'Chart created',
+            conditional_format: 'Conditional format applied',
+            output_settings: 'Output settings configured'
         }
     };
 
